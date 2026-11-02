@@ -1,0 +1,1 @@
+{"name": "odoo.exceptions.AccessError", "message": "You are not allowed to create 'Sales Order' (sale.order) records.", "arguments": ["You are not allowed to create 'Sales Order' (sale.order) records."], "context": {}, "debug": "Traceback (most recent call last):\n  ...\n"}

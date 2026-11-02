@@ -1,0 +1,1 @@
+{"name": "werkzeug.exceptions.Unauthorized", "message": "Invalid apikey", "arguments": ["Invalid apikey", 401], "context": {}, "debug": "Traceback (most recent call last):\n  ...\nwerkzeug.exceptions.Unauthorized: 401 Unauthorized: Invalid apikey\n"}

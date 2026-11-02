@@ -1,0 +1,1 @@
+{"jsonrpc": "2.0", "id": 7, "error": {"code": 200, "message": "Odoo Server Error", "data": {"name": "odoo.exceptions.ValidationError", "debug": "Traceback (most recent call last):\n  ...\nodoo.exceptions.ValidationError: The VAT number is not valid.\n", "message": "The VAT number is not valid.", "arguments": ["The VAT number is not valid."], "context": {}}}}

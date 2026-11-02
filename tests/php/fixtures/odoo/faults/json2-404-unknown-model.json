@@ -1,0 +1,1 @@
+{"name": "werkzeug.exceptions.NotFound", "message": "the model 'stock.quant' does not exist", "arguments": ["the model 'stock.quant' does not exist", 404], "context": {}, "debug": "Traceback (most recent call last):\n  ...\n"}
