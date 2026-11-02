@@ -21,7 +21,9 @@ use Estasoft\SyncEngine\Domain\Item;
  * A refund becomes a customer credit note (account.move of type out_refund) linked to the order's posted invoice when
  * there is one. The credit note is created as a draft unless the payload or the option refund_state says post. Odoo, or
  * its tax localisation, issues and reports the credit note; this plugin never signs it. The reference WC-{refund id}
- * goes at the start of the credit note's reference, followed by the reason, so a retry finds the credit note again.
+ * goes at the start of the credit note's reference, followed by the reason, so a retry finds the credit note again. A credit
+ * note that already exists is not just linked: if it should be posted and is still a draft, or it is posted and waits for the
+ * tax authority service, the missing step is done on this pass too.
  */
 final class OdooRefundSender {
 
@@ -39,6 +41,7 @@ final class OdooRefundSender {
 	 * @param OdooDocumentFlow $flow    Invoice lookup.
 	 * @param OdooOptions      $options Connection options.
 	 * @param OdooAmounts      $amounts Conversion helper.
+	 * @param OdooTaxPricing   $pricing Makes prices agree with the taxes.
 	 */
 	public function __construct(
 		private readonly OdooClient $client,
@@ -47,6 +50,7 @@ final class OdooRefundSender {
 		private readonly OdooDocumentFlow $flow,
 		private readonly OdooOptions $options,
 		private readonly OdooAmounts $amounts,
+		private readonly OdooTaxPricing $pricing,
 	) {
 	}
 
@@ -86,7 +90,7 @@ final class OdooRefundSender {
 		try {
 			$existing = $this->finder->creditNote( $clientRef );
 			if ( null !== $existing ) {
-				return SendResult::existing( $this->finder->creditNoteRef( $existing ) );
+				return SendResult::existing( $this->afterExisting( $existing, $payload ) );
 			}
 			$order = $this->finder->order( $orderRef );
 			if ( null === $order ) {
@@ -105,6 +109,47 @@ final class OdooRefundSender {
 		} catch ( OdooException $exception ) {
 			return SendResult::failure( $exception->error );
 		}
+	}
+
+	/**
+	 * Carry on with a credit note Odoo already has: post it when it should be posted and is not, and send a posted one to the
+	 * tax authority service when it is waiting there. Both steps are safe to repeat.
+	 *
+	 * @param array<string,mixed> $existing Credit note record.
+	 * @param array<string,mixed> $payload  Mapped payload.
+	 *
+	 * @throws OdooException On failure.
+	 */
+	private function afterExisting( array $existing, array $payload ): ExternalRef {
+		$id    = OdooRecord::id( $existing['id'] ?? 0 );
+		$state = OdooRecord::text( $existing['state'] ?? '' );
+		if ( 'cancel' === $state ) {
+			return $this->finder->creditNoteRef( $existing );
+		}
+		$changed = false;
+		if ( 'draft' === $state && $this->shouldPost( $payload ) ) {
+			$this->flow->postMove( $id );
+			$changed = true;
+		} elseif ( 'posted' === $state ) {
+			$changed = $this->flow->sendToTaxService( $id );
+		}
+		if ( ! $changed ) {
+			return $this->finder->creditNoteRef( $existing );
+		}
+		$records      = $this->client->read( 'account.move', array( $id ), OdooOrderFinder::MOVE_FIELDS );
+		$record       = $records[0] ?? $existing;
+		$record['id'] = $id;
+		return $this->finder->creditNoteRef( $record );
+	}
+
+	/**
+	 * Whether the credit note should be posted: the payload's flow block decides, then the option refund_state.
+	 *
+	 * @param array<string,mixed> $payload Mapped payload.
+	 */
+	private function shouldPost( array $payload ): bool {
+		$flow = isset( $payload['flow'] ) && is_array( $payload['flow'] ) ? $payload['flow'] : array();
+		return OdooPayloadReader::flag( $flow['post'] ?? null, 'post' === $this->options->choice( 'refund_state', array( 'draft', 'post' ), 'draft' ) );
 	}
 
 	/**
@@ -152,12 +197,13 @@ final class OdooRefundSender {
 			}
 		}
 
+		$includes = OdooPayloadReader::flag( $payload['prices_include_tax'] ?? null, false );
 		$commands = array();
 		foreach ( $lines as $line ) {
-			$commands[] = array( 0, 0, $this->refundLine( $line, $exponent, $taxIds ) );
+			$commands[] = array( 0, 0, $this->refundLine( $line, $exponent, $taxIds, $includes ) );
 		}
 		foreach ( $extras as $extra ) {
-			$commands[] = array( 0, 0, $this->extraValues( $extra, $exponent, $taxIds ) );
+			$commands[] = array( 0, 0, $this->extraValues( $extra, $exponent, $taxIds, $includes ) );
 		}
 		if ( array() === $commands ) {
 			$commands[] = array( 0, 0, $this->amountOnlyLine( $payload, $clientRef, $exponent ) );
@@ -189,13 +235,8 @@ final class OdooRefundSender {
 		}
 
 		$moveId = $this->client->create( 'account.move', $values );
-		$flow   = isset( $payload['flow'] ) && is_array( $payload['flow'] ) ? $payload['flow'] : array();
-		$post   = OdooPayloadReader::flag( $flow['post'] ?? null, 'post' === $this->options->choice( 'refund_state', array( 'draft', 'post' ), 'draft' ) );
-		if ( $post ) {
-			$this->client->callRecords( 'account.move', 'action_post', array( $moveId ) );
-			if ( $this->client->hasField( 'account.move', 'l10n_sa_uuid' ) && $this->client->hasField( 'account.move', 'edi_state' ) ) {
-				$this->client->callRecords( 'account.move', 'action_process_edi_web_services', array( $moveId ) );
-			}
+		if ( $this->shouldPost( $payload ) ) {
+			$this->flow->postMove( $moveId );
 		}
 
 		$records      = $this->client->read( 'account.move', array( $moveId ), OdooOrderFinder::MOVE_FIELDS );
@@ -231,22 +272,25 @@ final class OdooRefundSender {
 	 * @param array<string,mixed> $line     Line from the payload.
 	 * @param int                 $exponent Currency decimals.
 	 * @param array<string,int>   $taxIds   Tax ids by code.
+	 * @param bool                $includes Whether the payload's prices include tax.
 	 * @return array<string,mixed>
 	 *
 	 * @throws OdooException On failure.
 	 */
-	private function refundLine( array $line, int $exponent, array $taxIds ): array {
+	private function refundLine( array $line, int $exponent, array $taxIds, bool $includes ): array {
 		$sku      = OdooPayloadReader::text( $line['product'] ?? ( $line['sku'] ?? '' ) );
 		$quantity = isset( $line['quantity'] ) && is_numeric( $line['quantity'] ) ? max( 1.0, (float) $line['quantity'] ) : 1.0;
 		$amount   = abs( (int) OdooPayloadReader::minor( $line['amount'] ?? null ) );
 		$name     = OdooPayloadReader::text( $line['name'] ?? '' );
 		$name     = '' !== $name ? $name : ( '' !== $sku ? $sku : __( 'Refund', 'estasoft-erp-crm-sync-engine' ) );
 
+		$codes  = array_key_exists( 'tax', $line ) ? OdooPayloadReader::taxCodes( $line['tax'] ) : array();
 		$whole  = floor( $quantity ) === $quantity && 0 === $amount % (int) $quantity;
+		$unit   = $this->pricing->price( $whole ? intdiv( $amount, (int) $quantity ) : $amount, $codes, $taxIds, $includes );
 		$values = array(
 			'name'       => $name,
 			'quantity'   => $whole ? $quantity : 1.0,
-			'price_unit' => $this->amounts->toDecimal( $whole ? intdiv( $amount, (int) $quantity ) : $amount, $exponent ),
+			'price_unit' => $this->amounts->toDecimal( $unit, $exponent ),
 		);
 		if ( ! $whole ) {
 			$values['name'] = $name . ' x ' . rtrim( rtrim( number_format( $quantity, 3, '.', '' ), '0' ), '.' );
@@ -294,16 +338,18 @@ final class OdooRefundSender {
 	 * @param array<string,mixed> $extra    Shipping line.
 	 * @param int                 $exponent Currency decimals.
 	 * @param array<string,int>   $taxIds   Tax ids by code.
+	 * @param bool                $includes Whether the payload's prices include tax.
 	 * @return array<string,mixed>
 	 *
 	 * @throws OdooException On failure.
 	 */
-	private function extraValues( array $extra, int $exponent, array $taxIds ): array {
+	private function extraValues( array $extra, int $exponent, array $taxIds, bool $includes ): array {
+		$codes  = array_key_exists( 'tax', $extra ) ? OdooPayloadReader::taxCodes( $extra['tax'] ) : array();
 		$values = array(
 			'product_id' => $this->catalog->serviceProductId( 'shipping' ),
 			'name'       => (string) $extra['name'],
 			'quantity'   => 1.0,
-			'price_unit' => $this->amounts->toDecimal( (int) $extra['amount'], $exponent ),
+			'price_unit' => $this->amounts->toDecimal( $this->pricing->price( (int) $extra['amount'], $codes, $taxIds, $includes ), $exponent ),
 		);
 		if ( array_key_exists( 'tax', $extra ) ) {
 			$values['tax_ids'] = array( array( 6, 0, $this->taxIdList( OdooPayloadReader::taxCodes( $extra['tax'] ), $taxIds ) ) );

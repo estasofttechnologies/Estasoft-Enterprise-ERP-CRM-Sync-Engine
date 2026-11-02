@@ -186,7 +186,9 @@ final class OdooClient {
 	}
 
 	/**
-	 * The context sent with every call: the company the connector works in, plus extra values.
+	 * The context sent with every call: the one company the connector works in (allowed_company_ids), plus extra values.
+	 * Without this key Odoo lets a call see the records of every company the sync user belongs to, so a tax or product with the
+	 * same name in another company could be picked.
 	 *
 	 * @param array<string,mixed> $extra Extra context values.
 	 * @return array<string,mixed>
@@ -194,22 +196,21 @@ final class OdooClient {
 	 * @throws OdooException When the configured company cannot be found.
 	 */
 	public function context( array $extra = array() ): array {
-		$context = $extra;
-		if ( '' !== $this->companyRef ) {
-			$context['allowed_company_ids'] = array( $this->companyId() );
-		}
+		$context                        = $extra;
+		$context['allowed_company_ids'] = array( $this->companyId() );
 		return $context;
 	}
 
 	/**
-	 * A domain that limits records to the configured company; empty when no company is configured.
+	 * A domain that limits records to the company the connector works in. Records without a company (shared products,
+	 * customers and price lists) stay visible.
 	 *
 	 * @return array<int,mixed>
 	 *
 	 * @throws OdooException When the configured company does not exist.
 	 */
 	public function companyDomain(): array {
-		return '' === $this->companyRef ? array() : array( array( 'company_id', '=', $this->companyId() ) );
+		return array( array( 'company_id', 'in', array( false, $this->companyId() ) ) );
 	}
 
 	/**
@@ -320,7 +321,8 @@ final class OdooClient {
 				array(
 					'allfields'  => $names,
 					'attributes' => array( 'type' ),
-				)
+				),
+				$this->context()
 			);
 		} catch ( OdooException $exception ) {
 			if ( $exception->modelMissing ) {

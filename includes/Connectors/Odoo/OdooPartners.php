@@ -53,7 +53,7 @@ final class OdooPartners {
 		}
 		$records = $this->client->searchRead(
 			'res.partner',
-			array( array( 'email', '=ilike', $email ) ),
+			array_merge( array( array( 'email', '=ilike', $email ) ), $this->client->companyDomain() ),
 			array( 'name', 'email', 'parent_id', 'phone', 'vat' ),
 			array(
 				'order' => 'id asc',
@@ -209,11 +209,14 @@ final class OdooPartners {
 		}
 		$existing = $this->client->searchRead(
 			'res.partner',
-			array(
-				array( 'parent_id', '=', $partnerId ),
-				array( 'type', '=', 'delivery' ),
-				array( 'street', '=', $street ),
-				array( 'city', '=', $city ),
+			array_merge(
+				array(
+					array( 'parent_id', '=', $partnerId ),
+					array( 'type', '=', 'delivery' ),
+					array( 'street', '=', $street ),
+					array( 'city', '=', $city ),
+				),
+				$this->client->companyDomain()
 			),
 			array( 'zip' ),
 			array( 'order' => 'id asc' )

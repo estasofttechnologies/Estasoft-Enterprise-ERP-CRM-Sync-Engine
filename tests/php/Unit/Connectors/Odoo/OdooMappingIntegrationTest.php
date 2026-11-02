@@ -72,6 +72,7 @@ final class OdooMappingIntegrationTest extends OdooTestCase {
 		$this->assertSame( 'VAT 5% (AE)', $payload['order_line'][0]['tax'] );
 		$this->assertSame( 2500, $payload['shipping']['total'] );
 		$this->assertSame( 'Gift wrap please', $payload['note'] );
+		$this->assertSame( 48615, $payload['total'], 'The shop\'s total travels with the order so that Odoo\'s can be checked against it.' );
 	}
 
 	public function test_the_mapped_order_is_accepted_by_odoo_with_the_boards_total(): void {
@@ -97,7 +98,7 @@ final class OdooMappingIntegrationTest extends OdooTestCase {
 	public function test_a_discount_and_a_fee_in_the_canonical_order_become_lines(): void {
 		$payload = $this->mapped(
 			array(
-				'order'   => array( 'discount_total' => 5000 ),
+				'order'   => array( 'discount_total' => 5000, 'total' => 44615 ),
 				'coupons' => array( array( 'code' => 'SUMMER10', 'discount' => 5000 ) ),
 				'fees'    => array( array( 'name' => 'Gift wrap', 'total' => 1000, 'tax' => 50 ) ),
 			)

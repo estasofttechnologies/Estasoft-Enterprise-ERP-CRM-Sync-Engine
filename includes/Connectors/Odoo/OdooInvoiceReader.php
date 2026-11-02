@@ -16,7 +16,9 @@ use Estasoft\SyncEngine\Contract\ExternalRef;
 /**
  * The invoice is the latest customer invoice linked to the order. Where the Saudi localisation is installed
  * (l10n_sa_edi) the status of its tax authority submission is read from the electronic invoicing fields
- * (edi_state, edi_error_message) and the QR code and issue time from l10n_sa. The plugin only reads and shows these.
+ * (edi_state, edi_blocking_level, edi_error_message) and the QR code and issue time from l10n_sa. The plugin only reads and shows
+ * these: the result carries Odoo's own edi_state and edi_blocking_level next to the plugin's authority_status, so the real state is
+ * never hidden behind the summary.
  */
 final class OdooInvoiceReader {
 
@@ -25,7 +27,7 @@ final class OdooInvoiceReader {
 	 *
 	 * @var array<int,string>
 	 */
-	private const OPTIONAL = array( 'edi_state', 'edi_error_message', 'l10n_sa_qr_code_str', 'l10n_sa_confirmation_datetime', 'l10n_sa_uuid' );
+	private const OPTIONAL = array( 'edi_state', 'edi_blocking_level', 'edi_error_message', 'l10n_sa_qr_code_str', 'l10n_sa_confirmation_datetime', 'l10n_sa_uuid' );
 
 	/**
 	 * Set up with what it depends on.
@@ -40,7 +42,7 @@ final class OdooInvoiceReader {
 	 * Invoice facts for a sale order.
 	 *
 	 * @param ExternalRef $ref The sale order.
-	 * @return array{number:string,status:string,authority_status:string,pdf_url:string,qr:string,issued_at:string,payment_state:string,reject_reason:string,invoice_id:string,url:string,total_minor:int}|null Null when the order has no invoice yet.
+	 * @return array{number:string,status:string,authority_status:string,pdf_url:string,qr:string,issued_at:string,payment_state:string,reject_reason:string,invoice_id:string,url:string,total_minor:int,edi_state:string,edi_blocking_level:string}|null Null when the order has no invoice yet.
 	 *
 	 * @throws OdooException On failure.
 	 */
@@ -79,7 +81,7 @@ final class OdooInvoiceReader {
 	 *
 	 * @param array<string,mixed> $invoice Invoice record.
 	 * @param array<string,bool>  $have    Optional fields the version has.
-	 * @return array{number:string,status:string,authority_status:string,pdf_url:string,qr:string,issued_at:string,payment_state:string,reject_reason:string,invoice_id:string,url:string,total_minor:int}
+	 * @return array{number:string,status:string,authority_status:string,pdf_url:string,qr:string,issued_at:string,payment_state:string,reject_reason:string,invoice_id:string,url:string,total_minor:int,edi_state:string,edi_blocking_level:string}
 	 */
 	private function describe( array $invoice, array $have ): array {
 		$id       = OdooRecord::id( $invoice['id'] ?? 0 );
@@ -92,19 +94,24 @@ final class OdooInvoiceReader {
 			$issued = '' !== $date ? $date . 'T00:00:00Z' : '';
 		}
 		$problem = $this->plainText( OdooRecord::text( $invoice['edi_error_message'] ?? '' ) );
+		$level   = OdooRecord::text( $invoice['edi_blocking_level'] ?? '' );
+		// Odoo stops retrying a document only when the problem is an error; a warning or a note leaves it waiting.
+		$blocked = isset( $have['edi_blocking_level'] ) && $have['edi_blocking_level'] ? 'error' === $level : '' !== $problem;
 
 		return array(
-			'number'           => 'posted' === $state && '/' !== $name ? $name : '',
-			'status'           => $state,
-			'authority_status' => $this->authorityStatus( $state, OdooRecord::text( $invoice['edi_state'] ?? '' ), '' !== $problem, ( $have['edi_state'] ?? false ) && ( $have['l10n_sa_uuid'] ?? false ) ),
-			'pdf_url'          => 'posted' === $state ? $this->client->address()->url( '/report/pdf/account.report_invoice/' . $id ) : '',
-			'qr'               => OdooRecord::text( $invoice['l10n_sa_qr_code_str'] ?? '' ),
-			'issued_at'        => 'posted' === $state ? $issued : '',
-			'payment_state'    => OdooRecord::text( $invoice['payment_state'] ?? '' ),
-			'reject_reason'    => $problem,
-			'invoice_id'       => (string) $id,
-			'url'              => $this->client->recordUrl( 'account.move', $id ),
-			'total_minor'      => $this->amounts->toMinor( $invoice['amount_total'] ?? 0, $this->amounts->exponent( $currency ) ),
+			'number'             => 'posted' === $state && '/' !== $name ? $name : '',
+			'status'             => $state,
+			'authority_status'   => $this->authorityStatus( $state, OdooRecord::text( $invoice['edi_state'] ?? '' ), $blocked, ( $have['edi_state'] ?? false ) && ( $have['l10n_sa_uuid'] ?? false ) ),
+			'pdf_url'            => 'posted' === $state ? $this->client->address()->url( '/report/pdf/account.report_invoice/' . $id ) : '',
+			'qr'                 => OdooRecord::text( $invoice['l10n_sa_qr_code_str'] ?? '' ),
+			'issued_at'          => 'posted' === $state ? $issued : '',
+			'payment_state'      => OdooRecord::text( $invoice['payment_state'] ?? '' ),
+			'reject_reason'      => $problem,
+			'invoice_id'         => (string) $id,
+			'url'                => $this->client->recordUrl( 'account.move', $id ),
+			'total_minor'        => $this->amounts->toMinor( $invoice['amount_total'] ?? 0, $this->amounts->exponent( $currency ) ),
+			'edi_state'          => OdooRecord::text( $invoice['edi_state'] ?? '' ),
+			'edi_blocking_level' => $level,
 		);
 	}
 
@@ -113,7 +120,7 @@ final class OdooInvoiceReader {
 	 *
 	 * @param string $state       Invoice state (draft, posted).
 	 * @param string $ediState    Odoo's aggregated electronic invoicing state (to_send, sent, to_cancel, cancelled), or empty.
-	 * @param bool   $hasProblem  Whether Odoo recorded an error message.
+	 * @param bool   $hasProblem  Whether Odoo blocks the document with an error that needs a person.
 	 * @param bool   $hasEInvoice Whether the Saudi e-invoicing fields exist on this server.
 	 */
 	private function authorityStatus( string $state, string $ediState, bool $hasProblem, bool $hasEInvoice ): string {

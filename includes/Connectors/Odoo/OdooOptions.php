@@ -19,8 +19,11 @@ use Estasoft\SyncEngine\Domain\Connection;
  *
  * Keys: documents (order, order_invoice, order_invoice_payment), invoice_state (post or draft), refund_state (draft or post),
  * customer_policy (match_or_create, match_only, always_create), duplicate_customer (oldest, fail), missing_product (fail,
- * create), create_service_products (yes or no), call_interval_ms (0 to 10000), and shipping_product, fee_product,
- * discount_product, refund_product (the internal references of the service products Odoo uses for those lines).
+ * create), create_service_products (yes or no), call_interval_ms (0 to 10000), pricelist (name or id of the price list to use
+ * for every order; its currency must be the order's), create_pricelist (yes or no: make a price list when Odoo has none in the
+ * order's currency), total_mismatch (fail or warn: what to do when Odoo's total differs from the shop's by more than one
+ * minor unit), and shipping_product, fee_product, discount_product, refund_product (the internal references of the service
+ * products Odoo uses for those lines).
  */
 final class OdooOptions {
 
@@ -29,7 +32,7 @@ final class OdooOptions {
 	 *
 	 * @var array<int,string>
 	 */
-	private const KEYS = array( 'documents', 'invoice_state', 'refund_state', 'customer_policy', 'duplicate_customer', 'missing_product', 'create_service_products', 'call_interval_ms', 'shipping_product', 'fee_product', 'discount_product', 'refund_product' );
+	private const KEYS = array( 'documents', 'invoice_state', 'refund_state', 'customer_policy', 'duplicate_customer', 'missing_product', 'create_service_products', 'call_interval_ms', 'shipping_product', 'fee_product', 'discount_product', 'refund_product', 'pricelist', 'create_pricelist', 'total_mismatch' );
 
 	/**
 	 * Set up with what it depends on.

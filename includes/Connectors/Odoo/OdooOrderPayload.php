@@ -41,6 +41,8 @@ final class OdooOrderPayload {
 	 * @param bool                           $registerPayment  Register the payment on the invoice.
 	 * @param string                         $paymentReference Payment reference (transaction id).
 	 * @param bool                           $taxesMapped      True when the mapping supplies tax codes, so an empty code means no tax.
+	 * @param int|null                       $totalMinor       Total the shop expects Odoo to show (the order total less the part of products left out), or null when the mapping gives none.
+	 * @param bool                           $pricesIncludeTax True when the mapped prices include tax; false (the default) when they do not.
 	 */
 	private function __construct(
 		public readonly string $clientRef,
@@ -58,6 +60,8 @@ final class OdooOrderPayload {
 		public readonly bool $registerPayment,
 		public readonly string $paymentReference,
 		public readonly bool $taxesMapped,
+		public readonly ?int $totalMinor = null,
+		public readonly bool $pricesIncludeTax = false,
 	) {
 	}
 
@@ -103,15 +107,12 @@ final class OdooOrderPayload {
 			return self::refused( 'order_line', __( 'The order has no product lines.', 'estasoft-erp-crm-sync-engine' ) );
 		}
 
-		$flow      = isset( $payload['flow'] ) && is_array( $payload['flow'] ) ? $payload['flow'] : array();
-		$documents = $options->choice( 'documents', array( 'order', 'order_invoice', 'order_invoice_payment' ), 'order' );
-		$fallback  = 'order' === $documents ? 'none' : $options->choice( 'invoice_state', array( 'draft', 'post' ), 'post' );
-		$invoice   = OdooPayloadReader::choice( $flow['invoice'] ?? null, array( 'none', 'draft', 'post' ), $fallback );
-		$payment   = OdooPayloadReader::flag( $flow['register_payment'] ?? null, 'order_invoice_payment' === $documents );
-		if ( $payment ) {
-			$invoice = 'post';
+		$flow = self::plan( $options, isset( $payload['flow'] ) && is_array( $payload['flow'] ) ? $payload['flow'] : array() );
+
+		$total = OdooPayloadReader::minor( $payload['total'] ?? null );
+		if ( null !== $total ) {
+			$total -= abs( (int) OdooPayloadReader::minor( $payload['excluded_total'] ?? null ) );
 		}
-		$confirm = OdooPayloadReader::flag( $flow['confirm'] ?? null, true ) || 'none' !== $invoice;
 
 		$paymentBlock = isset( $payload['payment'] ) && is_array( $payload['payment'] ) ? $payload['payment'] : array();
 
@@ -126,11 +127,36 @@ final class OdooOrderPayload {
 			OdooPayloadReader::text( $payload['note'] ?? '' ),
 			OdooPayloadReader::text( $payload['payment_term'] ?? '' ),
 			OdooPayloadReader::text( $payload['warehouse'] ?? '' ),
-			$confirm,
-			$invoice,
-			$payment,
+			$flow['confirm'],
+			$flow['invoice'],
+			$flow['register_payment'],
 			OdooPayloadReader::text( $paymentBlock['reference'] ?? '' ),
-			$taxesMapped
+			$taxesMapped,
+			$total,
+			OdooPayloadReader::flag( $payload['prices_include_tax'] ?? null, false )
+		);
+	}
+
+	/**
+	 * The document steps an order goes through: what the connection's options ask for, changed by the payload's "flow" block.
+	 * Without a payload (a lookup that has only the options) pass an empty block.
+	 *
+	 * @param OdooOptions         $options Connection options.
+	 * @param array<string,mixed> $flow    The payload's flow block.
+	 * @return array{confirm:bool,invoice:string,register_payment:bool} invoice is none, draft or post.
+	 */
+	public static function plan( OdooOptions $options, array $flow ): array {
+		$documents = $options->choice( 'documents', array( 'order', 'order_invoice', 'order_invoice_payment' ), 'order' );
+		$fallback  = 'order' === $documents ? 'none' : $options->choice( 'invoice_state', array( 'draft', 'post' ), 'post' );
+		$invoice   = OdooPayloadReader::choice( $flow['invoice'] ?? null, array( 'none', 'draft', 'post' ), $fallback );
+		$payment   = OdooPayloadReader::flag( $flow['register_payment'] ?? null, 'order_invoice_payment' === $documents );
+		if ( $payment ) {
+			$invoice = 'post';
+		}
+		return array(
+			'confirm'          => OdooPayloadReader::flag( $flow['confirm'] ?? null, true ) || 'none' !== $invoice,
+			'invoice'          => $invoice,
+			'register_payment' => $payment,
 		);
 	}
 

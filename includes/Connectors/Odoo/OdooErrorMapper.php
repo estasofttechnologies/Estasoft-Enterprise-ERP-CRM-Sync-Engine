@@ -42,6 +42,13 @@ final class OdooErrorMapper {
 	public const RETRYABLE_FAULTS = array( 'LockError', 'ConcurrencyError', 'SerializationFailure', 'DeadlockDetected', 'LockNotAvailable', 'QueryCanceled', 'TooManyRequests' );
 
 	/**
+	 * Names of database connection and server errors. Their text is never kept.
+	 *
+	 * @var array<int,string>
+	 */
+	private const DATABASE_FAULTS = array( 'OperationalError', 'InterfaceError', 'DatabaseError', 'InternalError', 'AdminShutdown', 'CannotConnectNow', 'ConnectionException' );
+
+	/**
 	 * Names that mean the data was refused, not that the server is in trouble.
 	 *
 	 * @var array<int,string>
@@ -92,8 +99,11 @@ final class OdooErrorMapper {
 	 *
 	 * @param array<int,string> $secrets Values that must never appear in an error text (API key, user name).
 	 * @param bool              $odooOnline True when the host is an Odoo Online address.
+	 * @param string            $database Database name of the connection. It is taken out of Odoo's own texts where it stands in
+	 *                                    quotes or after dbname=, as in PostgreSQL's database "name" does not exist; the CFG-003
+	 *                                    message still names it because the person typed it.
 	 */
-	public function __construct( private readonly array $secrets = array(), private readonly bool $odooOnline = false ) {
+	public function __construct( private readonly array $secrets = array(), private readonly bool $odooOnline = false, private readonly string $database = '' ) {
 	}
 
 	/**
@@ -106,6 +116,11 @@ final class OdooErrorMapper {
 			if ( strlen( $secret ) >= 4 ) {
 				$text = str_ireplace( $secret, '***', $text );
 			}
+		}
+		if ( strlen( $this->database ) >= 2 ) {
+			$name = preg_quote( $this->database, '/' );
+			$text = (string) preg_replace( '/(["\'`])' . $name . '\1/i', '$1***$1', $text );
+			$text = (string) preg_replace( '/\b(dbname|database|db)(\s*[=:]\s*)' . $name . '\b/i', '$1$2***', $text );
 		}
 		$text = trim( (string) preg_replace( '/\s+/u', ' ', (string) preg_replace( '/<[^>]*>/', ' ', $text ) ) );
 		return mb_strlen( $text ) > self::MAX_REASON ? mb_substr( $text, 0, self::MAX_REASON ) . '...' : $text;
@@ -120,9 +135,6 @@ final class OdooErrorMapper {
 	 */
 	public function transportFailure( HttpResponse $response, string $model = '', string $method = '' ): OdooException {
 		$text = strtolower( $response->error );
-		if ( str_starts_with( $text, 'certificate' ) || 1 === preg_match( '/ssl|certificate|self.signed|issuer/', $text ) ) {
-			return $this->exception( ErrorCode::Net003, array(), null, null, 'certificate not trusted', '', $model, $method );
-		}
 		if ( str_starts_with( $text, 'unsafe_url' ) ) {
 			return $this->exception(
 				ErrorCode::Val002,
@@ -138,8 +150,15 @@ final class OdooErrorMapper {
 				$method
 			);
 		}
-		$detail = $response->timedOut || str_starts_with( $text, 'timeout' ) ? 'timeout' : 'connection failed';
-		return $this->exception( ErrorCode::Net001, array(), null, null, $detail, '', $model, $method );
+		// A time-out or a connection that was reset is a network problem that may pass, whatever the words around it say about
+		// SSL ("SSL connection timeout", "SSL_connect: Connection reset"). Only a certificate that fails verification is NET-003.
+		if ( $response->timedOut || str_starts_with( $text, 'timeout' ) || 1 === preg_match( '/timed? ?out|timeout|connection reset|reset by peer|connection refused|could not resolve|couldn\'t resolve|name or service not known|no route to host|network is unreachable|broken pipe|empty reply|curl error (6|7|28|52|55|56)\b/', $text ) ) {
+			return $this->exception( ErrorCode::Net001, array(), null, null, $response->timedOut || str_contains( $text, 'time' ) ? 'timeout' : 'connection failed', '', $model, $method );
+		}
+		if ( str_starts_with( $text, 'certificate' ) || 1 === preg_match( '/certificate (problem|verify|has expired|is not|not valid|verification)|self.signed|unable to get (local )?issuer|unable to verify|verify failed|no alternative certificate|hostname .*(mismatch|does not match)|curl error (51|58|60|77|83|90|91)\b/', $text ) ) {
+			return $this->exception( ErrorCode::Net003, array(), null, null, 'certificate not trusted', '', $model, $method );
+		}
+		return $this->exception( ErrorCode::Net001, array(), null, null, 'connection failed', '', $model, $method );
 	}
 
 	/**
@@ -333,9 +352,10 @@ final class OdooErrorMapper {
 		$short  = $this->shortName( $name );
 		$reason = $this->scrub( $message );
 
-		// Odoo Online blocks outside access on plans without it. The wording of that refusal is not documented, so only a message
-		// that clearly talks about the plan or the external API on an odoo.com address is read this way.
-		if ( $this->odooOnline && 1 === preg_match( '/\b(plan|subscription|upgrade|external api|xml-?rpc|json-?rpc)\b/i', $message ) ) {
+		// Odoo Online blocks outside access on plans without it. The wording of that refusal is not documented, so it is read this
+		// way only on an odoo.com address, only when it comes as an access refusal (never as a UserError or ValidationError about
+		// the data), and only when the message talks about the external API itself.
+		if ( $this->odooOnline && $this->looksLikePlanBlock( $short, $message ) ) {
 			return $this->exception( ErrorCode::Auth006, array(), $status > 0 ? $status : null, null, 'outside access not in the plan', $name, $model, $method );
 		}
 		if ( 'AccessDenied' === $short || 'Unauthorized' === $short ) {
@@ -344,11 +364,12 @@ final class OdooErrorMapper {
 		if ( 'AccessError' === $short || 'Forbidden' === $short ) {
 			return $this->exception( ErrorCode::Auth004, array( 'action' => $this->action( $model, $method ) ), $status > 0 ? $status : null, null, $this->detail( $name, $reason ), $name, $model, $method );
 		}
-		if ( 'OperationalError' === $short || 'InterfaceError' === $short ) {
+		if ( in_array( $short, self::DATABASE_FAULTS, true ) ) {
 			if ( 1 === preg_match( '/database "([^"]*)" does not exist/i', $message, $parts ) ) {
 				return $this->databaseMissing( $this->scrub( $parts[1] ), $model, $method, $status );
 			}
-			return $this->exception( ErrorCode::Net002, array( 'status' => 503 ), 503, null, $this->detail( $name, $reason ), $name, $model, $method );
+			// The text of a database error can hold the PostgreSQL host, port or user, so only the kind of error is kept.
+			return $this->exception( ErrorCode::Net002, array( 'status' => 503 ), 503, null, 'database error ' . $short, $name, $model, $method );
 		}
 		if ( 'NotFound' === $short || ( 'UserError' === $short && 1 === preg_match( "/Object \S+ doesn't exist/", $message ) ) ) {
 			return $this->missingModel( $name, $reason, $status, $model, $method );
@@ -389,6 +410,20 @@ final class OdooErrorMapper {
 		}
 		// Anything else is a server problem we cannot read; it is tried again a few times and then shown to the person.
 		return $this->exception( ErrorCode::Net002, array( 'status' => $status >= 500 ? $status : 500 ), $status >= 500 ? $status : 500, null, $this->detail( $name, $reason ), $name, $model, $method );
+	}
+
+	/**
+	 * Whether a fault looks like the refusal Odoo Online gives to a plan without external API access.
+	 *
+	 * @param string $short   Short exception name.
+	 * @param string $message Odoo's message.
+	 */
+	private function looksLikePlanBlock( string $short, string $message ): bool {
+		if ( ! in_array( $short, array( 'AccessDenied', 'AccessError', 'Forbidden', '' ), true ) ) {
+			return false;
+		}
+		return 1 === preg_match( '/\b(external api|xml-?rpc|json-?rpc|json-?2|api access|outside access)\b/i', $message )
+			|| 1 === preg_match( '/\b(plan|subscription)\b.*\b(api|rpc)\b|\b(api|rpc)\b.*\b(plan|subscription)\b/i', $message );
 	}
 
 	/**

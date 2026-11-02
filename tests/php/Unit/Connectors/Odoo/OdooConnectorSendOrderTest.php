@@ -115,12 +115,18 @@ final class OdooConnectorSendOrderTest extends OdooTestCase {
 		$this->assertSame( ErrorClass::Retry, $first->error->errorClass() );
 		$this->assertCount( 1, $server->db->all( 'sale.order' ), 'Odoo did create the order; only the answer was lost.' );
 
-		$found = $connector->findExisting( $connection, $item );
-		$this->assertInstanceOf( ExternalRef::class, $found, 'The retry looks first and finds it.' );
+		// The engine links whatever findExisting returns and does not call send() for it. The order is only a quotation (it was
+		// never confirmed), so it is not reported as found: send() finds it, confirms it and says it already existed.
+		$this->assertNull( $connector->findExisting( $connection, $item ), 'An unfinished order is not reported as found, or its steps would never be done.' );
 
 		$second = $connector->send( $connection, $item, $this->orderPayload() );
+		$this->assertTrue( $second->isSuccess(), (string) $second->error?->message() );
 		$this->assertTrue( $second->alreadyExisted );
-		$this->assertCount( 1, $server->db->all( 'sale.order' ) );
+		$this->assertCount( 1, $server->db->all( 'sale.order' ), 'Still one order.' );
+		$this->assertSame( 'sale', $server->db->all( 'sale.order' )[0]['state'], 'The retry carried on from the quotation.' );
+
+		$found = $connector->findExisting( $connection, $item );
+		$this->assertInstanceOf( ExternalRef::class, $found, 'Once its steps are done the order is found.' );
 		$this->assertSame( $found->id, $second->ref->id );
 	}
 
@@ -135,7 +141,7 @@ final class OdooConnectorSendOrderTest extends OdooTestCase {
 		$this->assertNull( $connector->findExisting( $connection, $this->item( EntityType::Order, '10491' ) ), 'WC-10491 is a different order.' );
 		$this->assertNull( $connector->findExisting( $connection, $this->item( EntityType::Order, '1049' ) ), 'WC-1049 must not match WC-10490.' );
 		$search = $server->callsTo( 'sale.order', 'search_read' );
-		$this->assertSame( array( array( 'client_order_ref', '=', 'WC-1049' ) ), $search[ count( $search ) - 1 ]['params']['domain'] );
+		$this->assertSame( array( array( 'client_order_ref', '=', 'WC-1049' ), array( 'company_id', 'in', array( false, 1 ) ) ), $search[ count( $search ) - 1 ]['params']['domain'] );
 	}
 
 	public function test_the_client_reference_comes_from_the_item_not_from_the_mapping(): void {
@@ -482,7 +488,9 @@ final class OdooConnectorSendOrderTest extends OdooTestCase {
 		$result  = $this->send( $server, $payload );
 		$this->assertSame( ErrorCode::Val002, $result->error->code );
 		$this->assertSame( 'currency', $result->error->context['field'] );
-		$this->assertStringContainsString( 'no price list in USD', $result->error->context['reason'] );
+		$this->assertStringContainsString( 'no active price list in USD', $result->error->context['reason'] );
+		$this->assertCount( 0, $server->db->all( 'sale.order' ), 'Nothing is created when the price list is missing.' );
+		$this->assertCount( 0, $server->db->all( 'res.partner' ), 'Not even the customer.' );
 
 		$server->db->insert( 'product.pricelist', array( 'name' => 'USD list', 'currency_id' => 2, 'active' => true ) );
 		$ok = $this->send( $server, $payload );

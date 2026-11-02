@@ -113,6 +113,98 @@ final class OdooErrorMapperTest extends TestCase {
 		$this->assertSame( ErrorCode::Auth001, $other->error->code, 'Only an odoo.com address is read as a plan problem.' );
 	}
 
+	/**
+	 * @return array<string,array{0:string}>
+	 */
+	public static function businessErrorsAboutPlans(): array {
+		return array(
+			'user error about a subscription' => array( 'odoo.exceptions.UserError' ),
+			'validation error'                => array( 'odoo.exceptions.ValidationError' ),
+			'missing record'                  => array( 'odoo.exceptions.MissingError' ),
+		);
+	}
+
+	/**
+	 * @dataProvider businessErrorsAboutPlans
+	 */
+	public function test_a_business_error_that_mentions_a_plan_or_subscription_is_not_the_plan_block( string $fault ): void {
+		foreach ( array( 'Please upgrade the subscription plan of this customer before confirming', 'The payment plan does not cover this order. Upgrade to continue.' ) as $message ) {
+			$exception = $this->mapper( true )->rpcFault( $this->rpcError( $fault, $message ), new HttpResponse( 200 ), 'sale.order', 'action_confirm' );
+			$this->assertNotSame( ErrorCode::Auth006, $exception->error->code, $fault . ': ' . $message );
+		}
+	}
+
+	public function test_only_an_access_refusal_that_names_the_external_api_is_the_plan_block(): void {
+		foreach ( array( 'odoo.exceptions.AccessDenied', 'odoo.exceptions.AccessError', 'werkzeug.exceptions.Forbidden' ) as $fault ) {
+			$exception = $this->mapper( true )->rpcFault( $this->rpcError( $fault, 'Access to the XML-RPC and JSON-RPC API is not included in your plan.' ), new HttpResponse( 200 ) );
+			$this->assertSame( ErrorCode::Auth006, $exception->error->code, $fault );
+		}
+		$plain = $this->mapper( true )->rpcFault( $this->rpcError( 'odoo.exceptions.AccessError', 'You are not allowed to create sale orders.' ), new HttpResponse( 200 ), 'sale.order', 'create' );
+		$this->assertSame( ErrorCode::Auth004, $plain->error->code, 'An ordinary rights error stays a rights error on Odoo Online.' );
+	}
+
+	/**
+	 * @return array<string,array{0:string,1:ErrorCode}>
+	 */
+	public static function sslWordings(): array {
+		return array(
+			'ssl timeout'                 => array( 'cURL error 28: SSL connection timeout', ErrorCode::Net001 ),
+			'ssl connect reset'           => array( 'cURL error 35: OpenSSL SSL_connect: Connection reset by peer in connection to erp.example.com:443', ErrorCode::Net001 ),
+			'ssl read reset'              => array( 'cURL error 56: OpenSSL SSL_read: Connection reset by peer, errno 104', ErrorCode::Net001 ),
+			'handshake timed out'         => array( 'SSL: Handshake timed out', ErrorCode::Net001 ),
+			'ssl connect error alone'     => array( 'cURL error 35: SSL connect error', ErrorCode::Net001 ),
+			'self signed'                 => array( 'cURL error 60: SSL certificate problem: self signed certificate', ErrorCode::Net003 ),
+			'issuer'                      => array( 'cURL error 60: SSL certificate problem: unable to get local issuer certificate', ErrorCode::Net003 ),
+			'expired'                     => array( 'SSL certificate problem: certificate has expired', ErrorCode::Net003 ),
+			'host name'                   => array( 'SSL: no alternative certificate subject name matches target host name \'erp.example.com\'', ErrorCode::Net003 ),
+			'peer verification'           => array( 'cURL error 51: SSL: certificate subject name does not match target host name', ErrorCode::Net003 ),
+			'the engine\'s own wording'   => array( 'certificate: the security certificate could not be checked', ErrorCode::Net003 ),
+			'the engine\'s own time-out'  => array( 'timeout: the system did not answer in time', ErrorCode::Net001 ),
+		);
+	}
+
+	/**
+	 * @dataProvider sslWordings
+	 */
+	public function test_only_a_certificate_that_fails_verification_is_net_003( string $text, ErrorCode $code ): void {
+		$exception = $this->mapper()->transportFailure( new HttpResponse( 0, '', array(), $text ) );
+		$this->assertSame( $code, $exception->error->code, $text );
+		if ( ErrorCode::Net001 === $code ) {
+			$this->assertSame( ErrorClass::Retry, $exception->error->errorClass(), $text );
+		}
+	}
+
+	public function test_the_database_name_is_taken_out_of_odoo_s_own_text(): void {
+		$mapper = new OdooErrorMapper( array( 'sk-secret-key-12345' ), false, 'acme-prod' );
+		$this->assertStringNotContainsString( 'acme-prod', $mapper->scrub( 'FATAL: database "acme-prod" is being accessed by other users' ) );
+		$this->assertStringNotContainsString( 'acme-prod', $mapper->scrub( "role 'acme-prod' dbname=acme-prod" ) );
+		$this->assertSame( 'The sale order of ACME-PROD is fine', $mapper->scrub( 'The sale order of ACME-PROD is fine' ), 'Plain words are left alone: only quoted names and dbname= are database names.' );
+
+		$sale = new OdooErrorMapper( array(), false, 'sale' );
+		$this->assertSame( 'You cannot confirm this sale order', $sale->scrub( 'You cannot confirm this sale order' ), 'A database called like an ordinary word does not eat the words.' );
+	}
+
+	public function test_the_error_for_a_missing_database_still_names_the_database(): void {
+		$mapper    = new OdooErrorMapper( array( 'sk-secret-key-12345' ), false, 'cedarstone_prod' );
+		$exception = $mapper->rpcFault( $this->rpcError( 'psycopg2.OperationalError', 'connection failed: FATAL:  database "cedarstone_prod" does not exist' ), new HttpResponse( 200 ) );
+		$this->assertSame( ErrorCode::Cfg003, $exception->error->code );
+		$this->assertSame( 'Odoo has no database called cedarstone_prod.', $mapper->withDatabase( $exception, 'cedarstone_prod' )->error->message() );
+		$this->assertStringNotContainsString( 'cedarstone_prod', $exception->error->detail, 'The log text does not repeat it.' );
+	}
+
+	public function test_a_database_error_keeps_only_its_kind_not_the_text_that_may_hold_the_host(): void {
+		$text = 'connection to server at "db-7.internal.example.net" (10.4.0.17), port 5432 failed: FATAL: password authentication failed for user "odoo_prod"';
+		foreach ( array( 'psycopg2.OperationalError', 'psycopg2.InterfaceError', 'psycopg2.errors.AdminShutdown' ) as $fault ) {
+			$exception = $this->mapper()->rpcFault( $this->rpcError( $fault, $text ), new HttpResponse( 200 ) );
+			$this->assertSame( ErrorCode::Net002, $exception->error->code, $fault );
+			$this->assertStringNotContainsString( 'db-7', $exception->error->detail, $fault );
+			$this->assertStringNotContainsString( '10.4.0.17', $exception->error->detail, $fault );
+			$this->assertStringNotContainsString( 'odoo_prod', $exception->error->detail, $fault );
+			$this->assertStringNotContainsString( 'db-7', $exception->error->message(), $fault );
+			$this->assertStringStartsWith( 'database error ', $exception->error->detail, $fault );
+		}
+	}
+
 	public function test_the_no_database_page_is_cfg_003(): void {
 		$exception = $this->mapper()->httpFailure( new HttpResponse( 404, '<p>No database is selected and the requested URL was not found in the server-wide controllers.</p>' ), null );
 		$this->assertSame( ErrorCode::Cfg003, $exception->error->code );

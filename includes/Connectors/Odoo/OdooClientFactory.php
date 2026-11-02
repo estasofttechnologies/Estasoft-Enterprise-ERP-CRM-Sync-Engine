@@ -92,7 +92,7 @@ final class OdooClientFactory {
 		$key      = $connection->secret( 'api_key' );
 		$company  = trim( (string) $connection->config( 'company', '' ) );
 		$options  = OdooOptions::fromConnection( $connection );
-		$errors   = new OdooErrorMapper( array( $key, $login ), $address->isOdooOnline() );
+		$errors   = new OdooErrorMapper( array( $key, $login ), $address->isOdooOnline(), $database );
 
 		// The key and the database name travel in request headers, so they must be plain text without spaces or line breaks.
 		if ( '' === $key || 1 === preg_match( '/[\x00-\x20\x7f]/', $key ) ) {
@@ -133,7 +133,7 @@ final class OdooClientFactory {
 		if ( ! $address instanceof OdooAddress ) {
 			return false;
 		}
-		$errors = new OdooErrorMapper( array( $connection->secret( 'api_key' ) ), $address->isOdooOnline() );
+		$errors = new OdooErrorMapper( array( $connection->secret( 'api_key' ) ), $address->isOdooOnline(), trim( (string) $connection->config( 'database', '' ) ) );
 		return ( new OdooVersionDetector( $this->http, $errors ) )->responds( $address, trim( (string) $connection->config( 'database', '' ) ) );
 	}
 
