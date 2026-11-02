@@ -53,8 +53,8 @@ abstract class Repository {
 	/**
 	 * Prepare a statement. Without arguments the statement is returned unchanged.
 	 *
-	 * @param string            $sql  Statement with %s, %d and %f placeholders.
-	 * @param array<int,mixed>  $args Arguments in order.
+	 * @param string           $sql  Statement with %s, %d and %f placeholders.
+	 * @param array<int,mixed> $args Arguments in order.
 	 */
 	protected function prepare( string $sql, array $args = array() ): string {
 		if ( array() === $args ) {
@@ -172,9 +172,9 @@ abstract class Repository {
 	/**
 	 * Placeholder for a value that may be null: the literal NULL (no argument) or the format with the value appended.
 	 *
-	 * @param mixed             $value  Value or null.
-	 * @param string            $format %s or %d.
-	 * @param array<int,mixed>  $args   Arguments collected so far (appended to).
+	 * @param mixed            $value  Value or null.
+	 * @param string           $format %s or %d.
+	 * @param array<int,mixed> $args   Arguments collected so far (appended to).
 	 */
 	protected function bind( mixed $value, string $format, array &$args ): string {
 		if ( null === $value ) {

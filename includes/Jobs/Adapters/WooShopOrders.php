@@ -116,8 +116,8 @@ final class WooShopOrders implements ShopOrders {
 				'return'       => 'ids',
 			)
 		);
-		$ids   = is_object( $result ) && isset( $result->orders ) ? (array) $result->orders : ( is_array( $result ) ? $result : array() );
-		$pages = is_object( $result ) && isset( $result->max_num_pages ) ? (int) $result->max_num_pages : 1;
+		$ids    = is_object( $result ) && isset( $result->orders ) ? (array) $result->orders : ( is_array( $result ) ? $result : array() );
+		$pages  = is_object( $result ) && isset( $result->max_num_pages ) ? (int) $result->max_num_pages : 1;
 		return array(
 			'ids'      => array_values( array_map( 'intval', $ids ) ),
 			'has_more' => $page < $pages,
@@ -279,7 +279,7 @@ final class WooShopOrders implements ShopOrders {
 				'compare' => '=',
 			);
 		}
-		$args = array(
+		$args   = array(
 			'type'       => 'shop_order',
 			'status'     => 'any',
 			'limit'      => max( 1, $perPage ),

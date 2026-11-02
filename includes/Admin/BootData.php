@@ -27,10 +27,10 @@ final class BootData {
 	public const ROUTES = array( '/', '/queue', '/invoices', '/connections', '/mapping', '/stock', '/reconciliation', '/logs', '/settings', '/setup', '/shadow' );
 
 	/**
-	 * @param NoticeFacts      $facts   Facts the notices depend on.
-	 * @param ScreenOptions    $screen  Screen Options (rows per page).
-	 * @param string           $version Plugin version.
-	 * @param string           $pluginUrl Address of the plugin folder.
+	 * @param NoticeFacts   $facts   Facts the notices depend on.
+	 * @param ScreenOptions $screen  Screen Options (rows per page).
+	 * @param string        $version Plugin version.
+	 * @param string        $pluginUrl Address of the plugin folder.
 	 */
 	public function __construct(
 		private readonly NoticeFacts $facts,
@@ -52,24 +52,24 @@ final class BootData {
 		$scheme   = (string) get_user_option( 'admin_color' );
 
 		return array(
-			'restUrl'           => rest_url( 'estasoft-sync/v1/' ),
-			'nonce'             => wp_create_nonce( 'wp_rest' ),
-			'adminUrl'          => admin_url(),
-			'pluginUrl'         => $this->pluginUrl,
-			'version'           => $this->version,
-			'capabilities'      => array(
+			'restUrl'            => rest_url( 'estasoft-sync/v1/' ),
+			'nonce'              => wp_create_nonce( 'wp_rest' ),
+			'adminUrl'           => admin_url(),
+			'pluginUrl'          => $this->pluginUrl,
+			'version'            => $this->version,
+			'capabilities'       => array(
 				'manage'    => Capabilities::userCanManage(),
 				'configure' => Capabilities::userCanConfigure(),
 			),
-			'storeTimezone'     => wp_timezone_string(),
-			'currency'          => $currency,
-			'currencyDecimals'  => Money::exponent( $currency ),
-			'locale'            => determine_locale(),
+			'storeTimezone'      => wp_timezone_string(),
+			'currency'           => $currency,
+			'currencyDecimals'   => Money::exponent( $currency ),
+			'locale'             => determine_locale(),
 			'wpAdminColorScheme' => '' === $scheme ? 'fresh' : $scheme,
-			'routes'            => self::ROUTES,
-			'notices'           => ( new NoticeRules() )->forApp( $facts ),
-			'encryptionKeyLine' => $facts['key_missing'] ? (string) $facts['key_line'] : null,
-			'perPage'           => $this->screen->perPage( $userId ),
+			'routes'             => self::ROUTES,
+			'notices'            => ( new NoticeRules() )->forApp( $facts ),
+			'encryptionKeyLine'  => $facts['key_missing'] ? (string) $facts['key_line'] : null,
+			'perPage'            => $this->screen->perPage( $userId ),
 		);
 	}
 }

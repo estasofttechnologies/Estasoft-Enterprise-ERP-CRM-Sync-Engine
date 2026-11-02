@@ -122,21 +122,21 @@ final class ProductMatchService {
 	/**
 	 * A `ProductMatch` for one product.
 	 *
-	 * @param int                                           $connectionId Connection.
-	 * @param array{id:int,sku:string,name:string}          $product      Product.
-	 * @param array<string,int>                             $blocked      Failed orders by SKU.
+	 * @param int                                  $connectionId Connection.
+	 * @param array{id:int,sku:string,name:string} $product      Product.
+	 * @param array<string,int>                    $blocked      Failed orders by SKU.
 	 * @return array<string,mixed>
 	 */
 	private function shape( int $connectionId, array $product, array $blocked ): array {
 		$link = $this->idMap->get( $connectionId, SkuMatcher::ENTITY, (string) $product['id'] );
 		return array(
-			'product_id'    => $product['id'],
-			'sku'           => $product['sku'],
-			'name'          => $product['name'],
-			'status'        => $this->matcher->status( $connectionId, $product['id'], $product['sku'] ),
-			'external_id'   => $link['external_id'] ?? null,
-			'external_ref'  => $link['external_ref'] ?? null,
-			'external_name' => null,
+			'product_id'     => $product['id'],
+			'sku'            => $product['sku'],
+			'name'           => $product['name'],
+			'status'         => $this->matcher->status( $connectionId, $product['id'], $product['sku'] ),
+			'external_id'    => $link['external_id'] ?? null,
+			'external_ref'   => $link['external_ref'] ?? null,
+			'external_name'  => null,
 			'orders_blocked' => $blocked[ strtolower( $product['sku'] ) ] ?? 0,
 		);
 	}

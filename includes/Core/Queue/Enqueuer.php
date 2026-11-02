@@ -43,12 +43,12 @@ use Estasoft\SyncEngine\Domain\ItemMode;
 final class Enqueuer {
 
 	/**
-	 * @param ConnectionRepository  $connections Connections.
-	 * @param QueueRepository       $queue       Queue.
-	 * @param IdempotencyRepository $idempotency Idempotency ledger.
-	 * @param OnboardingState       $onboarding  Shadow window.
-	 * @param Logger                $logger      Log.
-	 * @param Clock                 $clock       Time source.
+	 * @param ConnectionRepository         $connections Connections.
+	 * @param QueueRepository              $queue       Queue.
+	 * @param IdempotencyRepository        $idempotency Idempotency ledger.
+	 * @param OnboardingState              $onboarding  Shadow window.
+	 * @param Logger                       $logger      Log.
+	 * @param Clock                        $clock       Time source.
 	 * @param \Closure():ConnectorRegistry $connectors Returns the connector registry.
 	 */
 	public function __construct(
@@ -125,11 +125,11 @@ final class Enqueuer {
 		}
 
 		// Everything that can be slow or run other people's code is done before the unit starts, so the unit is short.
-		$mode       = $this->onboarding->isShadowActive( $this->clock->now() ) ? ItemMode::Shadow : ItemMode::Live;
-		$display    = $this->display( $type, $entityId, $event, $meta );
-		$partition  = $this->partition( $type, $entityId, $meta );
-		$priority   = isset( $meta['priority'] ) ? (int) $meta['priority'] : QueueRepository::DEFAULT_PRIORITY;
-		$tries      = count( (array) ( $connection->settings['retry_delays_seconds'] ?? ConnectionSettings::DEFAULT_DELAYS ) ) + 1;
+		$mode      = $this->onboarding->isShadowActive( $this->clock->now() ) ? ItemMode::Shadow : ItemMode::Live;
+		$display   = $this->display( $type, $entityId, $event, $meta );
+		$partition = $this->partition( $type, $entityId, $meta );
+		$priority  = isset( $meta['priority'] ) ? (int) $meta['priority'] : QueueRepository::DEFAULT_PRIORITY;
+		$tries     = count( (array) ( $connection->settings['retry_delays_seconds'] ?? ConnectionSettings::DEFAULT_DELAYS ) ) + 1;
 
 		// The ledger key, the queue row and the link between them are one unit: all kept or all dropped. Inside the order's
 		// own transaction this is a savepoint in it, and it commits and rolls back with the order.

@@ -186,14 +186,14 @@ final class SupportReportBuilder {
 	 * @return array<int,string>
 	 */
 	private function readinessLines(): array {
-		$last   = $this->readiness->last();
-		$lines  = array( __( 'Readiness', 'estasoft-erp-crm-sync-engine' ) );
+		$last  = $this->readiness->last();
+		$lines = array( __( 'Readiness', 'estasoft-erp-crm-sync-engine' ) );
 		if ( array() === $last['checks'] ) {
 			$lines[] = '  ' . __( 'Not checked yet', 'estasoft-erp-crm-sync-engine' );
 			$lines[] = '';
 			return $lines;
 		}
-		$counts = array_count_values( array_column( $last['checks'], 'status' ) );
+		$counts  = array_count_values( array_column( $last['checks'], 'status' ) );
 		$lines[] = '  ' . sprintf(
 			/* translators: 1: passed, 2: worth fixing, 3: needs fixing. */
 			__( '%1$d passed, %2$d worth fixing, %3$d need fixing', 'estasoft-erp-crm-sync-engine' ),

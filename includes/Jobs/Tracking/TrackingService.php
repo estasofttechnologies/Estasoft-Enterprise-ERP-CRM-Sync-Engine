@@ -318,8 +318,8 @@ final class TrackingService {
 	 * @param \DateTimeImmutable $at           Moment.
 	 */
 	private function saveCursor( int $connectionId, \DateTimeImmutable $at ): void {
-		$cursors = $this->options->get( self::CURSOR, array() );
-		$cursors = is_array( $cursors ) ? $cursors : array();
+		$cursors                           = $this->options->get( self::CURSOR, array() );
+		$cursors                           = is_array( $cursors ) ? $cursors : array();
 		$cursors[ (string) $connectionId ] = $at->setTimezone( new \DateTimeZone( 'UTC' ) )->format( Time::ISO );
 		$this->options->set( self::CURSOR, $cursors );
 	}

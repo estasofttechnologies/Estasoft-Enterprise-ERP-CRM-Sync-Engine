@@ -45,8 +45,8 @@ final class Menu {
 	private array $onLoad = array();
 
 	/**
-	 * @param Assets           $assets      Knows whether the compiled app exists.
-	 * @param \Closure():int   $failedCount Number of failed orders (cached 60 seconds by the dashboard service).
+	 * @param Assets         $assets      Knows whether the compiled app exists.
+	 * @param \Closure():int $failedCount Number of failed orders (cached 60 seconds by the dashboard service).
 	 */
 	public function __construct(
 		private readonly Assets $assets,

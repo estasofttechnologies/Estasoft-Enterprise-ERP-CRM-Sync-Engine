@@ -84,18 +84,18 @@ final class ItemProcessor {
 	private ?string $token = null;
 
 	/**
-	 * @param ConnectionRepository  $connections Connections.
-	 * @param QueueRepository       $queue       Queue.
-	 * @param IdMapRepository       $idMap       Id map.
-	 * @param StateRepository       $state       Data hashes.
-	 * @param IdempotencyRepository $idempotency Idempotency ledger.
-	 * @param Logger                $logger      Log.
-	 * @param RetryPolicy           $retry       Retry schedule.
-	 * @param ErrorClassifier       $classifier  Error classification.
-	 * @param CircuitBreaker        $breaker     Circuit breaker.
-	 * @param PauseController       $pause       Pause control.
-	 * @param Clock                 $clock       Time source.
-	 * @param \Closure():ConnectorRegistry $connectors Returns the connector registry.
+	 * @param ConnectionRepository                      $connections Connections.
+	 * @param QueueRepository                           $queue       Queue.
+	 * @param IdMapRepository                           $idMap       Id map.
+	 * @param StateRepository                           $state       Data hashes.
+	 * @param IdempotencyRepository                     $idempotency Idempotency ledger.
+	 * @param Logger                                    $logger      Log.
+	 * @param RetryPolicy                               $retry       Retry schedule.
+	 * @param ErrorClassifier                           $classifier  Error classification.
+	 * @param CircuitBreaker                            $breaker     Circuit breaker.
+	 * @param PauseController                           $pause       Pause control.
+	 * @param Clock                                     $clock       Time source.
+	 * @param \Closure():ConnectorRegistry              $connectors Returns the connector registry.
 	 * @param \Closure():(PayloadBuilderInterface|null) $payloadBuilder Returns the payload builder, or null when the mapping module is absent.
 	 */
 	public function __construct(
@@ -304,7 +304,13 @@ final class ItemProcessor {
 		if ( $result->isSuccess() && null !== $result->ref ) {
 			return $this->succeed( $item, $connection, $connector, $result->ref, $result->alreadyExisted, $hash, $payload, $built->mappingVersion, $ms, $built->sensitivePaths );
 		}
-		$error = $result->error ?? new ConnectorError( ErrorCode::Val002, array( 'field' => 'response', 'reason' => __( 'The connector returned nothing.', 'estasoft-erp-crm-sync-engine' ) ) );
+		$error = $result->error ?? new ConnectorError(
+			ErrorCode::Val002,
+			array(
+				'field'  => 'response',
+				'reason' => __( 'The connector returned nothing.', 'estasoft-erp-crm-sync-engine' ),
+			)
+		);
 		return $this->handleFailure( $item, $connection, $connector, $error, $ms, $payload, $built->mappingVersion, true, $built->sensitivePaths );
 	}
 
@@ -383,7 +389,7 @@ final class ItemProcessor {
 		}
 		$this->idempotency->markDone( $item->idempotencyKey, $ref->id );
 		$duplicate = str_replace( array( '{system}', '{ref}' ), array( $connector->label(), $ref->ref ), ErrorCode::Dup001->template() );
-		$written = $this->queue->markSynced( $item->id, $ref->id, $ref->ref, $ref->url, $mappingVersion, $alreadyExisted ? ErrorCode::Dup001->value : null, true, $alreadyExisted ? $duplicate : null, $this->token );
+		$written   = $this->queue->markSynced( $item->id, $ref->id, $ref->ref, $ref->url, $mappingVersion, $alreadyExisted ? ErrorCode::Dup001->value : null, true, $alreadyExisted ? $duplicate : null, $this->token );
 		$this->breaker->recordSuccess( $connection, $ms );
 		if ( ! $written ) {
 			// The row is not ours to write any more, but the system did accept the record with these warnings.

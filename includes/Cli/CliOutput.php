@@ -48,9 +48,9 @@ interface CliOutput {
 	/**
 	 * Print rows as a table, CSV, JSON or YAML.
 	 *
-	 * @param string                          $format table, csv, json, yaml or count.
-	 * @param array<int,array<string,mixed>>  $rows   Rows.
-	 * @param array<int,string>               $fields Columns, in order.
+	 * @param string                         $format table, csv, json, yaml or count.
+	 * @param array<int,array<string,mixed>> $rows   Rows.
+	 * @param array<int,string>              $fields Columns, in order.
 	 */
 	public function items( string $format, array $rows, array $fields ): void;
 

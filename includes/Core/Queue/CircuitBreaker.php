@@ -33,10 +33,10 @@ use Estasoft\SyncEngine\Domain\ErrorCode;
 final class CircuitBreaker {
 
 	/**
-	 * @param ConnectionRepository $connections Connections.
+	 * @param ConnectionRepository         $connections Connections.
 	 * @param \Closure():ConnectorRegistry $registry Returns the ConnectorRegistry (resolved late so add-ons are registered).
-	 * @param Logger               $logger      Log.
-	 * @param Clock                $clock       Time source.
+	 * @param Logger                       $logger      Log.
+	 * @param Clock                        $clock       Time source.
 	 */
 	public function __construct(
 		private readonly ConnectionRepository $connections,

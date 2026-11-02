@@ -61,7 +61,7 @@ final class Help {
 	 */
 	public function tabs(): array {
 		return array(
-			'queue'    => array(
+			'queue'   => array(
 				'title'   => __( 'The queue', 'estasoft-erp-crm-sync-engine' ),
 				'content' => $this->paragraphs(
 					array(
@@ -71,7 +71,7 @@ final class Help {
 					)
 				),
 			),
-			'states'   => array(
+			'states'  => array(
 				'title'   => __( 'Sync states', 'estasoft-erp-crm-sync-engine' ),
 				'content' => $this->definitions(
 					array(
@@ -84,7 +84,7 @@ final class Help {
 					)
 				),
 			),
-			'fix'      => array(
+			'fix'     => array(
 				'title'   => __( 'Fix a failed order', 'estasoft-erp-crm-sync-engine' ),
 				'content' => $this->paragraphs(
 					array(
@@ -94,7 +94,7 @@ final class Help {
 					)
 				),
 			),
-			'retries'  => array(
+			'retries' => array(
 				'title'   => __( 'Retries and pausing', 'estasoft-erp-crm-sync-engine' ),
 				'content' => $this->paragraphs(
 					array(
@@ -104,7 +104,7 @@ final class Help {
 					)
 				),
 			),
-			'support'  => array(
+			'support' => array(
 				'title'   => __( 'Getting help', 'estasoft-erp-crm-sync-engine' ),
 				'content' => $this->paragraphs(
 					array(
@@ -121,10 +121,10 @@ final class Help {
 	 */
 	public function sidebar(): string {
 		$links = array(
-			self::REPOSITORY_URL            => __( 'Read the documentation', 'estasoft-erp-crm-sync-engine' ),
-			self::FORUM_URL                 => __( 'Ask in the support forum', 'estasoft-erp-crm-sync-engine' ),
+			self::REPOSITORY_URL             => __( 'Read the documentation', 'estasoft-erp-crm-sync-engine' ),
+			self::FORUM_URL                  => __( 'Ask in the support forum', 'estasoft-erp-crm-sync-engine' ),
 			self::REPOSITORY_URL . '/issues' => __( 'Open an issue on GitHub', 'estasoft-erp-crm-sync-engine' ),
-			$this->urls->route( '/logs' )   => __( 'Copy a support report', 'estasoft-erp-crm-sync-engine' ),
+			$this->urls->route( '/logs' )    => __( 'Copy a support report', 'estasoft-erp-crm-sync-engine' ),
 		);
 		$html  = '<p><strong>' . esc_html__( 'For more help', 'estasoft-erp-crm-sync-engine' ) . '</strong></p>';
 		foreach ( $links as $url => $label ) {

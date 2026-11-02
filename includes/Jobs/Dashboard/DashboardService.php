@@ -50,16 +50,16 @@ final class DashboardService {
 	/**
 	 * Set up with what it depends on.
 	 *
-	 * @param QueueRepository               $queue       Queue counts.
-	 * @param ConnectionRepository          $connections Connections.
-	 * @param \Closure():ConnectorRegistry  $registry    Returns the connector registry.
-	 * @param LogRepository                 $logs        Latest events.
-	 * @param OnboardingState               $onboarding  Setup and shadow state.
-	 * @param SecretBox                     $box         Encryption key.
-	 * @param ShopEnvironment               $environment Time zone, currency, cron mode.
-	 * @param ShadowService                 $shadow      Shadow summary.
-	 * @param Transients                    $transients  The failed-count cache.
-	 * @param Clock                         $clock       Time source.
+	 * @param QueueRepository              $queue       Queue counts.
+	 * @param ConnectionRepository         $connections Connections.
+	 * @param \Closure():ConnectorRegistry $registry    Returns the connector registry.
+	 * @param LogRepository                $logs        Latest events.
+	 * @param OnboardingState              $onboarding  Setup and shadow state.
+	 * @param SecretBox                    $box         Encryption key.
+	 * @param ShopEnvironment              $environment Time zone, currency, cron mode.
+	 * @param ShadowService                $shadow      Shadow summary.
+	 * @param Transients                   $transients  The failed-count cache.
+	 * @param Clock                        $clock       Time source.
 	 */
 	public function __construct(
 		private readonly QueueRepository $queue,
@@ -88,23 +88,23 @@ final class DashboardService {
 		$oldest     = $this->queue->oldestWaiting();
 		$shadow     = $this->onboarding->isShadowActive( $now );
 		return array(
-			'mode'                  => $this->mode( $connection, $shadow, array_sum( $counts ) ),
-			'now'                   => $now->setTimezone( new \DateTimeZone( 'UTC' ) )->format( Time::ISO ),
-			'store_timezone'        => $this->environment->timezone()->getName(),
-			'currency'              => $this->environment->currency(),
-			'synced_today'          => $this->queue->syncedToday( $connectionId ),
-			'waiting'               => $counts['queued'] + $counts['syncing'] + $counts['retrying'],
-			'needs_attention'       => $counts['failed'],
-			'skipped'               => $counts['skipped'],
-			'oldest_waiting_at'     => $oldest['at'] ?? null,
-			'oldest_waiting_order'  => $oldest['order'] ?? null,
-			'by_state'              => $counts,
-			'hourly'                => $this->queue->hourly(),
-			'events'                => $this->logs->latest( self::EVENTS ),
-			'connection'            => $connection,
-			'shadow'                => $shadow ? $this->shadow->info( $connectionId ) : null,
+			'mode'                   => $this->mode( $connection, $shadow, array_sum( $counts ) ),
+			'now'                    => $now->setTimezone( new \DateTimeZone( 'UTC' ) )->format( Time::ISO ),
+			'store_timezone'         => $this->environment->timezone()->getName(),
+			'currency'               => $this->environment->currency(),
+			'synced_today'           => $this->queue->syncedToday( $connectionId ),
+			'waiting'                => $counts['queued'] + $counts['syncing'] + $counts['retrying'],
+			'needs_attention'        => $counts['failed'],
+			'skipped'                => $counts['skipped'],
+			'oldest_waiting_at'      => $oldest['at'] ?? null,
+			'oldest_waiting_order'   => $oldest['order'] ?? null,
+			'by_state'               => $counts,
+			'hourly'                 => $this->queue->hourly(),
+			'events'                 => $this->logs->latest( self::EVENTS ),
+			'connection'             => $connection,
+			'shadow'                 => $shadow ? $this->shadow->info( $connectionId ) : null,
 			'encryption_key_missing' => ! $this->box->keyAvailable(),
-			'cron_on_visits'        => $this->environment->cronRunsOnVisits(),
+			'cron_on_visits'         => $this->environment->cronRunsOnVisits(),
 		);
 	}
 

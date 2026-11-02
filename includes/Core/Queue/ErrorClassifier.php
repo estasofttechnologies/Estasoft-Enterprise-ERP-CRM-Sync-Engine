@@ -170,7 +170,13 @@ final class ErrorClassifier {
 	 */
 	public function cause( ConnectorError $error ): string {
 		$context = $error->context;
-		foreach ( array( 'sku' => 'SKU', 'field' => 'Field', 'type' => 'Mapping', 'action' => 'Access', 'name' => 'Database' ) as $key => $label ) {
+		foreach ( array(
+			'sku'    => 'SKU',
+			'field'  => 'Field',
+			'type'   => 'Mapping',
+			'action' => 'Access',
+			'name'   => 'Database',
+		) as $key => $label ) {
 			if ( isset( $context[ $key ] ) && is_scalar( $context[ $key ] ) && '' !== (string) $context[ $key ] ) {
 				return $label . ' ' . mb_substr( (string) $context[ $key ], 0, 120 );
 			}

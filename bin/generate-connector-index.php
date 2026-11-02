@@ -69,8 +69,13 @@ function estasoft_generate_connector_index( string $root, ?array &$problems = nu
 	ksort( $map );
 
 	$lines = '';
+	$width = 0;
+	foreach ( array_keys( $map ) as $id ) {
+		$width = max( $width, strlen( (string) $id ) );
+	}
 	foreach ( $map as $id => $class ) {
-		$lines .= "\t'" . $id . "' => \\" . $class . "::class,\n";
+		// Arrows are aligned, as the WordPress coding standard requires for multi-line arrays.
+		$lines .= "\t'" . $id . "'" . str_repeat( ' ', $width - strlen( (string) $id ) ) . ' => \\' . $class . "::class,\n";
 	}
 	return <<<PHP
 <?php

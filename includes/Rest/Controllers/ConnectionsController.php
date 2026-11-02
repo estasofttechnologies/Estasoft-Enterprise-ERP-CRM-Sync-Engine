@@ -64,7 +64,13 @@ final class ConnectionsController extends BaseController {
 			'POST',
 			self::CONFIGURE,
 			$this->update( ... ),
-			array_merge( array( 'id' => self::idArg(), 'connector' => $connector ), $input )
+			array_merge(
+				array(
+					'id'        => self::idArg(),
+					'connector' => $connector,
+				),
+				$input
+			)
 		);
 		$this->add( '/connections/(?P<id>\d+)', 'DELETE', self::CONFIGURE, $this->disconnect( ... ), array( 'id' => self::idArg() ) );
 		$this->add( '/connections/(?P<id>\d+)/test', 'POST', self::CONFIGURE, $this->test( ... ), array( 'id' => self::idArg() ), false );

@@ -299,9 +299,9 @@ final class InvoiceService {
 			$this->state->mergeExtra( $connectionId, EntityType::Order, (string) $orderId, array( 'invoice_checked_at' => $nowIso ) );
 			return;
 		}
-		$number = trim( (string) ( $answer['number'] ?? '' ) );
-		$status = InvoiceStatus::from( (string) ( $answer['authority_status'] ?? '' ), $number );
-		$facts  = array(
+		$number  = trim( (string) ( $answer['number'] ?? '' ) );
+		$status  = InvoiceStatus::from( (string) ( $answer['authority_status'] ?? '' ), $number );
+		$facts   = array(
 			'number'           => $number,
 			'status'           => $status,
 			'authority_status' => mb_substr( trim( (string) ( $answer['authority_status'] ?? '' ) ), 0, 190 ),

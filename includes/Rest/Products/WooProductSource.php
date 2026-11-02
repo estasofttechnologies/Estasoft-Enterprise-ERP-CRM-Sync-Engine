@@ -58,7 +58,7 @@ final class WooProductSource implements ProductSource {
 				),
 			)
 		);
-		$items = array();
+		$items  = array();
 		foreach ( is_object( $result ) && isset( $result->products ) ? (array) $result->products : array() as $product ) {
 			$items[] = $this->shape( $product );
 		}

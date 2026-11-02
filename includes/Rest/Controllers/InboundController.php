@@ -40,7 +40,7 @@ final class InboundController extends BaseController {
 	public function receive( \WP_REST_Request $request ): array {
 		/** @var InboundHandler $inbound */
 		$inbound = $this->service( JobServices::INBOUND );
-		$result = $inbound->handle(
+		$result  = $inbound->handle(
 			(int) $request['connection'],
 			$request->get_body(),
 			array(

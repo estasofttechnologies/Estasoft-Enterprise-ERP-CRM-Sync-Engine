@@ -501,17 +501,17 @@ final class ReconService {
 	/**
 	 * Store one difference, and queue the order again when it is missing and automatic repair is on.
 	 *
-	 * @param array<string,mixed> $progress   Place of the run (updated).
-	 * @param array<string,mixed> $order      Order summary.
+	 * @param array<string,mixed>  $progress   Place of the run (updated).
+	 * @param array<string,mixed>  $order      Order summary.
 	 * @param array<string,string> $difference type, wc_value, system_value.
-	 * @param bool                $autoRepair Whether orders missing in the system are queued again by themselves.
+	 * @param bool                 $autoRepair Whether orders missing in the system are queued again by themselves.
 	 */
 	private function record( array &$progress, array $order, array $difference, bool $autoRepair ): void {
 		++$progress['differences'];
 		$key = $order['id'] . ':' . $difference['type'];
 		$id  = $progress['known'][ $key ] ?? null;
 		if ( null === $id ) {
-			$id                      = $this->recon->addDiff( (int) $progress['run_id'], (int) $progress['connection_id'], (int) $order['id'], (string) $order['label'], $difference['type'], $difference['wc_value'], $difference['system_value'] );
+			$id                        = $this->recon->addDiff( (int) $progress['run_id'], (int) $progress['connection_id'], (int) $order['id'], (string) $order['label'], $difference['type'], $difference['wc_value'], $difference['system_value'] );
 			$progress['known'][ $key ] = $id;
 		}
 		if ( $autoRepair && 'missing_in_system' === $difference['type'] && $id > 0 ) {

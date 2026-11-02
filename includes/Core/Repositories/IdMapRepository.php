@@ -28,9 +28,9 @@ final class IdMapRepository extends Repository {
 	/**
 	 * Find the link for a WooCommerce object.
 	 *
-	 * @param int                $connectionId Connection.
-	 * @param EntityType|string  $type         Entity type, or `product`.
-	 * @param string             $wcId         WooCommerce id.
+	 * @param int               $connectionId Connection.
+	 * @param EntityType|string $type         Entity type, or `product`.
+	 * @param string            $wcId         WooCommerce id.
 	 * @return array{external_id:string,external_ref:?string,external_url:?string,sku:?string,is_override:bool}|null
 	 */
 	public function get( int $connectionId, EntityType|string $type, string $wcId ): ?array {
@@ -44,14 +44,14 @@ final class IdMapRepository extends Repository {
 	/**
 	 * Create or replace a link. A link marked as an override is kept unless the new one is an override too.
 	 *
-	 * @param int                $connectionId Connection.
-	 * @param EntityType|string  $type         Entity type, or `product`.
-	 * @param string             $wcId         WooCommerce id.
-	 * @param string             $externalId   The system's id.
-	 * @param string|null        $externalRef  The system's human number.
-	 * @param string|null        $externalUrl  Link to the record.
-	 * @param string|null        $sku          SKU, for products.
-	 * @param bool               $isOverride   True when a person chose this link.
+	 * @param int               $connectionId Connection.
+	 * @param EntityType|string $type         Entity type, or `product`.
+	 * @param string            $wcId         WooCommerce id.
+	 * @param string            $externalId   The system's id.
+	 * @param string|null       $externalRef  The system's human number.
+	 * @param string|null       $externalUrl  Link to the record.
+	 * @param string|null       $sku          SKU, for products.
+	 * @param bool              $isOverride   True when a person chose this link.
 	 * @return bool Whether the link was written (false when an override protected the existing one).
 	 */
 	public function link( int $connectionId, EntityType|string $type, string $wcId, string $externalId, ?string $externalRef = null, ?string $externalUrl = null, ?string $sku = null, bool $isOverride = false ): bool {
@@ -77,9 +77,9 @@ final class IdMapRepository extends Repository {
 	/**
 	 * Remove a link (for example when a person unmaps a product).
 	 *
-	 * @param int                $connectionId Connection.
-	 * @param EntityType|string  $type         Entity type, or `product`.
-	 * @param string             $wcId         WooCommerce id.
+	 * @param int               $connectionId Connection.
+	 * @param EntityType|string $type         Entity type, or `product`.
+	 * @param string            $wcId         WooCommerce id.
 	 */
 	public function forget( int $connectionId, EntityType|string $type, string $wcId ): void {
 		$this->run(
@@ -106,9 +106,9 @@ final class IdMapRepository extends Repository {
 	/**
 	 * Find the WooCommerce object linked to a system id.
 	 *
-	 * @param int                $connectionId Connection.
-	 * @param EntityType|string  $type         Entity type, or `product`.
-	 * @param string             $externalId   The system's id.
+	 * @param int               $connectionId Connection.
+	 * @param EntityType|string $type         Entity type, or `product`.
+	 * @param string            $externalId   The system's id.
 	 * @return string|null The WooCommerce id.
 	 */
 	public function findWcId( int $connectionId, EntityType|string $type, string $externalId ): ?string {

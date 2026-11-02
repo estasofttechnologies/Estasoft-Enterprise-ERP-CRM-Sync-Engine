@@ -387,9 +387,9 @@ final class Settings {
 	/**
 	 * Value must be one of a list of strings.
 	 *
-	 * @param mixed              $value   Candidate.
-	 * @param array<int,string>  $allowed Allowed values.
-	 * @param string             $message Message when it is not.
+	 * @param mixed             $value   Candidate.
+	 * @param array<int,string> $allowed Allowed values.
+	 * @param string            $message Message when it is not.
 	 * @return array{value:mixed,error:?string}
 	 */
 	private function oneOf( mixed $value, array $allowed, string $message ): array {
@@ -408,9 +408,9 @@ final class Settings {
 	/**
 	 * Value must be one of a list of whole numbers.
 	 *
-	 * @param mixed             $value   Candidate (int or digits).
-	 * @param array<int,int>    $allowed Allowed values.
-	 * @param string            $message Message when it is not.
+	 * @param mixed          $value   Candidate (int or digits).
+	 * @param array<int,int> $allowed Allowed values.
+	 * @param string         $message Message when it is not.
 	 * @return array{value:mixed,error:?string}
 	 */
 	private function oneOfInt( mixed $value, array $allowed, string $message ): array {

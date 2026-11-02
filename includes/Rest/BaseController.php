@@ -111,13 +111,13 @@ abstract class BaseController {
 	/**
 	 * Register one route.
 	 *
-	 * @param string               $route       Route pattern under the namespace, for example `/queue/(?P<id>\d+)`.
-	 * @param string               $method      GET, POST, PUT or DELETE.
-	 * @param string               $level       MANAGE, CONFIGURE or SIGNED.
-	 * @param callable             $handler     Receives the request, returns an array or a WP_REST_Response.
-	 * @param array<string,mixed>  $args        Argument schemas.
-	 * @param bool                 $idempotent  Whether a repeated Idempotency-Key replays the first answer (state-changing routes only).
-	 * @param \Closure|null        $permission  Own permission check, for the one route that cannot use the login cookie (the sign-in callback).
+	 * @param string              $route       Route pattern under the namespace, for example `/queue/(?P<id>\d+)`.
+	 * @param string              $method      GET, POST, PUT or DELETE.
+	 * @param string              $level       MANAGE, CONFIGURE or SIGNED.
+	 * @param callable            $handler     Receives the request, returns an array or a WP_REST_Response.
+	 * @param array<string,mixed> $args        Argument schemas.
+	 * @param bool                $idempotent  Whether a repeated Idempotency-Key replays the first answer (state-changing routes only).
+	 * @param \Closure|null       $permission  Own permission check, for the one route that cannot use the login cookie (the sign-in callback).
 	 */
 	protected function add( string $route, string $method, string $level, callable $handler, array $args = array(), bool $idempotent = true, ?\Closure $permission = null ): void {
 		$this->registered[ $method . ' ' . $route ] = $level;

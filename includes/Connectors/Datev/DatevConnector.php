@@ -251,8 +251,8 @@ final class DatevConnector extends LedgerExportConnector {
 		$text   = static fn( string $value ): string => '' === $value ? '' : $writer->field( $value, true );
 		$name   = Utf8::cut( 'WooCommerce ' . substr( $from, 0, 7 ), 30 );
 		$by     = SafeText::fit( (string) ( $settings['by'] ?? '' ), 25 )['text'];
-		$when = $this->deps->clock->now()->setTimezone( new \DateTimeZone( 'UTC' ) )->format( 'YmdHis' ) . '000';
-		$cols = array(
+		$when   = $this->deps->clock->now()->setTimezone( new \DateTimeZone( 'UTC' ) )->format( 'YmdHis' ) . '000';
+		$cols   = array(
 			'"EXTF"',
 			'700',
 			'21',

@@ -17,13 +17,13 @@ defined( 'ABSPATH' ) || exit;
 final class TestResult {
 
 	/**
-	 * @param bool                $ok          True when the connection works and nothing blocks syncing.
-	 * @param string              $version     System version, for example Odoo 18.0.
-	 * @param string              $company     Company name.
+	 * @param bool                                    $ok          True when the connection works and nothing blocks syncing.
+	 * @param string                                  $version     System version, for example Odoo 18.0.
+	 * @param string                                  $company     Company name.
 	 * @param array<int,array{id:string,name:string}> $warehouses Warehouses found.
-	 * @param array<string,bool>  $permissions Permission name => allowed (for example create_sale_orders).
-	 * @param ConnectorError|null $error       The failure when ok is false.
-	 * @param array<string,mixed> $detected    Facts to store on the connection: transport, version number, product count.
+	 * @param array<string,bool>                      $permissions Permission name => allowed (for example create_sale_orders).
+	 * @param ConnectorError|null                     $error       The failure when ok is false.
+	 * @param array<string,mixed>                     $detected    Facts to store on the connection: transport, version number, product count.
 	 */
 	public function __construct(
 		public readonly bool $ok,

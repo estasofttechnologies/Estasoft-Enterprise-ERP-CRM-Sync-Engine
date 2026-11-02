@@ -80,8 +80,8 @@ final class WooShopCustomers implements ShopCustomers {
 	 * @return array{total:int,items:array<int,array{id:int,name:string,state:string,country:string}>}
 	 */
 	public function withFreeTextState( int $limit ): array {
-		$found  = array();
-		$cache  = array();
+		$found = array();
+		$cache = array();
 		foreach ( ( $this->customers )( self::MAX_USERS ) as $customer ) {
 			if ( '' === $customer['state'] || '' === $customer['country'] ) {
 				continue;

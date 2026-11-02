@@ -80,7 +80,7 @@ final class Worker {
 		?ClaimPlanner $planner = null
 	) {
 		$this->planner = $planner ?? new ClaimPlanner( $queue, $connections );
-		$this->sleep = $sleep ?? static function ( float $seconds ): void {
+		$this->sleep   = $sleep ?? static function ( float $seconds ): void {
 			usleep( (int) round( $seconds * 1000000 ) );
 		};
 	}

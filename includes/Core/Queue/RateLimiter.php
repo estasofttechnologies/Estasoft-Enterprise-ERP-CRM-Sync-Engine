@@ -67,9 +67,9 @@ final class RateLimiter {
 	private function reserve( string $key, float $perSecond ): float {
 		$interval = 1.0 / max( 0.01, $perSecond );
 		for ( $i = 0; $i < self::RETRIES; ++$i ) {
-			$now    = (float) $this->clock->now()->format( 'U.u' );
-			$next   = $this->store->get( $key );
-			$start  = max( $next ?? $now, $now );
+			$now   = (float) $this->clock->now()->format( 'U.u' );
+			$next  = $this->store->get( $key );
+			$start = max( $next ?? $now, $now );
 			if ( $this->store->compareAndSet( $key, $next, $start + $interval ) ) {
 				return max( 0.0, $start - $now );
 			}
