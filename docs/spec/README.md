@@ -25,19 +25,26 @@ mapping rule model, the canonical order model, queue rules). It follows the orde
 
 What the later documents replaced, so nobody builds from the old text: the status words Coming next, Planned and
 Community and the "about 8 official connectors" cap (decisions), section 3 (phases and connector scope), ONB-5
-(status words) and the connector contract and error catalog sections of the Phase 1 spec (30 codes now).
+(status words) and the connector contract and error catalog sections of the Phase 1 spec (33 codes now).
 
 ## Documents
 
 | Document | What it is |
 | --- | --- |
-| [phase1-spec.md](phase1-spec.md) | Phase 1 specification. **Not yet in the repository**, see the note below. |
-| [review-2-changes.md](review-2-changes.md) | Findings of the full design review, what was added and fixed, the spec changes it implies, and the backlog. **Not yet in the repository.** |
+| [phase1-spec.md](phase1-spec.md) | Phase 1 specification (copy of the project document). |
+| [review-2-changes.md](review-2-changes.md) | Findings of the full design review, what was added and fixed, the spec changes it implies, and the backlog. **|
 | [scope-update.md](scope-update.md) | All 34 systems are official connectors; what the vendor research changed. |
 | [connection-methods-spec.md](connection-methods-spec.md) | Connection methods, credentials, export mode, relay decision, WordPress.org checklist. |
-| [../DECISIONS.md](../DECISIONS.md) | Design decisions, identifiers, palette and brand mark. **Not yet in the repository.** |
+| [../DECISIONS.md](../DECISIONS.md) | Design decisions, identifiers, palette and brand mark. |
 | [../ARCHITECTURE.md](../ARCHITECTURE.md) | Code layout, seams, core services, mapping rule model, queue rules, conventions. |
-| [../error-catalog.md](../error-catalog.md) | The thirty `SYNC-...` error codes: class, message, what the person does, retries. |
+| [../core-services.md](../core-services.md) | Container keys, repositories, queue services, settings, logging, crypto, lifecycle and hooks of the engine core. |
+| [../mapping-engine.md](../mapping-engine.md) | The rule model, the fixed transform library, tax and SKU matching, previews and versions. |
+| [../jobs.md](../jobs.md) | Background jobs: stock, tracking, invoices, reconciliation, shadow mode, notifications, readiness, support report, settings export and import. |
+| [../rest-api.md](../rest-api.md) | Every REST route: capability, parameters, response, error codes. |
+| [../cli.md](../cli.md) | The `wp estasoft-sync` commands. |
+| [../admin-app.md](../admin-app.md) | The React admin app: structure, mock development build, how to add a screen. |
+| [../connectors/odoo.md](../connectors/odoo.md) | The Odoo connector: verified API facts with sources, transports, field mapping, smoke test. |
+| [../error-catalog.md](../error-catalog.md) | The thirty-three `SYNC-...` error codes: class, message, what the person does, retries. |
 | [../design/uiux-status.md](../design/uiux-status.md) | State of the UI/UX design: direction, boards, what was checked and what was not, open decisions. |
 | [../research/integration-research.md](../research/integration-research.md) | What each vendor documents: API, sign-in, plan gates, objects, limits. Facts are tagged documented, third-party or inferred. |
 | [../research/integration-research-vendors.md](../research/integration-research-vendors.md) | Per-vendor research notes, first part. |
@@ -47,17 +54,6 @@ Community and the "about 8 official connectors" cap (decisions), section 3 (phas
 | [../release/SUBMISSION-NOTES.md](../release/SUBMISSION-NOTES.md) | Text to paste into the WordPress.org submission and reviewer replies, and reviewer test instructions. |
 | [../release/GUIDELINES-AUDIT.md](../release/GUIDELINES-AUDIT.md) | The 18 plugin guidelines, how the plugin meets each, and the vendor trademark list. |
 | [../release/ASSETS.md](../release/ASSETS.md) | Icon, banner and screenshot specifications and their current status. |
-
-Documents written by the build agents live next to the code they describe and are added to this table when they
-land: `docs/core-services.md`, `docs/mapping-engine.md`, `docs/admin-app.md` and `docs/connectors/odoo.md`.
-
-## Note for maintainers: three documents still to copy
-
-`phase1-spec.md`, `review-2-changes.md` and `../DECISIONS.md` are maintained in the owner's design project (the
-project documents `estasoft-erp-sync-engine-phase1-spec`, `estasoft-erp-sync-engine-review-2-changes` and
-`estasoft-erp-sync-engine-decisions`). They have to be copied into this repository unchanged, apart from a short
-front note, before the first release. `bin/check-docs.php` already expects these files; until they exist the
-links above are reported as broken.
 
 ## Keeping this folder honest
 

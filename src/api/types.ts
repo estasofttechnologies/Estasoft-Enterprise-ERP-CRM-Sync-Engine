@@ -636,9 +636,11 @@ export interface BootData {
  * POST   /connections/test     ConnectionInput -> ConnectionTestResult  (before saving)
  * GET    /connections/{id}/pause-history       -> not in Phase 1
  * GET    /catalog                              -> CatalogEntry[]
+ * (Mapping, tax-map, stock and reconciliation routes accept an optional connection_id; default: the only or first active connection)
  * GET    /mappings/{type}                      -> MappingSet
  * PUT    /mappings/{type}  {rules, note?}      -> MappingSet (saves the draft)
- * POST   /mappings/{type}/publish              -> MappingSet
+ * GET    /mappings/{type}/versions/{version}   -> MappingVersion (with rules; to view an older version)
+ * POST   /mappings/{type}/publish {note?}     -> MappingSet
  * POST   /mappings/{type}/discard              -> MappingSet
  * POST   /mappings/{type}/rollback {version}   -> MappingSet
  * POST   /mappings/preview     MappingPreviewRequest -> MappingPreview
@@ -669,6 +671,7 @@ export interface BootData {
  * POST   /tools/import {json, confirm}         -> { preview: string[] } | { applied: true }
  * POST   /tools/clear-logs                     -> { cleared: number }
  * POST   /tools/delete-data {word}             -> { deleted: true }
+ * POST   /notifications/test                    -> { sent_to: string[] }  (error SYNC-* when the mail was not accepted)
  * POST   /capacity-test                        -> CapacityResult
  * GET    /onboarding                           -> Onboarding
  * PUT    /onboarding                           -> Onboarding

@@ -1,0 +1,75 @@
+/*
+ * ESTASOFT SYNC: the two small pieces that appear outside the plugin's own page, the admin bar item and the box on the
+ * WordPress dashboard. The app has its own stylesheet (build/index.css). Logical properties throughout, so the same file
+ * serves right-to-left admin languages. Colour is never the only signal: the item and the box also say the state in words.
+ */
+
+#wpadminbar .estasoft-sync-bar .estasoft-sync-dot {
+	display: inline-block;
+	inline-size: 10px;
+	block-size: 10px;
+	margin-inline-end: 6px;
+	border-radius: 50%;
+	background: #a7aaad;
+	vertical-align: baseline;
+}
+
+#wpadminbar .estasoft-sync-bar .estasoft-sync-dot--ok {
+	background: #68de7c;
+}
+
+#wpadminbar .estasoft-sync-bar .estasoft-sync-dot--waiting {
+	background: #f0b849;
+}
+
+#wpadminbar .estasoft-sync-bar .estasoft-sync-dot--failed,
+#wpadminbar .estasoft-sync-bar .estasoft-sync-dot--paused {
+	background: #f86368;
+}
+
+#wpadminbar .estasoft-sync-bar .estasoft-sync-dot--idle {
+	background: #a7aaad;
+}
+
+.estasoft-sync-widget__counts {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 24px;
+	margin: 0 0 12px;
+	padding: 0;
+	list-style: none;
+}
+
+.estasoft-sync-widget__counts li {
+	margin: 0;
+}
+
+.estasoft-sync-widget__number {
+	display: block;
+	font-size: 24px;
+	font-weight: 600;
+	line-height: 1.2;
+}
+
+.estasoft-sync-widget__label {
+	color: #50575e;
+	font-size: 12px;
+}
+
+.estasoft-sync-widget__headline {
+	margin: 0 0 4px;
+}
+
+.estasoft-sync-widget__detail {
+	margin: 0 0 12px;
+	color: #50575e;
+}
+
+.estasoft-sync-widget--attention .estasoft-sync-widget__headline,
+.estasoft-sync-widget--paused .estasoft-sync-widget__headline {
+	color: #8a2424;
+}
+
+.estasoft-sync-widget--clear .estasoft-sync-widget__headline {
+	color: #1e6b36;
+}

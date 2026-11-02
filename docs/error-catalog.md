@@ -1,6 +1,6 @@
 # Error catalog
 
-Thirty codes. The same code shows on screen, in the log and in the support report. `{placeholders}` are filled in at run time. Source of truth for the plugin: `includes/Domain/ErrorCode.php`; for the admin app: `src/api/errors.ts`.
+Thirty-three codes. The same code shows on screen, in the log and in the support report. `{placeholders}` are filled in at run time. Source of truth for the plugin: `includes/Domain/ErrorCode.php`; for the admin app: `src/api/errors.ts`.
 
 | Code | Class | Message | What the person does | Retries |
 |---|---|---|---|---|
@@ -34,3 +34,6 @@ Thirty codes. The same code shows on screen, in the log and in the support repor
 | `SYNC-AUTH-007` | needs_person | {system} does not know this app yet. | Finish the app setup inside {system}, then test again | No |
 | `SYNC-EXP-001` | needs_person | The export file could not be written to the uploads folder. | Ask your host to make the uploads folder writable, then create the export again | No |
 | `SYNC-EXP-002` | needs_person | {n} orders were left out of the export: {reason}. | Map the missing ledger or code, then export again | No |
+| `SYNC-CFG-004` | needs_person | {system} connects with a key, not with a sign-in page. | Use the address and key form for this connection | No |
+| `SYNC-REST-001` | info | Something went wrong on the server. The details are in the log. | Try again in a moment. If it keeps happening, copy the support report and ask for help | No |
+| `SYNC-REST-002` | needs_person | The test email could not be sent. WordPress did not accept the message. | Check the email settings of this site, then send the test again | No |
