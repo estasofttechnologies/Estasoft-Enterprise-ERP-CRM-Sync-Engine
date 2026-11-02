@@ -35,8 +35,7 @@ final class SupportReportController extends BaseController {
 	 * @return array<string,mixed>
 	 */
 	public function show( \WP_REST_Request $request ): array {
-		/** @var SupportReportBuilder $report */
-		$report = $this->service( JobServices::SUPPORT_REPORT );
+		$report = $this->serviceAs( JobServices::SUPPORT_REPORT, SupportReportBuilder::class );
 		return $report->build( rest_sanitize_boolean( $request->get_param( 'order_numbers' ) ) );
 	}
 }

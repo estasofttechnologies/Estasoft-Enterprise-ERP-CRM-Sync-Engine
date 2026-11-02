@@ -59,6 +59,8 @@ final class DataEraser {
 	private \Closure $loadOrder;
 
 	/**
+	 * Set up the data eraser.
+	 *
 	 * @param \wpdb         $wpdb      Database of the site.
 	 * @param Tables        $tables    Table names of the site.
 	 * @param \Closure|null $orderIds  Finds order ids that carry a meta key; uses wc_get_orders() by default.
@@ -80,7 +82,8 @@ final class DataEraser {
 					'return'     => 'ids',
 					'status'     => 'any',
 					'type'       => array( 'shop_order', 'shop_order_refund' ),
-					'meta_query' => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- finds the orders that carry the plugin's meta key; this runs once, when the data is erased.
+					'meta_query' => array(
 						array(
 							'key'     => $key,
 							'compare' => 'EXISTS',
@@ -133,9 +136,10 @@ final class DataEraser {
 	 * Drop the nine tables.
 	 */
 	private function dropTables(): void {
+		$wpdb = $this->wpdb;
 		foreach ( $this->tables->all() as $table ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching
-			$this->wpdb->query( "DROP TABLE IF EXISTS `{$table}`" );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.DirectDatabaseQuery.NoCaching -- removing the plugin's own tables is the point of erasing its data.
+			$wpdb->query( $wpdb->prepare( 'DROP TABLE IF EXISTS %i', $table ) );
 		}
 	}
 
@@ -166,8 +170,10 @@ final class DataEraser {
 	 * @return array<int,string>
 	 */
 	private function optionsStartingWith( string $prefix ): array {
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-		$found = $this->wpdb->get_col( $this->wpdb->prepare( "SELECT option_name FROM {$this->wpdb->options} WHERE option_name LIKE %s", $this->wpdb->esc_like( $prefix ) . '%' ) );
+		$wpdb    = $this->wpdb;
+		$pattern = $wpdb->esc_like( $prefix ) . '%';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- finds option names by prefix, which get_option() cannot do; each one is then removed with delete_option().
+		$found = $wpdb->get_col( $wpdb->prepare( 'SELECT option_name FROM %i WHERE option_name LIKE %s', $wpdb->options, $pattern ) );
 		return array_map( 'strval', (array) $found );
 	}
 

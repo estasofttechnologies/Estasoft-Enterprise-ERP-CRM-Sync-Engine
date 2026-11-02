@@ -133,8 +133,8 @@ final class RestModule implements ModuleInterface {
 				new ConnectorTaxCodes(
 					$c->get( Services::CONNECTION_REPOSITORY ),
 					$c->get( Services::CONNECTOR_REGISTRY ),
-					static function ( string $class ) use ( $c ): void {
-						$c->get( Services::LOGGER )->warning( 'The tax codes of the connected system could not be read: ' . $class );
+					static function ( string $exceptionClass ) use ( $c ): void {
+						$c->get( Services::LOGGER )->warning( 'The tax codes of the connected system could not be read: ' . $exceptionClass );
 					}
 				)
 			)

@@ -29,6 +29,8 @@ final class Tables {
 	private const LOGICAL = array( 'connections', 'queue', 'logs', 'mappings', 'id_map', 'state', 'idempotency', 'recon_runs', 'recon_diffs' );
 
 	/**
+	 * Set up the table name helper.
+	 *
 	 * @param string $prefix The WordPress table prefix of the site ($wpdb->prefix).
 	 */
 	public function __construct( private readonly string $prefix ) {

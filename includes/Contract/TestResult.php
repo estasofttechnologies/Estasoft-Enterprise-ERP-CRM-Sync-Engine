@@ -17,6 +17,8 @@ defined( 'ABSPATH' ) || exit;
 final class TestResult {
 
 	/**
+	 * Describe a connection test result.
+	 *
 	 * @param bool                                    $ok          True when the connection works and nothing blocks syncing.
 	 * @param string                                  $version     System version, for example Odoo 18.0.
 	 * @param string                                  $company     Company name.

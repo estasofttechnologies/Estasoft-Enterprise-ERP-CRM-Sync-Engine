@@ -113,8 +113,7 @@ final class SettingsController extends BaseController {
 	 * @return array<string,mixed>
 	 */
 	public function show(): array {
-		/** @var Settings $settings */
-		$settings = $this->service( Services::SETTINGS );
+		$settings = $this->serviceAs( Services::SETTINGS, Settings::class );
 		return $settings->get();
 	}
 
@@ -125,8 +124,7 @@ final class SettingsController extends BaseController {
 	 * @return array<string,mixed>
 	 */
 	public function save( \WP_REST_Request $request ): array {
-		/** @var Settings $settings */
-		$settings = $this->service( Services::SETTINGS );
+		$settings = $this->serviceAs( Services::SETTINGS, Settings::class );
 		$changes  = array();
 		foreach ( self::FIELDS as $field ) {
 			if ( null !== $request->get_param( $field ) ) {
@@ -145,12 +143,12 @@ final class SettingsController extends BaseController {
 	 * @throws ApiException 502 when WordPress could not hand the email to the mail system.
 	 */
 	public function sendTest( \WP_REST_Request $request ): array {
-		/** @var NotificationService $notifications */
-		$notifications = $this->service( JobServices::NOTIFICATIONS );
+		$notifications = $this->serviceAs( JobServices::NOTIFICATIONS, NotificationService::class );
 		$recipient     = sanitize_email( (string) $request->get_param( 'recipient' ) );
 		$result        = $notifications->sendTest( $recipient );
 		if ( empty( $result['sent'] ) ) {
-			throw new ApiException( ApiException::MAIL_FAILED, __( 'The test email could not be sent. WordPress did not accept the message. Check the email settings of this site.', 'estasoft-erp-crm-sync-engine' ), 502, 'needs_person' );
+			$refusal = new ApiException( ApiException::MAIL_FAILED, esc_html__( 'The test email could not be sent. WordPress did not accept the message. Check the email settings of this site.', 'estasoft-erp-crm-sync-engine' ), 502, 'needs_person' );
+			throw $refusal;
 		}
 		$addresses = array_values( array_filter( array_map( 'trim', explode( ',', (string) ( $result['to'] ?? '' ) ) ), 'strlen' ) );
 		return array( 'sent_to' => $addresses );

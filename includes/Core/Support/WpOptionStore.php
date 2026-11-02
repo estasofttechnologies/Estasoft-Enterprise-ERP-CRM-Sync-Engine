@@ -19,12 +19,12 @@ final class WpOptionStore implements OptionStore {
 	/**
 	 * Read an option.
 	 *
-	 * @param string $name    Option name.
-	 * @param mixed  $default Value when the option does not exist.
+	 * @param string $name     Option name.
+	 * @param mixed  $fallback Value when the option does not exist.
 	 * @return mixed
 	 */
-	public function get( string $name, mixed $default = null ): mixed {
-		return get_option( $name, $default );
+	public function get( string $name, mixed $fallback = null ): mixed {
+		return get_option( $name, $fallback );
 	}
 
 	/**

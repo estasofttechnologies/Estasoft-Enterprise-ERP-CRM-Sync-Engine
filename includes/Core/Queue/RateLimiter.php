@@ -32,6 +32,8 @@ final class RateLimiter {
 	private const RETRIES = 8;
 
 	/**
+	 * Set up the rate limiter.
+	 *
 	 * @param RateStore $store Shared counters.
 	 * @param Clock     $clock Time source.
 	 */

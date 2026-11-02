@@ -29,6 +29,8 @@ final class Help {
 	public const FORUM_URL = 'https://wordpress.org/support/plugin/estasoft-erp-crm-sync-engine/';
 
 	/**
+	 * Create the help tabs.
+	 *
 	 * @param Urls $urls Addresses of the app.
 	 */
 	public function __construct( private readonly Urls $urls ) {

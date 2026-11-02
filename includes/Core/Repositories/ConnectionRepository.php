@@ -31,6 +31,8 @@ use Estasoft\SyncEngine\Domain\ConnectorType;
 final class ConnectionRepository extends Repository {
 
 	/**
+	 * Set up the connection repository.
+	 *
 	 * @param \wpdb              $wpdb     Database.
 	 * @param Tables             $tables   Table names.
 	 * @param Clock              $clock    Time source.
@@ -157,14 +159,16 @@ final class ConnectionRepository extends Repository {
 	 * (erp, accounting or crm; default erp) and `label` (default: the connector id). The rest is stored as
 	 * the connection's config (address, database, company, warehouses, version, capabilities).
 	 *
+	 * A CryptoException (SYNC-CFG-002) is passed on when secrets are given and no key is defined, and a ValidationException
+	 * when a setting is out of range.
+	 *
 	 * @param array<string,mixed>  $config   Non-secret values.
 	 * @param array<string,string> $secrets  Secret name to value (encrypted before saving).
 	 * @param array<string,mixed>  $settings Reliability settings (validated; defaults fill the gaps).
 	 * @return int The new connection id.
 	 *
 	 * @throws \InvalidArgumentException When `connector` is missing.
-	 * @throws CryptoException           With SYNC-CFG-002 when secrets are given and no key is defined.
-	 * @throws \Estasoft\SyncEngine\Core\Support\ValidationException When a setting is out of range.
+	 * @throws \RuntimeException         When the row could not be saved.
 	 */
 	public function create( array $config, array $secrets = array(), array $settings = array() ): int {
 		$connector = isset( $config['connector'] ) ? trim( (string) $config['connector'] ) : '';
@@ -212,12 +216,13 @@ final class ConnectionRepository extends Repository {
 	 * cannot be merged. Then every secret that is saved has to be given again (a value) or removed (null); an empty
 	 * string, which means "keep", is refused, so a partial save never leaves unreadable secrets behind.
 	 *
+	 * A CryptoException is passed on when secrets are changed and no key is defined, or only some secrets are sent while the
+	 * key has changed, and a ValidationException when a setting is out of range.
+	 *
 	 * @param int                 $id      Connection id.
 	 * @param array<string,mixed> $changes Changes.
 	 *
 	 * @throws \OutOfBoundsException When the connection does not exist.
-	 * @throws CryptoException       When secrets are changed and no key is defined, or only some secrets are sent while the key has changed.
-	 * @throws \Estasoft\SyncEngine\Core\Support\ValidationException When a setting is out of range.
 	 */
 	public function update( int $id, array $changes ): void {
 		$row = $this->rowById( $id );

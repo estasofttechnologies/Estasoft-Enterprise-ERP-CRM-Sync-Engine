@@ -112,7 +112,7 @@ final class ConnectionSettings {
 			}
 		}
 		if ( array() !== $errors ) {
-			throw new ValidationException( $errors );
+			throw new ValidationException( array_map( 'esc_html', $errors ) );
 		}
 		foreach ( $checked as $key => $result ) {
 			$current[ $key ] = $result['value'];

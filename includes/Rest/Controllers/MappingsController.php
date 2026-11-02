@@ -135,7 +135,7 @@ final class MappingsController extends BaseController {
 	public function version( \WP_REST_Request $request ): array {
 		$version = $this->mapping()->version( $this->connectionId( $request ), (string) $request['type'], (int) $request['version'] );
 		if ( null === $version ) {
-			throw ApiException::notFound( __( 'That version does not exist.', 'estasoft-erp-crm-sync-engine' ) );
+			throw ApiException::notFound( esc_html__( 'That version does not exist.', 'estasoft-erp-crm-sync-engine' ) );
 		}
 		return $version;
 	}
@@ -173,7 +173,7 @@ final class MappingsController extends BaseController {
 		$mapping    = $this->mapping();
 		$draft      = $mapping->set( $connection, $type )['draft'] ?? null;
 		if ( null === $draft ) {
-			throw ApiException::conflict( __( 'There is no draft to publish.', 'estasoft-erp-crm-sync-engine' ), 'SYNC-CFG-001' );
+			throw ApiException::conflict( esc_html__( 'There is no draft to publish.', 'estasoft-erp-crm-sync-engine' ), 'SYNC-CFG-001' );
 		}
 		if ( '' !== $note && is_array( $draft['rules'] ?? null ) ) {
 			$mapping->saveDraft( $connection, $type, $draft['rules'], $note, $this->actorName() );
@@ -208,7 +208,7 @@ final class MappingsController extends BaseController {
 		$type       = (string) $request['type'];
 		$version    = (int) $request->get_param( 'version' );
 		if ( null === $this->mapping()->version( $connection, $type, $version ) ) {
-			throw ApiException::notFound( __( 'That version does not exist.', 'estasoft-erp-crm-sync-engine' ) );
+			throw ApiException::notFound( esc_html__( 'That version does not exist.', 'estasoft-erp-crm-sync-engine' ) );
 		}
 		$this->mapping()->rollback( $connection, $type, $version, $this->actorName() );
 		return $this->mapping()->set( $connection, $type );
@@ -221,8 +221,7 @@ final class MappingsController extends BaseController {
 	 * @return array<string,mixed> The `MappingPreview`.
 	 */
 	public function preview( \WP_REST_Request $request ): array {
-		/** @var Previewer $previewer */
-		$previewer  = $this->service( 'mapping.previewer' );
+		$previewer  = $this->serviceAs( 'mapping.previewer', Previewer::class );
 		$connection = $this->connectionId( $request );
 		$type       = (string) $request->get_param( 'type' );
 		$draftRules = null;

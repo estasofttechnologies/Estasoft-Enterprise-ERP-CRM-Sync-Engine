@@ -25,6 +25,7 @@ use Estasoft\SyncEngine\Core\Repositories\QueueRepository;
 use Estasoft\SyncEngine\Core\Repositories\StateRepository;
 use Estasoft\SyncEngine\Core\Support\Clock;
 use Estasoft\SyncEngine\Core\Support\Json;
+use Estasoft\SyncEngine\Core\Support\PlainText;
 use Estasoft\SyncEngine\Core\Support\Time;
 use Estasoft\SyncEngine\Domain\Capability;
 use Estasoft\SyncEngine\Domain\Connection;
@@ -80,23 +81,30 @@ final class ItemProcessor {
 
 	/**
 	 * The lock token of the item being processed; null when the caller did not give one.
+	 *
+	 * @var string|null
 	 */
 	private ?string $token = null;
 
 	/**
-	 * @param ConnectionRepository                      $connections Connections.
-	 * @param QueueRepository                           $queue       Queue.
-	 * @param IdMapRepository                           $idMap       Id map.
-	 * @param StateRepository                           $state       Data hashes.
-	 * @param IdempotencyRepository                     $idempotency Idempotency ledger.
-	 * @param Logger                                    $logger      Log.
-	 * @param RetryPolicy                               $retry       Retry schedule.
-	 * @param ErrorClassifier                           $classifier  Error classification.
-	 * @param CircuitBreaker                            $breaker     Circuit breaker.
-	 * @param PauseController                           $pause       Pause control.
-	 * @param Clock                                     $clock       Time source.
-	 * @param \Closure():ConnectorRegistry              $connectors Returns the connector registry.
-	 * @param \Closure():(PayloadBuilderInterface|null) $payloadBuilder Returns the payload builder, or null when the mapping module is absent.
+	 * Set up the item processor.
+	 *
+	 * @param ConnectionRepository  $connections    Connections.
+	 * @param QueueRepository       $queue          Queue.
+	 * @param IdMapRepository       $idMap          Id map.
+	 * @param StateRepository       $state          Data hashes.
+	 * @param IdempotencyRepository $idempotency    Idempotency ledger.
+	 * @param Logger                $logger         Log.
+	 * @param RetryPolicy           $retry          Retry schedule.
+	 * @param ErrorClassifier       $classifier     Error classification.
+	 * @param CircuitBreaker        $breaker        Circuit breaker.
+	 * @param PauseController       $pause          Pause control.
+	 * @param Clock                 $clock          Time source.
+	 * @param \Closure              $connectors     Returns the connector registry.
+	 * @param \Closure              $payloadBuilder Returns the payload builder, or null when the mapping module is absent.
+	 *
+	 * @phpstan-param \Closure():ConnectorRegistry              $connectors
+	 * @phpstan-param \Closure():(PayloadBuilderInterface|null) $payloadBuilder
 	 */
 	public function __construct(
 		private readonly ConnectionRepository $connections,
@@ -616,8 +624,10 @@ final class ItemProcessor {
 			$this->pause->holdForPerson( $item->connectionId, ErrorCode::Cfg002, ConnectionStatus::Paused );
 			$written = $this->queue->release( $item->id, null, ErrorCode::Cfg002->value, ErrorCode::Cfg002->template(), false, $this->token );
 		} else {
-			$this->pause->holdForPerson( $item->connectionId, ErrorCode::Auth002, ConnectionStatus::NeedsReconnect, '', $e->getMessage() );
-			$written = $this->queue->release( $item->id, null, null, $e->getMessage(), false, $this->token );
+			// The exception message is escaped for HTML; the queue and the log keep plain text.
+			$message = PlainText::fromEscaped( $e->getMessage() );
+			$this->pause->holdForPerson( $item->connectionId, ErrorCode::Auth002, ConnectionStatus::NeedsReconnect, '', $message );
+			$written = $this->queue->release( $item->id, null, null, $message, false, $this->token );
 		}
 		return $this->settle( $written, $item, Outcome::Held );
 	}

@@ -43,13 +43,17 @@ use Estasoft\SyncEngine\Domain\ItemMode;
 final class Enqueuer {
 
 	/**
-	 * @param ConnectionRepository         $connections Connections.
-	 * @param QueueRepository              $queue       Queue.
-	 * @param IdempotencyRepository        $idempotency Idempotency ledger.
-	 * @param OnboardingState              $onboarding  Shadow window.
-	 * @param Logger                       $logger      Log.
-	 * @param Clock                        $clock       Time source.
-	 * @param \Closure():ConnectorRegistry $connectors Returns the connector registry.
+	 * Set up the enqueuer.
+	 *
+	 * @param ConnectionRepository  $connections Connections.
+	 * @param QueueRepository       $queue       Queue.
+	 * @param IdempotencyRepository $idempotency Idempotency ledger.
+	 * @param OnboardingState       $onboarding  Shadow window.
+	 * @param Logger                $logger      Log.
+	 * @param Clock                 $clock       Time source.
+	 * @param \Closure              $connectors  Returns the connector registry.
+	 *
+	 * @phpstan-param \Closure():ConnectorRegistry $connectors
 	 */
 	public function __construct(
 		private readonly ConnectionRepository $connections,

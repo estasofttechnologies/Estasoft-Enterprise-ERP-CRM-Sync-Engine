@@ -23,6 +23,8 @@ final class Urls {
 	public const PAGE = 'estasoft-sync';
 
 	/**
+	 * Create the address book.
+	 *
 	 * @param string $pageUrl Full address of the admin page, `admin.php?page=estasoft-sync`.
 	 */
 	public function __construct( private readonly string $pageUrl ) {

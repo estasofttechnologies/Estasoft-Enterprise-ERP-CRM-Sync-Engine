@@ -50,10 +50,14 @@ final class Worker {
 
 	/**
 	 * Counts what is running and claims what is left, under the claim lock.
+	 *
+	 * @var ClaimPlanner
 	 */
 	private ClaimPlanner $planner;
 
 	/**
+	 * Set up the worker.
+	 *
 	 * @param QueueRepository      $queue       Queue.
 	 * @param ConnectionRepository $connections Connections.
 	 * @param ItemProcessor        $processor   Pipeline.

@@ -35,12 +35,16 @@ final class Notices {
 	private \Closure $terminate;
 
 	/**
-	 * @param NoticeFacts     $facts        Facts the notices depend on.
-	 * @param NoticeRules     $rules        When each notice shows.
-	 * @param Urls            $urls         Addresses of the app.
-	 * @param \Closure():bool $onPluginPage Whether the current screen is the plugin's own page.
-	 * @param \Closure|null   $terminate    Ends the request after a redirect; `exit` by default (allowed for this file in
-	 *                                      bin/red-flags-allowlist.txt, as core ends its own redirects). Tests pass their own.
+	 * Create the notices.
+	 *
+	 * @param NoticeFacts   $facts        Facts the notices depend on.
+	 * @param NoticeRules   $rules        When each notice shows.
+	 * @param Urls          $urls         Addresses of the app.
+	 * @param \Closure      $onPluginPage Returns whether the current screen is the plugin's own page.
+	 * @param \Closure|null $terminate    Ends the request after a redirect; `exit` by default (allowed for this file in
+	 *                                    bin/red-flags-allowlist.txt, as core ends its own redirects). Tests pass their own.
+	 *
+	 * @phpstan-param \Closure():bool $onPluginPage
 	 */
 	public function __construct(
 		private readonly NoticeFacts $facts,

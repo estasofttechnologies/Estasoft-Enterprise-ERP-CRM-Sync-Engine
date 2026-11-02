@@ -27,15 +27,24 @@ final class CredentialField {
 	public const GROUPS = array( 'connection', 'app', 'advanced' );
 
 	/**
-	 * @param string               $name     Machine name (address, database, user, api_key).
-	 * @param string               $label    Label shown to the person (translated by the connector).
-	 * @param bool                 $secret   True for values that are encrypted and never shown again.
-	 * @param bool                 $required Whether the field must be filled.
-	 * @param string               $hint     Short helper text.
-	 * @param string               $default  Prefilled value.
-	 * @param string               $type     One of self::TYPES: text (default), password, select, textarea, url, number or display.
-	 * @param array<string,string> $options  Value => label pairs for a select.
-	 * @param string               $group    One of self::GROUPS: connection (default), app (client id and secret of the merchant's own app) or advanced.
+	 * Prefilled value.
+	 *
+	 * @var string
+	 */
+	public readonly string $default;
+
+	/**
+	 * Describe a credential field.
+	 *
+	 * @param string               $name         Machine name (address, database, user, api_key).
+	 * @param string               $label        Label shown to the person (translated by the connector).
+	 * @param bool                 $secret       True for values that are encrypted and never shown again.
+	 * @param bool                 $required     Whether the field must be filled.
+	 * @param string               $hint         Short helper text.
+	 * @param string               $defaultValue Prefilled value (kept in the `default` property).
+	 * @param string               $type         One of self::TYPES: text (default), password, select, textarea, url, number or display.
+	 * @param array<string,string> $options      Value => label pairs for a select.
+	 * @param string               $group        One of self::GROUPS: connection (default), app (client id and secret of the merchant's own app) or advanced.
 	 */
 	public function __construct(
 		public readonly string $name,
@@ -43,10 +52,11 @@ final class CredentialField {
 		public readonly bool $secret = false,
 		public readonly bool $required = true,
 		public readonly string $hint = '',
-		public readonly string $default = '',
+		string $defaultValue = '',
 		public readonly string $type = 'text',
 		public readonly array $options = array(),
 		public readonly string $group = 'connection',
 	) {
+		$this->default = $defaultValue;
 	}
 }

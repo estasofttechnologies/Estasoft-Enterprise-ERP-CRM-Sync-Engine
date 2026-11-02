@@ -93,7 +93,7 @@ final class ReconSettings {
 			}
 		}
 		if ( array() !== $errors ) {
-			throw new ValidationException( $errors );
+			throw new ValidationException( array_map( 'esc_html', $errors ) );
 		}
 		$settings = $this->get();
 		foreach ( $checked as $key => $result ) {

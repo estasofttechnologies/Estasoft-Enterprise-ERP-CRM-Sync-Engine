@@ -17,6 +17,8 @@ defined( 'ABSPATH' ) || exit;
 final class SendResult {
 
 	/**
+	 * Describe the outcome of a send.
+	 *
 	 * @param ExternalRef|null    $ref            The record when the send succeeded.
 	 * @param bool                $alreadyExisted True when the record was found instead of created (SYNC-DUP-001).
 	 * @param ConnectorError|null $error          The failure, when there was one.

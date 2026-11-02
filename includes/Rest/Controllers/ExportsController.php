@@ -11,8 +11,6 @@ namespace Estasoft\SyncEngine\Rest\Controllers;
 
 defined( 'ABSPATH' ) || exit;
 
-// phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the arguments of the exceptions here are error objects and fixed texts, not output.
-
 use Estasoft\SyncEngine\Connectors\ConnectorsModule;
 use Estasoft\SyncEngine\Connectors\Support\Export\ExportException;
 use Estasoft\SyncEngine\Connectors\Support\Export\ExportFile;
@@ -91,7 +89,8 @@ final class ExportsController extends BaseController {
 		try {
 			$file = $this->exports()->create( (int) $request->get_param( 'connection_id' ), $this->actorName() );
 		} catch ( ExportException $error ) {
-			throw $this->translate( $error );
+			$refusal = $this->translate( $error );
+			throw $refusal;
 		}
 		return new \WP_REST_Response( $file->info(), 201 );
 	}
@@ -108,7 +107,7 @@ final class ExportsController extends BaseController {
 	public function download( \WP_REST_Request $request ): \WP_REST_Response {
 		$found = $this->exports()->download( (string) $request['file'], (int) $request->get_param( 'part' ) );
 		if ( null === $found ) {
-			throw ApiException::notFound( __( 'That export file does not exist any more. Files are kept for 30 days.', 'estasoft-erp-crm-sync-engine' ) );
+			throw ApiException::notFound( esc_html__( 'That export file does not exist any more. Files are kept for 30 days.', 'estasoft-erp-crm-sync-engine' ) );
 		}
 		$response = new \WP_REST_Response( null, 200 );
 		$response->header( 'Content-Type', $found['mime'] );
@@ -146,7 +145,7 @@ final class ExportsController extends BaseController {
 	 */
 	public function delete( \WP_REST_Request $request ): array {
 		if ( ! $this->exports()->delete( (string) $request['file'] ) ) {
-			throw ApiException::notFound( __( 'That export file does not exist any more.', 'estasoft-erp-crm-sync-engine' ) );
+			throw ApiException::notFound( esc_html__( 'That export file does not exist any more.', 'estasoft-erp-crm-sync-engine' ) );
 		}
 		return array( 'deleted' => true );
 	}

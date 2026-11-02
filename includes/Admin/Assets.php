@@ -30,12 +30,18 @@ final class Assets {
 	public const CHROME_HANDLE = 'estasoft-sync-admin-chrome';
 
 	/**
-	 * @param string                         $dir        Plugin directory with a trailing slash.
-	 * @param string                         $url        Plugin address with a trailing slash.
-	 * @param string                         $version    Plugin version, used when the asset file is missing.
-	 * @param \Closure():string              $pageHook The hook suffix of the plugin's page (empty before the menu is built).
-	 * @param \Closure():array<string,mixed> $boot Builds the boot data.
-	 * @param \Closure():bool                $barShows   Whether the admin bar item shows for this person.
+	 * Create the asset loader.
+	 *
+	 * @param string   $dir      Plugin directory with a trailing slash.
+	 * @param string   $url      Plugin address with a trailing slash.
+	 * @param string   $version  Plugin version, used when the asset file is missing.
+	 * @param \Closure $pageHook Returns the hook suffix of the plugin's page (empty before the menu is built).
+	 * @param \Closure $boot     Builds the boot data.
+	 * @param \Closure $barShows Returns whether the admin bar item shows for this person.
+	 *
+	 * @phpstan-param \Closure():string              $pageHook
+	 * @phpstan-param \Closure():array<string,mixed> $boot
+	 * @phpstan-param \Closure():bool                $barShows
 	 */
 	public function __construct(
 		private readonly string $dir,

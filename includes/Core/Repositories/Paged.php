@@ -17,6 +17,8 @@ defined( 'ABSPATH' ) || exit;
 final class Paged {
 
 	/**
+	 * Describe one page of rows.
+	 *
 	 * @param array<int,mixed> $items   Rows of this page.
 	 * @param int              $total   Rows over all pages.
 	 * @param int              $page    This page, from 1.

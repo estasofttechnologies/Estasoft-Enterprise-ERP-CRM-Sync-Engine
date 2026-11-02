@@ -24,6 +24,8 @@ use Estasoft\SyncEngine\Core\Repositories\ReconRepository;
 final class RetentionJob {
 
 	/**
+	 * Set up the retention job.
+	 *
 	 * @param QueueRepository       $queue       Queue.
 	 * @param IdempotencyRepository $idempotency Idempotency ledger.
 	 * @param ReconRepository       $recon       Reconciliation history.

@@ -26,6 +26,8 @@ use Estasoft\SyncEngine\Domain\ErrorCode;
 final class Reaper {
 
 	/**
+	 * Set up the reaper.
+	 *
 	 * @param QueueRepository $queue  Queue.
 	 * @param Logger          $logger Log.
 	 */

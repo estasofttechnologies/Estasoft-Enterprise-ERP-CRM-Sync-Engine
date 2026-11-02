@@ -34,6 +34,8 @@ final class Welcome {
 	private \Closure $terminate;
 
 	/**
+	 * Create the welcome redirect.
+	 *
 	 * @param Urls          $urls      Addresses of the app.
 	 * @param \Closure|null $terminate Ends the request after a redirect; `exit` by default. Tests pass their own.
 	 */

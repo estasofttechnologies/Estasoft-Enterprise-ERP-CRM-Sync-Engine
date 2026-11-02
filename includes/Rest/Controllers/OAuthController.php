@@ -11,8 +11,6 @@ namespace Estasoft\SyncEngine\Rest\Controllers;
 
 defined( 'ABSPATH' ) || exit;
 
-// phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the arguments of the exceptions here are error objects and fixed texts, not output.
-
 use Estasoft\SyncEngine\Connectors\Support\GuardedSignInConnector;
 use Estasoft\SyncEngine\Connectors\Support\OAuth\OAuthRedirect;
 use Estasoft\SyncEngine\Contract\ConnectorError;
@@ -144,7 +142,8 @@ final class OAuthController extends BaseController {
 		list( $connection, $connector ) = $this->signInConnector( (int) $request['id'] );
 		$list                           = $connector->organisations( $connection );
 		if ( $list instanceof ConnectorError ) {
-			throw ApiException::fromCatalog( $list->code, $list->context, 502 );
+			$failure = ApiException::fromCatalog( $list->code, $list->context, 502 );
+			throw $failure;
 		}
 		return $list;
 	}
@@ -300,16 +299,17 @@ final class OAuthController extends BaseController {
 	private function signInConnector( int $id ): array {
 		$connection = $this->connectionRepository()->find( $id );
 		if ( null === $connection ) {
-			throw ApiException::notFound( __( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ) );
+			throw ApiException::notFound( esc_html__( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ) );
 		}
 		$connector = $this->connectorRegistry()->get( $connection->connector );
 		if ( ! $connector instanceof SignInConnector || ( $connector instanceof GuardedSignInConnector && ! $connector->requiresSignIn( $connection ) ) ) {
-			throw new ApiException(
+			$refusal = new ApiException(
 				ApiException::NO_SIGN_IN,
-				__( 'This connector does not use sign-in. It connects with a key. Open the connection and enter the key instead.', 'estasoft-erp-crm-sync-engine' ),
+				esc_html__( 'This connector does not use sign-in. It connects with a key. Open the connection and enter the key instead.', 'estasoft-erp-crm-sync-engine' ),
 				400,
 				ErrorClass::NeedsPerson->value
 			);
+			throw $refusal;
 		}
 		return array( $connection, $connector );
 	}

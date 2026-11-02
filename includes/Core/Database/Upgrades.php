@@ -14,7 +14,7 @@ defined( 'ABSPATH' ) || exit;
 use Estasoft\SyncEngine\Core\Support\Json;
 
 /**
- * dbDelta adds tables, columns and new indexes, but it cannot drop an index, cannot change an index that keeps its
+ * The dbDelta function adds tables, columns and new indexes, but it cannot drop an index, cannot change an index that keeps its
  * name, cannot add a unique index over duplicate rows, and fails when a column shrinks below the length of stored
  * data. These steps prepare the existing rows and indexes so that dbDelta then succeeds. Every step first checks
  * whether it is needed, so running them again changes nothing, and a fresh install (no tables yet) skips all of them.
@@ -27,6 +27,8 @@ final class Upgrades {
 	public const MESSAGE_LIMIT = 500;
 
 	/**
+	 * Set up the upgrade steps.
+	 *
 	 * @param \wpdb  $wpdb   Database.
 	 * @param Tables $tables Table names.
 	 */
@@ -59,14 +61,15 @@ final class Upgrades {
 	 * @param string $column Column name (a trusted constant).
 	 */
 	private function shortenColumn( string $table, string $column ): void {
+		$wpdb = $this->wpdb;
 		// Once the column has been narrowed there is nothing longer to cut, so a large table is not scanned again.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$type = (string) $this->wpdb->get_var( $this->wpdb->prepare( "SHOW COLUMNS FROM `{$table}` LIKE %s", $column ), 1 );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- one-off schema inspection of the plugin's own table during an upgrade; caching it would hide the change.
+		$type = (string) $wpdb->get_var( $wpdb->prepare( 'SHOW COLUMNS FROM %i LIKE %s', $table, $column ), 1 );
 		if ( sprintf( 'varchar(%d)', self::MESSAGE_LIMIT ) === strtolower( $type ) ) {
 			return;
 		}
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$this->wpdb->query( $this->wpdb->prepare( "UPDATE `{$table}` SET `{$column}` = LEFT(`{$column}`, %d) WHERE CHAR_LENGTH(`{$column}`) > %d", self::MESSAGE_LIMIT, self::MESSAGE_LIMIT ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- one-off data repair of the plugin's own table during an upgrade.
+		$wpdb->query( $wpdb->prepare( 'UPDATE %i SET %i = LEFT(%i, %d) WHERE CHAR_LENGTH(%i) > %d', $table, $column, $column, self::MESSAGE_LIMIT, $column, self::MESSAGE_LIMIT ) );
 	}
 
 	/**
@@ -78,16 +81,17 @@ final class Upgrades {
 
 		$claim = $this->indexColumns( $table, 'claim' );
 		if ( array() !== $claim && 3 !== count( $claim ) ) {
-			$this->alter( $table, 'DROP INDEX `claim`' );
+			$this->dropIndex( $table, 'claim' );
 		}
 
 		if ( array() === $this->indexColumns( $table, 'connection_key' ) ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			$this->wpdb->query( "DELETE q FROM `{$table}` q INNER JOIN `{$table}` k ON k.connection_id = q.connection_id AND k.idempotency_key = q.idempotency_key AND k.id < q.id" );
+			$wpdb = $this->wpdb;
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- one-off clean-up of the plugin's own table during an upgrade.
+			$wpdb->query( $wpdb->prepare( 'DELETE q FROM %i q INNER JOIN %i k ON k.connection_id = q.connection_id AND k.idempotency_key = q.idempotency_key AND k.id < q.id', $table, $table ) );
 		}
 
 		if ( array() !== $this->indexColumns( $table, 'idempotency' ) ) {
-			$this->alter( $table, 'DROP INDEX `idempotency`' );
+			$this->dropIndex( $table, 'idempotency' );
 		}
 	}
 
@@ -97,8 +101,9 @@ final class Upgrades {
 	 */
 	private function secretHintsToPresence(): void {
 		$table = $this->tables->connections();
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$rows = $this->wpdb->get_results( "SELECT id, secret_hints_json FROM `{$table}` WHERE secret_hints_json IS NOT NULL AND secret_hints_json <> '' AND secret_hints_json <> '{}'", ARRAY_A );
+		$wpdb  = $this->wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- one-off read of the plugin's own table during an upgrade.
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT id, secret_hints_json FROM %i WHERE secret_hints_json IS NOT NULL AND secret_hints_json <> '' AND secret_hints_json <> '{}'", $table ), ARRAY_A );
 		foreach ( (array) $rows as $row ) {
 			$hints = Json::decode( (string) $row['secret_hints_json'] );
 			$clean = array();
@@ -106,7 +111,7 @@ final class Upgrades {
 				$clean[ (string) $name ] = true;
 			}
 			if ( $clean !== $hints ) {
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- one-off rewrite of the plugin's own table during an upgrade.
 				$this->wpdb->update( $table, array( 'secret_hints_json' => Json::encode( $clean ) ), array( 'id' => (int) $row['id'] ) );
 			}
 		}
@@ -120,21 +125,23 @@ final class Upgrades {
 	 * @return array<int,string>
 	 */
 	private function indexColumns( string $table, string $index ): array {
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$rows = (array) $this->wpdb->get_results( $this->wpdb->prepare( "SHOW INDEX FROM `{$table}` WHERE Key_name = %s", $index ), ARRAY_A );
+		$wpdb = $this->wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- one-off schema inspection of the plugin's own table during an upgrade.
+		$rows = (array) $wpdb->get_results( $wpdb->prepare( 'SHOW INDEX FROM %i WHERE Key_name = %s', $table, $index ), ARRAY_A );
 		usort( $rows, static fn( array $a, array $b ): int => (int) $a['Seq_in_index'] <=> (int) $b['Seq_in_index'] );
 		return array_map( static fn( array $row ): string => (string) $row['Column_name'], $rows );
 	}
 
 	/**
-	 * Run an ALTER TABLE.
+	 * Drop an index so dbDelta can create it again with its new definition.
 	 *
-	 * @param string $table     Table name.
-	 * @param string $statement The part after the table name (a trusted constant).
+	 * @param string $table Table name.
+	 * @param string $index Index name.
 	 */
-	private function alter( string $table, string $statement ): void {
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$this->wpdb->query( "ALTER TABLE `{$table}` {$statement}" );
+	private function dropIndex( string $table, string $index ): void {
+		$wpdb = $this->wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.DirectDatabaseQuery.NoCaching -- dbDelta cannot drop or change an index, so the upgrade does it on the plugin's own table.
+		$wpdb->query( $wpdb->prepare( 'ALTER TABLE %i DROP INDEX %i', $table, $index ) );
 	}
 
 	/**
@@ -143,7 +150,9 @@ final class Upgrades {
 	 * @param string $table Table name.
 	 */
 	private function tableExists( string $table ): bool {
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-		return $table === $this->wpdb->get_var( $this->wpdb->prepare( 'SHOW TABLES LIKE %s', $this->wpdb->esc_like( $table ) ) );
+		$wpdb = $this->wpdb;
+		$like = $wpdb->esc_like( $table );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- schema check of the plugin's own table during an upgrade.
+		return $table === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $like ) );
 	}
 }

@@ -36,6 +36,8 @@ final class Snapshot {
 	private const KEY = 'admin_snapshot';
 
 	/**
+	 * Create the snapshot.
+	 *
 	 * @param QueueRepository      $queue       Queue.
 	 * @param ConnectionRepository $connections Connections.
 	 * @param OnboardingState      $onboarding  Shadow window.

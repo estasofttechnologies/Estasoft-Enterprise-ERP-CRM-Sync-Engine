@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Estasoft\SyncEngine\Tests\Unit\Rest;
 
 use Estasoft\SyncEngine\Core\Crypto\CryptoException;
+use Estasoft\SyncEngine\Core\Support\PlainText;
 use Estasoft\SyncEngine\Core\Support\ValidationException;
 use Estasoft\SyncEngine\Domain\ErrorCode;
 use Estasoft\SyncEngine\Jobs\Inbound\InboundRefused;
@@ -52,6 +53,21 @@ final class ApiErrorsTest extends TestCase {
 			),
 			$body
 		);
+	}
+
+	public function test_a_message_and_its_field_messages_that_were_escaped_where_they_were_thrown_are_plain_text_in_the_body(): void {
+		$error = ApiException::invalid( esc_html( "Choose the order's items & the <b>reason</b>." ), array( 'reason' => esc_html( "Say why you're skipping it." ) ) );
+		$this->assertStringContainsString( '&#039;', $error->getMessage(), 'kept escaped, as thrown' );
+		$body = $error->toBody();
+		$this->assertSame( "Choose the order's items & the <b>reason</b>.", $body['message'] );
+		$this->assertSame( array( 'reason' => "Say why you're skipping it." ), $body['data']['fields'] );
+	}
+
+	public function test_the_generic_and_the_catalog_messages_are_kept_escaped_and_come_out_as_plain_text(): void {
+		$catalog = ApiException::fromCatalog( ErrorCode::Map001, array( 'sku' => "O'Neil <1>", 'system' => 'Odoo' ) );
+		$this->assertStringNotContainsString( '<1>', $catalog->getMessage() );
+		$this->assertSame( "Product O'Neil <1> was not found in Odoo.", $catalog->toBody()['message'] );
+		$this->assertSame( ApiException::generic()->toBody()['message'], PlainText::fromEscaped( ApiException::generic()->getMessage() ) );
 	}
 
 	public function test_empty_context_fields_and_details_are_left_out_and_an_unknown_class_becomes_needs_person(): void {
@@ -103,6 +119,24 @@ final class ApiErrorsTest extends TestCase {
 		$this->assertSame( array( 'rules.r1.target', 'rules.r1.transforms[0]', 'rules.rules' ), array_keys( $mapped->fields ) );
 		$this->assertCount( 3, $mapped->details['errors'] );
 		$this->assertSame( 'target_unknown', $mapped->details['errors'][0]['code'] );
+	}
+
+	public function test_a_message_from_another_module_is_escaped_once_whether_or_not_it_was_escaped_where_it_was_thrown(): void {
+		$thrown   = $this->mapper()->map( new JobException( esc_html( "That connection isn't ready." ), 422 ) );
+		$unthrown = $this->mapper()->map( new JobException( "That connection isn't ready.", 422 ) );
+		$this->assertSame( $thrown->getMessage(), $unthrown->getMessage() );
+		$this->assertSame( "That connection isn&#039;t ready.", $thrown->getMessage() );
+		$this->assertSame( "That connection isn't ready.", $thrown->toBody()['message'] );
+	}
+
+	public function test_field_messages_from_validation_are_plain_text_in_the_body(): void {
+		$mapped = $this->mapper()->map( new ValidationException( array( 'days' => esc_html( "Enter the days you'd like." ), 'reason' => 'Say why.' ) ) );
+		$this->assertSame( array( 'days' => "Enter the days you'd like.", 'reason' => 'Say why.' ), $mapped->toBody()['data']['fields'] );
+	}
+
+	public function test_rule_problems_are_plain_text_in_the_body(): void {
+		$mapped = $this->mapper()->map( new RuleValidationException( array( new RuleError( 'r1', 'target', 'target_unknown', "The field doesn't exist." ) ) ) );
+		$this->assertSame( array( 'rules.r1.target' => "The field doesn't exist." ), $mapped->toBody()['data']['fields'] );
 	}
 
 	public function test_a_mapping_failure_keeps_its_catalog_code(): void {

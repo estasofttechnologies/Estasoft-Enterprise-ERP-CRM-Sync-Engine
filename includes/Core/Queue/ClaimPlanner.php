@@ -40,6 +40,8 @@ class ClaimPlanner {
 	private array $cache = array();
 
 	/**
+	 * Set up the claim planner.
+	 *
 	 * @param QueueRepository      $queue       Queue.
 	 * @param ConnectionRepository $connections Connections.
 	 */
@@ -74,15 +76,15 @@ class ClaimPlanner {
 	 * When another worker holds the claim lock it is busy filling the free slots, so nothing is claimed in this round and
 	 * the caller treats it like an empty queue.
 	 *
-	 * @param int    $global      Items at once, all connections together.
+	 * @param int    $globalLimit Items at once, all connections together.
 	 * @param string $workerId    Id of this run; it is the lock token of the items.
 	 * @param int    $lockSeconds How long a claim locks an item before the reaper may take it back.
 	 * @return array<int,Item>
 	 */
-	public function claim( int $global, string $workerId, int $lockSeconds ): array {
+	public function claim( int $globalLimit, string $workerId, int $lockSeconds ): array {
 		$batch = $this->guard(
-			function () use ( $global, $workerId, $lockSeconds ): array {
-				$slots = $global - $this->running( null );
+			function () use ( $globalLimit, $workerId, $lockSeconds ): array {
+				$slots = $globalLimit - $this->running( null );
 				$batch = array();
 				foreach ( $this->connections->activeIds() as $id ) {
 					if ( $slots <= 0 ) {

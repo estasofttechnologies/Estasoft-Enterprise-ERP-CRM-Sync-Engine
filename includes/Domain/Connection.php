@@ -17,6 +17,8 @@ defined( 'ABSPATH' ) || exit;
 final class Connection {
 
 	/**
+	 * Describe a connection.
+	 *
 	 * @param int                  $id        Row id.
 	 * @param string               $connector Connector id, for example odoo.
 	 * @param ConnectorType        $type      erp, accounting or crm.
@@ -52,12 +54,12 @@ final class Connection {
 	/**
 	 * Read a config value with a default.
 	 *
-	 * @param string $key     Config key.
-	 * @param mixed  $default Value when absent.
+	 * @param string $key      Config key.
+	 * @param mixed  $fallback Value when absent.
 	 * @return mixed
 	 */
-	public function config( string $key, mixed $default = null ): mixed {
-		return $this->config[ $key ] ?? $default;
+	public function config( string $key, mixed $fallback = null ): mixed {
+		return $this->config[ $key ] ?? $fallback;
 	}
 
 	/**

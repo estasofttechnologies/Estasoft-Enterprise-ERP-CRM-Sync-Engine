@@ -71,6 +71,8 @@ final class QueueRepository extends Repository {
 	public const DEFAULT_PRIORITY = 5;
 
 	/**
+	 * Set up the queue repository.
+	 *
 	 * @param \wpdb         $wpdb          Database.
 	 * @param Tables        $tables        Table names.
 	 * @param Clock         $clock         Time source.

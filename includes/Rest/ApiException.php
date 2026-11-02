@@ -12,6 +12,7 @@ namespace Estasoft\SyncEngine\Rest;
 defined( 'ABSPATH' ) || exit;
 
 use Estasoft\SyncEngine\Contract\ConnectorError;
+use Estasoft\SyncEngine\Core\Support\PlainText;
 use Estasoft\SyncEngine\Domain\ErrorClass;
 use Estasoft\SyncEngine\Domain\ErrorCode;
 
@@ -24,6 +25,9 @@ use Estasoft\SyncEngine\Domain\ErrorCode;
  * the catalog yet: GENERIC for an unexpected failure, NO_SIGN_IN for a sign-in route on a connector that does not use sign-in, and
  * MAIL_FAILED for a test email that WordPress did not accept.
  * Failures that WordPress already has a code for (not found, invalid parameter, forbidden) keep the WordPress code.
+ *
+ * The message and the field messages are kept escaped with `esc_html()`, the way they are written at the `throw` (WordPress.org
+ * plugin review asks for it). `toBody()` turns them back into plain text, because the answer is JSON and not HTML.
  */
 final class ApiException extends \RuntimeException {
 
@@ -81,7 +85,7 @@ final class ApiException extends \RuntimeException {
 	public readonly array $context;
 
 	/**
-	 * Field name to message, for validation failures.
+	 * Field name to message (escaped), for validation failures.
 	 *
 	 * @var array<string,string>
 	 */
@@ -95,12 +99,14 @@ final class ApiException extends \RuntimeException {
 	public readonly array $details;
 
 	/**
+	 * Create the error with everything the answer body needs.
+	 *
 	 * @param string               $apiCode    `SYNC-...` or a WordPress REST code.
-	 * @param string               $message    Sentence for the person.
+	 * @param string               $message    Sentence for the person, escaped with `esc_html()`.
 	 * @param int                  $status     HTTP status.
 	 * @param string               $errorClass One of the values of Domain\ErrorClass.
 	 * @param array<string,string> $context    Placeholder values.
-	 * @param array<string,string> $fields     Messages by field name.
+	 * @param array<string,string> $fields     Messages by field name, escaped with `esc_html()`.
 	 * @param array<string,mixed>  $details    Extra detail.
 	 */
 	public function __construct(
@@ -137,7 +143,7 @@ final class ApiException extends \RuntimeException {
 		}
 		return new self(
 			$code->value,
-			( new ConnectorError( $code, $context ) )->message(),
+			esc_html( ( new ConnectorError( $code, $context ) )->message() ),
 			$status,
 			$code->errorClass()->value,
 			$strings
@@ -147,8 +153,8 @@ final class ApiException extends \RuntimeException {
 	/**
 	 * A parameter or field is wrong.
 	 *
-	 * @param string               $message Sentence for the person.
-	 * @param array<string,string> $fields  Messages by field name.
+	 * @param string               $message Sentence for the person, escaped with `esc_html()`.
+	 * @param array<string,string> $fields  Messages by field name, escaped with `esc_html()`.
 	 * @param array<string,mixed>  $details Extra detail.
 	 */
 	public static function invalid( string $message, array $fields = array(), array $details = array() ): self {
@@ -158,7 +164,7 @@ final class ApiException extends \RuntimeException {
 	/**
 	 * The record does not exist.
 	 *
-	 * @param string $message Sentence for the person.
+	 * @param string $message Sentence for the person, escaped with `esc_html()`.
 	 */
 	public static function notFound( string $message ): self {
 		return new self( self::NOT_FOUND, $message, 404, ErrorClass::NeedsPerson->value );
@@ -167,7 +173,7 @@ final class ApiException extends \RuntimeException {
 	/**
 	 * The request is fine but the record is not in a state that allows it.
 	 *
-	 * @param string $message Sentence for the person.
+	 * @param string $message Sentence for the person, escaped with `esc_html()`.
 	 * @param string $code    Machine code.
 	 */
 	public static function conflict( string $message, string $code = 'estasoft_sync_conflict' ): self {
@@ -180,14 +186,14 @@ final class ApiException extends \RuntimeException {
 	public static function generic(): self {
 		return new self(
 			self::GENERIC,
-			__( 'Something went wrong on the server. Try again in a moment. If it keeps happening, copy the support report from Settings and send it to support.', 'estasoft-erp-crm-sync-engine' ),
+			esc_html__( 'Something went wrong on the server. Try again in a moment. If it keeps happening, copy the support report from Settings and send it to support.', 'estasoft-erp-crm-sync-engine' ),
 			500,
 			ErrorClass::Info->value
 		);
 	}
 
 	/**
-	 * The body of the error answer: `{ code, message, data: { status, class, ... } }`.
+	 * The body of the error answer: `{ code, message, data: { status, class, ... } }`, with the messages as plain text.
 	 *
 	 * @return array{code:string,message:string,data:array<string,mixed>}
 	 */
@@ -200,14 +206,14 @@ final class ApiException extends \RuntimeException {
 			$data['context'] = $this->context;
 		}
 		if ( array() !== $this->fields ) {
-			$data['fields'] = $this->fields;
+			$data['fields'] = array_map( PlainText::fromEscaped( ... ), $this->fields );
 		}
 		if ( array() !== $this->details ) {
 			$data['details'] = $this->details;
 		}
 		return array(
 			'code'    => $this->apiCode,
-			'message' => $this->getMessage(),
+			'message' => PlainText::fromEscaped( $this->getMessage() ),
 			'data'    => $data,
 		);
 	}

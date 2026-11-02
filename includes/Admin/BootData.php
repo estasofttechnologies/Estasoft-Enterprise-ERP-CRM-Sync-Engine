@@ -27,9 +27,11 @@ final class BootData {
 	public const ROUTES = array( '/', '/queue', '/invoices', '/connections', '/mapping', '/stock', '/reconciliation', '/logs', '/settings', '/setup', '/shadow' );
 
 	/**
-	 * @param NoticeFacts   $facts   Facts the notices depend on.
-	 * @param ScreenOptions $screen  Screen Options (rows per page).
-	 * @param string        $version Plugin version.
+	 * Create the boot data builder.
+	 *
+	 * @param NoticeFacts   $facts     Facts the notices depend on.
+	 * @param ScreenOptions $screen    Screen Options (rows per page).
+	 * @param string        $version   Plugin version.
 	 * @param string        $pluginUrl Address of the plugin folder.
 	 */
 	public function __construct(

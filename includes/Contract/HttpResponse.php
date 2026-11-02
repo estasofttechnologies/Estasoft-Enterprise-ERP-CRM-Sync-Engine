@@ -17,6 +17,8 @@ defined( 'ABSPATH' ) || exit;
 final class HttpResponse {
 
 	/**
+	 * Describe an HTTP response.
+	 *
 	 * @param int                  $status  HTTP status, or 0 when the request never completed.
 	 * @param string               $body    Raw body.
 	 * @param array<string,string> $headers Lower-case header names.

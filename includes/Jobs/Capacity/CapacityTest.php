@@ -155,7 +155,8 @@ final class CapacityTest {
 			foreach ( $ids as $id ) {
 				$limiter->acquire( 0, 1000000.0 );
 				$key = IdempotencyKey::make( 0, EntityType::Order, (string) $id, 'created', 0 );
-				hash(
+				// The hash stands for the work a real payload costs; its value is not needed.
+				$digest = hash(
 					'sha256',
 					Json::canonical(
 						array(
@@ -170,6 +171,7 @@ final class CapacityTest {
 						)
 					)
 				);
+				unset( $digest );
 				if ( 0 === $id % self::FAIL_EVERY && ! isset( $failedOnce[ $id ] ) ) {
 					// A retryable failure: ask the real retry policy, then wait one tick of the simulated clock.
 					$failedOnce[ $id ] = true;

@@ -34,8 +34,7 @@ final class CapacityController extends BaseController {
 	 * @return array<string,mixed>
 	 */
 	public function run(): array {
-		/** @var CapacityTest $capacity */
-		$capacity = $this->service( JobServices::CAPACITY );
+		$capacity = $this->serviceAs( JobServices::CAPACITY, CapacityTest::class );
 		return $capacity->run();
 	}
 }

@@ -19,8 +19,13 @@ defined( 'ABSPATH' ) || exit;
 final class WidgetData {
 
 	/**
-	 * @param \Closure():object $dashboard   Returns the dashboard service (`widget()` and `status()`).
-	 * @param \Closure():object $connections Returns the connection service (`summaries()`).
+	 * Create the widget data source.
+	 *
+	 * @param \Closure $dashboard   Returns the dashboard service (`widget()` and `status()`).
+	 * @param \Closure $connections Returns the connection service (`summaries()`).
+	 *
+	 * @phpstan-param \Closure():object $dashboard
+	 * @phpstan-param \Closure():object $connections
 	 */
 	public function __construct(
 		private readonly \Closure $dashboard,

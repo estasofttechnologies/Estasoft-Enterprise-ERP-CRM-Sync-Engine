@@ -102,6 +102,8 @@ final class Scheduler {
 	);
 
 	/**
+	 * Set up the background task scheduler.
+	 *
 	 * @param Worker          $worker      Queue runner.
 	 * @param Reaper          $reaper      Dead lock reaper.
 	 * @param CircuitBreaker  $breaker     Circuit probes.
@@ -127,7 +129,9 @@ final class Scheduler {
 	 * Add the WordPress hooks: the task handlers, the WP-Cron interval, and the check that the tasks are scheduled. The
 	 * Scheduler object itself (and everything it needs) is created only when a task actually runs.
 	 *
-	 * @param \Closure():Scheduler $resolve Returns the shared Scheduler.
+	 * @param \Closure $resolve Returns the shared Scheduler.
+	 *
+	 * @phpstan-param \Closure():Scheduler $resolve
 	 */
 	public static function registerHooks( \Closure $resolve ): void {
 		$handlers = array(
@@ -145,6 +149,7 @@ final class Scheduler {
 				}
 			);
 		}
+		// phpcs:ignore WordPress.WP.CronInterval.ChangeDetected -- the intervals come from the task list; the queue worker runs every minute by design, and this fallback is used only when Action Scheduler is not available.
 		add_filter( 'cron_schedules', array( self::class, 'cronSchedules' ) );
 		add_action( 'init', array( self::class, 'ensureScheduled' ), 20 );
 	}
@@ -219,6 +224,7 @@ final class Scheduler {
 				continue;
 			}
 			if ( false === wp_next_scheduled( $hook ) ) {
+				// phpcs:ignore WordPress.WP.CronInterval.ChangeDetected -- same task-list intervals as in registerHooks(); needed so WP-Cron knows the recurrence before the event is scheduled.
 				add_filter( 'cron_schedules', array( self::class, 'cronSchedules' ) );
 				wp_schedule_event( time() + 30, self::recurrence( $interval ), $hook );
 			}

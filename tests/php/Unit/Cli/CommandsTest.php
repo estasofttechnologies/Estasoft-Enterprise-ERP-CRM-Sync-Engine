@@ -387,6 +387,12 @@ final class CommandsTest extends TestCase {
 		$this->assertSame( 2, $this->exitCode( fn() => $this->commands()->reconcile( array(), array( 'window' => '31' ) ) ) );
 	}
 
+	public function test_a_reconcile_failure_prints_the_message_as_text_and_not_as_escaped_html(): void {
+		$this->container->instance( JobServices::RECONCILIATION, new RestFake( array(), array( 'run' => new JobException( esc_html( "Odoo said: \"can't compare\" <now>." ), 409 ) ) ) );
+		$this->assertSame( 1, $this->exitCode( fn() => $this->commands()->reconcile( array(), array() ) ) );
+		$this->assertSame( array( "Odoo said: \"can't compare\" <now>." ), $this->out->of( 'error' ) );
+	}
+
 	public function test_readiness_prints_the_checks_and_exits_with_1_when_one_needs_fixing(): void {
 		$checks = array(
 			array( 'status' => 'passed', 'title' => 'HPOS compatible', 'detail' => 'On.' ),

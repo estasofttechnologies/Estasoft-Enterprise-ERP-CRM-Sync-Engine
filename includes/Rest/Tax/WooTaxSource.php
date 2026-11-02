@@ -31,6 +31,8 @@ final class WooTaxSource implements TaxSource {
 	private const CACHE_SECONDS = 600;
 
 	/**
+	 * Create the source.
+	 *
 	 * @param KeyValueStore $cache Short-lived storage.
 	 */
 	public function __construct( private readonly KeyValueStore $cache ) {

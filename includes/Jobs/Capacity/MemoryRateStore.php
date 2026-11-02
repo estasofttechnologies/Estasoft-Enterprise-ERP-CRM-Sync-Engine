@@ -39,13 +39,13 @@ final class MemoryRateStore implements RateStore {
 	 *
 	 * @param string     $key      Counter name.
 	 * @param float|null $expected Value the caller read.
-	 * @param float      $new      New value.
+	 * @param float      $newValue Value to store.
 	 */
-	public function compareAndSet( string $key, ?float $expected, float $new ): bool {
+	public function compareAndSet( string $key, ?float $expected, float $newValue ): bool {
 		if ( ( $this->values[ $key ] ?? null ) !== $expected ) {
 			return false;
 		}
-		$this->values[ $key ] = $new;
+		$this->values[ $key ] = $newValue;
 		return true;
 	}
 }

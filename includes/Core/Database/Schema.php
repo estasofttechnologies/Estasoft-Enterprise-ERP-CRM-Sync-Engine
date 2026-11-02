@@ -28,6 +28,8 @@ final class Schema {
 	public const VERSION = '1.1.0';
 
 	/**
+	 * Set up the schema.
+	 *
 	 * @param Tables $tables         Table names.
 	 * @param string $charsetCollate Result of $wpdb->get_charset_collate() (utf8mb4).
 	 */

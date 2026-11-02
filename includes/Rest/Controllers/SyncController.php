@@ -72,10 +72,9 @@ final class SyncController extends BaseController {
 	 * @throws ApiException 503 when the run could not be scheduled.
 	 */
 	public function run(): array {
-		/** @var QueueService $queue */
-		$queue = $this->service( Services::QUEUE_SERVICE );
+		$queue = $this->serviceAs( Services::QUEUE_SERVICE, QueueService::class );
 		if ( ! $queue->syncNow() ) {
-			throw new ApiException( 'estasoft_sync_run_failed', __( 'The run could not be started. Background tasks may be switched off on this site.', 'estasoft-erp-crm-sync-engine' ), 503, 'retry' );
+			throw new ApiException( 'estasoft_sync_run_failed', esc_html__( 'The run could not be started. Background tasks may be switched off on this site.', 'estasoft-erp-crm-sync-engine' ), 503, 'retry' );
 		}
 		return array( 'started' => true );
 	}
@@ -130,11 +129,10 @@ final class SyncController extends BaseController {
 	 * @throws ApiException 409 when nothing could be paused.
 	 */
 	private function doPause( ?int $connectionId, ?int $minutes ): array {
-		/** @var PauseController $pause */
-		$pause = $this->service( Services::PAUSE_CONTROLLER );
+		$pause = $this->serviceAs( Services::PAUSE_CONTROLLER, PauseController::class );
 		$done  = null === $connectionId ? $pause->pauseAll( $minutes ) > 0 : $pause->pause( $connectionId, $minutes );
 		if ( ! $done ) {
-			throw ApiException::conflict( __( 'There is no connection that can be paused.', 'estasoft-erp-crm-sync-engine' ), 'estasoft_sync_cannot_pause' );
+			throw ApiException::conflict( esc_html__( 'There is no connection that can be paused.', 'estasoft-erp-crm-sync-engine' ), 'estasoft_sync_cannot_pause' );
 		}
 		return $this->summary( $connectionId );
 	}
@@ -148,11 +146,10 @@ final class SyncController extends BaseController {
 	 * @throws ApiException 409 when nothing needed resuming.
 	 */
 	private function doResume( ?int $connectionId ): array {
-		/** @var PauseController $pause */
-		$pause = $this->service( Services::PAUSE_CONTROLLER );
+		$pause = $this->serviceAs( Services::PAUSE_CONTROLLER, PauseController::class );
 		$done  = null === $connectionId ? $pause->resumeAll() > 0 : $pause->resume( $connectionId );
 		if ( ! $done ) {
-			throw ApiException::conflict( __( 'There is no paused connection to resume.', 'estasoft-erp-crm-sync-engine' ), 'estasoft_sync_cannot_resume' );
+			throw ApiException::conflict( esc_html__( 'There is no paused connection to resume.', 'estasoft-erp-crm-sync-engine' ), 'estasoft_sync_cannot_resume' );
 		}
 		return $this->summary( $connectionId );
 	}
@@ -166,14 +163,13 @@ final class SyncController extends BaseController {
 	 * @throws ApiException 404 when the connection does not exist.
 	 */
 	private function summary( ?int $connectionId ): array {
-		/** @var ConnectionService $connections */
-		$connections = $this->service( JobServices::CONNECTIONS );
+		$connections = $this->serviceAs( JobServices::CONNECTIONS, ConnectionService::class );
 		foreach ( $connections->summaries() as $summary ) {
 			if ( null === $connectionId ? 'disconnected' !== ( $summary['status'] ?? '' ) : (int) ( $summary['id'] ?? 0 ) === $connectionId ) {
 				return $summary;
 			}
 		}
-		throw ApiException::notFound( __( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ) );
+		throw ApiException::notFound( esc_html__( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ) );
 	}
 
 	/**

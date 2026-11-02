@@ -28,6 +28,8 @@ final class AdminBar {
 	public const NODE_ID = 'estasoft-sync';
 
 	/**
+	 * Create the admin bar item.
+	 *
 	 * @param Snapshot $snapshot Queue and connection picture.
 	 * @param Settings $settings Settings (the on and off switch).
 	 * @param Urls     $urls     Addresses of the app.

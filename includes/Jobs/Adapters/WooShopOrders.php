@@ -288,14 +288,14 @@ final class WooShopOrders implements ShopOrders {
 			'order'      => 'DESC',
 			'paginate'   => true,
 			'return'     => 'objects',
-			'meta_query' => $meta, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+			'meta_query' => $meta, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- one page of orders, found by the sync fields WooCommerce stores for them.
 		);
 		$search = trim( $search );
 		if ( '' !== $search ) {
 			if ( ctype_digit( $search ) ) {
 				$args['s'] = $search;
 			} else {
-				$args['meta_query'][] = array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+				$args['meta_query'][] = array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- searches the invoice number on one page of orders.
 					'key'     => self::INVOICE_NUMBER,
 					'value'   => $search,
 					'compare' => 'LIKE',

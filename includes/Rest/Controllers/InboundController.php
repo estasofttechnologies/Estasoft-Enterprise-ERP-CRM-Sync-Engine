@@ -38,8 +38,7 @@ final class InboundController extends BaseController {
 	 * @throws \Estasoft\SyncEngine\Jobs\Inbound\InboundRefused When the message is refused; the error mapper answers with its status and SYNC-INB-001.
 	 */
 	public function receive( \WP_REST_Request $request ): array {
-		/** @var InboundHandler $inbound */
-		$inbound = $this->service( JobServices::INBOUND );
+		$inbound = $this->serviceAs( JobServices::INBOUND, InboundHandler::class );
 		$result  = $inbound->handle(
 			(int) $request['connection'],
 			$request->get_body(),

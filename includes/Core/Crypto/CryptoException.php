@@ -14,16 +14,22 @@ defined( 'ABSPATH' ) || exit;
 use Estasoft\SyncEngine\Domain\ErrorCode;
 
 /**
- * The message is safe to show to a person: it never contains a key, a secret or a ciphertext.
+ * The message is safe to show to a person: it never contains a key, a secret or a ciphertext. It is escaped with `esc_html()`
+ * when the exception is created, so code that shows it as plain text (a log line, a JSON answer) turns it back with
+ * `PlainText::fromEscaped()`.
  */
 final class CryptoException extends \RuntimeException {
 
 	/**
 	 * Catalog code, or null when the failure has no catalog entry.
+	 *
+	 * @var ErrorCode|null
 	 */
 	private ?ErrorCode $errorCode;
 
 	/**
+	 * Create the exception.
+	 *
 	 * @param string         $message   Plain sentence for the person.
 	 * @param ErrorCode|null $errorCode Catalog code, if any.
 	 */
@@ -36,7 +42,7 @@ final class CryptoException extends \RuntimeException {
 	 * The encryption key constant is not defined in wp-config.php (SYNC-CFG-002).
 	 */
 	public static function keyMissing(): self {
-		return new self( ErrorCode::Cfg002->template(), ErrorCode::Cfg002 );
+		return new self( esc_html( ErrorCode::Cfg002->template() ), ErrorCode::Cfg002 );
 	}
 
 	/**

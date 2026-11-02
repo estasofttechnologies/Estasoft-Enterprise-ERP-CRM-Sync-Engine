@@ -100,15 +100,13 @@ final class QueueController extends BaseController {
 	 * @param \WP_REST_Request $request Request.
 	 */
 	public function index( \WP_REST_Request $request ): \WP_REST_Response {
-		/** @var QueueRepository $queue */
-		$queue = $this->service( Services::QUEUE_REPOSITORY );
+		$queue = $this->serviceAs( Services::QUEUE_REPOSITORY, QueueRepository::class );
 		$args  = $this->params( $request );
 		if ( ! isset( $args['mode'] ) ) {
 			$args['mode'] = 'live';
 		}
 		if ( ! isset( $args['per_page'] ) && $this->container->has( ScreenOptions::SERVICE ) ) {
-			/** @var ScreenOptions $options */
-			$options          = $this->container->get( ScreenOptions::SERVICE );
+			$options          = $this->serviceAs( ScreenOptions::SERVICE, ScreenOptions::class );
 			$args['per_page'] = $options->perPage( $this->actorId() );
 		}
 		return $this->paged( $queue->query( QueueQuery::fromArray( $args ) ) );
@@ -120,8 +118,7 @@ final class QueueController extends BaseController {
 	 * @return array<int,array<string,mixed>>
 	 */
 	public function attention(): array {
-		/** @var QueueRepository $queue */
-		$queue = $this->service( Services::QUEUE_REPOSITORY );
+		$queue = $this->serviceAs( Services::QUEUE_REPOSITORY, QueueRepository::class );
 		return $queue->attentionGroups();
 	}
 
@@ -134,11 +131,10 @@ final class QueueController extends BaseController {
 	 * @throws ApiException 404 when there is no such item.
 	 */
 	public function show( \WP_REST_Request $request ): array {
-		/** @var QueueService $queue */
-		$queue  = $this->service( Services::QUEUE_SERVICE );
+		$queue  = $this->serviceAs( Services::QUEUE_SERVICE, QueueService::class );
 		$detail = $queue->detail( (int) $request['id'] );
 		if ( null === $detail ) {
-			throw ApiException::notFound( __( 'That queue item does not exist.', 'estasoft-erp-crm-sync-engine' ) );
+			throw ApiException::notFound( esc_html__( 'That queue item does not exist.', 'estasoft-erp-crm-sync-engine' ) );
 		}
 		return $detail;
 	}
@@ -152,11 +148,10 @@ final class QueueController extends BaseController {
 	 * @throws ApiException 409 when the item is not failed or retrying.
 	 */
 	public function retry( \WP_REST_Request $request ): array {
-		/** @var QueueService $queue */
-		$queue = $this->service( Services::QUEUE_SERVICE );
+		$queue = $this->serviceAs( Services::QUEUE_SERVICE, QueueService::class );
 		$item  = $queue->retry( (int) $request['id'] );
 		if ( null === $item ) {
-			throw ApiException::conflict( __( 'Only failed or retrying orders can be retried.', 'estasoft-erp-crm-sync-engine' ), 'estasoft_sync_cannot_retry' );
+			throw ApiException::conflict( esc_html__( 'Only failed or retrying orders can be retried.', 'estasoft-erp-crm-sync-engine' ), 'estasoft_sync_cannot_retry' );
 		}
 		return $item;
 	}
@@ -170,11 +165,10 @@ final class QueueController extends BaseController {
 	 * @throws ApiException 409 when the item cannot be skipped.
 	 */
 	public function skip( \WP_REST_Request $request ): array {
-		/** @var QueueService $queue */
-		$queue = $this->service( Services::QUEUE_SERVICE );
+		$queue = $this->serviceAs( Services::QUEUE_SERVICE, QueueService::class );
 		$item  = $queue->skip( (int) $request['id'], Sanitize::line( $request->get_param( 'reason' ), 500 ) );
 		if ( null === $item ) {
-			throw ApiException::conflict( __( 'This item has already finished and cannot be skipped.', 'estasoft-erp-crm-sync-engine' ), 'estasoft_sync_cannot_skip' );
+			throw ApiException::conflict( esc_html__( 'This item has already finished and cannot be skipped.', 'estasoft-erp-crm-sync-engine' ), 'estasoft_sync_cannot_skip' );
 		}
 		return $item;
 	}
@@ -188,11 +182,10 @@ final class QueueController extends BaseController {
 	 * @throws ApiException 409 when the item is not skipped.
 	 */
 	public function restore( \WP_REST_Request $request ): array {
-		/** @var QueueService $queue */
-		$queue = $this->service( Services::QUEUE_SERVICE );
+		$queue = $this->serviceAs( Services::QUEUE_SERVICE, QueueService::class );
 		$item  = $queue->restore( (int) $request['id'] );
 		if ( null === $item ) {
-			throw ApiException::conflict( __( 'Only skipped orders can be restored.', 'estasoft-erp-crm-sync-engine' ), 'estasoft_sync_cannot_restore' );
+			throw ApiException::conflict( esc_html__( 'Only skipped orders can be restored.', 'estasoft-erp-crm-sync-engine' ), 'estasoft_sync_cannot_restore' );
 		}
 		return $item;
 	}
@@ -206,8 +199,7 @@ final class QueueController extends BaseController {
 	 * @throws ApiException 422 when neither ids nor an error code are given.
 	 */
 	public function retryMany( \WP_REST_Request $request ): array {
-		/** @var QueueService $queue */
-		$queue = $this->service( Services::QUEUE_SERVICE );
+		$queue = $this->serviceAs( Services::QUEUE_SERVICE, QueueService::class );
 		$code  = (string) $request->get_param( 'error_code' );
 		if ( '' !== $code ) {
 			$cause = Sanitize::line( $request->get_param( 'cause' ), 200 );
@@ -215,7 +207,7 @@ final class QueueController extends BaseController {
 		}
 		$ids = Sanitize::idList( $request->get_param( 'ids' ) );
 		if ( array() === $ids ) {
-			throw ApiException::invalid( __( 'Choose the orders to retry, or an error code.', 'estasoft-erp-crm-sync-engine' ), array( 'ids' => __( 'Choose at least one order.', 'estasoft-erp-crm-sync-engine' ) ) );
+			throw ApiException::invalid( esc_html__( 'Choose the orders to retry, or an error code.', 'estasoft-erp-crm-sync-engine' ), array( 'ids' => esc_html__( 'Choose at least one order.', 'estasoft-erp-crm-sync-engine' ) ) );
 		}
 		return array( 'retried' => $queue->retryMany( $ids ) );
 	}
@@ -229,12 +221,11 @@ final class QueueController extends BaseController {
 	 * @throws ApiException 422 when the action is unknown.
 	 */
 	public function bulk( \WP_REST_Request $request ): array {
-		/** @var QueueService $queue */
-		$queue  = $this->service( Services::QUEUE_SERVICE );
+		$queue  = $this->serviceAs( Services::QUEUE_SERVICE, QueueService::class );
 		$reason = Sanitize::line( $request->get_param( 'reason' ), 500 );
 		$done   = $queue->bulk( Sanitize::idList( $request->get_param( 'ids' ) ), (string) $request->get_param( 'action' ), '' === $reason ? null : $reason );
 		if ( null === $done ) {
-			throw ApiException::invalid( __( 'That action is not known.', 'estasoft-erp-crm-sync-engine' ), array( 'action' => __( 'Choose skip, retry or restore.', 'estasoft-erp-crm-sync-engine' ) ) );
+			throw ApiException::invalid( esc_html__( 'That action is not known.', 'estasoft-erp-crm-sync-engine' ), array( 'action' => esc_html__( 'Choose skip, retry or restore.', 'estasoft-erp-crm-sync-engine' ) ) );
 		}
 		return array( 'done' => $done );
 	}

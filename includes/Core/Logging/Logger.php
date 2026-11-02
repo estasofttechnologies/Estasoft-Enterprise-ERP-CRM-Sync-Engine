@@ -22,6 +22,8 @@ use Estasoft\SyncEngine\Domain\ErrorCode;
 final class Logger {
 
 	/**
+	 * Set up the logger.
+	 *
 	 * @param LogRepository $logs     Storage.
 	 * @param Settings      $settings Settings (redaction on or off, excerpt size).
 	 * @param Redactor      $redactor Redaction rules.

@@ -365,10 +365,12 @@ final class SettingsPorter {
 		if ( array() !== $problems ) {
 			throw new ValidationException(
 				array(
-					'json' => sprintf(
-						/* translators: %s: name of the setting that is not valid. */
-						__( 'The file has a value that is not allowed (%s). Nothing was imported.', 'estasoft-erp-crm-sync-engine' ),
-						$this->label( (string) array_key_first( $problems ) )
+					'json' => esc_html(
+						sprintf(
+							/* translators: %s: name of the setting that is not valid. */
+							__( 'The file has a value that is not allowed (%s). Nothing was imported.', 'estasoft-erp-crm-sync-engine' ),
+							$this->label( (string) array_key_first( $problems ) )
+						)
 					),
 				)
 			);
@@ -391,12 +393,14 @@ final class SettingsPorter {
 					$message = is_object( $first ) && isset( $first->message ) ? (string) $first->message : ( is_array( $first ) ? (string) ( $first['message'] ?? '' ) : (string) $first );
 					throw new ValidationException(
 						array(
-							'json' => sprintf(
-								/* translators: 1: mapping type, 2: connector id, 3: what is wrong. */
-								__( 'The %1$s mapping for %2$s has a problem: %3$s Nothing was imported.', 'estasoft-erp-crm-sync-engine' ),
-								$this->plain( (string) $type ),
-								$this->plain( (string) $connector ),
-								'' === $message ? __( 'its rules are not valid.', 'estasoft-erp-crm-sync-engine' ) : rtrim( mb_substr( $message, 0, 200 ), '.' ) . '.'
+							'json' => esc_html(
+								sprintf(
+									/* translators: 1: mapping type, 2: connector id, 3: what is wrong. */
+									__( 'The %1$s mapping for %2$s has a problem: %3$s Nothing was imported.', 'estasoft-erp-crm-sync-engine' ),
+									$this->plain( (string) $type ),
+									$this->plain( (string) $connector ),
+									'' === $message ? __( 'its rules are not valid.', 'estasoft-erp-crm-sync-engine' ) : rtrim( mb_substr( $message, 0, 200 ), '.' ) . '.'
+								)
 							),
 						)
 					);
@@ -414,46 +418,47 @@ final class SettingsPorter {
 	 * @throws ValidationException With the message under `json`.
 	 */
 	private function read( string $json ): array {
+		// The message is escaped where it is written, like every message that is thrown.
 		$fail = static function ( string $message ): ValidationException {
 			return new ValidationException( array( 'json' => $message ) );
 		};
 		if ( strlen( $json ) > self::MAX_BYTES ) {
-			throw $fail( __( 'The file is larger than 1 MB, so it is not a settings file from this plugin.', 'estasoft-erp-crm-sync-engine' ) );
+			throw $fail( esc_html__( 'The file is larger than 1 MB, so it is not a settings file from this plugin.', 'estasoft-erp-crm-sync-engine' ) );
 		}
 		$data = json_decode( $json, true, 12 );
 		if ( ! is_array( $data ) ) {
-			throw $fail( __( 'The file is not valid JSON.', 'estasoft-erp-crm-sync-engine' ) );
+			throw $fail( esc_html__( 'The file is not valid JSON.', 'estasoft-erp-crm-sync-engine' ) );
 		}
 		if ( ( $data['estasoft_sync'] ?? null ) !== self::SCHEMA ) {
-			throw $fail( __( 'This is not a settings file from this plugin, or it was made by a version with a different layout.', 'estasoft-erp-crm-sync-engine' ) );
+			throw $fail( esc_html__( 'This is not a settings file from this plugin, or it was made by a version with a different layout.', 'estasoft-erp-crm-sync-engine' ) );
 		}
 		$unknown = array_diff( array_keys( $data ), self::KEYS );
 		if ( array() !== $unknown ) {
-			throw $fail( sprintf( /* translators: %s: the key. */ __( 'The file has a part this plugin does not know (%s).', 'estasoft-erp-crm-sync-engine' ), $this->plain( (string) reset( $unknown ) ) ) );
+			throw $fail( esc_html( sprintf( /* translators: %s: the key. */ __( 'The file has a part this plugin does not know (%s).', 'estasoft-erp-crm-sync-engine' ), $this->plain( (string) reset( $unknown ) ) ) ) );
 		}
 		$settings = $data['settings'] ?? array();
 		$mappings = $data['mappings'] ?? array();
 		$limits   = $data['connection_settings'] ?? array();
 		if ( ! is_array( $settings ) || ! is_array( $mappings ) || ! is_array( $limits ) ) {
-			throw $fail( __( 'The file is not laid out as expected.', 'estasoft-erp-crm-sync-engine' ) );
+			throw $fail( esc_html__( 'The file is not laid out as expected.', 'estasoft-erp-crm-sync-engine' ) );
 		}
 		$known = array_keys( $this->settings->defaults() );
 		foreach ( array_keys( $settings ) as $key ) {
 			if ( ! in_array( $key, $known, true ) ) {
-				throw $fail( sprintf( /* translators: %s: the setting. */ __( 'The file has a setting this plugin does not know (%s).', 'estasoft-erp-crm-sync-engine' ), $this->plain( (string) $key ) ) );
+				throw $fail( esc_html( sprintf( /* translators: %s: the setting. */ __( 'The file has a setting this plugin does not know (%s).', 'estasoft-erp-crm-sync-engine' ), $this->plain( (string) $key ) ) ) );
 			}
 		}
 		foreach ( $mappings as $connector => $types ) {
 			if ( ! is_string( $connector ) || 1 !== preg_match( '/^[a-z0-9][a-z0-9_\-]{0,39}$/', $connector ) || ! is_array( $types ) ) {
-				throw $fail( __( 'The mappings in the file are not laid out as expected.', 'estasoft-erp-crm-sync-engine' ) );
+				throw $fail( esc_html__( 'The mappings in the file are not laid out as expected.', 'estasoft-erp-crm-sync-engine' ) );
 			}
 			foreach ( $types as $type => $rules ) {
 				if ( ! in_array( $type, self::TYPES, true ) || ! is_array( $rules ) || ! array_is_list( $rules ) || count( $rules ) > self::MAX_RULES ) {
-					throw $fail( sprintf( /* translators: %s: mapping type. */ __( 'The %s mapping in the file is not valid.', 'estasoft-erp-crm-sync-engine' ), $this->plain( (string) $type ) ) );
+					throw $fail( esc_html( sprintf( /* translators: %s: mapping type. */ __( 'The %s mapping in the file is not valid.', 'estasoft-erp-crm-sync-engine' ), $this->plain( (string) $type ) ) ) );
 				}
 				foreach ( $rules as $rule ) {
 					if ( ! is_array( $rule ) ) {
-						throw $fail( sprintf( /* translators: %s: mapping type. */ __( 'The %s mapping in the file is not valid.', 'estasoft-erp-crm-sync-engine' ), $this->plain( (string) $type ) ) );
+						throw $fail( esc_html( sprintf( /* translators: %s: mapping type. */ __( 'The %s mapping in the file is not valid.', 'estasoft-erp-crm-sync-engine' ), $this->plain( (string) $type ) ) ) );
 					}
 				}
 			}
@@ -465,11 +470,11 @@ final class SettingsPorter {
 		);
 		foreach ( $limits as $connector => $groups ) {
 			if ( ! is_string( $connector ) || 1 !== preg_match( '/^[a-z0-9][a-z0-9_\-]{0,39}$/', $connector ) || ! is_array( $groups ) ) {
-				throw $fail( __( 'The limits in the file are not laid out as expected.', 'estasoft-erp-crm-sync-engine' ) );
+				throw $fail( esc_html__( 'The limits in the file are not laid out as expected.', 'estasoft-erp-crm-sync-engine' ) );
 			}
 			foreach ( $groups as $group => $values ) {
 				if ( ! isset( $allowed[ $group ] ) || ! is_array( $values ) || array() !== array_diff( array_keys( $values ), $allowed[ $group ] ) ) {
-					throw $fail( __( 'The limits in the file have a part this plugin does not know.', 'estasoft-erp-crm-sync-engine' ) );
+					throw $fail( esc_html__( 'The limits in the file have a part this plugin does not know.', 'estasoft-erp-crm-sync-engine' ) );
 				}
 			}
 		}

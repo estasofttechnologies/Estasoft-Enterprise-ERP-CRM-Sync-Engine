@@ -151,7 +151,7 @@ final class InvoiceService {
 	 */
 	public function saveWindow( int $hours ): array {
 		if ( null === Ranges::read( $hours, self::WINDOW ) ) {
-			throw new ValidationException( array( 'window_hours' => Ranges::message( self::WINDOW ) ) );
+			throw new ValidationException( array( 'window_hours' => esc_html( Ranges::message( self::WINDOW ) ) ) );
 		}
 		$this->options->set( self::OPTION, array( 'window_hours' => $hours ) );
 		return array( 'window_hours' => $hours );

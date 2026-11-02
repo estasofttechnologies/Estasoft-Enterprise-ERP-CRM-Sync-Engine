@@ -16,6 +16,7 @@ use Estasoft\SyncEngine\Core\Queue\PauseController;
 use Estasoft\SyncEngine\Core\Queue\QueueService;
 use Estasoft\SyncEngine\Core\Queue\Worker;
 use Estasoft\SyncEngine\Core\Services;
+use Estasoft\SyncEngine\Core\Support\PlainText;
 use Estasoft\SyncEngine\Jobs\Connections\ConnectionService;
 use Estasoft\SyncEngine\Jobs\Dashboard\DashboardService;
 use Estasoft\SyncEngine\Jobs\JobException;
@@ -59,6 +60,8 @@ final class Commands {
 	private \Closure $memory;
 
 	/**
+	 * Create the commands.
+	 *
 	 * @param Container     $container Services, resolved when a command runs.
 	 * @param CliOutput     $out       Where messages go.
 	 * @param StopSignal    $stop      Set by SIGTERM and SIGINT.
@@ -118,8 +121,7 @@ final class Commands {
 		$maxItems    = $this->intOption( $assoc_args, 'max-items', 500, 1, 1000000 );
 		$maxMemory   = $this->intOption( $assoc_args, 'max-memory', 128, 16, 8192 );
 
-		/** @var Worker $worker */
-		$worker = $this->container->get( Services::WORKER );
+		$worker = $this->serviceAs( Services::WORKER, Worker::class );
 		$this->stop->listen();
 		/* translators: 1: items at once, 2: item limit, 3: memory limit in megabytes. */
 		$this->out->log( sprintf( __( 'Worker started: %1$d at a time, stops after %2$d items or %3$d MB.', 'estasoft-erp-crm-sync-engine' ), $concurrency, $maxItems, $maxMemory ) );
@@ -185,10 +187,8 @@ final class Commands {
 		$format = $this->format( $assoc_args, array( 'table', 'csv', 'json', 'yaml' ) );
 		$id     = $this->intOption( $assoc_args, 'connection', 0, 0, PHP_INT_MAX );
 
-		/** @var DashboardService $dashboard */
-		$dashboard = $this->container->get( JobServices::DASHBOARD );
-		/** @var ConnectionService $connections */
-		$connections = $this->container->get( JobServices::CONNECTIONS );
+		$dashboard   = $this->serviceAs( JobServices::DASHBOARD, DashboardService::class );
+		$connections = $this->serviceAs( JobServices::CONNECTIONS, ConnectionService::class );
 		$status      = $dashboard->status( $id > 0 ? $id : null );
 		$summaries   = array_values(
 			array_filter(
@@ -267,8 +267,7 @@ final class Commands {
 			$this->out->fail( __( '--cause needs --code.', 'estasoft-erp-crm-sync-engine' ), 2 );
 		}
 
-		/** @var QueueService $queue */
-		$queue = $this->container->get( Services::QUEUE_SERVICE );
+		$queue = $this->serviceAs( Services::QUEUE_SERVICE, QueueService::class );
 		$count = '' !== $code ? $queue->retryGroup( $code, '' === $cause ? null : $cause ) : $queue->retryMany( $ids );
 		if ( 0 === $count ) {
 			$this->out->warning( __( 'Nothing was retried. Only failed and retrying items can be retried.', 'estasoft-erp-crm-sync-engine' ) );
@@ -301,8 +300,7 @@ final class Commands {
 		$id      = $this->intOption( $assoc_args, 'connection', 0, 0, PHP_INT_MAX );
 		$minutes = $this->intOption( $assoc_args, 'minutes', 0, 0, 43200 );
 
-		/** @var PauseController $pause */
-		$pause = $this->container->get( Services::PAUSE_CONTROLLER );
+		$pause = $this->serviceAs( Services::PAUSE_CONTROLLER, PauseController::class );
 		$count = $id > 0 ? ( $pause->pause( $id, $minutes > 0 ? $minutes : null ) ? 1 : 0 ) : $pause->pauseAll( $minutes > 0 ? $minutes : null );
 		if ( 0 === $count ) {
 			$this->out->fail( __( 'There is no connection that can be paused.', 'estasoft-erp-crm-sync-engine' ) );
@@ -335,8 +333,7 @@ final class Commands {
 		unset( $args );
 		$id = $this->intOption( $assoc_args, 'connection', 0, 0, PHP_INT_MAX );
 
-		/** @var PauseController $pause */
-		$pause = $this->container->get( Services::PAUSE_CONTROLLER );
+		$pause = $this->serviceAs( Services::PAUSE_CONTROLLER, PauseController::class );
 		$count = $id > 0 ? ( $pause->resume( $id ) ? 1 : 0 ) : $pause->resumeAll();
 		if ( 0 === $count ) {
 			$this->out->warning( __( 'No connection was paused.', 'estasoft-erp-crm-sync-engine' ) );
@@ -374,15 +371,14 @@ final class Commands {
 		$window = $this->intOption( $assoc_args, 'window', 7, 1, 30 );
 		$id     = $this->intOption( $assoc_args, 'connection', 0, 0, PHP_INT_MAX );
 
-		/** @var ReconService $recon */
-		$recon = $this->container->get( JobServices::RECONCILIATION );
+		$recon = $this->serviceAs( JobServices::RECONCILIATION, ReconService::class );
 		$run   = array();
 		$done  = -1;
 		for ( $round = 0; $round < self::RECON_ROUNDS; ++$round ) {
 			try {
 				$run = $recon->run( $window, $id > 0 ? $id : null, 'manual' );
 			} catch ( JobException $error ) {
-				$this->out->fail( $error->getMessage() );
+				$this->out->fail( PlainText::fromEscaped( $error->getMessage() ) );
 			}
 			if ( 'running' !== (string) ( $run['status'] ?? '' ) ) {
 				break;
@@ -445,8 +441,7 @@ final class Commands {
 		unset( $args );
 		$format = $this->format( $assoc_args, array( 'table', 'csv', 'json', 'yaml' ) );
 
-		/** @var ReadinessService $readiness */
-		$readiness = $this->container->get( JobServices::READINESS );
+		$readiness = $this->serviceAs( JobServices::READINESS, ReadinessService::class );
 		$result    = $readiness->run();
 		$checks    = is_array( $result['checks'] ?? null ) ? $result['checks'] : array();
 
@@ -517,16 +512,16 @@ final class Commands {
 	/**
 	 * A whole-number option inside a range; a value outside the range or not a number stops the command with exit code 2.
 	 *
-	 * @param array<string,mixed> $assoc   Options.
-	 * @param string              $name    Option name.
-	 * @param int                 $default Value when the option is absent.
-	 * @param int                 $min     Smallest allowed.
-	 * @param int                 $max     Largest allowed.
+	 * @param array<string,mixed> $assoc    Options.
+	 * @param string              $name     Option name.
+	 * @param int                 $fallback Value when the option is absent.
+	 * @param int                 $min      Smallest allowed.
+	 * @param int                 $max      Largest allowed.
 	 */
-	private function intOption( array $assoc, string $name, int $default, int $min, int $max ): int {
+	private function intOption( array $assoc, string $name, int $fallback, int $min, int $max ): int {
 		$raw = $this->textOption( $assoc, $name );
 		if ( null === $raw ) {
-			return $default;
+			return $fallback;
 		}
 		$raw = trim( $raw );
 		if ( 1 !== preg_match( '/^\d+$/', $raw ) || (int) $raw < $min || (int) $raw > $max ) {
@@ -557,12 +552,12 @@ final class Commands {
 	/**
 	 * Queue item ids from a comma-separated list.
 	 *
-	 * @param string $list Text such as "10485, 10491".
+	 * @param string $text Text such as "10485, 10491".
 	 * @return array<int,int>
 	 */
-	private function ids( string $list ): array {
+	private function ids( string $text ): array {
 		$ids = array();
-		foreach ( explode( ',', $list ) as $part ) {
+		foreach ( explode( ',', $text ) as $part ) {
 			$part = trim( $part );
 			if ( '' === $part ) {
 				continue;
@@ -573,6 +568,27 @@ final class Commands {
 			$ids[ (int) $part ] = (int) $part;
 		}
 		return array_values( $ids );
+	}
+
+	/**
+	 * A service from the container, for the class the command uses it as.
+	 *
+	 * @template T of object
+	 * @param string $key  Container key.
+	 * @param string $type Class or interface the command uses the service as.
+	 * @phpstan-param class-string<T> $type
+	 * @return object The service.
+	 * @phpstan-return T
+	 */
+	private function serviceAs( string $key, string $type ): object {
+		unset( $type );
+		/**
+		 * The service, as the class the command asked for.
+		 *
+		 * @var T $service
+		 */
+		$service = $this->container->get( $key );
+		return $service;
 	}
 
 	/**

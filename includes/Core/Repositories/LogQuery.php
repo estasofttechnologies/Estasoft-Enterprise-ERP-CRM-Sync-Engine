@@ -35,6 +35,8 @@ final class LogQuery {
 	);
 
 	/**
+	 * Describe a log search.
+	 *
 	 * @param string|null $level        info, warning, error, or null for all.
 	 * @param string|null $search       Text matched against message, code and item reference.
 	 * @param int|null    $connectionId Connection.

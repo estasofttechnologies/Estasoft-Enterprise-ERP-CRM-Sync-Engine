@@ -31,6 +31,8 @@ final class QueueQuery {
 	public const DAYS = array( 'today', 'yesterday', '7d', '30d' );
 
 	/**
+	 * Describe a queue search.
+	 *
 	 * @param string|null $state        A state, `waiting` (queued, syncing, retrying), `all`, or null for all.
 	 * @param string|null $entityType   An entity type value.
 	 * @param string|null $day          today, yesterday, 7d or 30d (store time).

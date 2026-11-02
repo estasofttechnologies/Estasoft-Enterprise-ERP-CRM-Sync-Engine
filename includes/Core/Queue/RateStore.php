@@ -29,8 +29,8 @@ interface RateStore {
 	 *
 	 * @param string     $key      Counter name.
 	 * @param float|null $expected The value the caller read (null when it did not exist).
-	 * @param float      $new      The new value.
+	 * @param float      $newValue The new value.
 	 * @return bool True when the value was replaced; false when another worker changed it first.
 	 */
-	public function compareAndSet( string $key, ?float $expected, float $new ): bool;
+	public function compareAndSet( string $key, ?float $expected, float $newValue ): bool;
 }

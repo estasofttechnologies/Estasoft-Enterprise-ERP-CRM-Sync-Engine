@@ -54,8 +54,7 @@ final class ShadowController extends BaseController {
 	 * @return array<string,mixed> The `Onboarding` state.
 	 */
 	public function goLive( \WP_REST_Request $request ): array {
-		/** @var GoLiveService $goLive */
-		$goLive = $this->service( JobServices::GO_LIVE );
+		$goLive = $this->serviceAs( JobServices::GO_LIVE, GoLiveService::class );
 		return $goLive->goLive( (string) $request->get_param( 'mode' ), $this->actorId() );
 	}
 
@@ -66,8 +65,7 @@ final class ShadowController extends BaseController {
 	 * @return array<string,mixed> The `Onboarding` state.
 	 */
 	public function start( \WP_REST_Request $request ): array {
-		/** @var ShadowService $shadow */
-		$shadow = $this->service( JobServices::SHADOW );
+		$shadow = $this->serviceAs( JobServices::SHADOW, ShadowService::class );
 		return $shadow->start( $this->connectionId( $request ), max( 1, (int) ( $request->get_param( 'days' ) ?? 7 ) ) );
 	}
 
@@ -78,8 +76,7 @@ final class ShadowController extends BaseController {
 	 * @return array<string,mixed> The `ShadowReport`.
 	 */
 	public function report( \WP_REST_Request $request ): array {
-		/** @var ShadowService $shadow */
-		$shadow = $this->service( JobServices::SHADOW );
+		$shadow = $this->serviceAs( JobServices::SHADOW, ShadowService::class );
 		$id     = $request->get_param( 'connection_id' );
 		return $shadow->report( is_numeric( $id ) ? (int) $id : null );
 	}
@@ -90,8 +87,7 @@ final class ShadowController extends BaseController {
 	 * @return array<string,mixed> The `Onboarding` state.
 	 */
 	public function end(): array {
-		/** @var ShadowService $shadow */
-		$shadow = $this->service( JobServices::SHADOW );
+		$shadow = $this->serviceAs( JobServices::SHADOW, ShadowService::class );
 		return $shadow->end( $this->actorId() );
 	}
 }

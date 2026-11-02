@@ -115,11 +115,21 @@ final class ShadowService {
 	 */
 	public function start( int $connectionId, int $days = 7 ): array {
 		if ( $days < 1 || $days > self::MAX_DAYS ) {
-			throw new ValidationException( array( 'days' => sprintf( /* translators: %d: longest shadow window in days. */ __( 'Enter a number of days from 1 to %d.', 'estasoft-erp-crm-sync-engine' ), self::MAX_DAYS ) ) );
+			throw new ValidationException(
+				array(
+					'days' => esc_html(
+						sprintf(
+							/* translators: %d: longest shadow window in days. */
+							__( 'Enter a number of days from 1 to %d.', 'estasoft-erp-crm-sync-engine' ),
+							self::MAX_DAYS
+						)
+					),
+				)
+			);
 		}
 		$connection = $this->connections->findWithoutSecrets( $connectionId );
 		if ( null === $connection || ConnectionStatus::Disconnected === $connection->status ) {
-			throw new JobException( __( 'That connection does not exist or is disconnected.', 'estasoft-erp-crm-sync-engine' ), 404 );
+			throw new JobException( esc_html__( 'That connection does not exist or is disconnected.', 'estasoft-erp-crm-sync-engine' ), 404 );
 		}
 		$now     = $this->clock->now();
 		$answers = $this->onboarding->get()['answers'];
@@ -208,7 +218,13 @@ final class ShadowService {
 			'not_found' => 1,
 			'matches'   => 2,
 		);
-		usort( $rows, static fn( array $a, array $b ): int => ( $order[ $a['result'] ] <=> $order[ $b['result'] ] ) ?: ( $b['queue_id'] <=> $a['queue_id'] ) );
+		usort(
+			$rows,
+			static function ( array $a, array $b ) use ( $order ): int {
+				$byResult = $order[ $a['result'] ] <=> $order[ $b['result'] ];
+				return 0 !== $byResult ? $byResult : ( $b['queue_id'] <=> $a['queue_id'] );
+			}
+		);
 
 		return array(
 			'info' => $this->buildInfo( $state, $view, $counts, $total ),

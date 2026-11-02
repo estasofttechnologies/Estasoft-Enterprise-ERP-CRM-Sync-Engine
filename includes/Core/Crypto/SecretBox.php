@@ -55,10 +55,14 @@ final class SecretBox {
 
 	/**
 	 * The key material, kept only for deriving the key.
+	 *
+	 * @var string
 	 */
 	private string $material;
 
 	/**
+	 * Set up the secret box.
+	 *
 	 * @param string|null $keyMaterial The value of ESTASOFT_SYNC_KEY, or null/empty when it is not defined.
 	 */
 	public function __construct( ?string $keyMaterial ) {

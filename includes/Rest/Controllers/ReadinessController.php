@@ -34,8 +34,7 @@ final class ReadinessController extends BaseController {
 	 * @return array<string,mixed>
 	 */
 	public function last(): array {
-		/** @var ReadinessService $readiness */
-		$readiness = $this->service( JobServices::READINESS );
+		$readiness = $this->serviceAs( JobServices::READINESS, ReadinessService::class );
 		return $readiness->last();
 	}
 
@@ -45,8 +44,7 @@ final class ReadinessController extends BaseController {
 	 * @return array<string,mixed>
 	 */
 	public function run(): array {
-		/** @var ReadinessService $readiness */
-		$readiness = $this->service( JobServices::READINESS );
+		$readiness = $this->serviceAs( JobServices::READINESS, ReadinessService::class );
 		return $readiness->run();
 	}
 }

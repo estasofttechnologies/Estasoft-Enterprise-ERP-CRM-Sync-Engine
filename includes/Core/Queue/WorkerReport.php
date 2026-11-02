@@ -18,41 +18,57 @@ final class WorkerReport {
 
 	/**
 	 * Items claimed.
+	 *
+	 * @var int
 	 */
 	public int $claimed = 0;
 
 	/**
 	 * Items the system accepted, linked to an existing record, found unchanged, or built in shadow mode.
+	 *
+	 * @var int
 	 */
 	public int $synced = 0;
 
 	/**
 	 * Items that will be tried again.
+	 *
+	 * @var int
 	 */
 	public int $retrying = 0;
 
 	/**
 	 * Items that now wait for a person.
+	 *
+	 * @var int
 	 */
 	public int $failed = 0;
 
 	/**
 	 * Items given back without a try (connection paused, connector missing, time ran out).
+	 *
+	 * @var int
 	 */
 	public int $held = 0;
 
 	/**
 	 * Items skipped because their connection is gone.
+	 *
+	 * @var int
 	 */
 	public int $skipped = 0;
 
 	/**
 	 * Seconds the run took.
+	 *
+	 * @var float
 	 */
 	public float $seconds = 0.0;
 
 	/**
 	 * Why the run ended: idle (nothing left to claim) or time (the work limit was reached).
+	 *
+	 * @var string
 	 */
 	public string $stoppedBecause = 'idle';
 

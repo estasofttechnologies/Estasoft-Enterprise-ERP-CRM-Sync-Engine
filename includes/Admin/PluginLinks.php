@@ -19,6 +19,8 @@ use Estasoft\SyncEngine\Core\Capabilities;
 final class PluginLinks {
 
 	/**
+	 * Create the plugin row links.
+	 *
 	 * @param string $basename Plugin basename, for example estasoft-erp-crm-sync-engine/estasoft-erp-crm-sync-engine.php.
 	 * @param Urls   $urls     Addresses of the app.
 	 */

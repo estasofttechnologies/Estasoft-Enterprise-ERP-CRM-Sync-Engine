@@ -39,19 +39,19 @@ final class RateStateRepository extends Repository implements RateStore {
 	 *
 	 * @param string     $key      Counter name.
 	 * @param float|null $expected Value read earlier; null when the row did not exist.
-	 * @param float      $new      New value.
+	 * @param float      $newValue New value.
 	 */
-	public function compareAndSet( string $key, ?float $expected, float $new ): bool {
+	public function compareAndSet( string $key, ?float $expected, float $newValue ): bool {
 		$name = $this->name( $key );
 		if ( null === $expected ) {
 			return $this->run(
 				"INSERT IGNORE INTO {$this->wpdb->options} (option_name, option_value, autoload) VALUES (%s, %s, %s)",
-				array( $name, sprintf( '%.6F', $new ), 'no' )
+				array( $name, sprintf( '%.6F', $newValue ), 'no' )
 			) > 0;
 		}
 		return $this->run(
 			"UPDATE {$this->wpdb->options} SET option_value = %s WHERE option_name = %s AND option_value = %s",
-			array( sprintf( '%.6F', $new ), $name, sprintf( '%.6F', $expected ) )
+			array( sprintf( '%.6F', $newValue ), $name, sprintf( '%.6F', $expected ) )
 		) > 0;
 	}
 

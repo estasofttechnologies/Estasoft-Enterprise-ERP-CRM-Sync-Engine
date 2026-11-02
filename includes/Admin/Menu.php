@@ -45,8 +45,12 @@ final class Menu {
 	private array $onLoad = array();
 
 	/**
-	 * @param Assets         $assets      Knows whether the compiled app exists.
-	 * @param \Closure():int $failedCount Number of failed orders (cached 60 seconds by the dashboard service).
+	 * Create the menu.
+	 *
+	 * @param Assets   $assets      Knows whether the compiled app exists.
+	 * @param \Closure $failedCount Returns the number of failed orders (cached 60 seconds by the dashboard service).
+	 *
+	 * @phpstan-param \Closure():int $failedCount
 	 */
 	public function __construct(
 		private readonly Assets $assets,

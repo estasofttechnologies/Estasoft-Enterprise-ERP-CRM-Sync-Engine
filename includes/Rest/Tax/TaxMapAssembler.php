@@ -30,6 +30,8 @@ final class TaxMapAssembler {
 	private \Closure $systemCodes;
 
 	/**
+	 * Create the assembler.
+	 *
 	 * @param TaxMap    $taxes       Tax mapping store (live edit, logged).
 	 * @param TaxSource $source      The store's tax rates and recent use.
 	 * @param callable  $systemCodes Lists the system's tax codes for a connection id.
@@ -117,7 +119,7 @@ final class TaxMapAssembler {
 			}
 		}
 		if ( array() !== $problems ) {
-			throw new ValidationException( $problems );
+			throw new ValidationException( array_map( 'esc_html', $problems ) );
 		}
 	}
 
