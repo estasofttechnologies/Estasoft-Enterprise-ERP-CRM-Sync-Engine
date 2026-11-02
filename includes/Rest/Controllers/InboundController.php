@@ -33,7 +33,7 @@ final class InboundController extends BaseController {
 	 * Hand the raw body and the two signature headers to the handler.
 	 *
 	 * @param \WP_REST_Request $request Request.
-	 * @return array{accepted:true}
+	 * @return array{accepted:bool}
 	 *
 	 * @throws \Estasoft\SyncEngine\Jobs\Inbound\InboundRefused When the message is refused; the error mapper answers with its status and SYNC-INB-001.
 	 */
@@ -41,7 +41,7 @@ final class InboundController extends BaseController {
 		$inbound = $this->serviceAs( JobServices::INBOUND, InboundHandler::class );
 		$result  = $inbound->handle(
 			(int) $request['connection'],
-			$request->get_body(),
+			(string) $request->get_body(),
 			array(
 				'X-Estasoft-Signature' => (string) $request->get_header( 'X-Estasoft-Signature' ),
 				'X-Estasoft-Timestamp' => (string) $request->get_header( 'X-Estasoft-Timestamp' ),

@@ -7,7 +7,7 @@ available: true
 verified: false
 hosts: [api.accounting.sage.com, oauth.accounting.sage.com, www.sageone.com]
 terms_url: https://www.sage.com/en-gb/legal/                                 # Sage's legal hub; the URL is in the search index of sage.com on 2026-11-02, but sage.com refuses automated fetches, so the content was not read: the owner confirms it
-privacy_url: https://www.sage.com/en-gb/legal/privacy-and-cookies/           # same note
+privacy_url: https://www.sage.com/en-gb/legal/privacy-and-cookies/           # same note: the page was not read, the owner confirms it
 developer_url: https://developerselfservice.sageone.com/
 variants: [{id: sage-accounting, label: Sage Business Cloud Accounting}, {id: sage50-export, label: Sage 50 (export file)}]
 ---

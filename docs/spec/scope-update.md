@@ -65,3 +65,12 @@ Full detail, sources and confidence tags are in the research document. The point
 5. Ask Sage whether a free third-party plugin may use the Sage 300 Web API.
 6. Whether to tell merchants about SMACC's own WooCommerce connection.
 7. Whether to keep the contract and test suite public for add-ons from other developers.
+
+## Update, 3 Nov 2026: what the connector build found
+
+- **Every system now has a connector** (34 catalog rows, 36 connector ids because three rows hold several products), built from each vendor's public documentation and tested only against in-repository fakes of the vendors' wire behaviour. None has been run against a live account; the Choose a system screen says so ("Not yet tested with a live account") until a connector is verified with a vendor sandbox.
+- **Item 4 above is corrected.** Xero, QuickBooks Online, MYOB, Exact Online and Fortnox do document quantity on hand for tracked items, so those connectors flag stock read-back; Moneybird, Pennylane, Wafeq and Lexware Office still have no stock or tracking to read. Each connector document lists its flags with the reason.
+- **Pennylane is listed but cannot be selected** until its production terms are cleared: its own guide says company tokens are for sandbox use and OAuth is needed for production, and its API terms restrict open-source use. **SMACC** stays unavailable (no public API).
+- **Sage 200, Sage 300 and Sage X3** are three connectors behind one catalog row (the person picks the product); **Sage Business Cloud Accounting and Sage 50** are one row with two connectors (API and file).
+- **Export-file systems** (TallyPrime, DATEV, Sage 50) write their files inside WordPress, protected from direct web access, and nothing is sent to the vendor.
+- Sign-in systems use the merchant's own app and a stable callback address (`estasoft-sync/v1/oauth/callback`); there is no relay.

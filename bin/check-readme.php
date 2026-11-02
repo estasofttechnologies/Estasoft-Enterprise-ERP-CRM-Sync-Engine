@@ -56,6 +56,49 @@ if ( ! is_readable( $path ) ) {
 $errors   = array();
 $warnings = array();
 $raw      = (string) file_get_contents( $path );
+
+/*
+ * The connector documents and the catalog, read only so the readme can be compared with them. Nothing here changes a file. A missing document folder
+ * (the script run on a copy of the readme alone) turns the comparison off.
+ */
+$estasoft_docs = array();
+$estasoft_rows = 0;
+if ( is_dir( $root . '/docs/connectors' ) && is_readable( $root . '/bin/generate-catalog-from-docs.php' ) ) {
+	if ( ! defined( 'ESTASOFT_CATALOG_LIB' ) ) {
+		define( 'ESTASOFT_CATALOG_LIB', true );
+	}
+	if ( ! defined( 'ABSPATH' ) ) {
+		define( 'ABSPATH', sys_get_temp_dir() . '/estasoft-sync-abspath/' );
+	}
+	require_once $root . '/bin/generate-catalog-from-docs.php';
+	$estasoft_rows = is_readable( $root . '/includes/Catalog/catalog.php' ) ? count( (array) require $root . '/includes/Catalog/catalog.php' ) : 0;
+	foreach ( (array) glob( $root . '/docs/connectors/*.md' ) as $doc_file ) {
+		$slug = basename( (string) $doc_file, '.md' );
+		if ( in_array( $slug, array( 'README', 'BUILDING' ), true ) ) {
+			continue;
+		}
+		$front = estasoft_front_matter( (string) file_get_contents( (string) $doc_file ) );
+		if ( ! isset( $front['id'], $front['name'] ) ) {
+			continue;
+		}
+		$kind = 'api';
+		if ( array_key_exists( 'available', $front ) && false === $front['available'] ) {
+			$kind = 'unavailable';
+		} elseif ( 'export_file' === ( $front['connection_method'] ?? '' ) ) {
+			$kind = 'file';
+		}
+		$estasoft_docs[] = array(
+			'slug'    => $slug,
+			'name'    => (string) $front['name'],
+			'kind'    => $kind,
+			'hosts'   => array_map( 'strval', (array) ( $front['hosts'] ?? array() ) ),
+			'terms'   => is_string( $front['terms_url'] ?? null ) ? trim( (string) $front['terms_url'] ) : '',
+			'privacy' => is_string( $front['privacy_url'] ?? null ) ? trim( (string) $front['privacy_url'] ) : '',
+		);
+	}
+}
+define( 'ESTASOFT_README_DOCS', $estasoft_docs );
+define( 'ESTASOFT_README_CATALOG_ROWS', $estasoft_rows );
 $lines    = preg_split( '/\R/', $raw );
 $lines    = false === $lines ? array() : $lines;
 
@@ -65,8 +108,19 @@ if ( false !== strpos( $raw, "\r" ) ) {
 if ( ! mb_check_encoding( $raw, 'UTF-8' ) ) {
 	$errors[] = 'The file is not valid UTF-8.';
 }
-if ( strlen( $raw ) > 10000 ) {
-	$warnings[] = sprintf( 'The file is %d bytes. The readme handbook warns that a readme over 10 KB may cause errors; move detail to the GitHub documentation.', strlen( $raw ) );
+// The handbook says a readme "larger than 10k may result in errors" (the validator never enforced it: meta ticket 3460 was closed as wontfix). The part a person
+// writes must stay under 10 KiB. The generated per-service entries of == External services == (one short paragraph for each of ~36 systems, required by
+// guideline 6) are counted separately, with a limit of 40 KB for the whole file.
+$generated_bytes = 0;
+if ( 1 === preg_match( '/^== External services ==\s*$(.*?)(?=^== |\z)/ms', $raw, $ext_match ) ) {
+	$first_entry = strpos( $ext_match[1], "\n= " );
+	$generated_bytes = false === $first_entry ? 0 : strlen( $ext_match[1] ) - $first_entry;
+}
+if ( strlen( $raw ) - $generated_bytes > 10240 ) {
+	$warnings[] = sprintf( 'The readme without the generated service entries is %d bytes. The readme handbook warns that a readme over 10 KB may cause errors; move detail to the GitHub documentation.', strlen( $raw ) - $generated_bytes );
+}
+if ( strlen( $raw ) > 40000 ) {
+	$warnings[] = sprintf( 'The file is %d bytes; keep the whole readme under 40 KB.', strlen( $raw ) );
 }
 
 // Title line.
@@ -255,9 +309,10 @@ if ( isset( $sections['Screenshots'] ) ) {
 	}
 }
 
-// External services section must say what is sent, when and link to terms and privacy.
+// External services section must say what is sent, when and link to terms and privacy, and name every system the connector documents say is contacted.
 if ( isset( $sections['External services'] ) ) {
-	$ext = strtolower( implode( "\n", $sections['External services'] ) );
+	$ext_text = implode( "\n", $sections['External services'] );
+	$ext      = strtolower( $ext_text );
 	foreach ( array( 'terms', 'privacy', 'https://' ) as $needle ) {
 		if ( false === strpos( $ext, $needle ) ) {
 			$errors[] = "External services must mention '{$needle}'.";
@@ -266,12 +321,95 @@ if ( isset( $sections['External services'] ) ) {
 	if ( false === strpos( $ext, 'telemetry' ) ) {
 		$warnings[] = 'External services should state that the plugin has no telemetry.';
 	}
+	if ( false !== stripos( $ext_text, 'placeholder' ) ) {
+		$errors[] = 'External services still holds placeholder text; run: php bin/generate-external-services.php';
+	}
+
+	// One entry per document: "= Name =", a paragraph with "Data sent:" and "When:", and a "Terms: ... | Privacy: ..." line with an https address or words.
+	$entries = array();
+	$name    = '';
+	foreach ( $sections['External services'] as $line ) {
+		if ( 1 === preg_match( '/^= (.+) =\s*$/', $line, $m ) ) {
+			$name             = $m[1];
+			$entries[ $name ] = '';
+		} elseif ( '' !== $name ) {
+			$entries[ $name ] .= $line . "\n";
+		}
+	}
+	foreach ( ESTASOFT_README_DOCS as $doc ) {
+		if ( 'api' !== $doc['kind'] ) {
+			continue;
+		}
+		if ( ! isset( $entries[ $doc['name'] ] ) ) {
+			$errors[] = "External services has no entry '= {$doc['name']} =' (the connector document docs/connectors/{$doc['slug']}.md says it is contacted).";
+			continue;
+		}
+		$body = $entries[ $doc['name'] ];
+		foreach ( array( 'Data sent:', 'When:', 'Contacts:', 'Terms:', 'Privacy:' ) as $label ) {
+			if ( false === strpos( $body, $label ) ) {
+				$errors[] = "External services entry '{$doc['name']}' lacks '{$label}'.";
+			}
+		}
+		if ( '' !== $doc['terms'] && false === strpos( $body, $doc['terms'] ) ) {
+			$errors[] = "External services entry '{$doc['name']}' does not carry the terms link of its document ({$doc['terms']}); run: php bin/generate-external-services.php";
+		}
+		if ( '' !== $doc['privacy'] && false === strpos( $body, $doc['privacy'] ) ) {
+			$errors[] = "External services entry '{$doc['name']}' does not carry the privacy link of its document ({$doc['privacy']}); run: php bin/generate-external-services.php";
+		}
+		foreach ( $doc['hosts'] as $host ) {
+			if ( false === strpos( $body, $host ) ) {
+				$errors[] = "External services entry '{$doc['name']}' does not name the host '{$host}'; run: php bin/generate-external-services.php";
+			}
+		}
+	}
+}
+
+// Every system of the connector documents is named in the readme, and the numbers it quotes match the documents and the catalog.
+if ( isset( $sections['Description'] ) ) {
+	$description = implode( "\n", $sections['Description'] );
+	foreach ( ESTASOFT_README_DOCS as $doc ) {
+		if ( false === strpos( $description, $doc['name'] ) ) {
+			$errors[] = "The Description does not name the system '{$doc['name']}' (connector document {$doc['slug']}.md).";
+		}
+	}
+}
+if ( array() !== ESTASOFT_README_DOCS ) {
+	$selectable = count( array_filter( ESTASOFT_README_DOCS, static fn( array $doc ): bool => 'unavailable' !== $doc['kind'] ) );
+	if ( preg_match_all( '/\b(\d+) connectors\b/', $raw, $counts ) > 0 ) {
+		foreach ( $counts[1] as $quoted ) {
+			if ( (int) $quoted !== $selectable ) {
+				$errors[] = "The readme says {$quoted} connectors but the connector documents have {$selectable} that can be selected.";
+			}
+		}
+	}
+	// The GitHub front page quotes the same numbers.
+	if ( is_readable( $root . '/README.md' ) && preg_match_all( '/\*{0,2}(\d+) connectors\*{0,2}/', (string) file_get_contents( $root . '/README.md' ), $md_counts ) > 0 ) {
+		foreach ( $md_counts[1] as $quoted ) {
+			if ( (int) $quoted !== $selectable ) {
+				$errors[] = "README.md says {$quoted} connectors but the connector documents have {$selectable} that can be selected.";
+			}
+		}
+	}
+	$rows = ESTASOFT_README_CATALOG_ROWS;
+	if ( $rows > 0 ) {
+		foreach ( array( '/\bfrom (\d+), in one list/', '/\b(\d+) (?:setup entries|(?:entries|systems) on the setup screen)/' ) as $pattern ) {
+			if ( 1 === preg_match( $pattern, $raw, $quoted ) && (int) $quoted[1] !== $rows ) {
+				$errors[] = "The readme says {$quoted[1]} systems on the setup screen but the catalog has {$rows} rows.";
+			}
+		}
+	}
 }
 
 // Wording rules from the project brief: no superlatives, no performance numbers, no placeholders.
 $flat = $raw;
 if ( 1 === preg_match( '/\b(best|fastest|#1|number one|guarantee[sd]?|blazing|lightning)\b/i', $flat, $m ) ) {
 	$errors[] = "Marketing wording is not allowed (found '{$m[1]}').";
+}
+if ( 1 === preg_match( '/\b(premium|upgrade to|pro (version|edition)|affiliate|buy now|money[- ]back|limited time)\b/i', $flat, $m ) ) {
+	$errors[] = "Promotional wording is not allowed (found '{$m[1]}').";
+}
+if ( 1 === preg_match( '#https?://\S*[?&](ref|aff|affiliate|utm_[a-z]+)=#i', $flat, $m ) ) {
+	$errors[] = 'A link carries a referral or tracking parameter (' . $m[0] . '); WordPress.org forbids affiliate links without disclosure.';
 }
 if ( 1 === preg_match( '/\b\d+(\.\d+)?\s?(x|times)\s+(faster|quicker)\b|\b\d+\s?%\s+(faster|quicker|less)\b/i', $flat, $m ) ) {
 	$errors[] = "Performance numbers are not allowed (found '{$m[0]}').";
