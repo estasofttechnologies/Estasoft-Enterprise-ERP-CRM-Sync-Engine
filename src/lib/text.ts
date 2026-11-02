@@ -183,7 +183,6 @@ export function fillPlaceholders(
 	return template
 		.replace( /\{(\w+)\}/g, ( _match, key: string ) => values[ key ] ?? '' )
 		.replace( /\s{2,}/g, ' ' )
-		.replace( /\s+([.,;:])/g, '$1' )
 		.trim();
 }
 
@@ -292,22 +291,36 @@ export function whatHappened(
 			const next = item.next_attempt_at
 				? formatTime( item.next_attempt_at, cfg )
 				: '';
-			const text = sprintf(
+			const reason =
+				problem ||
+				__(
+					'The system did not answer well',
+					'estasoft-erp-crm-sync-engine'
+				);
+			const retry = Math.max( 1, item.attempt );
+			if ( ! next ) {
+				return sprintf(
+					/* translators: 1: problem such as "Odoo answered 503", 2: retry number, 3: number of retries allowed */
+					__(
+						'%1$s. Retry %2$d of %3$d',
+						'estasoft-erp-crm-sync-engine'
+					),
+					reason,
+					retry,
+					retriesAllowed
+				);
+			}
+			return sprintf(
 				/* translators: 1: problem such as "Odoo answered 503", 2: retry number, 3: number of retries allowed, 4: clock time of the next try */
 				__(
 					'%1$s. Retry %2$d of %3$d, next try %4$s',
 					'estasoft-erp-crm-sync-engine'
 				),
-				problem ||
-					__(
-						'The system did not answer well',
-						'estasoft-erp-crm-sync-engine'
-					),
-				Math.max( 1, item.attempt ),
+				reason,
+				retry,
 				retriesAllowed,
 				next
 			);
-			return next ? text : text.replace( /, next try\s*$/, '' );
 		}
 		case 'failed':
 			return (
@@ -332,6 +345,48 @@ export function whatHappened(
 				formatTime( item.updated_at, cfg )
 			);
 	}
+}
+
+/**
+ * Plural-safe "n days" phrase.
+ *
+ * @param count Number of days.
+ * @return Text such as "7 days".
+ */
+export function daysPhrase( count: number ): string {
+	return sprintf(
+		/* translators: %d: number of days */
+		_n( '%d day', '%d days', count, 'estasoft-erp-crm-sync-engine' ),
+		count
+	);
+}
+
+/**
+ * Plural-safe "n groups" phrase (groups of failed orders that share a cause).
+ *
+ * @param count Number of groups.
+ * @return Text such as "3 groups".
+ */
+export function groupsPhrase( count: number ): string {
+	return sprintf(
+		/* translators: %d: number of groups of failed orders */
+		_n( '%d group', '%d groups', count, 'estasoft-erp-crm-sync-engine' ),
+		count
+	);
+}
+
+/**
+ * Plural-safe "n notes" phrase.
+ *
+ * @param count Number of notes.
+ * @return Text such as "2 notes".
+ */
+export function notesPhrase( count: number ): string {
+	return sprintf(
+		/* translators: %d: number of notes */
+		_n( '%d note', '%d notes', count, 'estasoft-erp-crm-sync-engine' ),
+		count
+	);
 }
 
 /**

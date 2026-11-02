@@ -30,6 +30,7 @@ import type {
 	MappingPreview,
 	MappingPreviewRequest,
 	MappingSet,
+	MappingVersion,
 	MappingType,
 	Onboarding,
 	ProductMatch,
@@ -146,6 +147,17 @@ export const api = {
 	mappings: {
 		get: ( type: MappingType, signal?: AbortSignal ) =>
 			request< MappingSet >( `/mappings/${ type }`, { signal } ),
+		/**
+		 * One version with its rules (the list in the set has none).
+		 * @param type
+		 * @param version
+		 * @param signal
+		 */
+		version: ( type: MappingType, version: number, signal?: AbortSignal ) =>
+			request< MappingVersion >(
+				`/mappings/${ type }/versions/${ version }`,
+				{ signal }
+			),
 		saveDraft: ( type: MappingType, input: MappingSaveInput ) =>
 			request< MappingSet >( `/mappings/${ type }`, {
 				method: 'PUT',
@@ -197,10 +209,18 @@ export const api = {
 				query: { q, connection_id: connectionId },
 				signal,
 			} ),
-		map: ( productId: number, externalId: string | null ) =>
+		map: (
+			productId: number,
+			externalId: string | null,
+			externalRef: string | null = null
+		) =>
 			request< ProductMatch >( '/products/map', {
 				method: 'POST',
-				...json( { product_id: productId, external_id: externalId } ),
+				...json( {
+					product_id: productId,
+					external_id: externalId,
+					external_ref: externalRef,
+				} ),
 			} ),
 	},
 

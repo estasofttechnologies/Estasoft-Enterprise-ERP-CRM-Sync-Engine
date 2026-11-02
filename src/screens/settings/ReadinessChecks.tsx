@@ -5,6 +5,7 @@ import { Callout } from '../../components/Callout';
 import { StatusBadge } from '../../components/StatusBadge';
 import type { Tone } from '../../components/StatusBadge';
 import { navigate } from '../../app/router';
+import { safeHttpUrl } from '../../lib/url';
 
 const APP_ROUTE =
 	/^#?\/(?:dashboard|queue|invoices|connections|mapping|stock|reconciliation|logs|settings|setup|shadow)(?:[/?]|$)/;
@@ -15,11 +16,14 @@ const APP_ROUTE =
  * @param link Admin URL or app route from the check.
  * @return Button props.
  */
-function linkProps( link: string ): { href: string } | { onClick: () => void } {
+function linkProps(
+	link: string
+): { href: string } | { onClick: () => void } | null {
 	if ( APP_ROUTE.test( link ) ) {
 		return { onClick: () => navigate( link.replace( /^#/, '' ) ) };
 	}
-	return { href: link };
+	const href = safeHttpUrl( link );
+	return href ? { href } : null;
 }
 
 const TONE: Record< ReadinessCheck[ 'status' ], Tone > = {
@@ -104,7 +108,9 @@ export function ReadinessList( { readiness }: { readiness: Readiness } ) {
 						<p className="estasoft-sync-strong">{ check.title }</p>
 						<p className="estasoft-sync-muted">{ check.detail }</p>
 					</div>
-					{ check.link && check.link_label ? (
+					{ check.link &&
+					check.link_label &&
+					linkProps( check.link ) ? (
 						<Btn small { ...linkProps( check.link ) }>
 							{ check.link_label }
 						</Btn>

@@ -3,6 +3,7 @@ import { __, sprintf } from '@wordpress/i18n';
 import { useNotices } from '../app/NoticeProvider';
 import { api } from '../api/endpoints';
 import { formatTime } from '../lib/format';
+import { errorText } from '../lib/text';
 import { useFormat } from './FormatContext';
 import { ChoiceGroup } from './Fields';
 import { ConfirmDialog } from './Dialog';
@@ -17,7 +18,7 @@ export interface PauseDialogProps {
 }
 
 /**
- * Pause syncing for one hour or until resumed. Orders wait in the queue; nothing is lost.
+ * Pause syncing for one hour or until resumed. Orders wait in the queue.
  *
  * @param props              Connection and handlers.
  * @param props.connectionId
@@ -90,7 +91,15 @@ export function PauseDialog( {
 						'Resume now',
 						'estasoft-erp-crm-sync-engine'
 					),
-					onAction: () => void resume(),
+					onAction: () => {
+						// A refused resume must be said out loud, not dropped.
+						resume().catch( ( error: unknown ) =>
+							notify( {
+								kind: 'error',
+								text: errorText( error ),
+							} )
+						);
+					},
 				} );
 				onDone();
 			} }

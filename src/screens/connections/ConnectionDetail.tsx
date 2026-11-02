@@ -1,5 +1,6 @@
 import { useEffect, useState } from '@wordpress/element';
 import { __, _n, sprintf } from '@wordpress/i18n';
+import { ApiError } from '../../api/client';
 import { api } from '../../api/endpoints';
 import type {
 	Connection,
@@ -16,6 +17,7 @@ import { Card } from '../../components/Card';
 import { DateTime } from '../../components/DateTime';
 import { ConfirmDialog } from '../../components/Dialog';
 import { ErrorState, LoadingState } from '../../components/EmptyState';
+import { ErrorDetails } from '../../components/ErrorDetails';
 import {
 	CheckField,
 	SelectField,
@@ -426,7 +428,8 @@ export function ConnectionDetail( { id }: { id: number } ) {
 					</div>
 					{ test.error ? (
 						<Callout tone="danger" role="alert">
-							{ errorText( test.error ) }
+							<p>{ errorText( test.error ) }</p>
+							<ErrorDetails error={ test.error } />
 						</Callout>
 					) : null }
 					{ testResult ? (
@@ -614,9 +617,9 @@ export function ConnectionDetail( { id }: { id: number } ) {
 							</p>
 							<p className="estasoft-sync-muted">
 								{ sprintf(
-									/* translators: 1: number waiting, 2: number failed */
+									/* translators: 1: number of orders waiting, 2: number of failed orders */
 									__(
-										'Stops syncing and removes the saved API key. The %1$d waiting and %2$d failed orders are kept for 30 days but are not sent. Nothing in your system or WooCommerce is deleted.',
+										'Stops syncing and removes the saved API key. Waiting orders (%1$d) and failed orders (%2$d) are kept for 30 days but are not sent. Nothing in your system or WooCommerce is deleted.',
 										'estasoft-erp-crm-sync-engine'
 									),
 									status?.waiting ?? 0,
@@ -783,8 +786,10 @@ export function TestResultView( {
 		<Callout tone="success" role="status">
 			{ sprintf(
 				/* translators: 1: system version, 2: company, 3: number of warehouses */
-				__(
+				_n(
+					'Connected. %1$s, company %2$s, %3$d warehouse found.',
 					'Connected. %1$s, company %2$s, %3$d warehouses found.',
+					result.warehouses.length,
 					'estasoft-erp-crm-sync-engine'
 				),
 				result.version,
@@ -938,8 +943,12 @@ function Reliability( {
 				</h3>
 				<p className="estasoft-sync-muted">
 					{ sprintf(
-						/* translators: %d: number of failures */ __(
+						/* translators: %d: number of failures */
+						_n(
+							'Stops us hammering a system that is down. After %d failure the connection pauses and checks again by itself.',
 							'Stops us hammering a system that is down. After %d failures the connection pauses and checks again by itself.',
+							Number( draft.breaker ) ||
+								connection.settings.breaker_threshold,
 							'estasoft-erp-crm-sync-engine'
 						),
 						Number( draft.breaker ) ||
@@ -1050,7 +1059,8 @@ function Reliability( {
 			) : null }
 			{ save.error ? (
 				<Callout tone="danger" role="alert">
-					{ errorText( save.error ) }
+					<p>{ errorText( save.error ) }</p>
+					<ErrorDetails error={ save.error } />
 				</Callout>
 			) : null }
 		</Card>
@@ -1109,13 +1119,20 @@ function ReplaceKeyDialog( {
 					secrets: entered,
 				} );
 				if ( ! result.ok ) {
-					throw new Error(
+					// Carry the whole test with the error, so the dialog can list what is missing.
+					throw new ApiError(
+						result.error?.code ?? 'SYNC-AUTH-001',
 						result.error?.message ||
 							catalogMessage(
 								result.error?.code ?? 'SYNC-AUTH-001',
 								{},
 								system
-							)
+							),
+						result.error?.data?.status ?? 422,
+						null,
+						{},
+						{},
+						{ errors: [], test: result, keyLine: null }
 					);
 				}
 				await api.connections.update( connection.id, {

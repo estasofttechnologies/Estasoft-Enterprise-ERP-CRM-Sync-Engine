@@ -108,7 +108,7 @@ export function RuleSetEditor( {
 		| { kind: 'publish' }
 		| { kind: 'rollback'; version: number }
 		| { kind: 'discard' }
-		| { kind: 'view'; version: MappingVersion }
+		| { kind: 'view'; version: Omit< MappingVersion, 'rules' > }
 		| { kind: 'preview'; orderId: number | null }
 		| null
 	>( null );
@@ -594,10 +594,7 @@ export function RuleSetEditor( {
 											onClick={ () =>
 												setDialog( {
 													kind: 'view',
-													version: {
-														...version,
-														rules: [],
-													},
+													version,
 												} )
 											}
 											aria-label={ sprintf(
@@ -742,6 +739,7 @@ export function RuleSetEditor( {
 						set.setData( next );
 						setSeeded( '' );
 					} }
+					onDraftSaved={ ( next ) => set.setData( next ) }
 				/>
 			) : null }
 			{ dialog?.kind === 'rollback' ? (
@@ -845,60 +843,20 @@ export function RuleSetEditor( {
 				</ConfirmDialog>
 			) : null }
 			{ dialog?.kind === 'view' ? (
-				<Dialog
-					title={ sprintf(
-						/* translators: %d: version number */ __(
-							'Version %d',
-							'estasoft-erp-crm-sync-engine'
-						),
-						dialog.version.version
-					) }
+				<VersionViewDialog
+					type={ type }
+					version={ dialog.version }
+					sourceLabel={ sourceLabel }
 					onClose={ () => setDialog( null ) }
-					footer={
-						<Btn onClick={ () => setDialog( null ) }>
-							{ __( 'Close', 'estasoft-erp-crm-sync-engine' ) }
-						</Btn>
-					}
-				>
-					<p>
-						<DateTime
-							value={
-								dialog.version.published_at ??
-								dialog.version.created_at
-							}
-							kind="smart"
-						/>
-						, { dialog.version.created_by }
-						{ dialog.version.note
-							? ` \u00b7 ${ dialog.version.note }`
-							: '' }
-					</p>
-					{ dialog.version.rules.length === 0 ? (
-						<p className="estasoft-sync-muted">
-							{ __(
-								'The rules of an older version are kept but not listed here. Roll back to it to make it live again; nothing is deleted.',
-								'estasoft-erp-crm-sync-engine'
-							) }
-						</p>
-					) : (
-						<ul className="estasoft-sync-list">
-							{ dialog.version.rules.map( ( rule ) => (
-								<li key={ rule.id }>
-									{ sourceLabel( rule ) }:{ ' ' }
-									{ describeRule( rule ) } { '→' }{ ' ' }
-									<span className="estasoft-sync-mono">
-										{ rule.target }
-									</span>
-								</li>
-							) ) }
-						</ul>
-					) }
-				</Dialog>
+				/>
 			) : null }
 			{ dialog?.kind === 'preview' ? (
 				<PreviewDialog
 					type={ type }
 					hasDraft={ Boolean( data.draft ) || unsaved }
+					unsaved={ unsaved }
+					onSaveDraft={ () => save.run() }
+					draftKey={ `${ data.draft?.version ?? 'none' }-${ baseKey }` }
 					orders={ sample.orders }
 					initial={ dialog.orderId }
 					liveVersion={ data.live?.version }
@@ -906,6 +864,85 @@ export function RuleSetEditor( {
 				/>
 			) : null }
 		</div>
+	);
+}
+
+function VersionViewDialog( {
+	type,
+	version,
+	sourceLabel,
+	onClose,
+}: {
+	type: MappingType;
+	version: Omit< MappingVersion, 'rules' >;
+	sourceLabel: ( rule: MappingRule ) => string;
+	onClose: () => void;
+} ) {
+	const detail = useResource< MappingVersion >(
+		( signal ) => api.mappings.version( type, version.version, signal ),
+		[ type, version.version ]
+	);
+	return (
+		<Dialog
+			title={ sprintf(
+				/* translators: %d: version number */ __(
+					'Version %d',
+					'estasoft-erp-crm-sync-engine'
+				),
+				version.version
+			) }
+			onClose={ onClose }
+			footer={
+				<Btn onClick={ onClose }>
+					{ __( 'Close', 'estasoft-erp-crm-sync-engine' ) }
+				</Btn>
+			}
+		>
+			<p>
+				<DateTime
+					value={ version.published_at ?? version.created_at }
+					kind="smart"
+				/>
+				, { version.created_by }
+				{ version.note ? ` \u00b7 ${ version.note }` : '' }
+			</p>
+			{ detail.loading ? (
+				<LoadingState
+					rows={ 3 }
+					label={ __(
+						'Loading the rules of this version',
+						'estasoft-erp-crm-sync-engine'
+					) }
+				/>
+			) : null }
+			{ detail.error && ! detail.data ? (
+				<ErrorState
+					error={ detail.error }
+					onRetry={ () => void detail.reload() }
+				/>
+			) : null }
+			{ detail.data && detail.data.rules.length === 0 ? (
+				<p className="estasoft-sync-muted">
+					{ __(
+						'This version has no rules.',
+						'estasoft-erp-crm-sync-engine'
+					) }
+				</p>
+			) : null }
+			{ detail.data && detail.data.rules.length > 0 ? (
+				<ul className="estasoft-sync-list">
+					{ detail.data.rules.map( ( rule ) => (
+						<li key={ rule.id }>
+							{ sourceLabel( rule ) }: { describeRule( rule ) }{ ' ' }
+							{ '→' }{ ' ' }
+							<span className="estasoft-sync-mono">
+								{ rule.target }
+							</span>
+						</li>
+					) ) }
+				</ul>
+			) : null }
+		</Dialog>
 	);
 }
 
@@ -919,6 +956,8 @@ interface PublishDialogProps {
 	set: MappingSet;
 	onClose: () => void;
 	onPublished: ( next: MappingSet ) => void;
+	/** Called when the draft was saved on the way, so the editor shows the saved draft. */
+	onDraftSaved: ( next: MappingSet ) => void;
 }
 
 function PublishDialog( {
@@ -931,6 +970,7 @@ function PublishDialog( {
 	set,
 	onClose,
 	onPublished,
+	onDraftSaved,
 }: PublishDialogProps ) {
 	const { notify } = useNotices();
 	const system = useSystemName();
@@ -969,7 +1009,18 @@ function PublishDialog( {
 				version
 			) }
 			onClose={ onClose }
+			ruleLabel={ label }
 			onConfirm={ async () => {
+				// The server previews and publishes the saved draft, never the edits on screen, so the
+				// edits are saved first.
+				if ( unsaved ) {
+					onDraftSaved(
+						await api.mappings.saveDraft( type, {
+							rules,
+							note: note || undefined,
+						} )
+					);
+				}
 				if ( previewFirst ) {
 					const failures: string[] = [];
 					for ( const order of orders.slice( 0, 10 ) ) {
@@ -999,12 +1050,6 @@ function PublishDialog( {
 							)
 						);
 					}
-				}
-				if ( unsaved ) {
-					await api.mappings.saveDraft( type, {
-						rules,
-						note: note || undefined,
-					} );
 				}
 				const next = await api.mappings.publish(
 					type,
@@ -1115,9 +1160,17 @@ function PreviewDialog( {
 	initial,
 	liveVersion,
 	onClose,
+	unsaved,
+	onSaveDraft,
+	draftKey,
 }: {
 	type: MappingType;
 	hasDraft: boolean;
+	/** Edits on screen that the server has not seen: the preview cannot include them. */
+	unsaved: boolean;
+	onSaveDraft: () => Promise< unknown >;
+	/** Changes when the saved draft changes, so the preview is built again. */
+	draftKey: string;
 	orders: {
 		id: number;
 		label: string;
@@ -1152,9 +1205,12 @@ function PreviewDialog( {
 			] );
 			return { before, after };
 		},
-		[ type, orderId ],
+		[ type, orderId, draftKey ],
 		{ enabled: orderId !== null }
 	);
+	const saveFirst = useAsyncAction( async () => {
+		await onSaveDraft();
+	} );
 	const diff = both.data
 		? diffTargets( both.data.before.target, both.data.after.target )
 		: null;
@@ -1202,6 +1258,34 @@ function PreviewDialog( {
 						'estasoft-erp-crm-sync-engine'
 					) }
 				/>
+			) : null }
+			{ unsaved ? (
+				<Callout
+					tone="warning"
+					role="status"
+					action={
+						<Btn
+							small
+							busy={ saveFirst.busy }
+							onClick={ () => void saveFirst.run() }
+						>
+							{ __(
+								'Save the draft',
+								'estasoft-erp-crm-sync-engine'
+							) }
+						</Btn>
+					}
+				>
+					{ __(
+						'The edits you have not saved are not in this preview. The preview uses the saved draft. Save the draft to see them here.',
+						'estasoft-erp-crm-sync-engine'
+					) }
+				</Callout>
+			) : null }
+			{ saveFirst.error ? (
+				<Callout tone="danger" role="alert">
+					{ errorText( saveFirst.error ) }
+				</Callout>
 			) : null }
 			{ both.error ? (
 				<ErrorState

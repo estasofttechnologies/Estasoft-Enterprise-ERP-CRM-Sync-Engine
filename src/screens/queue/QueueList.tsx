@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from '@wordpress/element';
-import { __, sprintf } from '@wordpress/i18n';
+import { __, _n, sprintf } from '@wordpress/i18n';
 import { api } from '../../api/endpoints';
 import type {
 	EntityType,
@@ -42,11 +42,15 @@ import {
 	whatHappened,
 } from '../../lib/text';
 import {
+	actionable,
 	RestoreDialog,
+	RestoreManyDialog,
 	RetryDialog,
 	SkipDialog,
+	unavailableReason,
 	useQueueActions,
 } from './actions';
+import { safeHttpUrl } from '../../lib/url';
 
 type Filter = 'all' | 'waiting' | 'failed' | 'synced' | 'skipped';
 type DayFilter = NonNullable< QueueQuery[ 'day' ] >;
@@ -84,7 +88,6 @@ export function supportText( item: QueueItem ): string {
  * @param handlers           What the entries do.
  * @param handlers.skip
  * @param handlers.restore
- * @param handlers.retry
  * @param handlers.copy
  * @param handlers.system
  * @param handlers.canManage
@@ -95,7 +98,6 @@ export function rowMenuItems(
 	handlers: {
 		skip: () => void;
 		restore: () => void;
-		retry: () => void;
 		copy: () => void;
 		system: string;
 		canManage: boolean;
@@ -103,7 +105,9 @@ export function rowMenuItems(
 ): RowMenuItem[] {
 	const label = `#${ item.entity_label }`;
 	const items: RowMenuItem[] = [];
-	if ( item.order_edit_url ) {
+	const editUrl = safeHttpUrl( item.order_edit_url );
+	const externalUrl = safeHttpUrl( item.external_url );
+	if ( editUrl ) {
 		items.push( {
 			label: sprintf(
 				/* translators: %s: order number */ __(
@@ -112,7 +116,7 @@ export function rowMenuItems(
 				),
 				label
 			),
-			href: item.order_edit_url,
+			href: editUrl,
 		} );
 	} else {
 		items.push( {
@@ -126,7 +130,7 @@ export function rowMenuItems(
 			onClick: () => navigate( `/queue/${ item.id }` ),
 		} );
 	}
-	if ( item.state === 'synced' && item.external_url && item.external_ref ) {
+	if ( item.state === 'synced' && externalUrl && item.external_ref ) {
 		items.push( {
 			label: sprintf(
 				/* translators: 1: number in the system such as S00490, 2: system name */ __(
@@ -136,14 +140,8 @@ export function rowMenuItems(
 				item.external_ref,
 				handlers.system
 			),
-			href: item.external_url,
+			href: externalUrl,
 			external: true,
-		} );
-	}
-	if ( handlers.canManage && item.state === 'synced' ) {
-		items.push( {
-			label: __( 'Sync again', 'estasoft-erp-crm-sync-engine' ),
-			onClick: handlers.retry,
 		} );
 	}
 	if ( handlers.canManage && item.state === 'skipped' ) {
@@ -253,8 +251,9 @@ export function QueueList() {
 	);
 	const [ pauseOpen, setPauseOpen ] = useState( false );
 	const [ dialog, setDialog ] = useState<
-		| { kind: 'retry' | 'skip'; items: QueueItem[] }
+		| { kind: 'retry' | 'skip'; items: QueueItem[]; leftOut: number }
 		| { kind: 'restore'; item: QueueItem }
+		| { kind: 'restoreMany'; items: QueueItem[]; leftOut: number }
 		| null
 	>( null );
 	const actions = useQueueActions( () => {
@@ -295,12 +294,18 @@ export function QueueList() {
 	const retryingSelected = selectedItems.filter(
 		( item ) => item.state === 'retrying'
 	).length;
+	// Only the states the server accepts count for each action.
+	const canRetry = actionable( selectedItems, 'retry' );
+	const canSkip = actionable( selectedItems, 'skip' );
+	const canRestore = actionable( selectedItems, 'restore' );
 
 	const summary = counts
 		? sprintf(
 				/* translators: 1: total items today, 2: synced, 3: waiting, 4: failed, 5: skipped */
-				__(
+				_n(
+					'%1$d item today: %2$d synced, %3$d waiting, %4$d failed, %5$d skipped.',
 					'%1$d items today: %2$d synced, %3$d waiting, %4$d failed, %5$d skipped.',
+					Object.values( counts ).reduce( ( sum, n ) => sum + n, 0 ),
 					'estasoft-erp-crm-sync-engine'
 				),
 				Object.values( counts ).reduce( ( sum, n ) => sum + n, 0 ),
@@ -418,18 +423,13 @@ export function QueueList() {
 							system,
 							canManage,
 							skip: () =>
-								setDialog( { kind: 'skip', items: [ item ] } ),
+								setDialog( {
+									kind: 'skip',
+									items: [ item ],
+									leftOut: 0,
+								} ),
 							restore: () =>
 								setDialog( { kind: 'restore', item } ),
-							retry: () =>
-								void actions
-									.retryItems( [ item.id ] )
-									.catch( ( error ) =>
-										notify( {
-											kind: 'error',
-											text: errorText( error ),
-										} )
-									),
 							copy: () => {
 								void copyText( supportText( item ) ).then(
 									( ok ) =>
@@ -702,10 +702,14 @@ export function QueueList() {
 					<div className="estasoft-sync-bulkbar__buttons">
 						<Btn
 							small
+							disabled={ canRetry.length === 0 }
+							aria-describedby="estasoft-sync-bulk-reasons"
 							onClick={ () =>
 								setDialog( {
 									kind: 'retry',
-									items: selectedItems,
+									items: canRetry,
+									leftOut:
+										selectedItems.length - canRetry.length,
 								} )
 							}
 						>
@@ -716,15 +720,38 @@ export function QueueList() {
 						</Btn>
 						<Btn
 							small
+							disabled={ canSkip.length === 0 }
+							aria-describedby="estasoft-sync-bulk-reasons"
 							onClick={ () =>
 								setDialog( {
 									kind: 'skip',
-									items: selectedItems,
+									items: canSkip,
+									leftOut:
+										selectedItems.length - canSkip.length,
 								} )
 							}
 						>
 							{ __(
 								'Skip selected',
+								'estasoft-erp-crm-sync-engine'
+							) }
+						</Btn>
+						<Btn
+							small
+							disabled={ canRestore.length === 0 }
+							aria-describedby="estasoft-sync-bulk-reasons"
+							onClick={ () =>
+								setDialog( {
+									kind: 'restoreMany',
+									items: canRestore,
+									leftOut:
+										selectedItems.length -
+										canRestore.length,
+								} )
+							}
+						>
+							{ __(
+								'Restore selected',
 								'estasoft-erp-crm-sync-engine'
 							) }
 						</Btn>
@@ -736,6 +763,35 @@ export function QueueList() {
 							{ __( 'Clear', 'estasoft-erp-crm-sync-engine' ) }
 						</Btn>
 					</div>
+					{ canRetry.length === 0 ||
+					canSkip.length === 0 ||
+					canRestore.length === 0 ? (
+						<p
+							id="estasoft-sync-bulk-reasons"
+							className="estasoft-sync-muted estasoft-sync-bulkbar__reasons"
+						>
+							{ [
+								canRetry.length === 0
+									? unavailableReason( 'retry' )
+									: '',
+								canSkip.length === 0
+									? unavailableReason( 'skip' )
+									: '',
+								canRestore.length === 0
+									? unavailableReason( 'restore' )
+									: '',
+							]
+								.filter( Boolean )
+								.map( ( reason ) => (
+									<span
+										key={ reason }
+										className="estasoft-sync-block"
+									>
+										{ reason }
+									</span>
+								) ) }
+						</p>
+					) : null }
 				</div>
 			) : null }
 
@@ -888,6 +944,7 @@ export function QueueList() {
 			{ dialog?.kind === 'retry' ? (
 				<RetryDialog
 					items={ dialog.items }
+					leftOut={ dialog.leftOut }
 					onClose={ () => setDialog( null ) }
 					onConfirm={ () =>
 						actions.retryItems(
@@ -899,12 +956,25 @@ export function QueueList() {
 			{ dialog?.kind === 'skip' ? (
 				<SkipDialog
 					items={ dialog.items }
+					leftOut={ dialog.leftOut }
 					system={ system }
 					onClose={ () => setDialog( null ) }
 					onConfirm={ ( reason ) =>
 						actions.skipItems(
 							dialog.items.map( ( item ) => item.id ),
 							reason
+						)
+					}
+				/>
+			) : null }
+			{ dialog?.kind === 'restoreMany' ? (
+				<RestoreManyDialog
+					items={ dialog.items }
+					leftOut={ dialog.leftOut }
+					onClose={ () => setDialog( null ) }
+					onConfirm={ () =>
+						actions.restoreItems(
+							dialog.items.map( ( item ) => item.id )
 						)
 					}
 				/>

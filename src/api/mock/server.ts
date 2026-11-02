@@ -57,7 +57,13 @@ export interface MockOptions {
 	/** Make routes fail: map from "METHOD /route" prefix to an error code and status. */
 	failures?: Record<
 		string,
-		{ status: number; code: string; message: string }
+		{
+			status: number;
+			code: string;
+			message: string;
+			/** Extra structure for `data.details` (rule problems, the failed test, the wp-config line). */
+			details?: Record< string, unknown >;
+		}
 	>;
 }
 
@@ -374,19 +380,62 @@ export function createMockServer( options: MockOptions = {} ) {
 		);
 	};
 
+	// Like the server: an action only changes items in a state that allows it, and says how many it did.
+	const FROM: Record< 'retry' | 'skip' | 'restore', string[] > = {
+		retry: [ 'failed', 'retrying' ],
+		skip: [ 'queued', 'retrying', 'failed' ],
+		restore: [ 'skipped' ],
+	};
 	const touch = (
 		ids: number[],
-		change: ( entry: QueueItem ) => QueueItem
+		change: ( entry: QueueItem ) => QueueItem,
+		action: 'retry' | 'skip' | 'restore'
 	): number => {
 		let done = 0;
 		items = items.map( ( entry ) => {
-			if ( ids.includes( entry.id ) ) {
+			if (
+				ids.includes( entry.id ) &&
+				FROM[ action ].includes( entry.state )
+			) {
 				done += 1;
 				return change( entry );
 			}
 			return entry;
 		} );
 		return done;
+	};
+	const refuse = (
+		id: number,
+		action: 'retry' | 'skip' | 'restore'
+	): Answer | null => {
+		const entry = items.find( ( candidate ) => candidate.id === id );
+		if ( ! entry ) {
+			return fail(
+				404,
+				'rest_not_found',
+				'That queue item does not exist.'
+			);
+		}
+		if ( FROM[ action ].includes( entry.state ) ) {
+			return null;
+		}
+		return action === 'retry'
+			? fail(
+					409,
+					'estasoft_sync_cannot_retry',
+					'Only failed or retrying orders can be retried.'
+				)
+			: action === 'skip'
+				? fail(
+						409,
+						'estasoft_sync_cannot_skip',
+						'This item has already finished and cannot be skipped.'
+					)
+				: fail(
+						409,
+						'estasoft_sync_cannot_restore',
+						'Only skipped orders can be restored.'
+					);
 	};
 	const requeue = ( entry: QueueItem ): QueueItem => ( {
 		...entry,
@@ -661,7 +710,11 @@ export function createMockServer( options: MockOptions = {} ) {
 			'POST',
 			/^\/queue\/(\d+)\/retry$/,
 			( m ) => {
-				touch( [ Number( m[ 1 ] ) ], requeue );
+				const refused = refuse( Number( m[ 1 ] ), 'retry' );
+				if ( refused ) {
+					return refused;
+				}
+				touch( [ Number( m[ 1 ] ) ], requeue, 'retry' );
 				return ok(
 					items.find( ( entry ) => entry.id === Number( m[ 1 ] ) )
 				);
@@ -671,9 +724,14 @@ export function createMockServer( options: MockOptions = {} ) {
 			'POST',
 			/^\/queue\/(\d+)\/skip$/,
 			( m, req ) => {
+				const refused = refuse( Number( m[ 1 ] ), 'skip' );
+				if ( refused ) {
+					return refused;
+				}
 				touch(
 					[ Number( m[ 1 ] ) ],
-					skip( String( body( req ).reason ?? '' ) )
+					skip( String( body( req ).reason ?? '' ) ),
+					'skip'
 				);
 				return ok(
 					items.find( ( entry ) => entry.id === Number( m[ 1 ] ) )
@@ -684,7 +742,11 @@ export function createMockServer( options: MockOptions = {} ) {
 			'POST',
 			/^\/queue\/(\d+)\/restore$/,
 			( m ) => {
-				touch( [ Number( m[ 1 ] ) ], requeue );
+				const refused = refuse( Number( m[ 1 ] ), 'restore' );
+				if ( refused ) {
+					return refused;
+				}
+				touch( [ Number( m[ 1 ] ) ], requeue, 'restore' );
 				return ok(
 					items.find( ( entry ) => entry.id === Number( m[ 1 ] ) )
 				);
@@ -708,7 +770,7 @@ export function createMockServer( options: MockOptions = {} ) {
 								entry.error_code === input.error_code
 						)
 						.map( ( entry ) => entry.id );
-				return ok( { retried: touch( ids, requeue ) } );
+				return ok( { retried: touch( ids, requeue, 'retry' ) } );
 			},
 		],
 		[
@@ -724,7 +786,7 @@ export function createMockServer( options: MockOptions = {} ) {
 					input.action === 'skip'
 						? skip( input.reason ?? '' )
 						: requeue;
-				return ok( { done: touch( input.ids, change ) } );
+				return ok( { done: touch( input.ids, change, input.action ) } );
 			},
 		],
 		[ 'POST', /^\/sync\/run$/, () => ok( { started: true } ) ],
@@ -855,6 +917,30 @@ export function createMockServer( options: MockOptions = {} ) {
 				mappings[ m[ 1 ] ]
 					? ok( mappings[ m[ 1 ] ] )
 					: fail( 404, 'rest_not_found', 'Unknown mapping type.' ),
+		],
+		[
+			'GET',
+			/^\/mappings\/(\w+)\/versions\/(\d+)$/,
+			( m ) => {
+				const set = mappings[ m[ 1 ] ];
+				const number = Number( m[ 2 ] );
+				const meta = set?.versions.find(
+					( version ) => version.version === number
+				);
+				if ( ! set || ! meta ) {
+					return fail(
+						404,
+						'rest_not_found',
+						'That version does not exist.'
+					);
+				}
+				// Older versions keep their rules; the sample world gives them the live rules.
+				const rules =
+					set.live?.version === number
+						? set.live.rules
+						: ( set.live?.rules ?? [] ).slice( 0, -1 );
+				return ok( { ...meta, rules } );
+			},
 		],
 		[
 			'PUT',
@@ -1462,7 +1548,8 @@ export function createMockServer( options: MockOptions = {} ) {
 			answer = fail(
 				injected[ 1 ].status,
 				injected[ 1 ].code,
-				injected[ 1 ].message
+				injected[ 1 ].message,
+				injected[ 1 ].details ? { details: injected[ 1 ].details } : {}
 			);
 		} else {
 			const route = req.route.replace( /\/+$/, '' ) || '/';

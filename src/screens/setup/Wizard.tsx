@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from '@wordpress/element';
+import { useEffect, useMemo, useRef, useState } from '@wordpress/element';
+import { speak } from '@wordpress/a11y';
 import { __, sprintf } from '@wordpress/i18n';
 import { api } from '../../api/endpoints';
 import type { CatalogEntry, Connection, Onboarding } from '../../api/types';
@@ -11,7 +12,7 @@ import { Callout } from '../../components/Callout';
 import { ConfirmDialog } from '../../components/Dialog';
 import { ErrorState, LoadingState } from '../../components/EmptyState';
 import { PageHeader } from '../../components/PageHeader';
-import { Steps } from '../../components/Steps';
+import { getStepLabels, Steps } from '../../components/Steps';
 import { useAsyncAction } from '../../hooks/useAsyncAction';
 import { useResource } from '../../hooks/useResource';
 import { errorText } from '../../lib/text';
@@ -135,7 +136,9 @@ export function Wizard() {
 		}
 	);
 
-	const start = useAsyncAction( async () => {
+	// Throws when the server refuses. The "Go live now" dialog relies on that to stay open and show
+	// the reason; the shadow button runs it through `useAsyncAction`, which keeps the error for the page.
+	const doStart = async () => {
 		const result = await api.onboarding.goLive( mode );
 		onboarding.setData( result );
 		await reloadStatus();
@@ -153,7 +156,29 @@ export function Wizard() {
 						),
 		} );
 		navigate( '/' );
-	} );
+	};
+	const start = useAsyncAction( doStart );
+
+	// On every step change, move focus to the step heading and say where we are.
+	const stepHeading = useRef< HTMLHeadingElement >( null );
+	const firstStep = useRef( true );
+	useEffect( () => {
+		if ( firstStep.current ) {
+			firstStep.current = false;
+			return;
+		}
+		stepHeading.current?.focus();
+		speak(
+			sprintf(
+				/* translators: 1: current step, 2: number of steps, 3: name of the step */
+				__( 'Step %1$d of %2$d: %3$s', 'estasoft-erp-crm-sync-engine' ),
+				step,
+				5,
+				getStepLabels()[ step - 1 ] ?? ''
+			),
+			'polite'
+		);
+	}, [ step, sub ] );
 
 	if ( onboarding.loading || ( onboarding.data && ! seeded ) ) {
 		return (
@@ -213,7 +238,9 @@ export function Wizard() {
 		);
 	}
 
-	const blocked = readiness.data?.blocked ?? readiness.loading;
+	// A check that failed to run is not a pass: Continue stays off and only "Continue anyway" moves on.
+	const blocked = readiness.data?.blocked ?? false;
+	const checkFailed = Boolean( readiness.error ) && ! readiness.data;
 	const system = connection ? connection.connector : ( entry?.name ?? '' );
 	const sampleLabel = previewOrder ? String( previewOrder ) : null;
 
@@ -229,8 +256,13 @@ export function Wizard() {
 
 	switch ( step ) {
 		case 1:
-			body = <CheckStep readiness={ readiness } />;
-			canContinue = ! blocked && ! readiness.loading;
+			body = (
+				<CheckStep
+					readiness={ readiness }
+					onContinueAnyway={ () => void move.run( 2 ) }
+				/>
+			);
+			canContinue = ! blocked && ! readiness.loading && ! checkFailed;
 			break;
 		case 2:
 			if ( sub === 'choose' ) {
@@ -373,6 +405,13 @@ export function Wizard() {
 				) }
 			/>
 			<Steps current={ step } />
+			<h2
+				ref={ stepHeading }
+				tabIndex={ -1 }
+				className="estasoft-sync-wizard__heading"
+			>
+				{ getStepLabels()[ step - 1 ] }
+			</h2>
 			{ body }
 			{ move.error ? (
 				<Callout tone="danger" role="alert">
@@ -430,7 +469,7 @@ export function Wizard() {
 						'estasoft-erp-crm-sync-engine'
 					) }
 					onClose={ () => setConfirmLive( false ) }
-					onConfirm={ () => start.run() }
+					onConfirm={ doStart }
 				>
 					<p>
 						{ sprintf(

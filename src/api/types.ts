@@ -54,7 +54,7 @@ export interface ConnectionSummary {
 	address: string;
 	paused_until: string | null;
 	/** "circuit" when the breaker paused it, "person" when paused by hand, null otherwise. */
-	paused_reason: 'circuit' | 'person' | null;
+	paused_reason: 'circuit' | 'person' | 'sign_in' | 'key_missing' | null;
 	last_success_at: string | null;
 	last_failure_at: string | null;
 	failures_in_a_row: number;
@@ -610,6 +610,8 @@ export interface BootData {
 	routes: string[];
 	notices: Notice[];
 	encryptionKeyLine: string | null;
+	/** Rows per page of the person's Screen Options (25, 50 or 100). Additive: older boot data has none. */
+	perPage?: number;
 }
 
 /* ---------------------------------------------------------------- endpoint list */
@@ -627,11 +629,17 @@ export interface BootData {
  * POST   /sync/run                             -> { started: true }
  * POST   /pause      {connection_id?, minutes?}-> ConnectionSummary
  * POST   /resume     {connection_id?}          -> ConnectionSummary
+ * POST   /connections/{id}/pause  {minutes?}   -> ConnectionSummary   (same as /pause with connection_id)
+ * POST   /connections/{id}/resume              -> ConnectionSummary   (same as /resume with connection_id)
  * GET    /connections                          -> ConnectionSummary[]
  * POST   /connections  ConnectionInput         -> Connection
  * GET    /connections/{id}                     -> Connection
  * POST   /connections/{id}  Partial<ConnectionInput> -> Connection
  * DELETE /connections/{id}                     -> { disconnected: true }
+ * POST   /connections/{id}/inbound {enabled}  -> { enabled: false } | { enabled: true, secret, url }  (the secret is shown once)
+ * POST   /connections/{id}/oauth/start         -> { url }              (SYNC-CFG-004 for connectors that connect with a key)
+ * GET    /connections/{id}/oauth/organisations -> { id, name }[]       (SYNC-CFG-004 for connectors that connect with a key)
+ * GET    /connections/{id}/oauth/callback?state=&code=&error= -> 302 to the admin screen with signin=ok|cancelled|failed (never JSON once the state looks valid)
  * POST   /connections/{id}/test                -> ConnectionTestResult
  * POST   /connections/test     ConnectionInput -> ConnectionTestResult  (before saving)
  * GET    /connections/{id}/pause-history       -> not in Phase 1
@@ -660,7 +668,8 @@ export interface BootData {
  * POST   /reconciliation/differences/{id}/ignore {reason} -> ReconDiff
  * PUT    /reconciliation/settings              -> ReconOverview
  * GET    /invoices?status=                     -> Paged<InvoiceRow>
- * GET    /logs?level=&search=&connection_id=&page= -> Paged<LogEntry>  (Accept: text/csv for download)
+ * GET    /logs?level=&search=&connection_id=&queue_id=&code=&range=&page=&per_page= -> Paged<LogEntry>  (Accept: text/csv for download, same filters)
+ *          range: '1h' | '24h' | '7d' | '30d' | 'all' (default all); code: SYNC-XXX-000; queue_id: a queue item
  * GET    /logs/{id}                            -> LogEntryDetail
  * GET    /readiness                            -> Readiness
  * POST   /readiness/run                        -> Readiness
@@ -668,7 +677,7 @@ export interface BootData {
  * GET    /settings                             -> Settings
  * PUT    /settings                             -> Settings
  * POST   /tools/export                         -> { filename, json }
- * POST   /tools/import {json, confirm}         -> { preview: string[] } | { applied: true }
+ * POST   /tools/import {json, confirm}         -> { preview: string[] } | { applied: true, drafts?: number, skipped?: string[] }
  * POST   /tools/clear-logs                     -> { cleared: number }
  * POST   /tools/delete-data {word}             -> { deleted: true }
  * POST   /notifications/test                    -> { sent_to: string[] }  (error SYNC-* when the mail was not accepted)
@@ -676,6 +685,7 @@ export interface BootData {
  * GET    /onboarding                           -> Onboarding
  * PUT    /onboarding                           -> Onboarding
  * POST   /go-live {mode: 'shadow'|'live'}      -> Onboarding
+ * POST   /shadow/start {days?, connection_id?} -> Onboarding            (days 1 to 30, default 7)
  * GET    /shadow/report                        -> ShadowReport
  * POST   /shadow/end                           -> Onboarding
  * GET    /orders/sample                        -> SampleOrder[]

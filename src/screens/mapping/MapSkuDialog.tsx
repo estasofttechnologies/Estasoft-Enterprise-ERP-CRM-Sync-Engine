@@ -1,17 +1,20 @@
 import { useEffect, useState } from '@wordpress/element';
-import { __, sprintf } from '@wordpress/i18n';
+import { __, _n, sprintf } from '@wordpress/i18n';
 import { api } from '../../api/endpoints';
 import type { ProductSearchHit } from '../../api/local-types';
 import type { ProductMatch } from '../../api/types';
 import { useNotices } from '../../app/NoticeProvider';
 import { Link } from '../../app/router';
-import { useStatus, useSystemName } from '../../app/StatusProvider';
+import { useSystemName } from '../../app/StatusProvider';
 import { Callout } from '../../components/Callout';
 import { ConfirmDialog } from '../../components/Dialog';
 import { Busy } from '../../components/EmptyState';
 import { CheckField, ChoiceGroup, TextField } from '../../components/Fields';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import { useResource } from '../../hooks/useResource';
+
+/** How many pages of products without a match are searched for the SKU. */
+const MAX_PAGES = 20;
 
 export interface MapSkuDialogProps {
 	sku: string;
@@ -43,7 +46,6 @@ export function MapSkuDialog( {
 	onMapped,
 }: MapSkuDialogProps ) {
 	const system = useSystemName();
-	const { status } = useStatus();
 	const { notify } = useNotices();
 	const [ search, setSearch ] = useState( sku );
 	const settled = useDebouncedValue( search, 300 );
@@ -59,13 +61,24 @@ export function MapSkuDialog( {
 			return undefined;
 		}
 		let cancelled = false;
-		void api.products
-			.unmatched( 1 )
-			.then( ( page ) => {
+		// The list is paged, so the SKU may be on a later page than the first.
+		const look = async (): Promise< ProductMatch | null > => {
+			for ( let pageNumber = 1; pageNumber <= MAX_PAGES; pageNumber++ ) {
+				const page = await api.products.unmatched( pageNumber );
+				const found = page.items.find( ( item ) => item.sku === sku );
+				if ( found ) {
+					return found;
+				}
+				if ( pageNumber >= page.total_pages ) {
+					break;
+				}
+			}
+			return null;
+		};
+		look()
+			.then( ( found ) => {
 				if ( ! cancelled ) {
-					setResolved(
-						page.items.find( ( item ) => item.sku === sku ) ?? null
-					);
+					setResolved( found );
 				}
 			} )
 			.catch( () => {
@@ -79,8 +92,7 @@ export function MapSkuDialog( {
 	}, [ product, sku ] );
 
 	const results = useResource< ProductSearchHit[] >(
-		( signal ) =>
-			api.products.search( settled, status?.connection?.id, signal ),
+		( signal ) => api.products.search( settled, undefined, signal ),
 		[ settled ],
 		{ enabled: settled.trim().length > 0, keepPrevious: true }
 	);
@@ -105,7 +117,11 @@ export function MapSkuDialog( {
 				if ( ! resolved ) {
 					return;
 				}
-				await api.products.map( resolved.product_id, chosen );
+				await api.products.map(
+					resolved.product_id,
+					chosen,
+					hits.find( ( hit ) => hit.id === chosen )?.ref ?? null
+				);
 				let retried = 0;
 				if ( retry && failedOrders > 0 ) {
 					const result = await api.queue.retryMany( {
@@ -119,8 +135,11 @@ export function MapSkuDialog( {
 					text:
 						retried > 0
 							? sprintf(
-									/* translators: 1: SKU, 2: number of orders sent back to the queue */ __(
+									/* translators: 1: SKU, 2: number of orders sent back to the queue */
+									_n(
+										'SKU %1$s is mapped. %2$d order was sent back to the queue.',
 										'SKU %1$s is mapped. %2$d orders were sent back to the queue.',
+										retried,
 										'estasoft-erp-crm-sync-engine'
 									),
 									sku,
@@ -232,8 +251,11 @@ export function MapSkuDialog( {
 			{ failedOrders > 0 ? (
 				<CheckField
 					label={ sprintf(
-						/* translators: %d: number of orders */ __(
+						/* translators: %d: number of orders */
+						_n(
+							'Retry the %d order that failed on this SKU',
 							'Retry the %d orders that failed on this SKU',
+							failedOrders,
 							'estasoft-erp-crm-sync-engine'
 						),
 						failedOrders

@@ -137,7 +137,7 @@ export function AccessTab() {
 							</th>
 							<td>
 								{ __(
-									'See the dashboard, queue, invoices, stock, reconciliation and logs. See connections and mapping, read only. Retry, skip, restore, pause, resume and sync now. Accept or hold a stock conflict. Repair or ignore a reconciliation difference. Run the readiness check. Copy a support report.',
+									'See the dashboard, queue, invoices, stock, reconciliation and logs. See connections, mapping and settings, read only. Retry, skip, restore, pause, resume and sync now. Accept or hold a stock conflict. Repair or ignore a reconciliation difference. Run the readiness check. Copy a support report.',
 									'estasoft-erp-crm-sync-engine'
 								) }
 							</td>

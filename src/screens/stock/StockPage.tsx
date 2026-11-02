@@ -271,6 +271,21 @@ function StockTabView( {
 		if ( problem ) {
 			return;
 		}
+		// The server refuses this too; saying it here saves a round trip.
+		if (
+			rules.warehouses.length > 0 &&
+			! rules.warehouses.some(
+				( warehouse ) =>
+					counts[ warehouse.id ] ?? warehouse.counts_toward_stock
+			)
+		) {
+			throw new Error(
+				__(
+					'At least one warehouse must count toward shop stock.',
+					'estasoft-erp-crm-sync-engine'
+				)
+			);
+		}
 		const next = await api.stock.saveRules( {
 			enabled,
 			interval_minutes: Number( interval ),
@@ -695,6 +710,17 @@ function StockTabView( {
 	);
 }
 
+/**
+ * The order status slug without the `wc-` prefix the server accepts but WooCommerce does not store
+ * in its own lists.
+ *
+ * @param value Saved value of `delivered_becomes`.
+ * @return The slug.
+ */
+function statusSlug( value: string ): string {
+	return value.replace( /^wc-/, '' );
+}
+
 function TrackingTabView( {
 	rules,
 	overview,
@@ -703,17 +729,18 @@ function TrackingTabView( {
 	onSaved,
 }: TabProps ) {
 	const { notify } = useNotices();
-	const [ becomes, setBecomes ] = useState( rules.delivered_becomes );
+	const saved = statusSlug( rules.delivered_becomes );
+	const [ becomes, setBecomes ] = useState< string >( saved );
 	const [ tracking, setTracking ] = useState( rules.tracking_enabled );
 	const [ cod, setCod ] = useState( rules.cod_payment_on_delivery );
 	const reset = () => {
-		setBecomes( rules.delivered_becomes );
+		setBecomes( statusSlug( rules.delivered_becomes ) );
 		setTracking( rules.tracking_enabled );
 		setCod( rules.cod_payment_on_delivery );
 	};
 	useEffect( reset, [ rules ] );
 	const changes =
-		( becomes !== rules.delivered_becomes ? 1 : 0 ) +
+		( becomes !== saved ? 1 : 0 ) +
 		( tracking !== rules.tracking_enabled ? 1 : 0 ) +
 		( cod !== rules.cod_payment_on_delivery ? 1 : 0 );
 	const save = useAsyncAction( async () => {
@@ -772,29 +799,17 @@ function TrackingTabView( {
 								),
 							},
 							{
-								value: 'shipped',
-								label: __(
-									'Completed when shipped',
-									'estasoft-erp-crm-sync-engine'
-								),
-							},
-							{
 								value: 'none',
 								label: __(
 									'Do not change the status',
 									'estasoft-erp-crm-sync-engine'
 								),
 							},
-							...( [ 'completed', 'shipped', 'none' ].includes(
-								rules.delivered_becomes
-							)
+							// A status saved some other way stays visible, labelled with its slug, so saving
+							// this page does not silently replace it.
+							...( [ 'completed', 'none' ].includes( saved )
 								? []
-								: [
-										{
-											value: rules.delivered_becomes,
-											label: rules.delivered_becomes,
-										},
-									] ),
+								: [ { value: saved, label: saved } ] ),
 						] }
 					/>
 					<CheckField

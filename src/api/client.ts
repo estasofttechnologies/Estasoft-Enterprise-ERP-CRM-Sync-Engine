@@ -9,7 +9,13 @@ import apiFetch from '@wordpress/api-fetch';
 import { __ } from '@wordpress/i18n';
 import type { ErrorClass } from './errors';
 import { ERROR_CATALOG } from './errors';
-import type { ApiErrorBody, BootData, Paged } from './types';
+import type {
+	ApiErrorBody,
+	BootData,
+	ConnectionTestResult,
+	Paged,
+} from './types';
+import type { ApiErrorDetails, RuleProblem } from './local-types';
 import { readBootData } from './boot';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -47,6 +53,12 @@ export interface RequestOptions {
 	accept?: string;
 }
 
+const EMPTY_DETAILS: ApiErrorDetails = {
+	errors: [],
+	test: null,
+	keyLine: null,
+};
+
 /** An error answer from the server, or a failure to reach it. */
 export class ApiError extends Error {
 	public readonly code: string;
@@ -59,6 +71,8 @@ export class ApiError extends Error {
 
 	public readonly fieldErrors: Record< string, string >;
 
+	public readonly details: ApiErrorDetails;
+
 	/**
 	 * @param code        Error code (`SYNC-...` or a WordPress REST code).
 	 * @param message     Message for the person, already translated by the server when it came from there.
@@ -66,6 +80,7 @@ export class ApiError extends Error {
 	 * @param errorClass  Class from the error catalog, if known.
 	 * @param context     Placeholder values the server sent with the error.
 	 * @param fieldErrors Messages by field name, for validation errors.
+	 * @param details     Extra structure: rule problems, the failed connection test, the wp-config line.
 	 */
 	public constructor(
 		code: string,
@@ -73,7 +88,8 @@ export class ApiError extends Error {
 		status: number,
 		errorClass: ErrorClass | null = null,
 		context: Record< string, string > = {},
-		fieldErrors: Record< string, string > = {}
+		fieldErrors: Record< string, string > = {},
+		details: ApiErrorDetails = EMPTY_DETAILS
 	) {
 		super( message );
 		this.name = 'ApiError';
@@ -82,6 +98,7 @@ export class ApiError extends Error {
 		this.errorClass = errorClass;
 		this.context = context;
 		this.fieldErrors = fieldErrors;
+		this.details = details;
 	}
 }
 
@@ -221,6 +238,75 @@ function cleanQuery(
 	return out;
 }
 
+function isRecord( value: unknown ): value is Record< string, unknown > {
+	return (
+		typeof value === 'object' && value !== null && ! Array.isArray( value )
+	);
+}
+
+function toProblem( value: unknown ): RuleProblem | null {
+	if ( ! isRecord( value ) || typeof value.message !== 'string' ) {
+		return null;
+	}
+	return {
+		rule_id: typeof value.rule_id === 'string' ? value.rule_id : '',
+		field: typeof value.field === 'string' ? value.field : '',
+		code: typeof value.code === 'string' ? value.code : '',
+		message: value.message,
+	};
+}
+
+/**
+ * Reads `data.details` of an error answer. Only the three shapes the server documents are kept;
+ * anything else is dropped rather than trusted.
+ *
+ * @param raw The raw `details` value.
+ * @return Typed details.
+ */
+export function parseDetails( raw: unknown ): ApiErrorDetails {
+	if ( ! isRecord( raw ) ) {
+		return EMPTY_DETAILS;
+	}
+	const errors = Array.isArray( raw.errors )
+		? raw.errors
+				.map( toProblem )
+				.filter( ( item ): item is RuleProblem => item !== null )
+		: [];
+	const test =
+		isRecord( raw.test ) && typeof raw.test.ok === 'boolean'
+			? ( raw.test as unknown as ConnectionTestResult )
+			: null;
+	const keyLine =
+		typeof raw.key_line === 'string' && raw.key_line !== ''
+			? raw.key_line
+			: null;
+	return { errors, test, keyLine };
+}
+
+/** Routes that take `connection_id` and belong to a screen that has a connection picker. */
+const PICKED_ROUTES = /^\/(mappings|tax-map|products)(\/|$)/;
+
+/**
+ * The connection chosen in the picker of the Mapping screen (`#/mapping/orders?connection=13`).
+ * The address is the state of the picker, so it is read when a request is made; a request from
+ * another screen gets none and the server uses the first connection that is not disconnected.
+ *
+ * @param route Route under the namespace.
+ * @return The connection id, or undefined.
+ */
+export function pickedConnection( route: string ): number | undefined {
+	if ( ! PICKED_ROUTES.test( route ) || typeof window === 'undefined' ) {
+		return undefined;
+	}
+	const hash = window.location.hash.replace( /^#/, '' );
+	const [ path, query = '' ] = hash.split( '?' );
+	if ( ! path.startsWith( '/mapping' ) ) {
+		return undefined;
+	}
+	const id = Number( new URLSearchParams( query ).get( 'connection' ) );
+	return Number.isInteger( id ) && id > 0 ? id : undefined;
+}
+
 function toApiError( status: number, raw: string ): ApiError {
 	let body: Partial< ApiErrorBody > & { data?: Record< string, unknown > } =
 		{};
@@ -235,6 +321,7 @@ function toApiError( status: number, raw: string ): ApiError {
 		context?: Record< string, string >;
 		params?: Record< string, string >;
 		fields?: Record< string, string >;
+		details?: unknown;
 	};
 	const info = ERROR_CATALOG[ code ];
 	const errorClass = data.class ?? info?.class ?? null;
@@ -269,7 +356,8 @@ function toApiError( status: number, raw: string ): ApiError {
 		status,
 		errorClass,
 		data.context ?? {},
-		data.fields ?? data.params ?? {}
+		data.fields ?? data.params ?? {},
+		parseDetails( data.details )
 	);
 }
 
@@ -303,9 +391,14 @@ async function send(
 	}
 	let response: TransportResponse;
 	try {
+		const query = cleanQuery( options.query );
+		const picked = pickedConnection( route );
+		if ( picked !== undefined && query.connection_id === undefined ) {
+			query.connection_id = String( picked );
+		}
 		response = await transport( {
 			route,
-			query: cleanQuery( options.query ),
+			query,
 			method,
 			body: options.body,
 			headers,

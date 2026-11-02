@@ -235,14 +235,16 @@ export const ERROR_CATALOG: Record< string, ErrorInfo > = {
 	'SYNC-REST-001': {
 		code: 'SYNC-REST-001',
 		class: 'info',
-		message: 'Something went wrong on the server. The details are in the log.',
+		message:
+			'Something went wrong on the server. The details are in the log.',
 		remedy: 'Try again in a moment. If it keeps happening, copy the support report and ask for help',
 		retries: false,
 	},
 	'SYNC-REST-002': {
 		code: 'SYNC-REST-002',
 		class: 'needs_person',
-		message: 'The test email could not be sent. WordPress did not accept the message.',
+		message:
+			'The test email could not be sent. WordPress did not accept the message.',
 		remedy: 'Check the email settings of this site, then send the test again',
 		retries: false,
 	},

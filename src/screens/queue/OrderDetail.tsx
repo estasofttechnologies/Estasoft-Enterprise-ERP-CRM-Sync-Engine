@@ -1,4 +1,4 @@
-import { useState } from '@wordpress/element';
+import { createInterpolateElement, useState } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 import { api } from '../../api/endpoints';
 import type { QueueItemDetail } from '../../api/types';
@@ -29,6 +29,7 @@ import {
 	useQueueActions,
 } from './actions';
 import { supportText } from './QueueList';
+import { safeHttpUrl } from '../../lib/url';
 
 /**
  * One queue item: the order, why it failed, what happened step by step and the redacted
@@ -108,6 +109,8 @@ export function OrderDetail( { id }: { id: number } ) {
 	}
 
 	const label = `#${ item.entity_label }`;
+	const externalUrl = safeHttpUrl( item.external_url );
+	const editUrl = safeHttpUrl( item.order_edit_url );
 	const problem =
 		item.error_message ||
 		( item.error_code
@@ -155,16 +158,26 @@ export function OrderDetail( { id }: { id: number } ) {
 						),
 					},
 				] }
-				description={
-					<>
-						{ eventLabel( item.event, item.entity_type ) } ·{ ' ' }
-						{ __( 'placed', 'estasoft-erp-crm-sync-engine' ) }{ ' ' }
-						<DateTime value={ item.created_at } />
-						{ item.total
-							? ` · ${ formatMoney( item.total, cfg ) }`
-							: '' }
-					</>
-				}
+				description={ createInterpolateElement(
+					item.total
+						? /* translators: <event/> is the kind of event such as "Order created", <when/> the clock time it was placed, <total/> the order total with its currency */
+							__(
+								'<event/> · placed <when/> · <total/>',
+								'estasoft-erp-crm-sync-engine'
+							)
+						: /* translators: <event/> is the kind of event such as "Order created", <when/> the clock time it was placed */
+							__(
+								'<event/> · placed <when/>',
+								'estasoft-erp-crm-sync-engine'
+							),
+					{
+						event: (
+							<>{ eventLabel( item.event, item.entity_type ) }</>
+						),
+						when: <DateTime value={ item.created_at } />,
+						total: <>{ formatMoney( item.total, cfg ) }</>,
+					}
+				) }
 				actions={
 					<>
 						{ canRetry ? (
@@ -451,11 +464,9 @@ export function OrderDetail( { id }: { id: number } ) {
 													),
 													system
 												),
-												value: item.external_url ? (
+												value: externalUrl ? (
 													<a
-														href={
-															item.external_url
-														}
+														href={ externalUrl }
 														target="_blank"
 														rel="noopener noreferrer"
 														className="estasoft-sync-link"
@@ -478,10 +489,10 @@ export function OrderDetail( { id }: { id: number } ) {
 						) }
 					>
 						<ul className="estasoft-sync-list estasoft-sync-list--plain">
-							{ item.order_edit_url ? (
+							{ editUrl ? (
 								<li>
 									<a
-										href={ item.order_edit_url }
+										href={ editUrl }
 										className="estasoft-sync-link"
 									>
 										{ sprintf(

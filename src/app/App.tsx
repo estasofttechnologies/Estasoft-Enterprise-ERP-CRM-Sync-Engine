@@ -32,7 +32,8 @@ function Frame( { boot, wrap }: { boot: BootData; wrap: boolean } ) {
 	const settings = useResource(
 		( signal ) => api.settings.get( signal ),
 		[],
-		{ enabled: boot.capabilities.configure }
+		// Managers can read the settings too: the time display and the log retention need them.
+		{ enabled: boot.capabilities.manage || boot.capabilities.configure }
 	);
 	const main = useRef< HTMLElement >( null );
 	const first = useRef( true );
@@ -57,11 +58,16 @@ function Frame( { boot, wrap }: { boot: BootData; wrap: boolean } ) {
 					? 'UTC'
 					: ( status?.store_timezone ?? boot.storeTimezone ),
 			currency: status?.currency ?? boot.currency,
+			currencyDecimals:
+				( status?.currency ?? boot.currency ) === boot.currency
+					? boot.currencyDecimals
+					: undefined,
 		} ),
 		[
 			boot.locale,
 			boot.storeTimezone,
 			boot.currency,
+			boot.currencyDecimals,
 			settings.data?.display_time,
 			status?.store_timezone,
 			status?.currency,
@@ -71,7 +77,10 @@ function Frame( { boot, wrap }: { boot: BootData; wrap: boolean } ) {
 	const section = sectionOf( route.segments );
 	return (
 		<DisplaySettingsContext.Provider
-			value={ { refresh: () => void settings.reload() } }
+			value={ {
+				settings: settings.data ?? null,
+				refresh: () => void settings.reload(),
+			} }
 		>
 			<FormatContext.Provider value={ format }>
 				<div

@@ -20,7 +20,14 @@ import { useAsyncAction } from '../../hooks/useAsyncAction';
 import { useResource } from '../../hooks/useResource';
 import { groupRemedy, groupSentence } from '../../lib/attention';
 import { formatFullDateTime, formatSpan, formatTime } from '../../lib/format';
-import { errorText, systemName } from '../../lib/text';
+import {
+	daysPhrase,
+	errorText,
+	groupsPhrase,
+	notesPhrase,
+	ordersPhrase,
+	systemName,
+} from '../../lib/text';
 import { HourlyChart } from './HourlyChart';
 import { LatestEvents } from './LatestEvents';
 import { Kpi } from '../../components/Kpi';
@@ -184,7 +191,7 @@ function FirstRun() {
 }
 
 function NormalDashboard( { status }: { status: Status } ) {
-	const { canManage } = useApp();
+	const { canManage, canConfigure } = useApp();
 	const { reload } = useStatus();
 	const { notify } = useNotices();
 	const cfg = useFormat();
@@ -291,20 +298,25 @@ function NormalDashboard( { status }: { status: Status } ) {
 					canManage ? (
 						paused ? (
 							<>
+								{ canConfigure ? (
+									<Btn
+										variant="primary"
+										busy={ check.busy }
+										onClick={ () => void check.run() }
+									>
+										{ sprintf(
+											/* translators: %s: system name */ __(
+												'Check %s now',
+												'estasoft-erp-crm-sync-engine'
+											),
+											system
+										) }
+									</Btn>
+								) : null }
 								<Btn
-									variant="primary"
-									busy={ check.busy }
-									onClick={ () => void check.run() }
-								>
-									{ sprintf(
-										/* translators: %s: system name */ __(
-											'Check %s now',
-											'estasoft-erp-crm-sync-engine'
-										),
-										system
-									) }
-								</Btn>
-								<Btn
+									variant={
+										canConfigure ? undefined : 'primary'
+									}
 									busy={ resume.busy }
 									onClick={ () => void resume.run() }
 								>
@@ -621,30 +633,30 @@ function attentionSummary(
 	failed: number,
 	notes: number
 ): string {
+	// The orders and the groups are each counted in their own phrase, so each noun agrees with its own number.
 	const failedPart = sprintf(
-		/* translators: 1: number of failed orders, 2: number of groups */
+		/* translators: 1: number of failed orders, 2: number of groups such as "3 groups" */
 		_n(
-			'%1$d failed order in %2$d group',
-			'%1$d failed orders in %2$d groups',
+			'%1$d failed order in %2$s',
+			'%1$d failed orders in %2$s',
 			failed,
 			'estasoft-erp-crm-sync-engine'
 		),
 		failed,
-		groupCount
+		groupsPhrase( groupCount )
 	);
 	if ( notes === 0 ) {
-		return failedPart + '.';
+		return sprintf(
+			/* translators: %s: sentence about failed orders */
+			__( '%s.', 'estasoft-erp-crm-sync-engine' ),
+			failedPart
+		);
 	}
 	return sprintf(
-		/* translators: 1: sentence about failed orders, 2: number of notes */
-		_n(
-			'%1$s, and %2$d note.',
-			'%1$s, and %2$d notes.',
-			notes,
-			'estasoft-erp-crm-sync-engine'
-		),
+		/* translators: 1: sentence about failed orders, 2: number of notes such as "2 notes" */
+		__( '%1$s, and %2$s.', 'estasoft-erp-crm-sync-engine' ),
 		failedPart,
-		notes
+		notesPhrase( notes )
 	);
 }
 
@@ -729,14 +741,14 @@ function buildNotes(
 				open
 			),
 			text: sprintf(
-				/* translators: 1: number of orders that differ, 2: number of orders compared, 3: number of days */
+				/* translators: 1: number of orders that differ, 2: number of orders compared such as "2104 orders", 3: length of the window such as "7 days" */
 				__(
-					'WooCommerce and your system disagree on %1$d of %2$d orders from the last %3$d days.',
+					'WooCommerce and your system disagree on %1$d of %2$s from the last %3$s.',
 					'estasoft-erp-crm-sync-engine'
 				),
 				open,
-				recon.last_run.compared,
-				recon.window_days
+				ordersPhrase( recon.last_run.compared ),
+				daysPhrase( recon.window_days )
 			),
 			action: __( 'Open Reconciliation', 'estasoft-erp-crm-sync-engine' ),
 			route: '/reconciliation',
@@ -780,8 +792,10 @@ function PausedBanner( {
 	const text = byCircuit
 		? sprintf(
 				/* translators: 1: system name, 2: clock time of its last answer, 3: number of orders waiting, 4: clock time of the next check */
-				__(
+				_n(
+					'%1$s has not answered since %2$s. Syncing is paused. Customers can still check out. %3$d order is waiting in the queue. The next automatic check is at %4$s.',
 					'%1$s has not answered since %2$s. Syncing is paused. Customers can still check out. %3$d orders are waiting in the queue. The next automatic check is at %4$s.',
+					status.waiting,
 					'estasoft-erp-crm-sync-engine'
 				),
 				system,
@@ -791,8 +805,10 @@ function PausedBanner( {
 			)
 		: sprintf(
 				/* translators: 1: system name, 2: number of orders waiting */
-				__(
+				_n(
+					'Syncing to %1$s is paused. Customers can still check out. %2$d order is waiting in the queue.',
 					'Syncing to %1$s is paused. Customers can still check out. %2$d orders are waiting in the queue.',
+					status.waiting,
 					'estasoft-erp-crm-sync-engine'
 				),
 				system,
@@ -845,13 +861,13 @@ function ReconCard( { overview }: { overview: ReconOverview } ) {
 					{
 						label: __( 'Compared', 'estasoft-erp-crm-sync-engine' ),
 						value: sprintf(
-							/* translators: 1: number of orders, 2: number of days */
+							/* translators: 1: number of orders such as "2104 orders", 2: length of the window such as "7 days" */
 							__(
-								'%1$d orders from the last %2$d days',
+								'%1$s from the last %2$s',
 								'estasoft-erp-crm-sync-engine'
 							),
-							run.compared,
-							run.window_days
+							ordersPhrase( run.compared ),
+							daysPhrase( run.window_days )
 						),
 					},
 					{
