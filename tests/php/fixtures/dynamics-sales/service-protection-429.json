@@ -1,0 +1,12 @@
+{
+	"status": 429,
+	"headers": {
+		"Retry-After": "30"
+	},
+	"body": {
+		"error": {
+			"code": "0x80072321",
+			"message": "Number of requests exceeded the limit of 6000 over time window of 300 seconds."
+		}
+	}
+}

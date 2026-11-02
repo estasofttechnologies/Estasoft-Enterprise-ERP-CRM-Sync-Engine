@@ -1,0 +1,101 @@
+<?php
+/**
+ * The Finance and Supply Chain connector against the connector contract and the rules of the shared API base.
+ *
+ * @package Estasoft\SyncEngine\Tests
+ */
+
+declare(strict_types=1);
+
+namespace Estasoft\SyncEngine\Tests\Unit\Connectors\DynamicsFinance;
+
+use Estasoft\SyncEngine\Connectors\DynamicsFinance\DynamicsFinanceConnector;
+use Estasoft\SyncEngine\Connectors\Support\AbstractApiConnector;
+use Estasoft\SyncEngine\Domain\Connection;
+use Estasoft\SyncEngine\Domain\EntityType;
+use Estasoft\SyncEngine\Domain\Item;
+use Estasoft\SyncEngine\Domain\ItemState;
+use Estasoft\SyncEngine\Tests\Contract\ApiConnectorContractTestCase;
+use Estasoft\SyncEngine\Tests\Support\FakeDynamicsFinanceServer;
+
+final class DynamicsFinanceContractTest extends ApiConnectorContractTestCase {
+
+	private FakeDynamicsFinanceServer $server;
+
+	protected function setUp(): void {
+		parent::setUp();
+		$this->server = new FakeDynamicsFinanceServer( $this->kit->http );
+		$this->server->addProduct( 'CS-MUG-01' );
+	}
+
+	protected function apiConnector(): AbstractApiConnector {
+		return new DynamicsFinanceConnector( $this->kit->deps );
+	}
+
+	protected function workingConnection(): Connection {
+		return $this->kit->connection( 'dynamics-finance', $this->config(), array( 'client_secret' => FakeDynamicsFinanceServer::SECRET ) );
+	}
+
+	protected function brokenConnection(): Connection {
+		return $this->kit->connection( 'dynamics-finance', $this->config(), array( 'client_secret' => 'wrong-client-secret-value' ), 2 );
+	}
+
+	/**
+	 * @return array<string,string>
+	 */
+	private function config(): array {
+		return array(
+			'tenant_id'       => FakeDynamicsFinanceServer::TENANT,
+			'client_id'       => FakeDynamicsFinanceServer::CLIENT_ID,
+			'environment_url' => FakeDynamicsFinanceServer::ENVIRONMENT,
+			'legal_entity'    => 'USMF',
+			'customer_group'  => '10',
+		);
+	}
+
+	protected function orderFixture( string $orderId, array $options = array() ): array {
+		$item     = new Item( (int) $orderId, 1, EntityType::Order, $orderId, 'created', 'order:' . $orderId, hash( 'sha256', $orderId ), ItemState::Syncing );
+		$quantity = (int) ( $options['quantity'] ?? 1 );
+		$unit     = (int) ( $options['unit_minor'] ?? 4200 );
+		$payload  = array(
+			'currency'   => (string) ( $options['currency'] ?? 'AED' ),
+			'order_date' => '2026-11-02 07:34:00',
+			'total'      => $quantity * $unit,
+			'partner'    => array(
+				'name'       => (string) ( $options['name'] ?? 'Noor Al-Mansouri' ),
+				'email'      => (string) ( $options['email'] ?? 'buyer' . $orderId . '@example.test' ),
+				'street'     => (string) ( $options['street'] ?? 'Sheikh Zayed Road' ),
+				'city'       => 'Dubai',
+				'country_id' => 'ARE',
+			),
+			'order_line' => array(
+				array(
+					'product'    => 'CS-MUG-01',
+					'name'       => 'Mug',
+					'quantity'   => $quantity,
+					'price_unit' => $unit,
+					'tax'        => 'ZERO',
+				),
+			),
+		);
+		return array( $item, $payload );
+	}
+
+	protected function customerNameFrom( \Estasoft\SyncEngine\Contract\ExternalRef $ref ): string {
+		return $ref->ref;
+	}
+
+	protected function failNextWrite( string $kind, int $seconds = 0 ): void {
+		$this->server->retryAfter = $seconds;
+		if ( 'auth' === $kind ) {
+			$this->server->entra->revokeAll();
+			$this->server->entra->failNext = 'invalid_secret';
+			return;
+		}
+		$this->server->failNextWrite = $kind;
+	}
+
+	protected function secretValues(): array {
+		return array( FakeDynamicsFinanceServer::SECRET, 'wrong-client-secret-value' );
+	}
+}

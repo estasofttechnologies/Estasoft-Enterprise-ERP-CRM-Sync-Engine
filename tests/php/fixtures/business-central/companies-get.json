@@ -1,0 +1,12 @@
+{
+	"@odata.context": "https://api.businesscentral.dynamics.com/v2.0/production/api/v2.0/$metadata#companies",
+	"value": [
+		{
+			"id": "824820a2-508c-ed11-aada-000d3a298ab3",
+			"systemVersion": "26.0.0.0",
+			"name": "TESTCO",
+			"displayName": "Test Company LLC",
+			"businessProfileId": ""
+		}
+	]
+}
