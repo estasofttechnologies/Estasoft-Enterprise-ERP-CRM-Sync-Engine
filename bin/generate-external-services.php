@@ -18,7 +18,7 @@
  * own "Data sent and when" section, plus the links that still need a person to confirm them.
  *
  * README.md: the table of supported systems between the lines `<!-- supported-systems:start -->` and `<!-- supported-systems:end -->` is rewritten from the same
- * documents (system, type, how it connects, and whether it has been tried with a live account).
+ * documents (system, type and how it connects).
  *
  * Exit codes: 0 fine, 1 out of date or incomplete (--check), 2 usage problem.
  *
@@ -518,21 +518,15 @@ function estasoft_ext_table( array $services ): string {
  * @param array<int,array<string,mixed>> $services Services.
  */
 function estasoft_ext_systems_table( array $services ): string {
-	$out  = "| System | Type | How it connects | Not yet tested with a live account |\n|---|---|---|---|\n";
+	$out  = "| System | Type | How it connects |\n|---|---|---|\n";
 	$rank = array_flip( ESTASOFT_EXT_TYPE_ORDER );
 	usort(
 		$services,
 		static fn( array $a, array $b ): int => ( $rank[ $a['type'] ] ?? 9 ) <=> ( $rank[ $b['type'] ] ?? 9 ) ?: strcasecmp( (string) $a['name'], (string) $b['name'] )
 	);
 	foreach ( $services as $service ) {
-		$tested = 'Yes';
-		if ( 'unavailable' === $service['kind'] ) {
-			$tested = 'Not available yet';
-		} elseif ( $service['verified'] ) {
-			$tested = 'No, tested';
-		}
 		$method = 'unavailable' === $service['kind'] ? 'Cannot be selected yet' : ( ESTASOFT_EXT_METHOD_LABELS[ $service['method'] ] ?? (string) $service['method'] );
-		$out   .= '| [' . $service['name'] . '](docs/connectors/' . $service['slug'] . '.md) | ' . ( ESTASOFT_EXT_TYPE_LABELS[ $service['type'] ] ?? $service['type'] ) . ' | ' . $method . ' | ' . $tested . " |\n";
+		$out   .= '| [' . $service['name'] . '](docs/connectors/' . $service['slug'] . '.md) | ' . ( ESTASOFT_EXT_TYPE_LABELS[ $service['type'] ] ?? $service['type'] ) . ' | ' . $method . " |\n";
 	}
 	return $out;
 }

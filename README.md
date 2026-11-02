@@ -32,45 +32,45 @@ on a real account. Use Shadow mode first. A connector only runs when a merchant 
 ### Supported systems
 
 <!-- supported-systems:start -->
-| System | Type | How it connects | Not yet tested with a live account |
-|---|---|---|---|
-| [Acumatica](docs/connectors/acumatica.md) | ERP | Your own app and sign-in page | Yes |
-| [Dynamics 365 Finance and Supply Chain](docs/connectors/dynamics-finance.md) | ERP | Cloud app (no sign-in page) | Yes |
-| [ERPNext](docs/connectors/erpnext.md) | ERP | API key or login | Yes |
-| [Holded](docs/connectors/holded.md) | ERP | API key or login | Yes |
-| [Microsoft Dynamics 365 Business Central](docs/connectors/business-central.md) | ERP | Cloud app (no sign-in page) | Yes |
-| [NetSuite](docs/connectors/netsuite.md) | ERP | Cloud app (no sign-in page) | Yes |
-| [Odoo](docs/connectors/odoo.md) | ERP | API key or login | Yes |
-| [Oracle Fusion Cloud ERP](docs/connectors/oracle-fusion.md) | ERP | Cloud app (no sign-in page) | Yes |
-| [Sage 200](docs/connectors/sage200.md) | ERP | Your own app and sign-in page | Yes |
-| [Sage 300](docs/connectors/sage300.md) | ERP | Server login | Yes |
-| [Sage X3](docs/connectors/sagex3.md) | ERP | See the document | Yes |
-| [SAP Business One](docs/connectors/sap-b1.md) | ERP | Server login | Yes |
-| [SAP S/4HANA](docs/connectors/sap-s4hana.md) | ERP | Cloud app (no sign-in page) | Yes |
-| [Daftra](docs/connectors/daftra.md) | Accounting | API key or login | Yes |
-| [DATEV](docs/connectors/datev-export.md) | Accounting | File you import | Yes |
-| [Exact Online](docs/connectors/exact-online.md) | Accounting | Your own app and sign-in page | Yes |
-| [Fortnox](docs/connectors/fortnox.md) | Accounting | Your own app and sign-in page | Yes |
-| [Lexware Office](docs/connectors/lexware-office.md) | Accounting | API key or login | Yes |
-| [Moneybird](docs/connectors/moneybird.md) | Accounting | API key or login | Yes |
-| [MYOB](docs/connectors/myob.md) | Accounting | Your own app and sign-in page | Yes |
-| [Pennylane](docs/connectors/pennylane.md) | Accounting | Cannot be selected yet | Not available yet |
-| [Qoyod](docs/connectors/qoyod.md) | Accounting | API key or login | Yes |
-| [QuickBooks Online](docs/connectors/quickbooks.md) | Accounting | Your own app and sign-in page | Yes |
-| [Sage 50](docs/connectors/sage50-export.md) | Accounting | File you import | Yes |
-| [Sage Business Cloud Accounting](docs/connectors/sage-accounting.md) | Accounting | Your own app and sign-in page | Yes |
-| [sevDesk](docs/connectors/sevdesk.md) | Accounting | API key or login | Yes |
-| [SMACC](docs/connectors/smacc.md) | Accounting | Cannot be selected yet | Not available yet |
-| [TallyPrime](docs/connectors/tallyprime-export.md) | Accounting | File you import | Yes |
-| [Wafeq](docs/connectors/wafeq.md) | Accounting | API key or login | Yes |
-| [Xero](docs/connectors/xero.md) | Accounting | Your own app and sign-in page | Yes |
-| [Zoho Books](docs/connectors/zoho-books.md) | Accounting | Your own app and sign-in page | Yes |
-| [Dynamics 365 Sales](docs/connectors/dynamics-sales.md) | CRM | Cloud app (no sign-in page) | Yes |
-| [HubSpot](docs/connectors/hubspot.md) | CRM | API key or login | Yes |
-| [Pipedrive](docs/connectors/pipedrive.md) | CRM | API key or login | Yes |
-| [Salesforce](docs/connectors/salesforce.md) | CRM | Your own app and sign-in page | Yes |
-| [SuiteCRM](docs/connectors/suitecrm.md) | CRM | API key or login | Yes |
-| [Zoho CRM](docs/connectors/zoho-crm.md) | CRM | Your own app and sign-in page | Yes |
+| System | Type | How it connects |
+|---|---|---|
+| [Acumatica](docs/connectors/acumatica.md) | ERP | Your own app and sign-in page |
+| [Dynamics 365 Finance and Supply Chain](docs/connectors/dynamics-finance.md) | ERP | Cloud app (no sign-in page) |
+| [ERPNext](docs/connectors/erpnext.md) | ERP | API key or login |
+| [Holded](docs/connectors/holded.md) | ERP | API key or login |
+| [Microsoft Dynamics 365 Business Central](docs/connectors/business-central.md) | ERP | Cloud app (no sign-in page) |
+| [NetSuite](docs/connectors/netsuite.md) | ERP | Cloud app (no sign-in page) |
+| [Odoo](docs/connectors/odoo.md) | ERP | API key or login |
+| [Oracle Fusion Cloud ERP](docs/connectors/oracle-fusion.md) | ERP | Cloud app (no sign-in page) |
+| [Sage 200](docs/connectors/sage200.md) | ERP | Your own app and sign-in page |
+| [Sage 300](docs/connectors/sage300.md) | ERP | Server login |
+| [Sage X3](docs/connectors/sagex3.md) | ERP | See the document |
+| [SAP Business One](docs/connectors/sap-b1.md) | ERP | Server login |
+| [SAP S/4HANA](docs/connectors/sap-s4hana.md) | ERP | Cloud app (no sign-in page) |
+| [Daftra](docs/connectors/daftra.md) | Accounting | API key or login |
+| [DATEV](docs/connectors/datev-export.md) | Accounting | File you import |
+| [Exact Online](docs/connectors/exact-online.md) | Accounting | Your own app and sign-in page |
+| [Fortnox](docs/connectors/fortnox.md) | Accounting | Your own app and sign-in page |
+| [Lexware Office](docs/connectors/lexware-office.md) | Accounting | API key or login |
+| [Moneybird](docs/connectors/moneybird.md) | Accounting | API key or login |
+| [MYOB](docs/connectors/myob.md) | Accounting | Your own app and sign-in page |
+| [Pennylane](docs/connectors/pennylane.md) | Accounting | Cannot be selected yet |
+| [Qoyod](docs/connectors/qoyod.md) | Accounting | API key or login |
+| [QuickBooks Online](docs/connectors/quickbooks.md) | Accounting | Your own app and sign-in page |
+| [Sage 50](docs/connectors/sage50-export.md) | Accounting | File you import |
+| [Sage Business Cloud Accounting](docs/connectors/sage-accounting.md) | Accounting | Your own app and sign-in page |
+| [sevDesk](docs/connectors/sevdesk.md) | Accounting | API key or login |
+| [SMACC](docs/connectors/smacc.md) | Accounting | Cannot be selected yet |
+| [TallyPrime](docs/connectors/tallyprime-export.md) | Accounting | File you import |
+| [Wafeq](docs/connectors/wafeq.md) | Accounting | API key or login |
+| [Xero](docs/connectors/xero.md) | Accounting | Your own app and sign-in page |
+| [Zoho Books](docs/connectors/zoho-books.md) | Accounting | Your own app and sign-in page |
+| [Dynamics 365 Sales](docs/connectors/dynamics-sales.md) | CRM | Cloud app (no sign-in page) |
+| [HubSpot](docs/connectors/hubspot.md) | CRM | API key or login |
+| [Pipedrive](docs/connectors/pipedrive.md) | CRM | API key or login |
+| [Salesforce](docs/connectors/salesforce.md) | CRM | Your own app and sign-in page |
+| [SuiteCRM](docs/connectors/suitecrm.md) | CRM | API key or login |
+| [Zoho CRM](docs/connectors/zoho-crm.md) | CRM | Your own app and sign-in page |
 <!-- supported-systems:end -->
 
 "Cannot be selected yet" means the system is listed on the setup screen with the reason, and the connector does
