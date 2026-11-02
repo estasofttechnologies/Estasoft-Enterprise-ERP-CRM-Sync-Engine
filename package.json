@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@wordpress/api-fetch": "^7.10.0",
-    "@wordpress/components": "^28.10.0",
+    "@wordpress/components": "^43.0.0",
     "@wordpress/element": "^6.10.0",
     "@wordpress/i18n": "^5.10.0",
     "@wordpress/icons": "^10.10.0"
