@@ -35,6 +35,11 @@ final class JobsFakeStock implements ShopStock {
 	public array $unsynced = array();
 
 	/**
+	 * Whether the count of unsynced units covers every order (false: a safety cap was hit).
+	 */
+	public bool $unsyncedComplete = true;
+
+	/**
 	 * Writes: array( id, quantity, system quantity ).
 	 *
 	 * @var array<int,array{0:int,1:int,2:int}>
@@ -107,6 +112,13 @@ final class JobsFakeStock implements ShopStock {
 		return $this->unsynced;
 	}
 
+	public function countUnsyncedSoldUnits(): array {
+		return array(
+			'units'    => $this->unsynced,
+			'complete' => $this->unsyncedComplete,
+		);
+	}
+
 	public function product( int $productId ): ?array {
 		if ( ! isset( $this->products[ $productId ] ) ) {
 			return null;
@@ -117,6 +129,7 @@ final class JobsFakeStock implements ShopStock {
 			'sku'      => $product['sku'],
 			'name'     => $product['name'],
 			'quantity' => $product['quantity'],
+			'buffer'   => $product['buffer'] ?? null,
 		);
 	}
 }

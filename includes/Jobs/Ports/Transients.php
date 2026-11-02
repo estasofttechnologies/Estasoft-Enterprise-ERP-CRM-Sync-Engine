@@ -34,6 +34,17 @@ interface Transients {
 	public function set( string $key, mixed $value, int $seconds ): void;
 
 	/**
+	 * Add one to a counter and return the new count. The counter starts at one and lives for `$seconds` from its first count.
+	 * Where the cache supports it the step is atomic (an external object cache), so two requests cannot both read the same
+	 * count; without one it is a plain read and write.
+	 *
+	 * @param string $key     Name.
+	 * @param int    $seconds Lifetime in seconds.
+	 * @return int The count after adding one.
+	 */
+	public function increment( string $key, int $seconds ): int;
+
+	/**
 	 * Remove a value.
 	 *
 	 * @param string $key Name.

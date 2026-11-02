@@ -192,7 +192,7 @@ final class ConnectionService {
 	 * sign-in (a refused sign-in paused it, or it needs reconnecting), it is resumed and the log says so.
 	 *
 	 * @param int                 $id    Connection id.
-	 * @param array<string,mixed> $input Fields to change: label, config, secrets (an empty value keeps the saved one), settings.
+	 * @param array<string,mixed> $input Fields to change: label, config, secrets (an empty value keeps the saved one unless an address or another identity field changed), settings.
 	 * @return array<string,mixed> The `Connection` after the change.
 	 *
 	 * @throws ValidationException When a field is missing or out of range.
@@ -226,10 +226,17 @@ final class ConnectionService {
 			if ( ! $tested['ok'] ) {
 				throw $this->failureFromArray( $tested );
 			}
-			$changes['config'] = $config + $this->detectedFactsFromArray( $connector, $tested, (array) ( $public['config']['warehouses'] ?? array() ) );
+			$changes['config']                = $config + $this->detectedFactsFromArray( $connector, $tested, (array) ( $public['config']['warehouses'] ?? array() ) );
+			$changes['credential_expires_at'] = $this->expiryFromDetected( (array) ( $tested['detected'] ?? array() ) );
 		}
 		if ( array() !== array_filter( $secrets, static fn( ?string $value ): bool => '' !== (string) $value ) ) {
 			$changes['secrets'] = $secrets;
+			if ( empty( $public['secrets_readable'] ) ) {
+				// The saved secrets belong to another key and cannot be opened. Every secret was entered again (the test needed them);
+				// the inbound secret cannot be entered, so it is dropped and inbound is switched off until a person enables it again.
+				$changes['secrets']['inbound_secret'] = null;
+				$changes['inbound_enabled']           = false;
+			}
 		}
 		if ( array() !== $changes ) {
 			try {
@@ -254,22 +261,22 @@ final class ConnectionService {
 	/**
 	 * Test a connection, saved or not. Saves nothing.
 	 *
-	 * @param array<string,mixed> $input      A `ConnectionInput`. With an existing connection, config and secrets are laid over the saved ones (an empty secret keeps the saved one).
+	 * @param array<string,mixed> $input      A `ConnectionInput`. With an existing connection, config and secrets are laid over the saved ones (an empty secret keeps the saved one) as long as no non-secret credential field (address, database, user, ...) differs from the saved value; when one does, every secret that is required or was saved has to be sent again.
 	 * @param int|null            $existingId The saved connection to test, or null for a new one.
 	 * @return array<string,mixed> A `ConnectionTestResult`.
 	 *
-	 * @throws ValidationException When a required field is missing.
-	 * @throws JobException        404 when the saved connection does not exist.
+	 * @throws ValidationException When a required field is missing, or a secret has to be entered again because the address (or another identity field) changed.
+	 * @throws JobException        404 when the saved connection does not exist, 409 when a saved secret is needed and cannot be read with the current encryption key.
 	 */
 	public function test( array $input, ?int $existingId = null ): array {
-		$base = null;
+		$base   = null;
+		$public = null;
 		if ( null !== $existingId ) {
-			try {
-				$base = $this->connections->find( $existingId );
-			} catch ( CryptoException $e ) {
-				throw new JobException( $e->getMessage(), 409, $e->errorCode() );
-			}
-			if ( null === $base ) {
+			// Without secrets: the saved ones are opened only when they are needed, so a changed encryption key does not block a
+			// test whose secrets were all entered again.
+			$base   = $this->connections->findWithoutSecrets( $existingId );
+			$public = $this->connections->findPublic( $existingId );
+			if ( null === $base || null === $public ) {
 				throw new JobException( __( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ), 404 );
 			}
 		}
@@ -277,17 +284,102 @@ final class ConnectionService {
 		$config    = $this->cleanConfig( $connector, (array) ( $input['config'] ?? array() ), null !== $base );
 		$secrets   = $this->cleanSecrets( $connector, (array) ( $input['secrets'] ?? array() ), null !== $base );
 		$label     = null === $base ? $connector->label() : $base->label;
-		if ( null !== $base ) {
+		if ( null !== $base && null !== $public ) {
+			$moved   = $this->changedIdentity( $connector, $config, $base );
 			$config  = array_replace( $base->config, $config );
-			foreach ( $connector->credentialFields() as $field ) {
-				if ( $field->secret && '' === ( $secrets[ $field->name ] ?? '' ) && '' !== $base->secret( $field->name ) ) {
-					$secrets[ $field->name ] = $base->secret( $field->name );
-				}
-			}
+			$secrets = $this->withSavedSecrets( $connector, $secrets, (int) $existingId, (array) ( $public['secret_hints'] ?? array() ), $moved );
 		}
 		$secrets = array_filter( $secrets, static fn( ?string $value ): bool => null !== $value && '' !== $value );
 		$this->requireFields( $connector, $config, $secrets );
 		return $this->resultToArray( $this->runTest( $connector, $existingId ?? 0, $label, $config, $secrets, $base ), $connector );
+	}
+
+	/**
+	 * The label of the first non-secret credential field (address, database, login, company, ...) whose submitted value differs from
+	 * the saved one. Where the sign-in goes has changed, so the saved secrets must not go with it.
+	 *
+	 * @param ConnectorInterface  $connector Connector.
+	 * @param array<string,mixed> $submitted Cleaned submitted config.
+	 * @param Connection          $base      The saved connection.
+	 * @return string|null Label of the field that moved, or null when none did.
+	 */
+	private function changedIdentity( ConnectorInterface $connector, array $submitted, Connection $base ): ?string {
+		foreach ( $connector->credentialFields() as $field ) {
+			if ( $field->secret || ! array_key_exists( $field->name, $submitted ) ) {
+				continue;
+			}
+			$saved = isset( $base->config[ $field->name ] ) && is_scalar( $base->config[ $field->name ] ) ? trim( (string) $base->config[ $field->name ] ) : '';
+			if ( (string) $submitted[ $field->name ] !== $saved ) {
+				return '' !== $field->label ? $field->label : $field->name;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Fill the secrets a person left empty from the saved ones, unless the identity of the connection changed: then nothing saved
+	 * is reused and every secret that is required or was saved has to be entered again (a saved key is never sent to an address the
+	 * request supplied). Saved secrets are opened only when one is really reused.
+	 *
+	 * @param ConnectorInterface   $connector Connector.
+	 * @param array<string,string> $secrets   Cleaned submitted secrets.
+	 * @param int                  $id        Connection id.
+	 * @param array<string,mixed>  $hints     Which secrets are saved (name to true).
+	 * @param string|null          $moved     Label of the identity field that changed, or null.
+	 * @return array<string,string>
+	 *
+	 * @throws ValidationException When a secret has to be entered again.
+	 * @throws JobException        409 when a saved secret is needed and cannot be read with the current key.
+	 */
+	private function withSavedSecrets( ConnectorInterface $connector, array $secrets, int $id, array $hints, ?string $moved ): array {
+		$saved  = null;
+		$errors = array();
+		foreach ( $connector->credentialFields() as $field ) {
+			if ( ! $field->secret || '' !== ( $secrets[ $field->name ] ?? '' ) ) {
+				continue;
+			}
+			$had = ! empty( $hints[ $field->name ] );
+			if ( null !== $moved ) {
+				if ( $had || $field->required ) {
+					$errors[ $field->name ] = sprintf(
+						/* translators: 1: name of the secret field (for example API key), 2: name of the field that changed (for example Address). */
+						__( 'Enter the %1$s again because the %2$s changed.', 'estasoft-erp-crm-sync-engine' ),
+						$this->plain( $field->label ),
+						$this->plain( $moved )
+					);
+				}
+				continue;
+			}
+			if ( ! $had ) {
+				continue;
+			}
+			if ( null === $saved ) {
+				try {
+					$saved = $this->connections->find( $id );
+				} catch ( CryptoException $e ) {
+					throw new JobException( $e->getMessage(), 409, $e->errorCode() );
+				}
+				if ( null === $saved ) {
+					throw new JobException( __( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ), 404 );
+				}
+			}
+			if ( '' !== $saved->secret( $field->name ) ) {
+				$secrets[ $field->name ] = $saved->secret( $field->name );
+			}
+		}
+		if ( array() !== $errors ) {
+			throw new ValidationException( $errors );
+		}
+		return $secrets;
+	}
+
+	/**
+	 * A field label inside a sentence: "Address" becomes "address", "API key" stays.
+	 *
+	 * @param string $label Label.
+	 */
+	private function plain( string $label ): string {
+		return ( mb_strlen( $label ) > 1 && mb_strtolower( mb_substr( $label, 1, 1 ) ) === mb_substr( $label, 1, 1 ) ) ? mb_strtolower( mb_substr( $label, 0, 1 ) ) . mb_substr( $label, 1 ) : $label;
 	}
 
 	/**
@@ -712,7 +804,16 @@ final class ConnectionService {
 	 * @param TestResult $tested Result.
 	 */
 	private function expiry( TestResult $tested ): ?string {
-		$value = $tested->detected['credential_expires_at'] ?? null;
+		return $this->expiryFromDetected( $tested->detected );
+	}
+
+	/**
+	 * The credential end date in a detected-facts array, as a MySQL datetime.
+	 *
+	 * @param array<string,mixed> $detected Detected facts.
+	 */
+	private function expiryFromDetected( array $detected ): ?string {
+		$value = $detected['credential_expires_at'] ?? null;
 		if ( ! is_string( $value ) || '' === $value ) {
 			return null;
 		}

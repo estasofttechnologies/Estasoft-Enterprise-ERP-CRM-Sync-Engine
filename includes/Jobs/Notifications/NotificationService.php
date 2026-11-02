@@ -34,6 +34,9 @@ use Estasoft\SyncEngine\Jobs\Urls;
  *   the "already told" flag until then.
  * - Daily list: at the store-time hour in the settings, when there are failed orders, once per local date.
  * - Queue backlog: when more items wait than the limit in the settings, once until the queue is back under the limit.
+ *
+ * An "already told" flag is set only after `wp_mail` returned true, so a message the mail system refused is tried again (the
+ * daily list after an hour), and the backlog flag is never set while the backlog alert is switched off.
  */
 final class NotificationService {
 
@@ -51,6 +54,11 @@ final class NotificationService {
 	 * Hours the paused flag lasts if the connection never resumes.
 	 */
 	private const PAUSED_TTL = 12 * 3600;
+
+	/**
+	 * Seconds to wait before the daily list is tried again after the mail system refused it.
+	 */
+	private const RETRY_SECONDS = 3600;
 
 	/**
 	 * Failed orders listed in the daily mail.
@@ -124,7 +132,7 @@ final class NotificationService {
 	 * A connection paused (hooked to `estasoft_sync_connection_paused`).
 	 *
 	 * @param mixed $connectionId Connection.
-	 * @param mixed $reason       circuit, sign_in or person.
+	 * @param mixed $reason       circuit, sign_in, key_missing or person.
 	 * @return bool Whether an e-mail was sent.
 	 */
 	public function onPaused( mixed $connectionId, mixed $reason = 'circuit' ): bool {
@@ -142,10 +150,14 @@ final class NotificationService {
 		if ( null === $connection ) {
 			return false;
 		}
-		$this->transients->set( $key, 1, self::PAUSED_TTL );
 		$waiting = $this->waiting( $connectionId );
 		$system  = '' !== (string) $connection['label'] ? (string) $connection['label'] : (string) $connection['connector'];
-		$lines   = 'sign_in' === $reason
+		$lines   = 'key_missing' === $reason
+			? array(
+				__( 'The encryption key is missing from wp-config.php, so syncing is paused. Orders wait in the queue.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Open the plugin, copy the line it shows into wp-config.php, and syncing resumes.', 'estasoft-erp-crm-sync-engine' ),
+			)
+			: ( 'sign_in' === $reason
 			? array(
 				sprintf(
 					/* translators: %s: name of the connected system. */
@@ -161,13 +173,13 @@ final class NotificationService {
 					$system
 				),
 				__( 'The plugin checks again every few minutes and resumes by itself when the system answers.', 'estasoft-erp-crm-sync-engine' ),
-			);
+			) );
 		$lines[] = sprintf(
 			/* translators: %d: number of orders waiting. */
 			_n( '%d item is waiting.', '%d items are waiting.', $waiting, 'estasoft-erp-crm-sync-engine' ),
 			$waiting
 		);
-		return $this->mail(
+		$sent = $this->mail(
 			$this->recipients(),
 			sprintf(
 				/* translators: 1: site name, 2: name of the connected system. */
@@ -179,6 +191,11 @@ final class NotificationService {
 			$this->urls->app( '/connections' ),
 			__( 'Open Connections', 'estasoft-erp-crm-sync-engine' )
 		);
+		// "Already told" only once the mail system accepted the message; if it did not, the next pause event tries again.
+		if ( $sent ) {
+			$this->transients->set( $key, 1, self::PAUSED_TTL );
+		}
+		return $sent;
 	}
 
 	/**
@@ -210,10 +227,13 @@ final class NotificationService {
 		if ( $state['digest_date'] === $today ) {
 			return $this->outcome( false, 'already' );
 		}
-		$state['digest_date'] = $today;
-		$this->options->set( self::STATE, $state );
+		if ( $state['digest_retry_at'] > $now->getTimestamp() ) {
+			return $this->outcome( false, 'retry_later' );
+		}
 		$failed = $this->queue->countsByState( null, 'live' )['failed'];
 		if ( $failed <= 0 ) {
+			$state['digest_date'] = $today;
+			$this->options->set( self::STATE, $state );
 			return $this->outcome( false, 'none' );
 		}
 		$items = $this->queue->query( new QueueQuery( 'failed', null, null, null, null, null, 'live', 1, 25 ) )->items;
@@ -252,6 +272,14 @@ final class NotificationService {
 			$this->urls->app( '/queue?state=failed' ),
 			__( 'Open the queue', 'estasoft-erp-crm-sync-engine' )
 		);
+		// The day counts as done only when the mail was accepted. If it was not, try again in an hour rather than at every tick.
+		if ( $sent ) {
+			$state['digest_date']     = $today;
+			$state['digest_retry_at'] = 0;
+		} else {
+			$state['digest_retry_at'] = $now->getTimestamp() + self::RETRY_SECONDS;
+		}
+		$this->options->set( self::STATE, $state );
 		return array(
 			'sent'   => $sent,
 			'reason' => $sent ? 'sent' : 'mail_failed',
@@ -279,9 +307,8 @@ final class NotificationService {
 		if ( $state['backlog'] ) {
 			return $this->outcome( false, 'already', $waiting );
 		}
-		$state['backlog'] = true;
-		$this->options->set( self::STATE, $state );
 		if ( ! $this->settings->notifications()['on_backlog'] ) {
+			// Nothing is told, so nothing is marked as told: switching the alert on later while the queue is still backed up sends it.
 			return $this->outcome( false, 'off', $waiting );
 		}
 		$sent = $this->mail(
@@ -303,6 +330,11 @@ final class NotificationService {
 			$this->urls->app( '/queue?state=waiting' ),
 			__( 'Open the queue', 'estasoft-erp-crm-sync-engine' )
 		);
+		if ( $sent ) {
+			// "Already told" only once the mail system accepted the message; otherwise the next check tries again.
+			$state['backlog'] = true;
+			$this->options->set( self::STATE, $state );
+		}
 		return $this->outcome( $sent, $sent ? 'sent' : 'mail_failed', $waiting );
 	}
 
@@ -371,14 +403,15 @@ final class NotificationService {
 	/**
 	 * The stored state.
 	 *
-	 * @return array{digest_date:string,backlog:bool}
+	 * @return array{digest_date:string,backlog:bool,digest_retry_at:int}
 	 */
 	private function state(): array {
 		$stored = $this->options->get( self::STATE, array() );
 		$stored = is_array( $stored ) ? $stored : array();
 		return array(
-			'digest_date' => (string) ( $stored['digest_date'] ?? '' ),
-			'backlog'     => (bool) ( $stored['backlog'] ?? false ),
+			'digest_date'     => (string) ( $stored['digest_date'] ?? '' ),
+			'backlog'         => (bool) ( $stored['backlog'] ?? false ),
+			'digest_retry_at' => (int) ( $stored['digest_retry_at'] ?? 0 ),
 		);
 	}
 

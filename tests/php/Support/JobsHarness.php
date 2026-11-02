@@ -91,6 +91,18 @@ final class JobsHarness {
 	public bool $actionScheduler = false;
 
 	/**
+	 * The address the inbound handler sees the request coming from.
+	 */
+	public string $remoteAddress = '203.0.113.7';
+
+	/**
+	 * What the mapping validator the porter uses answers: a list of problems (each with a `message`), empty for valid rules.
+	 *
+	 * @var array<int,object>
+	 */
+	public array $ruleProblems = array();
+
+	/**
 	 * Mapping drafts saved by the porter: array( connection id, type, rules count ).
 	 *
 	 * @var array<int,array{0:int,1:string,2:int}>
@@ -203,7 +215,8 @@ final class JobsHarness {
 			$core->clock,
 			function ( int $connectionId, string $entity ): void {
 				$this->scheduled[] = array( 'inbound', $connectionId, $entity );
-			}
+			},
+			fn(): string => $this->remoteAddress
 		);
 		$this->porter        = new SettingsPorter(
 			$core->settings,
@@ -219,7 +232,8 @@ final class JobsHarness {
 				$this->drafts[] = array( $connectionId, $type, count( $rules ) );
 				return $this->core->mappings->saveDraft( $connectionId, $type, $rules, $note, $by );
 			},
-			static fn( int $userId ): string => 'User ' . $userId
+			static fn( int $userId ): string => 'User ' . $userId,
+			fn( int $connectionId, string $type, array $rules ): array => $this->ruleProblems
 		);
 		$this->readiness     = new ReadinessService( $this->env, $this->catalog, $this->catalog, $core->box, $core->connections, $this->urls, $core->options, $core->clock, fn(): ?string => $this->lastQueueRun );
 		$this->support       = new SupportReportBuilder( $this->env, $core->connections, $core->queue, $core->logs, $this->readiness, $core->redactor, $core->box, $core->clock, fn(): bool => $this->actionScheduler );

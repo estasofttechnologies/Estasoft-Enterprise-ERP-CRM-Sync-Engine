@@ -161,14 +161,16 @@ final class StockStore {
 	 * @param int    $systemQuantity Quantity in the system.
 	 * @param int    $soldUnsynced   Units sold and not yet known to the system.
 	 * @param string $detectedAt     ISO time.
+	 * @param int    $systemHeld     Units the system holds back (reserved), kept so accepting the quantity later subtracts the same.
 	 * @return int Conflict id.
 	 */
-	public function openConflict( int $connectionId, int $productId, string $sku, string $productName, int $systemQuantity, int $soldUnsynced, string $detectedAt ): int {
+	public function openConflict( int $connectionId, int $productId, string $sku, string $productName, int $systemQuantity, int $soldUnsynced, string $detectedAt, int $systemHeld = 0 ): int {
 		$data = $this->conflictData();
 		foreach ( $data['open'] as $index => $conflict ) {
 			if ( (int) $conflict['connection_id'] === $connectionId && (int) $conflict['product_id'] === $productId ) {
 				$data['open'][ $index ]['system_quantity'] = $systemQuantity;
 				$data['open'][ $index ]['sold_unsynced']   = $soldUnsynced;
+				$data['open'][ $index ]['system_held']     = $systemHeld;
 				$this->options->set( self::CONFLICTS, $data );
 				return (int) $conflict['id'];
 			}
@@ -183,6 +185,7 @@ final class StockStore {
 			'product_name'    => $productName,
 			'system_quantity' => $systemQuantity,
 			'sold_unsynced'   => $soldUnsynced,
+			'system_held'     => $systemHeld,
 			'detected_at'     => $detectedAt,
 		);
 		$data['open'] = array_slice( $data['open'], -self::CONFLICT_CAP );

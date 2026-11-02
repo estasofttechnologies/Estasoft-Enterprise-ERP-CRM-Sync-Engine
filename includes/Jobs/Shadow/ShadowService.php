@@ -42,7 +42,8 @@ use Estasoft\SyncEngine\Jobs\Support\ConnectorGateway;
  *
  * The window never closes by itself. Day 7 is when the owner is asked; `end()` or going live closes it.
  * Verdicts are kept in the option `estasoft_sync_shadow_verdicts` (at most 500) so opening the report does not ask the system
- * about every order again; each call to `report()` or `compare()` refreshes a limited number of orders.
+ * about every order again; each call to `report()` or `compare()` refreshes a limited number of orders within a time budget, and
+ * verdicts are final once the window is closed.
  */
 final class ShadowService {
 
@@ -65,6 +66,11 @@ final class ShadowService {
 	 * Orders the report asks the system about in one call.
 	 */
 	public const REPORT_BATCH = 25;
+
+	/**
+	 * Seconds one `compare()` call may spend asking the system (the same budget as a reconciliation run).
+	 */
+	public const BUDGET_SECONDS = 15.0;
 
 	/**
 	 * Longest shadow window a person can ask for, in days.
@@ -145,19 +151,21 @@ final class ShadowService {
 	/**
 	 * Close the shadow window now. New orders are sent from this moment; shadow items are not sent afterwards.
 	 *
-	 * @param int $userId Who ends it.
+	 * @param int    $userId Who ends it.
+	 * @param string $reason Why, kept in the state (`person` or `go_live`).
 	 * @return array<string,mixed> The `Onboarding` after the change.
 	 */
-	public function end( int $userId ): array {
+	public function end( int $userId, string $reason = 'person' ): array {
 		$state = $this->onboarding->get();
 		if ( ! empty( $state['shadow_started_at'] ) && $this->onboarding->isShadowActive( $this->clock->now() ) ) {
-			$this->onboarding->save(
-				array(
-					'shadow_ends_at' => $this->clock->now()->format( Time::ISO ),
-					'answers'        => array_replace( $state['answers'], array( 'shadow_ended_by' => $userId ) ),
+			$this->onboarding->endShadow( $this->clock->now(), $reason );
+			$this->logger->info(
+				sprintf(
+					/* translators: %d: user id. */
+					__( 'Shadow mode ended by user #%d. New orders are sent to your system.', 'estasoft-erp-crm-sync-engine' ),
+					$userId
 				)
 			);
-			$this->logger->info( __( 'Shadow mode ended. New orders are sent to your system.', 'estasoft-erp-crm-sync-engine' ) );
 		}
 		return OnboardingView::present( $this->onboarding->get() );
 	}
@@ -267,17 +275,26 @@ final class ShadowService {
 	/**
 	 * Compare shadow orders with the system's records (read-only), newest first, skipping verdicts that are still fresh.
 	 *
-	 * @param int|null $connectionId One connection, or null for all.
-	 * @param int      $limit        Most orders to ask the system about.
-	 * @return array{compared:int,errors:int}
+	 * It stops when the order limit or the time budget is reached, and keeps each verdict as soon as the system answers, so a
+	 * request that is cut off loses nothing. Once the shadow window is closed the verdicts that exist are final: they are not
+	 * refreshed, so the system is no longer asked about orders it has already been asked about (orders that never got a verdict
+	 * are still compared, a few at a time).
+	 *
+	 * @param int|null $connectionId   One connection, or null for all.
+	 * @param int      $limit          Most orders to ask the system about.
+	 * @param float    $budgetSeconds  Most seconds to spend; 0 or less asks about nothing.
+	 * @return array{compared:int,errors:int,timed_out:bool}
 	 */
-	public function compare( ?int $connectionId = null, int $limit = self::REPORT_BATCH ): array {
+	public function compare( ?int $connectionId = null, int $limit = self::REPORT_BATCH, float $budgetSeconds = self::BUDGET_SECONDS ): array {
 		$result   = array(
-			'compared' => 0,
-			'errors'   => 0,
+			'compared'  => 0,
+			'errors'    => 0,
+			'timed_out' => false,
 		);
+		$started  = $this->clock->now();
 		$verdicts = $this->verdicts();
-		$now      = $this->clock->now()->getTimestamp();
+		$now      = $started->getTimestamp();
+		$final    = ! $this->onboarding->isShadowActive( $started );
 		$tolerate = (int) $this->recon->get()['tolerance_minor'];
 		foreach ( $this->gateway->targets( Capability::ShadowLookup, $connectionId ) as $target ) {
 			$connection = $target['connection'];
@@ -287,8 +304,12 @@ final class ShadowService {
 					break 2;
 				}
 				$key = (string) $row['id'];
-				if ( isset( $verdicts[ $key ] ) && ( $now - (int) $verdicts[ $key ]['at'] ) < self::VERDICT_TTL ) {
+				if ( isset( $verdicts[ $key ] ) && ( $final || ( $now - (int) $verdicts[ $key ]['at'] ) < self::VERDICT_TTL ) ) {
 					continue;
+				}
+				if ( $this->elapsed( $started ) >= $budgetSeconds ) {
+					$result['timed_out'] = true;
+					break 2;
 				}
 				$item = $this->queue->find( (int) $row['id'] );
 				if ( null === $item ) {
@@ -300,13 +321,32 @@ final class ShadowService {
 					break;
 				}
 				++$result['compared'];
-				$verdicts[ $key ] = $this->verdict( $found instanceof ExternalRef ? $found : null, $this->orders->find( (int) $row['entity_id'] ), $tolerate, $now );
+				$verdicts[ $key ] = $this->verdict( $found instanceof ExternalRef ? $found : null, $this->orders->find( (int) $row['entity_id'] ), $tolerate, $this->clock->now()->getTimestamp() );
+				$this->remember( $key, $verdicts[ $key ] );
 			}
 		}
-		if ( $result['compared'] > 0 ) {
-			$this->saveVerdicts( $verdicts );
-		}
 		return $result;
+	}
+
+	/**
+	 * Seconds since a moment.
+	 *
+	 * @param \DateTimeImmutable $started Start.
+	 */
+	private function elapsed( \DateTimeImmutable $started ): float {
+		return max( 0.0, (float) $this->clock->now()->format( 'U.u' ) - (float) $started->format( 'U.u' ) );
+	}
+
+	/**
+	 * Keep one verdict right away (read again first, so another request's verdicts are not overwritten).
+	 *
+	 * @param string                                             $key     Queue item id.
+	 * @param array{result:string,fields:array<int,string>,at:int} $verdict Verdict.
+	 */
+	private function remember( string $key, array $verdict ): void {
+		$stored         = $this->verdicts();
+		$stored[ $key ] = $verdict;
+		$this->saveVerdicts( $stored );
 	}
 
 	/**

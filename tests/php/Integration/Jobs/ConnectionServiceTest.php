@@ -297,17 +297,140 @@ final class ConnectionServiceTest extends JobsTestCase {
 		$this->assertSame( 'paused', $this->j->connectionService->get( $id )['status'] );
 	}
 
-	public function test_testing_a_saved_connection_uses_the_saved_secret_when_none_is_sent(): void {
+	public function test_testing_a_saved_connection_uses_the_saved_secret_when_the_address_is_the_same(): void {
 		$id = $this->j->connectionService->create( $this->input() )['id'];
+		$this->j->connector->testedWith = array();
 
-		$result = $this->j->connectionService->test( array( 'config' => array( 'address' => 'https://other.example.test' ), 'secrets' => array( 'api_key' => '' ) ), $id );
+		$result = $this->j->connectionService->test( array( 'config' => array( 'address' => 'https://erp.example.test' ), 'secrets' => array( 'api_key' => '' ) ), $id );
 
 		$this->assertTrue( $result['ok'] );
 		$this->assertSame( 'Cedarstone Home', $result['company'] );
 		$this->assertSame( array( array( 'id' => '1', 'name' => 'Dubai warehouse' ), array( 'id' => '2', 'name' => 'Riyadh warehouse' ) ), $result['warehouses'] );
 		$this->assertSame( 1204, $result['product_count'] );
 		$this->assertSame( array(), $result['missing_permissions'] );
+		$this->assertSame( array( array( 'address' => 'https://erp.example.test', 'api_key' => 'sk-live-abcdefghijklmnopqrstu' ) ), $this->j->connector->testedWith );
 		$this->assertSame( 'https://erp.example.test', json_decode( (string) $this->h->connectionRow( $id )['config_json'], true )['address'], 'testing saves nothing' );
+	}
+
+	public function test_a_test_that_names_a_new_address_never_sends_the_saved_secret_there(): void {
+		$id = $this->j->connectionService->create( $this->input() )['id'];
+		$this->j->connector->testedWith = array();
+
+		try {
+			$this->j->connectionService->test( array( 'connection_id' => $id, 'config' => array( 'address' => 'https://evil.example' ), 'secrets' => array() ), $id );
+			$this->fail( 'expected the key to be asked for again' );
+		} catch ( ValidationException $e ) {
+			$this->assertSame( array( 'api_key' ), array_keys( $e->errors() ) );
+			$this->assertSame( 'Enter the API key again because the address changed.', $e->errors()['api_key'] );
+		}
+		$this->assertSame( array(), $this->j->connector->testedWith, 'the connector was never asked, so nothing was sent anywhere' );
+
+		// An empty secret is the same as none.
+		try {
+			$this->j->connectionService->test( array( 'config' => array( 'address' => 'https://evil.example' ), 'secrets' => array( 'api_key' => '' ) ), $id );
+			$this->fail( 'expected the key to be asked for again' );
+		} catch ( ValidationException $e ) {
+			$this->assertArrayHasKey( 'api_key', $e->errors() );
+		}
+		$this->assertSame( array(), $this->j->connector->testedWith );
+
+		// With the key typed again the test runs, with the typed key.
+		$result = $this->j->connectionService->test( array( 'config' => array( 'address' => 'https://new.example.test' ), 'secrets' => array( 'api_key' => 'sk-typed-0123456789abcdefghij' ) ), $id );
+		$this->assertTrue( $result['ok'] );
+		$this->assertSame( array( array( 'address' => 'https://new.example.test', 'api_key' => 'sk-typed-0123456789abcdefghij' ) ), $this->j->connector->testedWith );
+	}
+
+	public function test_any_changed_identity_field_asks_for_the_secrets_again(): void {
+		$id = $this->j->connectionService->create( $this->input() )['id'];
+
+		try {
+			$this->j->connectionService->test( array( 'config' => array( 'user' => 'someone.else@example.test' ) ), $id );
+			$this->fail( 'expected the key to be asked for again' );
+		} catch ( ValidationException $e ) {
+			$this->assertSame( 'Enter the API key again because the user changed.', $e->errors()['api_key'] );
+		}
+		// The same user, spelled the same, is no change.
+		$this->assertTrue( $this->j->connectionService->test( array( 'config' => array( 'user' => 'sync@example.test' ) ), $id )['ok'] );
+	}
+
+	public function test_update_never_saves_a_new_address_with_the_old_key(): void {
+		$id = $this->j->connectionService->create( $this->input() )['id'];
+		$this->j->connector->testedWith = array();
+
+		try {
+			$this->j->connectionService->update( $id, array( 'config' => array( 'address' => 'https://evil.example' ) ) );
+			$this->fail( 'expected the key to be asked for again' );
+		} catch ( ValidationException $e ) {
+			$this->assertArrayHasKey( 'api_key', $e->errors() );
+		}
+		$this->assertSame( array(), $this->j->connector->testedWith );
+		$this->assertSame( 'https://erp.example.test', json_decode( (string) $this->h->connectionRow( $id )['config_json'], true )['address'] );
+		$this->assertSame( 'sk-live-abcdefghijklmnopqrstu', $this->h->connections->find( $id )->secret( 'api_key' ) );
+
+		$this->j->connectionService->update( $id, array( 'config' => array( 'address' => 'https://new.example.test' ), 'secrets' => array( 'api_key' => 'sk-typed-0123456789abcdefghij' ) ) );
+		$this->assertSame( 'https://new.example.test', $this->j->connectionService->get( $id )['address'] );
+		$this->assertSame( 'sk-typed-0123456789abcdefghij', $this->h->connections->find( $id )->secret( 'api_key' ) );
+	}
+
+	/**
+	 * Make the saved secrets unreadable, as if the key in wp-config.php had been changed.
+	 *
+	 * @param int $id Connection id.
+	 */
+	private function changeTheKey( int $id ): void {
+		global $wpdb;
+		$other = new SecretBox( 'another-key-0123456789abcdef-0123456' );
+		$wpdb->update(
+			$this->h->tables->connections(),
+			array(
+				'secrets_enc'     => $other->encrypt( array( 'api_key' => 'sk-old-0123456789abcdefghijkl', 'inbound_secret' => str_repeat( 'a', 64 ) ) ),
+				'key_fingerprint' => $other->fingerprint(),
+				'inbound_enabled' => 1,
+				'credential_expires_at' => '2026-12-01 00:00:00',
+			),
+			array( 'id' => $id )
+		);
+	}
+
+	public function test_after_an_encryption_key_change_complete_secrets_test_and_save_and_inbound_is_switched_off(): void {
+		$id = $this->j->connectionService->create( $this->input() )['id'];
+		$this->changeTheKey( $id );
+		$this->assertFalse( $this->h->connections->findPublic( $id )['secrets_readable'] );
+		$this->j->connector->testedWith = array();
+
+		$connection = $this->j->connectionService->update( $id, array( 'secrets' => array( 'api_key' => 'sk-new-0123456789abcdefghijk' ) ) );
+
+		$this->assertSame( array( array( 'address' => 'https://erp.example.test', 'api_key' => 'sk-new-0123456789abcdefghijk' ) ), $this->j->connector->testedWith );
+		$this->assertTrue( $this->h->connections->findPublic( $id )['secrets_readable'], 'the secrets are readable again' );
+		$this->assertSame( 'sk-new-0123456789abcdefghijk', $this->h->connections->find( $id )->secret( 'api_key' ) );
+		$this->assertSame( '', $this->h->connections->find( $id )->secret( 'inbound_secret' ), 'the unreadable inbound secret is gone' );
+		$this->assertFalse( $this->h->connections->findPublic( $id )['inbound_enabled'], 'and inbound is off until a person enables it again' );
+		$this->assertSame( '2027-02-01T00:00:00Z', $connection['credential_expires_at'], 'the end date comes from the new test' );
+	}
+
+	public function test_after_an_encryption_key_change_a_test_with_complete_secrets_works_and_one_without_them_says_why(): void {
+		$id = $this->j->connectionService->create( $this->input() )['id'];
+		$this->changeTheKey( $id );
+
+		$this->assertTrue( $this->j->connectionService->test( array( 'secrets' => array( 'api_key' => 'sk-new-0123456789abcdefghijk' ) ), $id )['ok'] );
+
+		try {
+			$this->j->connectionService->test( array( 'config' => array( 'address' => 'https://erp.example.test' ) ), $id );
+			$this->fail( 'expected the unreadable secrets to be reported' );
+		} catch ( JobException $e ) {
+			$this->assertSame( 409, $e->httpStatus() );
+			$this->assertStringContainsString( 'cannot be read', $e->getMessage() );
+		}
+	}
+
+	public function test_update_refreshes_the_credential_end_date_and_clears_it_when_the_new_test_finds_none(): void {
+		$id = $this->j->connectionService->create( $this->input() )['id'];
+		$this->h->sql( "UPDATE {$this->h->tables->connections()} SET credential_expires_at = '2026-12-01 00:00:00' WHERE id = {$id}" );
+
+		$this->assertSame( '2027-02-01T00:00:00Z', $this->j->connectionService->update( $id, array( 'secrets' => array( 'api_key' => 'sk-new-0123456789abcdefghijk' ) ) )['credential_expires_at'] );
+
+		$this->j->connector->testResult = new TestResult( true, 'Fakesystem 19', 'Cedarstone Home', array(), array( 'create_orders' => true ), null, array() );
+		$this->assertNull( $this->j->connectionService->update( $id, array( 'secrets' => array( 'api_key' => 'sk-newer-0123456789abcdefghi' ) ) )['credential_expires_at'] );
 	}
 
 	public function test_a_test_reports_missing_permissions_by_name(): void {

@@ -17,6 +17,7 @@ use Estasoft\SyncEngine\Core\Repositories\QueueQuery;
 use Estasoft\SyncEngine\Core\Support\ValidationException;
 use Estasoft\SyncEngine\Domain\ErrorCode;
 use Estasoft\SyncEngine\Jobs\JobException;
+use Estasoft\SyncEngine\Jobs\Reconciliation\ReconService;
 
 final class ReconServiceTest extends JobsTestCase {
 
@@ -160,6 +161,228 @@ final class ReconServiceTest extends JobsTestCase {
 
 		$this->expectException( ValidationException::class );
 		$this->j->reconService->repair( (int) $byOrder[602]['id'], 'system_to_wc', 1 );
+	}
+
+	public function test_a_repair_goes_to_the_connection_the_difference_was_found_in_not_the_first_one(): void {
+		$second = $this->j->connect();
+		$this->j->orders->add( 602 );
+		$this->document( 602, array( 'total_minor' => 99999 ) );
+		$this->j->reconService->run( 7, $second );
+		$diff = $this->h->recon->diffs()[0];
+
+		$this->j->reconService->repair( (int) $diff['id'], 'wc_to_system', 7 );
+
+		$this->assertSame( 1, $this->h->queue->countsByState( $second, null )['queued'], 'the order is sent to the system it was compared with' );
+		$this->assertSame( 0, $this->h->queue->countsByState( $this->connection, null )['queued'] );
+	}
+
+	public function test_an_automatic_repair_also_goes_to_the_connection_of_the_run(): void {
+		$second = $this->j->connect();
+		$this->j->reconService->saveSettings( array( 'auto_repair_missing' => true ) );
+		$this->j->orders->add( 603 );
+
+		$this->j->reconService->run( 7, $second );
+
+		$this->assertSame( 1, $this->h->queue->countsByState( $second, null )['queued'] );
+		$this->assertSame( 0, $this->h->queue->countsByState( $this->connection, null )['queued'] );
+	}
+
+	public function test_a_repair_for_a_system_that_was_disconnected_since_is_refused(): void {
+		$second = $this->j->connect();
+		$this->j->orders->add( 602 );
+		$this->document( 602, array( 'total_minor' => 99999 ) );
+		$this->j->reconService->run( 7, $second );
+		$this->h->connections->delete( $second );
+
+		try {
+			$this->j->reconService->repair( (int) $this->h->recon->diffs()[0]['id'], 'wc_to_system', 7 );
+			$this->fail( 'expected a refusal' );
+		} catch ( JobException $e ) {
+			$this->assertSame( 409, $e->httpStatus() );
+		}
+		$this->assertSame( 0, $this->h->queue->countsByState( $this->connection, null )['queued'], 'it was not sent to some other system instead' );
+	}
+
+	public function test_a_difference_from_before_the_connection_was_recorded_uses_the_only_connected_system_or_asks_for_a_new_check(): void {
+		$this->j->orders->add( 602 );
+		$this->document( 602, array( 'total_minor' => 99999 ) );
+		$this->j->reconService->run( 7 );
+		$id = (int) $this->h->recon->diffs()[0]['id'];
+		$this->h->options->delete( ReconService::DIFF_CONNECTIONS );
+
+		$second = $this->j->connect();
+		try {
+			$this->j->reconService->repair( $id, 'wc_to_system', 7 );
+			$this->fail( 'with two systems it cannot be told which one' );
+		} catch ( JobException $e ) {
+			$this->assertSame( 409, $e->httpStatus() );
+		}
+		$this->h->connections->delete( $second );
+
+		$this->assertSame( 'repaired', $this->j->reconService->repair( $id, 'wc_to_system', 7 )['status'] );
+		$this->assertSame( 1, $this->h->queue->countsByState( $this->connection, null )['queued'] );
+	}
+
+	public function test_copying_a_cancellation_is_refused_when_the_order_is_no_longer_in_the_status_the_check_saw(): void {
+		$this->j->orders->add( 601 );
+		$this->document( 601, array( 'state' => 'cancel' ) );
+		$this->j->reconService->run( 7 );
+		$diff = $this->h->recon->diffs()[0];
+		$this->assertSame( 'processing', $diff['wc_value'] );
+		$this->j->orders->orders[601]['status'] = 'completed';
+
+		try {
+			$this->j->reconService->repair( (int) $diff['id'], 'system_to_wc', 1 );
+			$this->fail( 'expected a refusal' );
+		} catch ( JobException $e ) {
+			$this->assertSame( 409, $e->httpStatus() );
+			$this->assertStringContainsString( 'completed', $e->getMessage() );
+		}
+		$this->assertSame( 'completed', $this->j->orders->orders[601]['status'], 'a completed order was not cancelled' );
+		$this->assertSame( array(), $this->j->orders->statusChanges );
+		$this->assertSame( 'open', $this->h->recon->diff( (int) $diff['id'] )['status'], 'the difference stays open' );
+
+		// Back in the status the check saw, the copy goes through.
+		$this->j->orders->orders[601]['status'] = 'processing';
+		$this->j->reconService->repair( (int) $diff['id'], 'system_to_wc', 1 );
+		$this->assertSame( 'cancelled', $this->j->orders->orders[601]['status'] );
+	}
+
+	public function test_no_manual_repair_while_a_shadow_window_is_open_on_the_connection(): void {
+		$this->j->orders->add( 601 );
+		$this->j->orders->add( 602 );
+		$this->document( 601, array( 'state' => 'cancel' ) );
+		$this->document( 602, array( 'total_minor' => 99999 ) );
+		$this->j->reconService->run( 7 );
+		$byOrder = array_column( $this->h->recon->diffs(), null, 'order_id' );
+		$this->j->shadowService->start( $this->connection, 7 );
+
+		foreach ( array( array( 602, 'wc_to_system' ), array( 601, 'system_to_wc' ) ) as list( $order, $direction ) ) {
+			try {
+				$this->j->reconService->repair( (int) $byOrder[ $order ]['id'], $direction, 1 );
+				$this->fail( 'expected a refusal for ' . $direction );
+			} catch ( JobException $e ) {
+				$this->assertSame( 409, $e->httpStatus() );
+				$this->assertStringContainsString( 'Shadow mode', $e->getMessage() );
+			}
+		}
+		$this->assertSame( 0, $this->h->queue->countsByState( $this->connection, 'live' )['queued'] );
+		$this->assertSame( 'processing', $this->j->orders->orders[601]['status'] );
+
+		$this->j->shadowService->end( 1 );
+		$this->assertSame( 'repaired', $this->j->reconService->repair( (int) $byOrder[602]['id'], 'wc_to_system', 1 )['status'] );
+	}
+
+	public function test_automatic_repair_waits_while_a_shadow_window_is_open(): void {
+		$this->j->reconService->saveSettings( array( 'auto_repair_missing' => true ) );
+		$this->j->orders->add( 603 );
+		$this->j->shadowService->start( $this->connection, 7 );
+
+		$run = $this->j->reconService->run( 7 );
+
+		$this->assertSame( 1, $run['differences'] );
+		$this->assertSame( 0, $run['repaired'] );
+		$this->assertSame( 'open', $this->h->recon->diffs()[0]['status'] );
+		$this->assertSame( 0, $this->h->queue->countsByState( $this->connection, null )['queued'], 'nothing was queued' );
+
+		$this->j->shadowService->end( 1 );
+		$again = $this->j->reconService->run( 7 );
+		$this->assertSame( 1, $again['repaired'], 'once the window is closed the next run repairs it' );
+	}
+
+	public function test_a_shadow_window_on_another_connection_does_not_block_repairs(): void {
+		$other = $this->j->connect();
+		$this->j->orders->add( 602 );
+		$this->document( 602, array( 'total_minor' => 99999 ) );
+		$this->j->reconService->run( 7, $this->connection );
+		$this->j->shadowService->start( $other, 7 );
+
+		$repaired = $this->j->reconService->repair( (int) $this->h->recon->diffs()[0]['id'], 'wc_to_system', 1 );
+
+		$this->assertSame( 'repaired', $repaired['status'] );
+	}
+
+	/**
+	 * A run left half done: 250 orders, 200 compared.
+	 */
+	private function halfDoneRun(): void {
+		for ( $i = 1; $i <= 250; ++$i ) {
+			$this->j->orders->add( 1000 + $i );
+			$this->document( 1000 + $i );
+		}
+		$this->j->orders->onRead = function (): void {
+			$this->h->clock->advance( 10 );
+		};
+		$first = $this->j->reconService->run( 7 );
+		$this->assertSame( 200, $first['progress']['done'] );
+		$this->j->scheduled = array();
+	}
+
+	public function test_a_run_another_request_is_advancing_is_not_advanced_twice(): void {
+		$this->halfDoneRun();
+		$reads = 0;
+		$this->j->orders->onRead = function () use ( &$reads ): void {
+			++$reads;
+			$this->h->clock->advance( 10 );
+		};
+		$this->h->options->set( ReconService::LOCK, array( 'token' => 'someone-else', 'until' => $this->h->clock->now()->getTimestamp() + 60 ) );
+
+		$tick     = $this->j->reconService->continueRun();
+		$manual   = $this->j->reconService->run( 7 );
+		$schedule = $this->j->reconService->tick();
+
+		$this->assertSame( 0, $reads, 'nobody read an order: the run belongs to the request that holds the lock' );
+		foreach ( array( $tick, $manual, $schedule['run'] ) as $answer ) {
+			$this->assertSame( 'running', $answer['status'] );
+			$this->assertSame( 200, $answer['progress']['done'] );
+		}
+		$this->assertSame( array(), $this->j->scheduled, 'and nothing was scheduled by the ones that stood back' );
+		$this->assertSame( 'someone-else', $this->h->options->get( ReconService::LOCK )['token'], "a request that did not take the lock does not release the other's" );
+	}
+
+	public function test_an_expired_lock_from_a_request_that_died_does_not_block_the_run(): void {
+		$this->halfDoneRun();
+		$this->h->options->set( ReconService::LOCK, array( 'token' => 'dead', 'until' => $this->h->clock->now()->getTimestamp() + 60 ) );
+		$this->h->clock->advance( 61 );
+		$this->j->orders->onRead = null;
+
+		$last = $this->j->reconService->continueRun();
+
+		$this->assertSame( 'done', $last['status'] );
+		$this->assertNull( $this->h->options->get( ReconService::LOCK ), 'the lock is released when the work is done' );
+	}
+
+	public function test_the_lock_is_released_after_a_run_even_when_it_throws(): void {
+		$this->j->connector->flags['reconciliation'] = false;
+		try {
+			$this->j->reconService->run( 7 );
+			$this->fail( 'expected a refusal' );
+		} catch ( JobException $e ) {
+			$this->assertSame( 409, $e->httpStatus() );
+		}
+		$this->assertNull( $this->h->options->get( ReconService::LOCK ) );
+	}
+
+	public function test_a_second_manual_run_during_the_start_of_the_first_waits(): void {
+		$this->j->orders->add( 601 );
+		$this->document( 601 );
+		$nested = null;
+		$this->j->connector->afterCall = function ( string $method ) use ( &$nested ): void {
+			if ( 'listForReconcile' === $method && null === $nested ) {
+				try {
+					$this->j->reconService->run( 7 );
+					$nested = 'ran';
+				} catch ( JobException $e ) {
+					$nested = $e->httpStatus();
+				}
+			}
+		};
+
+		$run = $this->j->reconService->run( 7 );
+
+		$this->assertSame( 409, $nested, 'the second request was told to wait' );
+		$this->assertSame( 'done', $run['status'] );
+		$this->assertCount( 1, $this->h->recon->runs( 10 ), 'one run, not two' );
 	}
 
 	public function test_ignore_needs_a_reason_and_stores_it(): void {

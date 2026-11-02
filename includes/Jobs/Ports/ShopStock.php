@@ -51,10 +51,19 @@ interface ShopStock {
 	public function unsyncedSoldUnits(): array;
 
 	/**
-	 * Name and current quantity of a product.
+	 * Like `unsyncedSoldUnits()`, but says whether every such order was read. It pages through all of them; when a safety cap
+	 * (number of orders or time) is reached the answer is `complete` false and `units` holds only what was read, so a caller must
+	 * not trust it to write stock.
+	 *
+	 * @return array{units:array<int,int>,complete:bool}
+	 */
+	public function countUnsyncedSoldUnits(): array;
+
+	/**
+	 * Name, current quantity and own safety buffer of a product.
 	 *
 	 * @param int $productId Product or variation id.
-	 * @return array{id:int,sku:string,name:string,quantity:?int}|null
+	 * @return array{id:int,sku:string,name:string,quantity:?int,buffer:?int}|null `buffer` is null when the product has none of its own.
 	 */
 	public function product( int $productId ): ?array;
 }

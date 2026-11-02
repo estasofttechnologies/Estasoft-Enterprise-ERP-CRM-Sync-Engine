@@ -30,13 +30,16 @@ use Estasoft\SyncEngine\Jobs\Ports\Transients;
  * fresh timestamp. It is accepted only when:
  *
  * 1. the connection exists, is not disconnected, and has inbound enabled;
- * 2. fewer than 30 messages arrived for it in the last minute (counted before anything else, so guessing is slow);
+ * 2. fewer than 30 messages arrived for it from the same source address in the last minute, and fewer than 300 from all sources
+ *    (counted before anything else, so guessing is slow; one noisy address cannot use up the sender's share);
  * 3. the body is at most 64 KB;
- * 4. the timestamp is within 5 minutes of now;
+ * 4. the timestamp is Unix seconds in digits or a strict ISO 8601 time (`2026-11-02T12:00:00Z`, with an offset or fractions of
+ *    a second if needed), never relative text such as "now", and is within 5 minutes of now;
  * 5. the signature of `{timestamp}.{rawbody}` matches (compared with `hash_equals`);
  * 6. the same signature was not seen in the last 10 minutes (replay).
  *
- * A refusal is logged as SYNC-INB-001 (info) and answered with `InboundRefused`. The body is only a hint: it names what changed
+ * A refusal is logged as SYNC-INB-001 (info) and answered with `InboundRefused`. Not found and too many requests are logged too, but
+ * at most once a minute each (per connection for too many requests, once for all unknown connections), so a flood cannot fill the log. The body is only a hint: it names what changed
  * (`stock`, `tracking`, `invoice` or `order`) and nothing else is read from it. The handler schedules one refresh of that kind;
  * the refresh reads the data again through the authenticated connector.
  *
@@ -51,9 +54,14 @@ final class InboundHandler {
 	public const SECRET_NAME = 'inbound_secret';
 
 	/**
-	 * Messages per connection per minute.
+	 * Messages per connection and source address per minute.
 	 */
 	public const RATE_LIMIT = 30;
+
+	/**
+	 * Messages per connection per minute from all addresses together.
+	 */
+	public const CONNECTION_RATE_LIMIT = 300;
 
 	/**
 	 * Largest body in bytes.
@@ -83,6 +91,14 @@ final class InboundHandler {
 	private \Closure $schedule;
 
 	/**
+	 * The address the request came from: function(): string. `REMOTE_ADDR` by default (never a forwarded header, which anyone can
+	 * set).
+	 *
+	 * @var \Closure
+	 */
+	private \Closure $remoteAddress;
+
+	/**
 	 * Set up with what it depends on.
 	 *
 	 * @param ConnectionRepository $connections Connections.
@@ -91,6 +107,7 @@ final class InboundHandler {
 	 * @param Logger               $logger      Log.
 	 * @param Clock                $clock       Time source.
 	 * @param \Closure|null        $schedule    Schedules the refresh; a single WordPress event by default.
+	 * @param \Closure|null        $remoteAddress The caller's address; `REMOTE_ADDR` by default.
 	 */
 	public function __construct(
 		private readonly ConnectionRepository $connections,
@@ -98,10 +115,15 @@ final class InboundHandler {
 		private readonly Transients $transients,
 		private readonly Logger $logger,
 		private readonly Clock $clock,
-		?\Closure $schedule = null
+		?\Closure $schedule = null,
+		?\Closure $remoteAddress = null
 	) {
-		$this->schedule = $schedule ?? static function ( int $connectionId, string $entity ): void {
+		$this->schedule      = $schedule ?? static function ( int $connectionId, string $entity ): void {
 			wp_schedule_single_event( time() + 5, 'estasoft_sync_inbound_refresh', array( $connectionId, $entity ) );
+		};
+		$this->remoteAddress = $remoteAddress ?? static function (): string {
+			$address = isset( $_SERVER['REMOTE_ADDR'] ) && is_string( $_SERVER['REMOTE_ADDR'] ) ? $_SERVER['REMOTE_ADDR'] : '';
+			return false === filter_var( $address, FILTER_VALIDATE_IP ) ? '' : $address;
 		};
 	}
 
@@ -166,17 +188,18 @@ final class InboundHandler {
 	 * @param int                 $connectionId Connection from the route.
 	 * @param string              $rawBody      The body exactly as received.
 	 * @param array<string,mixed> $headers      Request headers (any case; a value may be a list).
+	 * @param string|null         $source       Address of the caller, or null to read it from the request.
 	 * @return array{accepted:bool}
 	 *
 	 * @throws InboundRefused When the message is refused; carries the HTTP status.
 	 */
-	public function handle( int $connectionId, string $rawBody, array $headers ): array {
+	public function handle( int $connectionId, string $rawBody, array $headers, ?string $source = null ): array {
 		$connection = $this->connections->findWithoutSecrets( $connectionId );
 		if ( null === $connection || ConnectionStatus::Disconnected === $connection->status || ! $this->enabled( $connectionId ) ) {
-			throw new InboundRefused( __( 'Not found.', 'estasoft-erp-crm-sync-engine' ), 404 );
+			throw $this->refuse( 0, 404, __( 'Not found.', 'estasoft-erp-crm-sync-engine' ), true );
 		}
-		if ( $this->tooMany( $connectionId ) ) {
-			throw new InboundRefused( __( 'Too many requests. Try again in a minute.', 'estasoft-erp-crm-sync-engine' ), 429 );
+		if ( $this->tooMany( $connectionId, $source ?? ( $this->remoteAddress )() ) ) {
+			throw $this->refuse( $connectionId, 429, __( 'Too many requests. Try again in a minute.', 'estasoft-erp-crm-sync-engine' ), true );
 		}
 		if ( strlen( $rawBody ) > self::MAX_BODY ) {
 			throw $this->refuse( $connectionId, 413, __( 'The message is too large.', 'estasoft-erp-crm-sync-engine' ) );
@@ -230,30 +253,43 @@ final class InboundHandler {
 	}
 
 	/**
-	 * Count a message and say whether the minute's limit is used up.
+	 * Count a message and say whether a limit of the minute is used up: one per source address, one for the connection as a whole.
+	 * A source that is already over its own limit does not count toward the connection's, so one noisy address cannot lock the
+	 * real sender out.
 	 *
-	 * @param int $connectionId Connection.
+	 * @param int    $connectionId Connection.
+	 * @param string $source       Address of the caller ('' when unknown).
 	 */
-	private function tooMany( int $connectionId ): bool {
-		$key   = 'estasoft_sync_inb_rl_' . $connectionId . '_' . (int) floor( $this->clock->now()->getTimestamp() / 60 );
-		$count = (int) $this->transients->get( $key ) + 1;
-		$this->transients->set( $key, $count, 120 );
-		return $count > self::RATE_LIMIT;
+	private function tooMany( int $connectionId, string $source ): bool {
+		$minute = (int) floor( $this->clock->now()->getTimestamp() / 60 );
+		$mine   = $this->transients->increment( 'estasoft_sync_inb_rl_' . $connectionId . '_' . substr( hash( 'sha256', $source ), 0, 16 ) . '_' . $minute, 120 );
+		if ( $mine > self::RATE_LIMIT ) {
+			return true;
+		}
+		return $this->transients->increment( 'estasoft_sync_inb_rt_' . $connectionId . '_' . $minute, 120 ) > self::CONNECTION_RATE_LIMIT;
 	}
 
 	/**
-	 * Read the time header.
+	 * Read the time header: Unix seconds as digits, or a strict ISO 8601 time with a `T`, whole seconds (fractions allowed) and
+	 * `Z` or an offset. Anything else, relative text such as "now" or "+1 hour" included, is not a time.
 	 *
 	 * @param string $value Header value.
-	 * @return int|null Unix seconds.
+	 * @return int|null Unix seconds, or null when it is not an accepted time.
 	 */
 	private function timestamp( string $value ): ?int {
 		$value = trim( $value );
 		if ( 1 === preg_match( '/^\d{9,11}$/', $value ) ) {
 			return (int) $value;
 		}
-		$parsed = '' === $value ? false : date_create_immutable( $value );
-		return false === $parsed ? null : $parsed->getTimestamp();
+		if ( 1 !== preg_match( '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}:\d{2})$/', $value ) ) {
+			return null;
+		}
+		$parsed = \DateTimeImmutable::createFromFormat( str_contains( $value, '.' ) ? 'Y-m-d\TH:i:s.up' : 'Y-m-d\TH:i:sp', $value );
+		$errors = \DateTimeImmutable::getLastErrors();
+		if ( false === $parsed || ( is_array( $errors ) && ( $errors['warning_count'] > 0 || $errors['error_count'] > 0 ) ) ) {
+			return null;
+		}
+		return $parsed->getTimestamp();
 	}
 
 	/**
@@ -270,19 +306,30 @@ final class InboundHandler {
 	/**
 	 * Log a refusal (SYNC-INB-001) and make the exception.
 	 *
-	 * @param int    $connectionId Connection.
+	 * @param int    $connectionId Connection (0 when it does not exist).
 	 * @param int    $status       HTTP status.
 	 * @param string $message      Short sentence for the sender.
+	 * @param bool   $capped       Log it at most once a minute per status and connection (for the refusals anyone can cause at will).
 	 */
-	private function refuse( int $connectionId, int $status, string $message ): InboundRefused {
-		$this->logger->info(
-			ErrorCode::Inb001->template(),
-			array(
-				'connection_id' => $connectionId,
-				'code'          => ErrorCode::Inb001,
-				'http_status'   => $status,
-			)
-		);
+	private function refuse( int $connectionId, int $status, string $message, bool $capped = false ): InboundRefused {
+		$quiet = false;
+		if ( $capped ) {
+			$key   = 'estasoft_sync_inb_log_' . $status . '_' . $connectionId;
+			$quiet = false !== $this->transients->get( $key );
+			if ( ! $quiet ) {
+				$this->transients->set( $key, 1, 60 );
+			}
+		}
+		if ( ! $quiet ) {
+			$this->logger->info(
+				ErrorCode::Inb001->template(),
+				array(
+					'connection_id' => $connectionId,
+					'code'          => ErrorCode::Inb001,
+					'http_status'   => $status,
+				)
+			);
+		}
 		return new InboundRefused( $message, $status );
 	}
 }

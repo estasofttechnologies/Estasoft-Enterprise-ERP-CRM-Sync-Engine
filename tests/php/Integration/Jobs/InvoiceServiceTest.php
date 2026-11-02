@@ -14,6 +14,7 @@ require_once __DIR__ . '/JobsTestCase.php';
 use Estasoft\SyncEngine\Contract\ConnectorError;
 use Estasoft\SyncEngine\Core\Support\ValidationException;
 use Estasoft\SyncEngine\Domain\ErrorCode;
+use Estasoft\SyncEngine\Jobs\Invoices\InvoiceService;
 
 final class InvoiceServiceTest extends JobsTestCase {
 
@@ -127,6 +128,90 @@ final class InvoiceServiceTest extends JobsTestCase {
 		$this->h->clock->advance( 3600 );
 		$this->j->invoiceService->run();
 		$this->assertSame( $before, $this->j->connector->count( 'fetchInvoice' ), 'a reported invoice is final' );
+	}
+
+	/**
+	 * How many times a rejection was written to the log.
+	 */
+	private function rejectionLogs(): int {
+		return count( array_filter( $this->h->logs->latest( 100 ), static fn( array $entry ): bool => 'SYNC-COMP-001' === $entry['code'] ) );
+	}
+
+	public function test_a_rejection_that_does_not_change_is_noted_once_not_on_every_poll(): void {
+		$this->syncedOrder( 502 );
+		$this->j->connector->invoiceFor['SO-502'] = $this->facts( array( 'authority_status' => 'rejected', 'reject_reason' => 'Buyer VAT number invalid' ) );
+
+		$first = $this->j->invoiceService->run();
+		$this->assertSame( 1, $first['rejected'] );
+		$this->assertSame( 1, $this->rejectionLogs() );
+		$failedAt = $this->h->row( (int) $this->h->queue->query( new \Estasoft\SyncEngine\Core\Repositories\QueueQuery( 'failed', 'invoice' ) )->items[0]['id'] )['updated_at'];
+
+		foreach ( range( 1, 5 ) as $round ) {
+			$this->h->clock->advance( 600 );
+			$again = $this->j->invoiceService->run();
+			$this->assertSame( 1, $again['checked'], 'it is still asked about, a rejected invoice is not final' );
+			$this->assertSame( 0, $again['rejected'], 'but nothing new is reported in round ' . $round );
+		}
+
+		$this->assertSame( 1, $this->rejectionLogs(), 'one error in the log, not one every ten minutes' );
+		$items = $this->h->queue->query( new \Estasoft\SyncEngine\Core\Repositories\QueueQuery( 'failed', 'invoice' ) )->items;
+		$this->assertCount( 1, $items );
+		$this->assertSame( $failedAt, $this->h->row( (int) $items[0]['id'] )['updated_at'], 'the failed item was not rewritten' );
+	}
+
+	public function test_a_rejection_with_a_new_reason_or_an_item_that_is_no_longer_failed_is_noted_again(): void {
+		$this->syncedOrder( 502 );
+		$this->j->connector->invoiceFor['SO-502'] = $this->facts( array( 'authority_status' => 'rejected', 'reject_reason' => 'Buyer VAT number invalid' ) );
+		$this->j->invoiceService->run();
+
+		$this->h->clock->advance( 600 );
+		$this->j->connector->invoiceFor['SO-502'] = $this->facts( array( 'authority_status' => 'rejected', 'reject_reason' => 'Seller address missing' ) );
+		$changed = $this->j->invoiceService->run();
+		$this->assertSame( 1, $changed['rejected'], 'a new reason is news' );
+		$this->assertSame( 2, $this->rejectionLogs() );
+		$failed = $this->h->queue->query( new \Estasoft\SyncEngine\Core\Repositories\QueueQuery( 'failed', 'invoice' ) )->items;
+		$this->assertStringContainsString( 'Seller address missing', (string) $failed[0]['error_message'] );
+
+		// A person sends the item back to the queue; the next poll finds the same rejection and fails it again.
+		$this->assertTrue( $this->h->queue->retry( (int) $failed[0]['id'] ) );
+		$this->h->clock->advance( 600 );
+		$third = $this->j->invoiceService->run();
+		$this->assertSame( 1, $third['rejected'] );
+		$this->assertSame( 3, $this->rejectionLogs() );
+		$this->assertCount( 1, $this->h->queue->query( new \Estasoft\SyncEngine\Core\Repositories\QueueQuery( 'failed', 'invoice' ) )->items );
+	}
+
+	public function test_an_old_open_invoice_is_still_polled_behind_many_newer_orders(): void {
+		$ids = range( 601, 607 );
+		foreach ( $ids as $id ) {
+			$this->syncedOrder( $id );
+		}
+		// The six newest are settled; only the oldest still waits for its invoice.
+		foreach ( array_slice( $ids, 1 ) as $id ) {
+			$this->h->state->mergeExtra( $this->connection, 'order', (string) $id, array( 'invoice_final' => true ) );
+		}
+		$this->j->connector->invoiceFor['SO-601'] = $this->facts();
+		$service = new InvoiceService( $this->j->orders, $this->h->state, $this->h->idMap, $this->h->queue, $this->h->enqueuer, $this->j->gateway, $this->h->redactor, $this->h->logger, $this->h->options, $this->h->clock, 20, 2 );
+
+		$summary = $service->run();
+
+		$this->assertSame( 1, $summary['checked'], 'seven synced orders over four pages of two: the oldest was reached' );
+		$this->assertArrayHasKey( 601, $this->j->orders->invoices );
+		$this->assertTrue( $summary['complete'] );
+	}
+
+	public function test_the_longest_unchecked_open_invoice_goes_first(): void {
+		$this->syncedOrder( 701 );
+		$this->syncedOrder( 702 );
+		$this->j->connector->invoiceFor['SO-701'] = $this->facts();
+		$this->j->connector->invoiceFor['SO-702'] = $this->facts( array( 'number' => 'INV/2026/1202' ) );
+		$this->h->state->mergeExtra( $this->connection, 'order', '702', array( 'invoice_checked_at' => '2026-11-02T10:00:00Z' ) );
+
+		$this->j->invoiceService->run();
+
+		$asked = array_values( array_map( static fn( array $call ) => $call[1], array_filter( $this->j->connector->calls, static fn( array $call ): bool => 'fetchInvoice' === $call[0] ) ) );
+		$this->assertCount( 2, $asked );
+		$this->assertSame( 'SO-701', (string) $asked[0], 'never checked goes before checked two hours ago' );
 	}
 
 	public function test_an_order_is_not_asked_about_again_within_five_minutes_and_unchanged_facts_save_nothing(): void {
