@@ -35,4 +35,3 @@
 /README.md export-ignore
 /SECURITY.md export-ignore
 /includes/**/*.md export-ignore
-/includes/**/READY export-ignore

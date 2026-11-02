@@ -22,7 +22,7 @@ or authority has to do it. **Done** = already true on the day this file was last
 
 | # | Step | Who | Status |
 | --- | --- | --- | --- |
-| B1 | `bin/check-all.sh` is green locally (it lists whatever it had to skip). | Tooling | Runs now; PHPCS and PHPStan need `composer install`, or the local tools in `the local tools` |
+| B1 | `bin/check-all.sh` is green locally (it lists whatever it had to skip). | Tooling | Runs now; PHPCS and PHPStan need `composer install` |
 | B2 | CI is green on `main`: PHP lint 8.1 to 8.4, PHPCS, PHPStan, unit tests 8.1 to 8.4, integration tests on WordPress 6.4 and latest with MySQL 8, admin app checks, generated files, release zip build. Workflow: `.github/workflows/ci.yml` (passes `actionlint`; not runnable locally). | Tooling | CI |
 | B3 | **PHPCS clean** with the WordPress standard (`phpcs.xml.dist`). Every `phpcs:ignore` has a reason next to it. | Tooling | Clean locally on 2 Nov ([PLUGIN-CHECK-NOTES.md](PLUGIN-CHECK-NOTES.md)); CI |
 | B4 | **Plugin Check clean** on the release zip: `.github/workflows/plugin-check.yml` (official `WordPress/plugin-check-action`, WooCommerce installed on the test site). Fix every error, read every warning in the job summary. [PLUGIN-CHECK-NOTES.md](PLUGIN-CHECK-NOTES.md) says what was approximated here and what only this job can show. **Watch the first run:** the workflow writes `.wp-env.override.json` to add WooCommerce, which cannot be tried outside GitHub. | Tooling, then Owner reads it | CI |
@@ -82,7 +82,7 @@ or authority has to do it. **Done** = already true on the day this file was last
 - `php bin/red-flags.php`, `php bin/check-php-version.php`, `php bin/check-readme.php --strict-assets`,
   `php bin/check-docs.php`, `bash bin/check-dist-parity.sh`, the three `--check` generators, and `actionlint` on the
   three workflows, run on the working tree. PHPCS (WordPress standard) and PHPStan (level 6) through
-  `the local tools`; results in [PLUGIN-CHECK-NOTES.md](PLUGIN-CHECK-NOTES.md).
+  Composer and in CI; results in [PLUGIN-CHECK-NOTES.md](PLUGIN-CHECK-NOTES.md).
 - `bash bin/smoke-install.sh`: the release zip was built with `npm ci` and `npm run build`, unpacked into a fresh
   WordPress 6.4.3 and exercised ([SMOKE-TEST.md](SMOKE-TEST.md)).
 - **Not verified here (no network and no GitHub):** any GitHub Actions run, the real Plugin Check, the readme

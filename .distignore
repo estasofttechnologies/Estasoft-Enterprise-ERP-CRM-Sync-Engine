@@ -67,6 +67,5 @@ vendor
 /README.md
 /SECURITY.md
 
-# Working notes that sit next to the code (includes/Connectors/Support has CHANGES.md, PROGRESS.md, REQUESTS.md and a READY marker): never part of a release
+# Working notes that sit next to the code (includes/Connectors/Support has CHANGES.md): never part of a release
 /includes/**/*.md
-/includes/**/READY

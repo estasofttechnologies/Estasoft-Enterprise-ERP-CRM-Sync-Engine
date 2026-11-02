@@ -114,7 +114,6 @@ bin/check-all.sh          # everything that can run on this machine; lists what 
 | PHP unit tests (no WordPress, no database) | `composer test`, or `phpunit -c phpunit.xml.dist` |
 | PHP integration tests (real WordPress and database; drops and recreates the named database) | `php bin/install-test-wp.php && vendor/bin/phpunit -c phpunit-integration.xml.dist` |
 | Coding standards (WordPress) and static analysis (level 6) | `composer lint`, `composer analyse` |
-| The same two without Composer (the build machine) | `vendor/bin/phpcs [paths]`, `vendor/bin/phpstan analyse [paths]` |
 | Red-flag scan and PHP 8.1 compatibility scan of the runtime code | `php bin/red-flags.php`, `php bin/check-php-version.php` |
 | Files written from other files (must be committed) | `php bin/generate-connector-index.php`, `php bin/generate-catalog-from-docs.php`, `php bin/generate-external-services.php` (each has `--check`) |
 | `readme.txt` against the WordPress.org rules | `php bin/check-readme.php` |
