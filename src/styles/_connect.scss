@@ -1,0 +1,104 @@
+// The connect experience: forms drawn from a connector's fields, the steps of a test, the exports screen.
+
+// A tag with its help button beside it.
+.estasoft-sync-untested {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px;
+	margin-block-start: 4px;
+}
+
+// A read-only value to copy (the redirect address of a sign-in app).
+.estasoft-sync-display {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 12px;
+	border: 1px solid var(--estasoft-sync-border);
+	border-radius: var(--estasoft-sync-radius);
+	background: var(--estasoft-sync-subtle);
+}
+
+.estasoft-sync-display__row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 12px;
+
+	code {
+		min-inline-size: 0;
+		overflow-wrap: anywhere;
+		padding: 4px 8px;
+		border: 1px solid var(--estasoft-sync-border-strong);
+		border-radius: var(--estasoft-sync-radius);
+		background: var(--estasoft-sync-card);
+	}
+}
+
+// "More settings": a native disclosure.
+.estasoft-sync-more {
+	border: 1px solid var(--estasoft-sync-border);
+	border-radius: var(--estasoft-sync-radius);
+	background: var(--estasoft-sync-card);
+
+	> summary {
+		display: flex;
+		align-items: center;
+		min-block-size: 36px;
+		padding-inline: 12px;
+		font-weight: 600;
+		cursor: pointer;
+	}
+
+	> summary:focus-visible {
+		outline: var(--estasoft-sync-focus);
+		outline-offset: 2px;
+	}
+
+	> .estasoft-sync-stack {
+		padding: 4px 12px 12px;
+	}
+}
+
+// The steps of a connection test: icon and words.
+.estasoft-sync-checks {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+
+	li {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.is-passed {
+		color: var(--estasoft-sync-success-text);
+	}
+
+	.is-failed {
+		color: var(--estasoft-sync-danger-text);
+		font-weight: 600;
+	}
+
+	.is-not-tried {
+		color: var(--estasoft-sync-text-muted);
+	}
+}
+
+.estasoft-sync-problems .estasoft-sync-card__head {
+	align-items: center;
+}
+
+// The table "If the test does not pass" scrolls sideways on a narrow screen instead of squeezing its columns.
+.estasoft-sync-plain-table--wide {
+	min-inline-size: 560px;
+
+	td.estasoft-sync-mono {
+		white-space: nowrap;
+	}
+}

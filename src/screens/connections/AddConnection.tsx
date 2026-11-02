@@ -1,8 +1,15 @@
 import { useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
-import type { CatalogEntry, Connection } from '../../api/types';
+import type { SystemEntry } from '../../api/local-types';
+import type { Connection } from '../../api/types';
 import { navigate } from '../../app/router';
 import { Btn } from '../../components/Btn';
+import {
+	isConnectedNow,
+	isSelectable,
+	needsVariant,
+	resolveSystem,
+} from '../../lib/connect';
 import { PageHeader } from '../../components/PageHeader';
 import { ChooseSystem } from './ChooseSystem';
 import { ConnectSystem } from './ConnectSystem';
@@ -14,7 +21,9 @@ import { ConnectSystem } from './ConnectSystem';
  * @return The screen.
  */
 export function AddConnection() {
-	const [ entry, setEntry ] = useState< CatalogEntry | null >( null );
+	const [ row, setRow ] = useState< SystemEntry | null >( null );
+	const [ variant, setVariant ] = useState< string | null >( null );
+	const entry = row ? resolveSystem( row, variant ) : null;
 	const [ connecting, setConnecting ] = useState( false );
 	const [ created, setCreated ] = useState< Connection | null >( null );
 	return (
@@ -55,8 +64,17 @@ export function AddConnection() {
 				/>
 			) : (
 				<ChooseSystem
-					selected={ entry?.name ?? null }
-					onSelect={ setEntry }
+					selected={ row?.name ?? null }
+					variant={ variant }
+					onSelect={ ( picked ) => {
+						setRow( picked );
+						setVariant( null );
+						setCreated( null );
+					} }
+					onVariant={ ( id ) => {
+						setVariant( id );
+						setCreated( null );
+					} }
 				/>
 			) }
 			<div className="estasoft-sync-wizard__foot">
@@ -76,7 +94,7 @@ export function AddConnection() {
 					{ connecting ? (
 						<Btn
 							variant="primary"
-							disabled={ ! created }
+							disabled={ ! isConnectedNow( created ) }
 							onClick={ () =>
 								created &&
 								navigate( `/connections/${ created.id }` )
@@ -90,7 +108,11 @@ export function AddConnection() {
 					) : (
 						<Btn
 							variant="primary"
-							disabled={ ! entry }
+							disabled={
+								! row ||
+								! isSelectable( row ) ||
+								needsVariant( row, variant )
+							}
 							onClick={ () => setConnecting( true ) }
 						>
 							{ __( 'Continue', 'estasoft-erp-crm-sync-engine' ) }

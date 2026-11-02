@@ -1,7 +1,7 @@
 import { useMemo, useState } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 import { api } from '../../api/endpoints';
-import type { CatalogEntry } from '../../api/types';
+import type { SystemEntry } from '../../api/local-types';
 import { useApp } from '../../app/AppContext';
 import { Link } from '../../app/router';
 import { Btn } from '../../components/Btn';
@@ -10,12 +10,15 @@ import {
 	ErrorState,
 	LoadingState,
 } from '../../components/EmptyState';
-import { TextField } from '../../components/Fields';
+import { Card } from '../../components/Card';
+import { ChoiceGroup, TextField } from '../../components/Fields';
+import { HelpTip } from '../../components/HelpTip';
 import { ResponsiveTable } from '../../components/ResponsiveTable';
 import { SegmentedFilter } from '../../components/SegmentedFilter';
 import { StatusBadge, Tag } from '../../components/StatusBadge';
 import { useResource } from '../../hooks/useResource';
 import type { CatalogFilter } from '../../lib/catalog';
+import { isSelectable, variantsOf } from '../../lib/connect';
 import {
 	filterCatalog,
 	methodLabel,
@@ -26,7 +29,116 @@ import {
 
 export interface ChooseSystemProps {
 	selected: string | null;
-	onSelect: ( entry: CatalogEntry ) => void;
+	onSelect: ( entry: SystemEntry ) => void;
+	/** The product chosen for a row that holds several (a connector id), or null. */
+	variant?: string | null;
+	onVariant?: ( id: string ) => void;
+}
+
+/**
+ * The tag that says a connector has not been tried with a live account, and what that means for
+ * the person. Calm on purpose: it says what was done, and what they can do about it.
+ *
+ * @param props      The system.
+ * @param props.name
+ * @return The tag and its help.
+ */
+function UntestedTag( { name }: { name: string } ) {
+	return (
+		<span className="estasoft-sync-untested">
+			<Tag>
+				{ __(
+					'Not yet tested with a live account',
+					'estasoft-erp-crm-sync-engine'
+				) }
+			</Tag>
+			<HelpTip
+				label={ sprintf(
+					/* translators: %s: system name */
+					__(
+						'What “not yet tested” means for %s',
+						'estasoft-erp-crm-sync-engine'
+					),
+					name
+				) }
+			>
+				<p>
+					{ sprintf(
+						/* translators: %s: system name */
+						__(
+							'This connector was built from the public documentation of %s and checked with automated tests that use recorded examples. It has not been tried with a live account yet.',
+							'estasoft-erp-crm-sync-engine'
+						),
+						name
+					) }
+				</p>
+				<p>
+					{ __(
+						'You can use Shadow mode to check the results before anything is sent. Shadow mode changes nothing in either system.',
+						'estasoft-erp-crm-sync-engine'
+					) }
+				</p>
+			</HelpTip>
+		</span>
+	);
+}
+
+/**
+ * "Which product do you use?" for a row that holds several (Sage).
+ *
+ * @param props           The row, the chosen product and the handler.
+ * @param props.entry
+ * @param props.variant
+ * @param props.onVariant
+ * @return The question.
+ */
+function WhichProduct( {
+	entry,
+	variant,
+	onVariant,
+}: {
+	entry: SystemEntry;
+	variant: string | null | undefined;
+	onVariant?: ( id: string ) => void;
+} ) {
+	return (
+		<Card
+			title={ __(
+				'Which product do you use?',
+				'estasoft-erp-crm-sync-engine'
+			) }
+			description={ sprintf(
+				/* translators: %s: system name such as "Sage 200, Sage 300 and Sage X3" */
+				__(
+					'%s is a family of products, and each connects its own way.',
+					'estasoft-erp-crm-sync-engine'
+				),
+				entry.name
+			) }
+		>
+			<ChoiceGroup
+				legend={ __(
+					'Which product do you use?',
+					'estasoft-erp-crm-sync-engine'
+				) }
+				hideLegend
+				value={ variant ?? '' }
+				onChange={ ( id ) => onVariant?.( id ) }
+				choices={ variantsOf( entry ).map( ( item ) => ( {
+					value: item.id,
+					label: item.label,
+					disabled: item.available === false,
+					description:
+						item.available === false
+							? __(
+									'Not available yet.',
+									'estasoft-erp-crm-sync-engine'
+								)
+							: undefined,
+				} ) ) }
+			/>
+		</Card>
+	);
 }
 
 function Tile( { name }: { name: string } ) {
@@ -41,17 +153,25 @@ function Tile( { name }: { name: string } ) {
  * Choose a system (B02): 34 systems from the catalog, filters, live search, the way each one
  * connects, a suggestion row, and empty states.
  *
- * @param props          Selected system name and handler.
+ * @param props           Selected system name, chosen product and handlers.
  * @param props.selected
  * @param props.onSelect
+ * @param props.variant
+ * @param props.onVariant
  * @return The list.
  */
-export function ChooseSystem( { selected, onSelect }: ChooseSystemProps ) {
+export function ChooseSystem( {
+	selected,
+	onSelect,
+	variant,
+	onVariant,
+}: ChooseSystemProps ) {
 	const { boot } = useApp();
 	const catalog = useResource( ( signal ) => api.catalog.list( signal ), [] );
 	const [ filter, setFilter ] = useState< CatalogFilter >( 'all' );
 	const [ query, setQuery ] = useState( '' );
 	const entries = useMemo( () => catalog.data ?? [], [ catalog.data ] );
+	const chosenEntry = entries.find( ( entry ) => entry.name === selected );
 	const counts = useMemo( () => {
 		const total = entries.length;
 		return {
@@ -93,7 +213,7 @@ export function ChooseSystem( { selected, onSelect }: ChooseSystemProps ) {
 	}
 
 	const groups: {
-		type: CatalogEntry[ 'type' ];
+		type: SystemEntry[ 'type' ];
 		title: string;
 		note: string;
 	}[] = [
@@ -181,7 +301,7 @@ export function ChooseSystem( { selected, onSelect }: ChooseSystemProps ) {
 				{ sprintf(
 					/* translators: %d: number of systems */
 					__(
-						'All %d systems are official connectors, and every feature is free. Each row says how you connect and what you need first, because that differs: some need only a key, some need an app that you create, and a few use a file. Systems marked as not in this release can be read about but not connected yet. SMACC is listed but cannot be selected, because SMACC publishes no way to connect yet. You can add more than one system later. Is yours missing? See',
+						'All %d systems are official connectors, and every feature is free. Each row says how you connect and what you need first, because that differs: some need only a key, some need an app that you create, and a few use a file. Every connector is built from the vendor’s public documentation and checked with recorded examples, and none has been tried with a live account yet, so use Shadow mode to check the results before anything is sent. SMACC is listed but cannot be selected, because SMACC publishes no way to connect yet. You can add more than one system later. Is yours missing? See',
 						'estasoft-erp-crm-sync-engine'
 					),
 					entries.length
@@ -322,7 +442,7 @@ export function ChooseSystem( { selected, onSelect }: ChooseSystemProps ) {
 							<p className="estasoft-sync-muted">
 								{ group.note }
 							</p>
-							<ResponsiveTable< CatalogEntry, string >
+							<ResponsiveTable< SystemEntry, string >
 								caption={ sprintf(
 									/* translators: %s: group name */ __(
 										'%s systems',
@@ -356,8 +476,7 @@ export function ChooseSystem( { selected, onSelect }: ChooseSystemProps ) {
 														{ entry.regions }
 													</span>
 												</span>
-												{ entry.connector &&
-												! entry.available ? (
+												{ entry.community ? (
 													<Tag>
 														{ __(
 															'Community',
@@ -405,13 +524,22 @@ export function ChooseSystem( { selected, onSelect }: ChooseSystemProps ) {
 												<span className="estasoft-sync-muted estasoft-sync-block">
 													{ entry.needs }
 												</span>
-												{ ! entry.connector ? (
+												{ ! entry.connector &&
+												variantsOf( entry ).length ===
+													0 &&
+												isSelectable( entry ) ? (
 													<span className="estasoft-sync-muted estasoft-sync-block">
 														{ __(
 															'The connector for this system is not in this release yet.',
 															'estasoft-erp-crm-sync-engine'
 														) }
 													</span>
+												) : null }
+												{ entry.verified === false &&
+												isSelectable( entry ) ? (
+													<UntestedTag
+														name={ entry.name }
+													/>
 												) : null }
 											</>
 										),
@@ -425,8 +553,7 @@ export function ChooseSystem( { selected, onSelect }: ChooseSystemProps ) {
 										hideHeader: true,
 										align: 'end',
 										cell: ( entry ) =>
-											entry.connection_method ===
-											'none' ? (
+											! isSelectable( entry ) ? (
 												<Btn
 													small
 													disabled
@@ -489,6 +616,15 @@ export function ChooseSystem( { selected, onSelect }: ChooseSystemProps ) {
 									},
 								] }
 							/>
+							{ chosenEntry &&
+							chosenEntry.type === group.type &&
+							variantsOf( chosenEntry ).length > 0 ? (
+								<WhichProduct
+									entry={ chosenEntry }
+									variant={ variant }
+									onVariant={ onVariant }
+								/>
+							) : null }
 						</section>
 					);
 				} )

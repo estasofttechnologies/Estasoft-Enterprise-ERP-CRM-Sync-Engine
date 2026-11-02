@@ -2,7 +2,7 @@ import { __, _n, sprintf } from '@wordpress/i18n';
 import { api } from '../../api/endpoints';
 import type { ConnectionSummary } from '../../api/types';
 import { useApp } from '../../app/AppContext';
-import { Link, navigate } from '../../app/router';
+import { Link, navigate, useRoute } from '../../app/router';
 import { useStatus } from '../../app/StatusProvider';
 import { Btn } from '../../components/Btn';
 import { Callout } from '../../components/Callout';
@@ -20,6 +20,8 @@ import { ResponsiveTable } from '../../components/ResponsiveTable';
 import { StateChip } from '../../components/StateChip';
 import { StatusBadge } from '../../components/StatusBadge';
 import { useResource } from '../../hooks/useResource';
+import type { SystemEntry } from '../../api/local-types';
+import { entryForConnector, readSignIn, shapeOf } from '../../lib/connect';
 import { formatDay } from '../../lib/format';
 import { systemName } from '../../lib/text';
 import { typeLabel } from '../../lib/catalog';
@@ -38,6 +40,11 @@ export function ConnectionsList() {
 		[],
 		{ keepPrevious: true }
 	);
+	const catalog = useResource( ( signal ) => api.catalog.list( signal ), [] );
+	const route = useRoute();
+	// A sign-in that ends here, not on a connection, is one the server could not match to a connection
+	// (an unknown, used or expired link): it says failed and nothing was connected.
+	const lostSignIn = readSignIn( route.params, route.segments );
 	const connections = list.data ?? [];
 	const now = status?.now ?? new Date().toISOString();
 	const expiring = connections.filter(
@@ -83,14 +90,65 @@ export function ConnectionsList() {
 				title={ __( 'Connections', 'estasoft-erp-crm-sync-engine' ) }
 				description={ description }
 				actions={
-					<Btn onClick={ () => navigate( '/connections/other' ) }>
-						{ __(
-							'Other systems',
-							'estasoft-erp-crm-sync-engine'
-						) }
-					</Btn>
+					<>
+						<Btn
+							onClick={ () =>
+								navigate( '/connections/problems' )
+							}
+						>
+							{ __(
+								'Connection problems',
+								'estasoft-erp-crm-sync-engine'
+							) }
+						</Btn>
+						<Btn onClick={ () => navigate( '/connections/other' ) }>
+							{ __(
+								'Other systems',
+								'estasoft-erp-crm-sync-engine'
+							) }
+						</Btn>
+					</>
 				}
 			/>
+			{ lostSignIn.result && lostSignIn.connectionId === null ? (
+				<Callout
+					tone={
+						lostSignIn.result === 'cancelled' ? 'warning' : 'danger'
+					}
+					role="alert"
+					action={
+						<Btn
+							small
+							onClick={ () => navigate( '/connections', true ) }
+						>
+							{ __( 'Close', 'estasoft-erp-crm-sync-engine' ) }
+						</Btn>
+					}
+				>
+					<p>
+						{ lostSignIn.result === 'cancelled'
+							? __(
+									'Sign-in was cancelled. Nothing was connected.',
+									'estasoft-erp-crm-sync-engine'
+								)
+							: __(
+									'The sign-in could not be finished. Nothing was connected. The link may have expired or been used already.',
+									'estasoft-erp-crm-sync-engine'
+								) }{ ' ' }
+						{ lostSignIn.result === 'cancelled' ? (
+							<span className="estasoft-sync-mono">
+								SYNC-AUTH-003
+							</span>
+						) : null }
+					</p>
+					<p className="estasoft-sync-muted">
+						{ __(
+							'Open the connection and press Sign in again, or add the system again. The log has the details.',
+							'estasoft-erp-crm-sync-engine'
+						) }
+					</p>
+				</Callout>
+			) : null }
 			{ status?.encryption_key_missing ? (
 				<Callout
 					tone="danger"
@@ -133,6 +191,10 @@ export function ConnectionsList() {
 					connection={ connection }
 					now={ now }
 					canConfigure={ canConfigure }
+					entry={ entryForConnector(
+						catalog.data,
+						connection.connector
+					) }
 				/>
 			) ) }
 			{ list.loading ? (
@@ -279,26 +341,53 @@ export function ConnectionsList() {
 								hideHeader: true,
 								align: 'end',
 								cell: ( connection ) => (
-									<Btn
-										small
-										aria-label={ sprintf(
-											/* translators: %s: connection name */ __(
-												'Open %s',
+									<span className="estasoft-sync-actions">
+										{ connection.status ===
+											'needs_reconnect' &&
+										canConfigure ? (
+											<Btn
+												small
+												variant="primary"
+												aria-label={ sprintf(
+													/* translators: %s: connection name */ __(
+														'Reconnect %s',
+														'estasoft-erp-crm-sync-engine'
+													),
+													connection.label
+												) }
+												onClick={ () =>
+													navigate(
+														`/connections/${ connection.id }?reconnect=1`
+													)
+												}
+											>
+												{ __(
+													'Reconnect',
+													'estasoft-erp-crm-sync-engine'
+												) }
+											</Btn>
+										) : null }
+										<Btn
+											small
+											aria-label={ sprintf(
+												/* translators: %s: connection name */ __(
+													'Open %s',
+													'estasoft-erp-crm-sync-engine'
+												),
+												connection.label
+											) }
+											onClick={ () =>
+												navigate(
+													`/connections/${ connection.id }`
+												)
+											}
+										>
+											{ __(
+												'Open',
 												'estasoft-erp-crm-sync-engine'
-											),
-											connection.label
-										) }
-										onClick={ () =>
-											navigate(
-												`/connections/${ connection.id }`
-											)
-										}
-									>
-										{ __(
-											'Open',
-											'estasoft-erp-crm-sync-engine'
-										) }
-									</Btn>
+											) }
+										</Btn>
+									</span>
 								),
 							},
 						] }
@@ -413,16 +502,27 @@ function ExpiryNotice( {
 	connection,
 	now,
 	canConfigure,
+	entry,
 }: {
 	connection: ConnectionSummary;
 	now: string;
 	canConfigure: boolean;
+	entry: SystemEntry | undefined;
 } ) {
 	const cfg = useFormat();
 	const name = systemName( connection );
 	const days = daysUntil( connection.credential_expires_at ?? now, now );
 	const date = formatDay( connection.credential_expires_at, cfg );
 	const expired = days < 0;
+	const shape = shapeOf( entry?.connection_method );
+	const word =
+		shape === 'own_app'
+			? __( 'sign-in', 'estasoft-erp-crm-sync-engine' )
+			: shape === 'cloud_app'
+				? __( 'secret', 'estasoft-erp-crm-sync-engine' )
+				: shape === 'server_login'
+					? __( 'password', 'estasoft-erp-crm-sync-engine' )
+					: __( 'key', 'estasoft-erp-crm-sync-engine' );
 	return (
 		<Callout
 			tone={ expired || days <= 7 ? 'danger' : 'warning' }
@@ -436,10 +536,18 @@ function ExpiryNotice( {
 							)
 						}
 					>
-						{ __(
-							'Replace the key',
-							'estasoft-erp-crm-sync-engine'
-						) }
+						{ shape === 'own_app'
+							? __(
+									'Sign in again',
+									'estasoft-erp-crm-sync-engine'
+								)
+							: sprintf(
+									/* translators: %s: "key", "secret" or "password" */ __(
+										'Replace the %s',
+										'estasoft-erp-crm-sync-engine'
+									),
+									word
+								) }
 					</Btn>
 				) : undefined
 			}
@@ -447,34 +555,42 @@ function ExpiryNotice( {
 			<p>
 				{ expired
 					? sprintf(
-							/* translators: 1: system name, 2: date */ __(
-								'The %1$s key ran out on %2$s. Syncing has stopped and orders wait in the queue.',
+							/* translators: 1: system name, 2: "key", "secret", "password" or "sign-in", 3: date */ __(
+								'The %1$s %2$s ran out on %3$s. Syncing has stopped and orders wait in the queue.',
 								'estasoft-erp-crm-sync-engine'
 							),
 							name,
+							word,
 							date
 						)
 					: sprintf(
-							/* translators: 1: system name, 2: date, 3: days */ _n(
-								'The %1$s key runs out on %2$s, in %3$d day.',
-								'The %1$s key runs out on %2$s, in %3$d days.',
+							/* translators: 1: system name, 2: "key", "secret", "password" or "sign-in", 3: date, 4: days */ _n(
+								'The %1$s %2$s runs out on %3$s, in %4$d day.',
+								'The %1$s %2$s runs out on %3$s, in %4$d days.',
 								days,
 								'estasoft-erp-crm-sync-engine'
 							),
 							name,
+							word,
 							date,
 							days
 						) }{ ' ' }
 				<span className="estasoft-sync-mono">SYNC-AUTH-005</span>
 			</p>
 			<p className="estasoft-sync-muted">
-				{ sprintf(
-					/* translators: %s: system name */ __(
-						'When it runs out, syncing stops and orders wait in the queue. Make a new key in %s and paste it here; your mappings stay.',
-						'estasoft-erp-crm-sync-engine'
-					),
-					name
-				) }
+				{ shape === 'own_app'
+					? __(
+							'When it runs out, syncing stops and orders wait in the queue. Sign in again before then; your mappings stay.',
+							'estasoft-erp-crm-sync-engine'
+						)
+					: sprintf(
+							/* translators: 1: system name, 2: "key", "secret" or "password" */ __(
+								'When it runs out, syncing stops and orders wait in the queue. Make a new %2$s in %1$s and paste it here; your mappings stay.',
+								'estasoft-erp-crm-sync-engine'
+							),
+							name,
+							word
+						) }
 			</p>
 		</Callout>
 	);

@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from '@wordpress/element';
 import { speak } from '@wordpress/a11y';
 import { __, sprintf } from '@wordpress/i18n';
 import { api } from '../../api/endpoints';
-import type { CatalogEntry, Connection, Onboarding } from '../../api/types';
+import type { SystemEntry } from '../../api/local-types';
+import type { Connection, Onboarding } from '../../api/types';
 import { useApp } from '../../app/AppContext';
 import { useNotices } from '../../app/NoticeProvider';
 import { navigate } from '../../app/router';
@@ -15,6 +16,12 @@ import { PageHeader } from '../../components/PageHeader';
 import { getStepLabels, Steps } from '../../components/Steps';
 import { useAsyncAction } from '../../hooks/useAsyncAction';
 import { useResource } from '../../hooks/useResource';
+import {
+	isConnectedNow,
+	isSelectable,
+	needsVariant,
+	resolveSystem,
+} from '../../lib/connect';
 import { errorText } from '../../lib/text';
 import { ChooseSystem } from '../connections/ChooseSystem';
 import { ConnectSystem } from '../connections/ConnectSystem';
@@ -52,6 +59,10 @@ export function Wizard() {
 	const [ systemNameChosen, setSystemNameChosen ] = useState< string | null >(
 		null
 	);
+	// The product chosen for a row that holds several (a connector id).
+	const [ variantChosen, setVariantChosen ] = useState< string | null >(
+		null
+	);
 	const [ connection, setConnection ] = useState< Connection | null >( null );
 	const [ what, setWhat ] = useState< WhatAnswers >( readWhat( undefined ) );
 	const [ previewOrder, setPreviewOrder ] = useState< number | null >( null );
@@ -71,6 +82,9 @@ export function Wizard() {
 		const chosen =
 			typeof answers.system === 'string' ? answers.system : null;
 		setSystemNameChosen( chosen );
+		setVariantChosen(
+			typeof answers.variant === 'string' ? answers.variant : null
+		);
 		setSub( chosen ? 'connect' : 'choose' );
 		setWhat( readWhat( answers.what ) );
 		if ( typeof answers.preview_order === 'number' ) {
@@ -81,12 +95,16 @@ export function Wizard() {
 		}
 	}, [ onboarding.data, seeded ] );
 
-	const entry: CatalogEntry | undefined = useMemo(
+	const row: SystemEntry | undefined = useMemo(
 		() =>
 			catalog.data?.find(
 				( candidate ) => candidate.name === systemNameChosen
 			),
 		[ catalog.data, systemNameChosen ]
+	);
+	const entry: SystemEntry | undefined = useMemo(
+		() => ( row ? resolveSystem( row, variantChosen ) : undefined ),
+		[ row, variantChosen ]
 	);
 
 	// Resume: find the connection that belongs to the chosen system.
@@ -111,6 +129,7 @@ export function Wizard() {
 		const answers = {
 			...( onboarding.data?.answers ?? {} ),
 			system: systemNameChosen ?? undefined,
+			variant: variantChosen ?? undefined,
 			what,
 			preview_order: previewOrder ?? undefined,
 			...( changes.answers ?? {} ),
@@ -269,8 +288,10 @@ export function Wizard() {
 				body = (
 					<ChooseSystem
 						selected={ systemNameChosen }
+						variant={ variantChosen }
 						onSelect={ ( picked ) => {
 							setSystemNameChosen( picked.name );
+							setVariantChosen( null );
 							if (
 								connection &&
 								connection.connector !== picked.connector
@@ -278,15 +299,28 @@ export function Wizard() {
 								setConnection( null );
 							}
 						} }
+						onVariant={ ( id ) => {
+							setVariantChosen( id );
+							if ( connection && connection.connector !== id ) {
+								setConnection( null );
+							}
+						} }
 					/>
 				);
-				canContinue = Boolean( systemNameChosen );
+				canContinue = Boolean(
+					row &&
+					isSelectable( row ) &&
+					! needsVariant( row, variantChosen )
+				);
 				onContinue = () => {
 					setSub( 'connect' );
 					void persist( {
 						step: 2,
 						connector: entry?.connector ?? null,
-						answers: { system: systemNameChosen ?? undefined },
+						answers: {
+							system: systemNameChosen ?? undefined,
+							variant: variantChosen ?? undefined,
+						},
 					} ).catch( () => undefined );
 				};
 				onBack = () => void move.run( 1 );
@@ -312,7 +346,7 @@ export function Wizard() {
 						) }
 					/>
 				);
-				canContinue = Boolean( connection );
+				canContinue = isConnectedNow( connection );
 				onContinue = () =>
 					void move.run( 3, {
 						connector: connection?.connector ?? null,
@@ -345,7 +379,7 @@ export function Wizard() {
 					) }
 				</Callout>
 			);
-			canContinue = Boolean( connection );
+			canContinue = isConnectedNow( connection );
 			onContinue = () => void move.run( 4, { answers: { what } } );
 			break;
 		case 4:

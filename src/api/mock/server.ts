@@ -3,10 +3,10 @@
  * development build (`ESTASOFT_MOCK=1`) and by the tests. It is never imported by the production bundle.
  */
 import type { Transport, TransportRequest, TransportResponse } from '../client';
+import type { SystemEntry } from '../local-types';
 import type {
 	AttentionGroup,
 	BootData,
-	CatalogEntry,
 	Connection,
 	ConnectionTestResult,
 	DashboardMode,
@@ -26,6 +26,7 @@ import type {
 	TaxMap,
 } from '../types';
 import { CATALOG } from './catalog';
+import { createConnectMock } from './connect';
 import {
 	aed,
 	CURRENCY,
@@ -48,7 +49,13 @@ import {
 	TIMEZONE,
 } from './data';
 
-export type Scenario = 'normal' | 'first_run' | 'paused' | 'shadow';
+export type Scenario =
+	| 'normal'
+	| 'first_run'
+	| 'paused'
+	| 'shadow'
+	/** The normal world plus a signed-out Xero, a TallyPrime export, Wafeq, Business Central and SAP. */
+	| 'systems';
 
 export interface MockOptions {
 	scenario?: Scenario;
@@ -207,7 +214,8 @@ export function createMockServer( options: MockOptions = {} ) {
 	let recon: ReconOverview = makeRecon();
 	let settings: Settings = makeSettings();
 	let readiness: Readiness = makeReadiness();
-	let catalog: CatalogEntry[] = CATALOG;
+	let catalog: SystemEntry[] = CATALOG;
+	const connect = createConnectMock( { systems: scenario === 'systems' } );
 	const unmatched = [
 		{
 			product_id: 501,
@@ -260,6 +268,7 @@ export function createMockServer( options: MockOptions = {} ) {
 	const requests: {
 		method: string;
 		route: string;
+		query: Record< string, string >;
 		body: unknown;
 		headers: Record< string, string >;
 	}[] = [];
@@ -834,7 +843,11 @@ export function createMockServer( options: MockOptions = {} ) {
 		[
 			'GET',
 			/^\/connections$/,
-			() => ok( connection ? [ status().connection ] : [] ),
+			() =>
+				ok( [
+					...( connection ? [ status().connection ] : [] ),
+					...connect.summaries(),
+				] ),
 		],
 		[
 			'POST',
@@ -1539,6 +1552,7 @@ export function createMockServer( options: MockOptions = {} ) {
 		requests.push( {
 			method: req.method,
 			route: req.route,
+			query: req.query,
 			body: req.body,
 			headers: req.headers,
 		} );
@@ -1564,12 +1578,19 @@ export function createMockServer( options: MockOptions = {} ) {
 			);
 		} else {
 			const route = req.route.replace( /\/+$/, '' ) || '/';
-			for ( const [ method, pattern, handler ] of routes ) {
+			// The connect experience answers first and passes on what is not its own (Odoo, the rest).
+			for ( const [ method, pattern, handler ] of [
+				...connect.routes,
+				...routes,
+			] ) {
 				const match =
 					method === req.method ? route.match( pattern ) : null;
 				if ( match ) {
-					answer = handler( match, req );
-					break;
+					const candidate = handler( match, req );
+					if ( candidate !== undefined ) {
+						answer = candidate;
+						break;
+					}
 				}
 			}
 		}
@@ -1609,9 +1630,11 @@ export function createMockServer( options: MockOptions = {} ) {
 		get onboarding() {
 			return onboarding;
 		},
+		/** The connections and export files of the connect experience, for assertions. */
+		connect,
 		mappings,
 		aed,
-		setCatalog: ( next: CatalogEntry[] ) => {
+		setCatalog: ( next: SystemEntry[] ) => {
 			catalog = next;
 		},
 	};

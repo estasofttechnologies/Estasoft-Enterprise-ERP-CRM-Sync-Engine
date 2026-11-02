@@ -1,6 +1,5 @@
-import { useEffect, useState } from '@wordpress/element';
+import { useEffect, useRef, useState } from '@wordpress/element';
 import { __, _n, sprintf } from '@wordpress/i18n';
-import { ApiError } from '../../api/client';
 import { api } from '../../api/endpoints';
 import type {
 	Connection,
@@ -9,11 +8,12 @@ import type {
 } from '../../api/types';
 import { useApp } from '../../app/AppContext';
 import { useNotices } from '../../app/NoticeProvider';
-import { navigate, useRoute } from '../../app/router';
+import { Link, navigate, routeTo, useRoute } from '../../app/router';
 import { useStatus } from '../../app/StatusProvider';
 import { Btn } from '../../components/Btn';
 import { Callout } from '../../components/Callout';
 import { Card } from '../../components/Card';
+import { CopyButton } from '../../components/CopyButton';
 import { DateTime } from '../../components/DateTime';
 import { ConfirmDialog } from '../../components/Dialog';
 import { ErrorState, LoadingState } from '../../components/EmptyState';
@@ -33,9 +33,25 @@ import { SaveBar } from '../../components/SaveBar';
 import { StatusBadge } from '../../components/StatusBadge';
 import { useAsyncAction } from '../../hooks/useAsyncAction';
 import { useResource } from '../../hooks/useResource';
+import type { ConnectShape } from '../../lib/connect';
+import {
+	entryForConnector,
+	readSignIn,
+	secretWord,
+	shapeOf,
+} from '../../lib/connect';
 import { formatDay, formatDuration } from '../../lib/format';
 import { catalogMessage, errorText, systemName } from '../../lib/text';
+import { ConnectOutcome } from '../connect/ConnectOutcome';
+import { SignInReturn } from '../connect/SignInReturn';
 import { daysUntil } from './capabilities';
+import {
+	EditSettingsDialog,
+	lowerFirst,
+	ReconnectDialog,
+	ReplaceSecretDialog,
+	savedFields,
+} from './ConnectionDialogs';
 import { ConnectionStateChip } from './ConnectionsList';
 
 const RETRY_OPTIONS = [
@@ -102,8 +118,20 @@ export function ConnectionDetail( { id }: { id: number } ) {
 		{ poll: 60000 }
 	);
 	const connection = detail.data;
+	const catalog = useResource( ( signal ) => api.catalog.list( signal ), [] );
+	const entry = entryForConnector(
+		catalog.data,
+		connection?.connector ?? ''
+	);
+	const shape = shapeOf( entry?.connection_method );
+	const signIn = readSignIn( route.params, route.segments );
+	const onboarding = useResource(
+		( signal ) => api.onboarding.get( signal ),
+		[],
+		{ enabled: signIn.result !== null }
+	);
 	const [ dialog, setDialog ] = useState<
-		'replace' | 'edit' | 'disconnect' | 'pause' | null
+		'replace' | 'reconnect' | 'edit' | 'disconnect' | 'pause' | null
 	>( null );
 	const [ testResult, setTestResult ] =
 		useState< ConnectionTestResult | null >( null );
@@ -124,19 +152,40 @@ export function ConnectionDetail( { id }: { id: number } ) {
 		await Promise.all( [ detail.reload(), reloadStatus() ] );
 	} );
 
+	// A sign-in that comes back while this screen is already open (a hash change, not a page load) must
+	// see the connection as the server has it now: the server may have activated it. Read it again first.
+	const returnKey = signIn.result ? route.hash : '';
+	const [ freshKey, setFreshKey ] = useState( returnKey );
+	useEffect( () => {
+		if ( returnKey && returnKey !== freshKey ) {
+			void detail.reload().then( () => setFreshKey( returnKey ) );
+		}
+		// Only a new return starts a reload.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [ returnKey ] );
+
+	// Open the dialog once, when arriving from the expiry notice or a Reconnect button. The way to
+	// reconnect depends on how the system connects, so wait for the catalog.
+	const opened = useRef( false );
 	useEffect( () => {
 		if (
-			route.params.get( 'replace' ) === '1' &&
-			canConfigure &&
-			connection
+			opened.current ||
+			! canConfigure ||
+			! connection ||
+			catalog.loading
 		) {
-			setDialog( 'replace' );
+			return;
 		}
-		// Open the dialog once, when arriving from the expiry notice.
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [ connection?.id ] );
+		if (
+			route.params.get( 'reconnect' ) === '1' ||
+			route.params.get( 'replace' ) === '1'
+		) {
+			opened.current = true;
+			setDialog( shape === 'own_app' ? 'reconnect' : 'replace' );
+		}
+	}, [ canConfigure, connection, catalog.loading, shape, route.params ] );
 
-	if ( detail.loading ) {
+	if ( detail.loading || ( catalog.loading && ! detail.error ) ) {
 		return (
 			<>
 				<PageHeader
@@ -197,6 +246,32 @@ export function ConnectionDetail( { id }: { id: number } ) {
 		? daysUntil( connection.credential_expires_at, now )
 		: null;
 	const keyProblem = expiresIn !== null && expiresIn <= 30;
+	const fields = savedFields( connection );
+	const word =
+		shape === 'own_app'
+			? __( 'sign-in', 'estasoft-erp-crm-sync-engine' )
+			: secretWord( fields );
+	const firstSecret = fields.find( ( field ) => field.secret );
+	const isExport = shape === 'export_file';
+	// What Disconnect removes: the saved key, secret or password, the sign-in, or nothing secret at all.
+	const removedText = isExport
+		? __( 'the saved settings', 'estasoft-erp-crm-sync-engine' )
+		: shape === 'own_app'
+			? __(
+					'the saved sign-in and secret',
+					'estasoft-erp-crm-sync-engine'
+				)
+			: shape === 'key' || ! shape
+				? __( 'the saved API key', 'estasoft-erp-crm-sync-engine' )
+				: sprintf(
+						/* translators: %s: "secret" or "password" */
+						__( 'the saved %s', 'estasoft-erp-crm-sync-engine' ),
+						word
+					);
+	const reconnect = () =>
+		setDialog( shape === 'own_app' ? 'reconnect' : 'replace' );
+	const leaveSignIn = () =>
+		navigate( routeTo( `/connections/${ id }` ), true );
 
 	return (
 		<>
@@ -222,13 +297,30 @@ export function ConnectionDetail( { id }: { id: number } ) {
 					) }
 				</Callout>
 			) : null }
-			{ connection.status === 'needs_reconnect' ? (
+			{ signIn.result && canConfigure && freshKey === returnKey ? (
+				<SignInReturn
+					key={ returnKey }
+					connection={ connection }
+					system={ entry?.name ?? name }
+					result={ signIn.result }
+					continueSetup={
+						Boolean( onboarding.data ) &&
+						! onboarding.data?.completed
+					}
+					onClose={ leaveSignIn }
+					onTested={ () => {
+						void detail.reload();
+						void reloadStatus();
+					} }
+				/>
+			) : null }
+			{ connection.status === 'needs_reconnect' && ! signIn.result ? (
 				<Callout
 					tone="warning"
 					role="alert"
 					action={
 						canConfigure ? (
-							<Btn small onClick={ () => setDialog( 'replace' ) }>
+							<Btn small onClick={ reconnect }>
 								{ __(
 									'Reconnect',
 									'estasoft-erp-crm-sync-engine'
@@ -247,11 +339,61 @@ export function ConnectionDetail( { id }: { id: number } ) {
 						{ __(
 							'The plugin stopped sending to this connection. Items wait as Queued and are kept.',
 							'estasoft-erp-crm-sync-engine'
-						) }
+						) }{ ' ' }
+						<Link
+							to="/connections/problems"
+							className="estasoft-sync-link"
+						>
+							{ __(
+								'What does this mean?',
+								'estasoft-erp-crm-sync-engine'
+							) }
+						</Link>
 					</p>
 				</Callout>
 			) : null }
-			{ paused ? (
+			{ paused && connection.paused_reason === 'sign_in' ? (
+				<Callout
+					tone="danger"
+					role="alert"
+					action={
+						canConfigure && firstSecret ? (
+							<Btn small onClick={ reconnect }>
+								{ sprintf(
+									/* translators: %s: name of the secret such as "API key" */ __(
+										'Change the %s',
+										'estasoft-erp-crm-sync-engine'
+									),
+									lowerFirst( firstSecret.label )
+								) }
+							</Btn>
+						) : undefined
+					}
+				>
+					<p>
+						{ catalogMessage( 'SYNC-AUTH-001', {}, name ) }{ ' ' }
+						<span className="estasoft-sync-mono">
+							SYNC-AUTH-001
+						</span>
+					</p>
+					<p className="estasoft-sync-muted">
+						{ __(
+							'The connection is paused. Orders wait as Queued; none are marked Failed. Check the details, then test again.',
+							'estasoft-erp-crm-sync-engine'
+						) }{ ' ' }
+						<Link
+							to="/connections/problems"
+							className="estasoft-sync-link"
+						>
+							{ __(
+								'What does this mean?',
+								'estasoft-erp-crm-sync-engine'
+							) }
+						</Link>
+					</p>
+				</Callout>
+			) : null }
+			{ paused && connection.paused_reason !== 'sign_in' ? (
 				<Callout
 					tone={
 						connection.paused_reason === 'circuit'
@@ -296,31 +438,41 @@ export function ConnectionDetail( { id }: { id: number } ) {
 					}
 					action={
 						canConfigure ? (
-							<Btn small onClick={ () => setDialog( 'replace' ) }>
-								{ __(
-									'Replace the key',
-									'estasoft-erp-crm-sync-engine'
-								) }
+							<Btn small onClick={ reconnect }>
+								{ shape === 'own_app'
+									? __(
+											'Sign in again',
+											'estasoft-erp-crm-sync-engine'
+										)
+									: sprintf(
+											/* translators: %s: "key", "secret" or "password" */ __(
+												'Replace the %s',
+												'estasoft-erp-crm-sync-engine'
+											),
+											word
+										) }
 							</Btn>
 						) : undefined
 					}
 				>
 					{ expiresIn !== null && expiresIn < 0
 						? sprintf(
-								/* translators: %s: date */ __(
-									'The key ran out on %s. Make a new key and replace it here.',
+								/* translators: 1: "key", "secret", "password" or "sign-in", 2: date */ __(
+									'The %1$s ran out on %2$s. Make a new one and replace it here.',
 									'estasoft-erp-crm-sync-engine'
 								),
+								word,
 								formatDay(
 									connection.credential_expires_at,
 									cfg
 								)
 							)
 						: sprintf(
-								/* translators: %s: date */ __(
-									'The key runs out on %s. Make a new key and replace it here before then; your mappings stay.',
+								/* translators: 1: "key", "secret", "password" or "sign-in", 2: date */ __(
+									'The %1$s runs out on %2$s. Make a new one and replace it here before then; your mappings stay.',
 									'estasoft-erp-crm-sync-engine'
 								),
+								word,
 								formatDay(
 									connection.credential_expires_at,
 									cfg
@@ -403,7 +555,7 @@ export function ConnectionDetail( { id }: { id: number } ) {
 						] }
 					/>
 					<div className="estasoft-sync-actions">
-						{ canConfigure ? (
+						{ canConfigure && ! isExport ? (
 							<Btn
 								small
 								busy={ test.busy }
@@ -433,7 +585,11 @@ export function ConnectionDetail( { id }: { id: number } ) {
 						</Callout>
 					) : null }
 					{ testResult ? (
-						<TestResultView result={ testResult } system={ name } />
+						<TestResultView
+							result={ testResult }
+							system={ name }
+							shape={ shape ?? 'key' }
+						/>
 					) : null }
 				</Card>
 
@@ -442,89 +598,170 @@ export function ConnectionDetail( { id }: { id: number } ) {
 						'Credentials',
 						'estasoft-erp-crm-sync-engine'
 					) }
-					description={ __(
-						'The saved key is never shown to anyone. It can only be replaced.',
-						'estasoft-erp-crm-sync-engine'
-					) }
+					description={
+						isExport
+							? __(
+									'The settings that shape the file. There is no key: nothing is sent anywhere.',
+									'estasoft-erp-crm-sync-engine'
+								)
+							: sprintf(
+									/* translators: %s: "key", "secret", "password" or "sign-in" */
+									__(
+										'The saved %s is never shown to anyone. It can only be replaced.',
+										'estasoft-erp-crm-sync-engine'
+									),
+									shape === 'own_app'
+										? __(
+												'secret',
+												'estasoft-erp-crm-sync-engine'
+											)
+										: word
+								)
+					}
 				>
 					<KeyValueList
 						items={ [
-							...connection.credentials.map( ( field ) => ( {
+							...fields.map( ( field ) => ( {
 								label: field.label,
-								value: field.secret ? (
-									<span className="estasoft-sync-mono">
-										{ field.has_value
-											? sprintf(
-													/* translators: bullets then the words "saved encrypted" */ '•••••••••••• %s',
-													__(
-														'saved encrypted',
-														'estasoft-erp-crm-sync-engine'
-													)
-												)
-											: __(
-													'Not set',
+								value:
+									field.type === 'display' ? (
+										<span className="estasoft-sync-codecell">
+											<code
+												className="estasoft-sync-mono"
+												dir="ltr"
+											>
+												{ field.value || field.default }
+											</code>
+											<CopyButton
+												text={
+													field.value || field.default
+												}
+												label={ __(
+													'Copy',
 													'estasoft-erp-crm-sync-engine'
 												) }
-									</span>
-								) : (
-									<span dir="ltr">
-										{ field.value ?? '—' }
-									</span>
-								),
+											/>
+										</span>
+									) : field.secret ? (
+										<span className="estasoft-sync-mono">
+											{ field.has_value
+												? sprintf(
+														/* translators: bullets then the words "saved encrypted" */ '•••••••••••• %s',
+														__(
+															'saved encrypted',
+															'estasoft-erp-crm-sync-engine'
+														)
+													)
+												: __(
+														'Not set',
+														'estasoft-erp-crm-sync-engine'
+													) }
+										</span>
+									) : (
+										<span dir="ltr">
+											{ field.value ?? '—' }
+										</span>
+									),
 							} ) ),
-							{
-								label: __(
-									'Encryption key',
-									'estasoft-erp-crm-sync-engine'
-								),
-								value: status?.encryption_key_missing ? (
-									<StatusBadge tone="danger">
-										{ __(
-											'Missing from wp-config.php',
-											'estasoft-erp-crm-sync-engine'
-										) }
-									</StatusBadge>
-								) : (
-									<StatusBadge tone="success">
-										{ __(
-											'Found in wp-config.php',
-											'estasoft-erp-crm-sync-engine'
-										) }
-									</StatusBadge>
-								),
-							},
+							...( isExport
+								? []
+								: [
+										{
+											label: __(
+												'Encryption key',
+												'estasoft-erp-crm-sync-engine'
+											),
+											value: status?.encryption_key_missing ? (
+												<StatusBadge tone="danger">
+													{ __(
+														'Missing from wp-config.php',
+														'estasoft-erp-crm-sync-engine'
+													) }
+												</StatusBadge>
+											) : (
+												<StatusBadge tone="success">
+													{ __(
+														'Found in wp-config.php',
+														'estasoft-erp-crm-sync-engine'
+													) }
+												</StatusBadge>
+											),
+										},
+									] ),
 						] }
 					/>
 					{ canConfigure ? (
 						<div className="estasoft-sync-actions">
-							<Btn
-								small
-								onClick={ () => setDialog( 'replace' ) }
-								disabled={ Boolean(
-									status?.encryption_key_missing
-								) }
-							>
-								{ __(
-									'Change the API key',
-									'estasoft-erp-crm-sync-engine'
-								) }
-							</Btn>
+							{ firstSecret ? (
+								<Btn
+									small
+									onClick={ () => setDialog( 'replace' ) }
+									disabled={ Boolean(
+										status?.encryption_key_missing
+									) }
+								>
+									{ sprintf(
+										/* translators: %s: name of the secret such as "API key" */ __(
+											'Change the %s',
+											'estasoft-erp-crm-sync-engine'
+										),
+										lowerFirst( firstSecret.label )
+									) }
+								</Btn>
+							) : null }
 							<Btn small onClick={ () => setDialog( 'edit' ) }>
-								{ __(
-									'Edit address and user',
-									'estasoft-erp-crm-sync-engine'
-								) }
+								{ shape === 'key'
+									? __(
+											'Edit address and user',
+											'estasoft-erp-crm-sync-engine'
+										)
+									: __(
+											'Edit settings',
+											'estasoft-erp-crm-sync-engine'
+										) }
 							</Btn>
+							{ shape === 'own_app' ? (
+								<Btn small onClick={ reconnect }>
+									{ __(
+										'Sign in again',
+										'estasoft-erp-crm-sync-engine'
+									) }
+								</Btn>
+							) : null }
 						</div>
 					) : null }
 				</Card>
 			</div>
 
-			<Reliability
-				connection={ connection }
-				disabled={ ! canConfigure }
-				onSaved={ () => void detail.reload() }
-			/>
+			{ isExport ? (
+				<Card title={ __( 'Exports', 'estasoft-erp-crm-sync-engine' ) }>
+					<p>
+						{ __(
+							'This connection uses files. The plugin writes a file, you download it and import it in your program. Nothing is sent over the internet.',
+							'estasoft-erp-crm-sync-engine'
+						) }
+					</p>
+					<div className="estasoft-sync-actions">
+						<Btn
+							variant="primary"
+							onClick={ () =>
+								navigate( `/connections/${ id }/exports` )
+							}
+						>
+							{ __(
+								'Open the Exports screen',
+								'estasoft-erp-crm-sync-engine'
+							) }
+						</Btn>
+					</div>
+				</Card>
+			) : (
+				<Reliability
+					connection={ connection }
+					disabled={ ! canConfigure }
+					onSaved={ () => void detail.reload() }
+				/>
+			) }
 
 			{ connection.warehouses.length > 0 ? (
 				<Card
@@ -617,13 +854,14 @@ export function ConnectionDetail( { id }: { id: number } ) {
 							</p>
 							<p className="estasoft-sync-muted">
 								{ sprintf(
-									/* translators: 1: number of orders waiting, 2: number of failed orders */
+									/* translators: 1: number of orders waiting, 2: number of failed orders, 3: what is removed, such as "the saved API key" */
 									__(
-										'Stops syncing and removes the saved API key. Waiting orders (%1$d) and failed orders (%2$d) are kept for 30 days but are not sent. Nothing in your system or WooCommerce is deleted.',
+										'Stops syncing and removes %3$s. Waiting orders (%1$d) and failed orders (%2$d) are kept for 30 days but are not sent. Nothing in your system or WooCommerce is deleted.',
 										'estasoft-erp-crm-sync-engine'
 									),
 									status?.waiting ?? 0,
-									status?.by_state.failed ?? 0
+									status?.by_state.failed ?? 0,
+									removedText
 								) }
 							</p>
 						</div>
@@ -652,9 +890,10 @@ export function ConnectionDetail( { id }: { id: number } ) {
 				/>
 			) : null }
 			{ dialog === 'replace' ? (
-				<ReplaceKeyDialog
+				<ReplaceSecretDialog
 					connection={ connection }
-					system={ name }
+					system={ entry?.name ?? name }
+					shape={ shape ?? 'key' }
 					onClose={ () => setDialog( null ) }
 					onDone={ () => {
 						void detail.reload();
@@ -662,10 +901,34 @@ export function ConnectionDetail( { id }: { id: number } ) {
 					} }
 				/>
 			) : null }
-			{ dialog === 'edit' ? (
-				<EditConfigDialog
+			{ dialog === 'reconnect' ? (
+				<ReconnectDialog
 					connection={ connection }
-					system={ name }
+					system={ entry?.name ?? name }
+					onClose={ () => setDialog( null ) }
+				/>
+			) : null }
+			{ dialog === 'edit' ? (
+				<EditSettingsDialog
+					connection={ connection }
+					system={ entry?.name ?? name }
+					title={
+						shape === 'key'
+							? sprintf(
+									/* translators: %s: system name */ __(
+										'Edit the %s address and user',
+										'estasoft-erp-crm-sync-engine'
+									),
+									name
+								)
+							: sprintf(
+									/* translators: %s: system name */ __(
+										'Edit the %s settings',
+										'estasoft-erp-crm-sync-engine'
+									),
+									name
+								)
+					}
 					onClose={ () => setDialog( null ) }
 					onDone={ () => void detail.reload() }
 				/>
@@ -702,9 +965,13 @@ export function ConnectionDetail( { id }: { id: number } ) {
 					} }
 				>
 					<p>
-						{ __(
-							'Syncing stops and the saved API key is removed. Waiting and failed orders are kept for 30 days but are not sent.',
-							'estasoft-erp-crm-sync-engine'
+						{ sprintf(
+							/* translators: %s: what is removed, such as "the saved API key" */
+							__(
+								'Syncing stops and %s is removed. Waiting and failed orders are kept for 30 days but are not sent.',
+								'estasoft-erp-crm-sync-engine'
+							),
+							removedText
 						) }
 					</p>
 					<p className="estasoft-sync-muted">
@@ -720,83 +987,50 @@ export function ConnectionDetail( { id }: { id: number } ) {
 }
 
 /**
- * Shows what a connection test found.
+ * Shows what a connection test found: the checks, the access that is missing, or the reason it failed.
  *
- * @param props        Result and system name.
+ * @param props        Result, system name and the way the system connects.
  * @param props.result
  * @param props.system
+ * @param props.shape
  * @return The message.
  */
 export function TestResultView( {
 	result,
 	system,
+	shape = 'key',
 }: {
 	result: ConnectionTestResult;
 	system: string;
+	shape?: ConnectShape;
 } ) {
-	if ( ! result.ok ) {
-		const code = result.error?.code;
-		return (
-			<Callout tone="danger" role="alert">
-				<p>
-					{ result.error?.message ||
-						( code
-							? catalogMessage(
-									code,
-									result.error?.data?.context,
-									system
-								)
-							: '' ) ||
-						sprintf(
-							/* translators: %s: system name */ __(
-								'%s could not be reached or refused the test.',
-								'estasoft-erp-crm-sync-engine'
-							),
-							system
-						) }
-					{ code ? (
-						<>
-							{ ' ' }
-							<span className="estasoft-sync-mono">{ code }</span>
-						</>
-					) : null }
-				</p>
-			</Callout>
-		);
-	}
-	if ( result.missing_permissions.length > 0 ) {
-		return (
-			<Callout tone="warning" role="status">
-				<p>
+	const passed = result.ok && result.missing_permissions.length === 0;
+	return (
+		<>
+			<ConnectOutcome
+				shape={ shape }
+				system={ system }
+				result={ result }
+				failure={ null }
+				nothingSaved={ false }
+			/>
+			{ passed ? (
+				<Callout tone="success" role="status">
 					{ sprintf(
-						/* translators: 1: system name and version, 2: list of missing permissions, 3: system name */ __(
-							'%1$s answered, but this user is missing access: %2$s. Give the user the right access in %3$s, then test again.',
+						/* translators: 1: system version, 2: company, 3: number of warehouses */
+						_n(
+							'Connected. %1$s, company %2$s, %3$d warehouse found.',
+							'Connected. %1$s, company %2$s, %3$d warehouses found.',
+							result.warehouses.length,
 							'estasoft-erp-crm-sync-engine'
 						),
-						result.version || system,
-						result.missing_permissions.join( ', ' ),
-						system
-					) }{ ' ' }
-					<span className="estasoft-sync-mono">SYNC-AUTH-004</span>
-				</p>
-			</Callout>
-		);
-	}
-	return (
-		<Callout tone="success" role="status">
-			{ sprintf(
-				/* translators: 1: system version, 2: company, 3: number of warehouses */
-				_n(
-					'Connected. %1$s, company %2$s, %3$d warehouse found.',
-					'Connected. %1$s, company %2$s, %3$d warehouses found.',
-					result.warehouses.length,
-					'estasoft-erp-crm-sync-engine'
-				),
-				result.version,
-				result.company,
-				result.warehouses.length
-			) }
-		</Callout>
+						result.version,
+						result.company,
+						result.warehouses.length
+					) }
+				</Callout>
+			) : null }
+		</>
 	);
 }
 
@@ -1064,179 +1298,5 @@ function Reliability( {
 				</Callout>
 			) : null }
 		</Card>
-	);
-}
-
-function ReplaceKeyDialog( {
-	connection,
-	system,
-	onClose,
-	onDone,
-}: {
-	connection: Connection;
-	system: string;
-	onClose: () => void;
-	onDone: () => void;
-} ) {
-	const { notify } = useNotices();
-	const secrets = connection.credentials.filter( ( field ) => field.secret );
-	const [ values, setValues ] = useState< Record< string, string > >( {} );
-	const config: Record< string, string > = {};
-	connection.credentials
-		.filter( ( field ) => ! field.secret )
-		.forEach( ( field ) => {
-			config[ field.name ] = field.value ?? '';
-		} );
-	const filled = secrets.every(
-		( field ) =>
-			! field.required || ( values[ field.name ] ?? '' ).trim() !== ''
-	);
-	return (
-		<ConfirmDialog
-			title={ sprintf(
-				/* translators: %s: system name */ __(
-					'Replace the %s key',
-					'estasoft-erp-crm-sync-engine'
-				),
-				system
-			) }
-			confirmLabel={ __(
-				'Test and save',
-				'estasoft-erp-crm-sync-engine'
-			) }
-			confirmDisabled={ ! filled }
-			onClose={ onClose }
-			onConfirm={ async () => {
-				const entered: Record< string, string > = {};
-				secrets.forEach( ( field ) => {
-					if ( ( values[ field.name ] ?? '' ).trim() ) {
-						entered[ field.name ] = values[ field.name ].trim();
-					}
-				} );
-				const result = await api.connections.testInput( {
-					connector: connection.connector,
-					config,
-					secrets: entered,
-				} );
-				if ( ! result.ok ) {
-					// Carry the whole test with the error, so the dialog can list what is missing.
-					throw new ApiError(
-						result.error?.code ?? 'SYNC-AUTH-001',
-						result.error?.message ||
-							catalogMessage(
-								result.error?.code ?? 'SYNC-AUTH-001',
-								{},
-								system
-							),
-						result.error?.data?.status ?? 422,
-						null,
-						{},
-						{},
-						{ errors: [], test: result, keyLine: null }
-					);
-				}
-				await api.connections.update( connection.id, {
-					secrets: entered,
-				} );
-				notify( {
-					kind: 'success',
-					text: sprintf(
-						/* translators: %s: system name */ __(
-							'The new %s key is saved, encrypted. Your mappings stay.',
-							'estasoft-erp-crm-sync-engine'
-						),
-						system
-					),
-				} );
-				onDone();
-			} }
-		>
-			<p>
-				{ sprintf(
-					/* translators: %s: system name */ __(
-						'Paste the new key from %s. It is tested first, and saved only if the test passes. The old key stays until then.',
-						'estasoft-erp-crm-sync-engine'
-					),
-					system
-				) }
-			</p>
-			{ secrets.map( ( field ) => (
-				<TextField
-					key={ field.name }
-					label={ field.label }
-					type="password"
-					autoComplete="new-password"
-					value={ values[ field.name ] ?? '' }
-					onChange={ ( value ) =>
-						setValues( { ...values, [ field.name ]: value } )
-					}
-					hint={
-						field.hint ||
-						__(
-							'Saved encrypted. It is never shown again.',
-							'estasoft-erp-crm-sync-engine'
-						)
-					}
-				/>
-			) ) }
-		</ConfirmDialog>
-	);
-}
-
-function EditConfigDialog( {
-	connection,
-	system,
-	onClose,
-	onDone,
-}: {
-	connection: Connection;
-	system: string;
-	onClose: () => void;
-	onDone: () => void;
-} ) {
-	const { notify } = useNotices();
-	const fields = connection.credentials.filter( ( field ) => ! field.secret );
-	const [ values, setValues ] = useState< Record< string, string > >( () =>
-		Object.fromEntries(
-			fields.map( ( field ) => [ field.name, field.value ?? '' ] )
-		)
-	);
-	return (
-		<ConfirmDialog
-			title={ sprintf(
-				/* translators: %s: system name */ __(
-					'Edit the %s address and user',
-					'estasoft-erp-crm-sync-engine'
-				),
-				system
-			) }
-			confirmLabel={ __( 'Save', 'estasoft-erp-crm-sync-engine' ) }
-			onClose={ onClose }
-			onConfirm={ async () => {
-				await api.connections.update( connection.id, {
-					config: values,
-				} );
-				notify( {
-					kind: 'success',
-					text: __(
-						'Saved. Test the connection to check the new details.',
-						'estasoft-erp-crm-sync-engine'
-					),
-				} );
-				onDone();
-			} }
-		>
-			{ fields.map( ( field ) => (
-				<TextField
-					key={ field.name }
-					label={ field.label }
-					value={ values[ field.name ] ?? '' }
-					onChange={ ( value ) =>
-						setValues( { ...values, [ field.name ]: value } )
-					}
-					hint={ field.hint }
-				/>
-			) ) }
-		</ConfirmDialog>
 	);
 }

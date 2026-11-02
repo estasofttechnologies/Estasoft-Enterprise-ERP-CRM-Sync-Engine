@@ -1,9 +1,12 @@
 /**
- * The 34 systems, as GET /catalog returns them (generated from includes/Catalog/catalog.php for the mock layer).
+ * The 34 systems, as GET /catalog returns them. The rows are generated from includes/Catalog/catalog.php;
+ * `withConnector` adds what the connector says about itself (id, hosts, links, steps, form fields).
  */
+import type { SystemEntry } from '../local-types';
 import type { CatalogEntry } from '../types';
+import { withConnector } from './connectors';
 
-export const CATALOG: CatalogEntry[] = [
+const ROWS: CatalogEntry[] = [
 	{
 		name: 'QuickBooks Online',
 		type: 'accounting',
@@ -345,3 +348,5 @@ export const CATALOG: CatalogEntry[] = [
 		wave: 4,
 	},
 ];
+
+export const CATALOG: SystemEntry[] = ROWS.map( withConnector );

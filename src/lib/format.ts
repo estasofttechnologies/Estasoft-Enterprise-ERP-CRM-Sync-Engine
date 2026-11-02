@@ -465,3 +465,32 @@ export function formatKilobytes( bytes: number ): string {
 		Math.round( bytes / 1024 )
 	);
 }
+
+/**
+ * Formats the size of a file: bytes below 1 KB, then KB with one place below 10, then MB.
+ *
+ * @param bytes Bytes.
+ * @return Text such as `812 B`, `4.2 KB` or `1.3 MB`.
+ */
+export function formatFileSize( bytes: number ): string {
+	if ( bytes < 1024 ) {
+		return sprintf(
+			/* translators: %d: bytes */
+			__( '%d B', 'estasoft-erp-crm-sync-engine' ),
+			bytes
+		);
+	}
+	if ( bytes < 1024 * 1024 ) {
+		const kb = bytes / 1024;
+		return sprintf(
+			/* translators: %s: kilobytes, such as 4.2 */
+			__( '%s KB', 'estasoft-erp-crm-sync-engine' ),
+			kb < 10 ? kb.toFixed( 1 ) : String( Math.round( kb ) )
+		);
+	}
+	return sprintf(
+		/* translators: %s: megabytes, such as 1.3 */
+		__( '%s MB', 'estasoft-erp-crm-sync-engine' ),
+		( bytes / ( 1024 * 1024 ) ).toFixed( 1 )
+	);
+}

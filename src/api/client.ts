@@ -35,6 +35,8 @@ export interface TransportResponse {
 	status: number;
 	headers: { get: ( name: string ) => string | null };
 	text: () => Promise< string >;
+	/** Present on a real `Response`; lets a download keep its bytes (a DATEV file is Windows-1252, not UTF-8). */
+	blob?: () => Promise< Blob >;
 }
 
 export type Transport = (
@@ -375,6 +377,28 @@ export async function request< T >(
 ): Promise< T > {
 	const response = await send( route, options );
 	return parseBody< T >( response, options );
+}
+
+/**
+ * Sends a request and returns the answer as a file, byte for byte.
+ *
+ * @param  route   Route under the namespace, for example `/exports/5/download`.
+ * @param  options Method, query and signal.
+ * @return The file.
+ * @throws {ApiError} When the server answers with an error status or cannot be reached.
+ */
+export async function requestBlob(
+	route: string,
+	options: RequestOptions = {}
+): Promise< Blob > {
+	const response = await send( route, {
+		...options,
+		accept: options.accept ?? '*/*',
+	} );
+	if ( typeof response.blob === 'function' ) {
+		return response.blob();
+	}
+	return new Blob( [ await response.text() ] );
 }
 
 async function send(

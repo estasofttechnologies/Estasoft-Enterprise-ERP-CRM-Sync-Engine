@@ -196,7 +196,7 @@ describe( 'Setup wizard', () => {
 		).toBeGreaterThan( 0 );
 	} );
 
-	it( 'explains a system this release cannot connect yet instead of pretending', async () => {
+	it( 'explains a product with no documented way to connect instead of pretending', async () => {
 		const { user } = await renderApp( {
 			scenario: 'first_run',
 			route: '/setup',
@@ -205,19 +205,23 @@ describe( 'Setup wizard', () => {
 		await user.click( screen.getByRole( 'button', { name: 'Continue' } ) );
 		await user.type(
 			await screen.findByRole( 'searchbox', { name: 'Find a system' } ),
-			'xero'
+			'sage 200'
 		);
 		await user.click(
-			screen.getAllByRole( 'button', { name: 'Select Xero' } )[ 0 ]
+			screen.getAllByRole( 'button', {
+				name: 'Select Sage 200, Sage 300 and Sage X3',
+			} )[ 0 ]
 		);
+		// Which product comes first: Continue stays off until one is chosen.
+		expect(
+			screen.getByRole( 'button', { name: 'Continue' } )
+		).toBeDisabled();
+		await user.click( await screen.findByLabelText( 'Sage X3' ) );
 		await user.click( screen.getByRole( 'button', { name: 'Continue' } ) );
 		expect(
-			await screen.findByText(
-				/The Xero connector is not part of this release yet/
-			)
-		).toBeInTheDocument();
-		expect(
-			screen.getByRole( 'heading', { name: 'How you connect to Xero' } )
+			await screen.findByRole( 'heading', {
+				name: 'How you connect to Sage X3',
+			} )
 		).toBeInTheDocument();
 		expect(
 			screen.getByRole( 'button', { name: 'Continue' } )
