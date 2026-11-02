@@ -17,6 +17,7 @@ use Estasoft\SyncEngine\ModuleInterface;
 use Estasoft\SyncEngine\Rest\Controllers\CapacityController;
 use Estasoft\SyncEngine\Rest\Controllers\CatalogController;
 use Estasoft\SyncEngine\Rest\Controllers\ConnectionsController;
+use Estasoft\SyncEngine\Rest\Controllers\ExportsController;
 use Estasoft\SyncEngine\Rest\Controllers\InboundController;
 use Estasoft\SyncEngine\Rest\Controllers\InvoicesController;
 use Estasoft\SyncEngine\Rest\Controllers\LogsController;
@@ -97,6 +98,7 @@ final class RestModule implements ModuleInterface {
 		OrdersController::class,
 		InboundController::class,
 		OAuthController::class,
+		ExportsController::class,
 	);
 
 	/**

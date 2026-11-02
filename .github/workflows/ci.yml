@@ -2,7 +2,7 @@ name: CI
 
 # Runs on every push to main and on every pull request against it.
 #
-#   php-lint     syntax on PHP 8.1 to 8.4, plus the scan for code WordPress.org rejects
+#   php-lint     syntax on PHP 8.1 to 8.4, the scan for code WordPress.org rejects, and the check that the connector index is up to date
 #   phpcs        WordPress Coding Standards (phpcs.xml.dist)
 #   phpstan      static analysis (phpstan.neon.dist)
 #   unit         PHPUnit unit tests on PHP 8.1 to 8.4 (no WordPress, no database)
@@ -46,7 +46,7 @@ jobs:
           php-version: ${{ matrix.php }}
           install: "false"
 
-      - name: Lint every PHP file and scan for red flags
+      - name: Lint every PHP file, scan for red flags and check the connector index
         run: bash bin/lint-php.sh
 
   phpcs:

@@ -11,6 +11,8 @@ namespace Estasoft\SyncEngine\Jobs\Connections;
 
 defined( 'ABSPATH' ) || exit;
 
+// phpcs:disable WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the arguments of the exceptions here are error templates and fixed texts, not output.
+
 use Estasoft\SyncEngine\Contract\ConnectorError;
 use Estasoft\SyncEngine\Contract\ConnectorInterface;
 use Estasoft\SyncEngine\Contract\ConnectorRegistry;
@@ -29,6 +31,8 @@ use Estasoft\SyncEngine\Domain\Connection;
 use Estasoft\SyncEngine\Domain\ConnectionStatus;
 use Estasoft\SyncEngine\Domain\ErrorCode;
 use Estasoft\SyncEngine\Jobs\JobException;
+use Estasoft\SyncEngine\Connectors\Support\GuardedSignInConnector;
+use Estasoft\SyncEngine\Rest\OAuth\SignInConnector;
 
 /**
  * CON-1 to CON-4, CON-9, CON-10, MAP-1, ONB-5.
@@ -66,18 +70,26 @@ final class ConnectionService {
 	private \Closure $catalogRows;
 
 	/**
+	 * The connect form of each connector.
+	 *
+	 * @var CatalogForms
+	 */
+	private CatalogForms $forms;
+
+	/**
 	 * Set up with what it depends on.
 	 *
-	 * @param ConnectionRepository         $connections Connections.
-	 * @param ConnectionSettings           $limits      Reliability settings rules and defaults.
-	 * @param MappingRepository            $mappings    Mapping versions.
-	 * @param \Closure():ConnectorRegistry $registry    Returns the connector registry.
-	 * @param SecretBox                    $box         Encryption.
-	 * @param Logger                       $logger      Log.
-	 * @param Clock                        $clock       Time source.
-	 * @param PauseController              $pause       Resumes a connection whose new credentials passed the test.
-	 * @param SignInPauses                 $signIns     Which connections were paused by a refused sign-in.
-	 * @param \Closure|null                $catalogRows Returns the catalog rows; the static file by default.
+	 * @param ConnectionRepository $connections Connections.
+	 * @param ConnectionSettings   $limits      Reliability settings rules and defaults.
+	 * @param MappingRepository    $mappings    Mapping versions.
+	 * @param \Closure             $registry    Returns the connector registry.
+	 * @param SecretBox            $box         Encryption.
+	 * @param Logger               $logger      Log.
+	 * @param Clock                $clock       Time source.
+	 * @param PauseController      $pause       Resumes a connection whose new credentials passed the test.
+	 * @param SignInPauses         $signIns     Which connections were paused by a refused sign-in.
+	 * @param \Closure|null        $catalogRows Returns the catalog rows; the static file by default.
+	 * @param CatalogForms|null    $forms       Builds (and keeps) the connect form of each connector for the catalog; nothing is kept by default.
 	 */
 	public function __construct(
 		private readonly ConnectionRepository $connections,
@@ -89,8 +101,10 @@ final class ConnectionService {
 		private readonly Clock $clock,
 		private readonly PauseController $pause,
 		private readonly SignInPauses $signIns,
-		?\Closure $catalogRows = null
+		?\Closure $catalogRows = null,
+		?CatalogForms $forms = null
 	) {
+		$this->forms       = $forms ?? new CatalogForms( $registry );
 		$this->catalogRows = $catalogRows ?? static function (): array {
 			$rows = require dirname( __DIR__, 2 ) . '/Catalog/catalog.php';
 			return is_array( $rows ) ? $rows : array();
@@ -147,7 +161,9 @@ final class ConnectionService {
 		$label = trim( (string) ( $input['label'] ?? '' ) );
 		$label = '' === $label ? $connector->label() : mb_substr( $label, 0, 120 );
 
-		$tested = $this->runTest( $connector, 0, $label, $config, $secrets );
+		// A system with a sign-in page cannot be tested before the person signs in: save the app's details and wait for the sign-in.
+		$awaitingSignIn = $connector instanceof SignInConnector && ( ! $connector instanceof GuardedSignInConnector || $connector->requiresSignIn( new Connection( 0, $connector->id(), $connector->type(), $label, ConnectionStatus::Active, $config, array(), $secrets ) ) );
+		$tested         = $awaitingSignIn ? new TestResult( true ) : $this->runTest( $connector, 0, $label, $config, $secrets );
 		if ( ! $tested->ok ) {
 			throw $this->failure( $tested );
 		}
@@ -160,18 +176,32 @@ final class ConnectionService {
 			$secrets,
 			$settings
 		);
-		$this->connections->update(
-			$id,
-			array(
-				'config'                => $this->detectedFacts( $connector, $tested ),
-				'credential_expires_at' => $this->expiry( $tested ),
-			)
-		);
+		if ( $awaitingSignIn ) {
+			// Nothing was tested and nothing is sent until the sign-in finishes and the organisation is chosen (selectOrganisation()).
+			$this->connections->setStatus( $id, ConnectionStatus::NeedsReconnect, null, 'sign_in' );
+			$this->connections->update(
+				$id,
+				array(
+					'config' => array(
+						'capabilities'     => array_map( 'boolval', $connector->capabilities() ),
+						'contract_version' => $connector->contractVersion(),
+					),
+				)
+			);
+		} else {
+			$this->connections->update(
+				$id,
+				array(
+					'config'                => $this->detectedFacts( $connector, $tested ),
+					'credential_expires_at' => $this->expiry( $tested ),
+				)
+			);
+		}
 		$this->seedMappings( $id, $connector );
 		$this->logger->info(
 			sprintf(
 				/* translators: %s: name of the connected system. */
-				__( 'Connected to %s.', 'estasoft-erp-crm-sync-engine' ),
+				$awaitingSignIn ? __( 'Saved the app details for %s. Sign in to finish connecting.', 'estasoft-erp-crm-sync-engine' ) : __( 'Connected to %s.', 'estasoft-erp-crm-sync-engine' ),
 				$connector->label()
 			),
 			array( 'connection_id' => $id )
@@ -222,7 +252,14 @@ final class ConnectionService {
 		}
 		$credentialsChanged = array() !== $config || array() !== array_filter( $secrets, static fn( ?string $value ): bool => '' !== (string) $value );
 		if ( $credentialsChanged ) {
-			$tested = $this->test( array( 'connector' => $connector->id(), 'config' => $config, 'secrets' => $secrets ), $id );
+			$tested = $this->test(
+				array(
+					'connector' => $connector->id(),
+					'config'    => $config,
+					'secrets'   => $secrets,
+				),
+				$id
+			);
 			if ( ! $tested['ok'] ) {
 				throw $this->failureFromArray( $tested );
 			}
@@ -265,8 +302,7 @@ final class ConnectionService {
 	 * @param int|null            $existingId The saved connection to test, or null for a new one.
 	 * @return array<string,mixed> A `ConnectionTestResult`.
 	 *
-	 * @throws ValidationException When a required field is missing, or a secret has to be entered again because the address (or another identity field) changed.
-	 * @throws JobException        404 when the saved connection does not exist, 409 when a saved secret is needed and cannot be read with the current encryption key.
+	 * @throws JobException 404 when the saved connection does not exist, 409 when a saved secret is needed and cannot be read with the current encryption key; ValidationException when a required field is missing, or a secret has to be entered again because the address (or another identity field) changed.
 	 */
 	public function test( array $input, ?int $existingId = null ): array {
 		$base   = null;
@@ -383,6 +419,104 @@ final class ConnectionService {
 	}
 
 	/**
+	 * Finish connecting a system with a sign-in page: remember the organisation the person chose, test the connection and, when the test passes,
+	 * make it active. A failed test changes nothing: the connection keeps waiting.
+	 *
+	 * @param int    $id             Connection id.
+	 * @param string $organisationId An id from the sign-in connector's organisations().
+	 * @return array<string,mixed> The `Connection`.
+	 *
+	 * @throws JobException 404 when the connection does not exist, 400 when it does not use sign-in, 422 when the organisation is not one the person may use or the test fails, 502 when the system cannot be asked.
+	 */
+	public function selectOrganisation( int $id, string $organisationId ): array {
+		$connection = $this->connections->find( $id );
+		if ( null === $connection ) {
+			throw new JobException( __( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ), 404 );
+		}
+		$connector = ( $this->registry )()->get( $connection->connector );
+		if ( ! $connector instanceof GuardedSignInConnector ) {
+			throw new JobException( ErrorCode::Cfg004->template(), 400, ErrorCode::Cfg004 );
+		}
+		$organisations = $connector->organisations( $connection );
+		if ( $organisations instanceof ConnectorError ) {
+			throw new JobException( $organisations->message(), $this->statusFor( $organisations ), $organisations->code );
+		}
+		$chosen = null;
+		foreach ( $organisations as $organisation ) {
+			if ( (string) $organisation['id'] === $organisationId ) {
+				$chosen = $organisation;
+			}
+		}
+		if ( null === $chosen ) {
+			throw new JobException( __( 'That organisation is not available to the account you signed in with.', 'estasoft-erp-crm-sync-engine' ), 422 );
+		}
+		$keys = $connector->selectOrganisation( $connection, $organisationId );
+		if ( $keys instanceof ConnectorError ) {
+			throw new JobException( $keys->message(), $this->statusFor( $keys ), $keys->code );
+		}
+		$this->connections->update(
+			$id,
+			array(
+				'config' => $keys + array(
+					'oauth_organisation'      => $organisationId,
+					'oauth_organisation_name' => (string) $chosen['name'],
+				),
+			)
+		);
+		$this->activateAfterSignIn( $id, $connector );
+		return $this->get( $id );
+	}
+
+	/**
+	 * After a sign-in finished: when an organisation was chosen earlier (the person reconnects an expired sign-in), test and resume.
+	 * A first sign-in waits for the choice of the organisation.
+	 *
+	 * @param int $id Connection id.
+	 */
+	public function afterSignIn( int $id ): void {
+		$connection = $this->connections->findWithoutSecrets( $id );
+		$connector  = null === $connection ? null : ( $this->registry )()->get( $connection->connector );
+		if ( null === $connection || ! $connector instanceof GuardedSignInConnector || '' === (string) $connection->config( 'oauth_organisation', '' ) ) {
+			return;
+		}
+		try {
+			$this->activateAfterSignIn( $id, $connector );
+		} catch ( JobException $error ) {
+			unset( $error ); // The connection keeps waiting; the log has the reason, and Test connection shows it.
+		}
+	}
+
+	/**
+	 * Test a connection that has tokens and an organisation, and resume it when the test passes.
+	 *
+	 * @param int                    $id        Connection id.
+	 * @param GuardedSignInConnector $connector Connector.
+	 *
+	 * @throws JobException 422 when the test fails.
+	 */
+	private function activateAfterSignIn( int $id, GuardedSignInConnector $connector ): void {
+		$connection = $this->connections->find( $id );
+		if ( null === $connection ) {
+			return;
+		}
+		$tested = $connector->test( $connection ); // Guarded: a failure comes back as a result, never as an exception.
+		if ( ! $tested->ok ) {
+			throw $this->failure( $tested );
+		}
+		$facts = $this->detectedFacts( $connector, $tested );
+		$this->connections->update( $id, array( 'config' => $facts ) );
+		$this->pause->resume( $id );
+		$this->logger->info(
+			sprintf(
+				/* translators: %s: name of the connected system. */
+				__( 'Connected to %s.', 'estasoft-erp-crm-sync-engine' ),
+				$connector->label()
+			),
+			array( 'connection_id' => $id )
+		);
+	}
+
+	/**
 	 * Disconnect: the secrets are wiped, the queue, the mapping versions and the history stay (CON-9).
 	 *
 	 * @param int $id Connection id.
@@ -424,25 +558,82 @@ final class ConnectionService {
 		 *
 		 * @param array<int,array<string,mixed>> $rows Catalog rows.
 		 */
-		$rows = apply_filters( 'estasoft_sync_catalog', ( $this->catalogRows )() );
-		$out  = array();
+		$rows     = apply_filters( 'estasoft_sync_catalog', ( $this->catalogRows )() );
+		$prepared = array();
+		$wanted   = array();
 		foreach ( is_array( $rows ) ? $rows : array() as $row ) {
 			if ( ! is_array( $row ) || ! isset( $row['name'] ) ) {
 				continue;
 			}
-			$connector = isset( $row['connector'] ) && is_string( $row['connector'] ) && '' !== $row['connector'] ? $row['connector'] : null;
-			$out[]     = array(
+			// A connector document can say the system cannot be chosen yet (`available: false` in its front matter, written to the row as `selectable`).
+			$selectable = false !== ( $row['selectable'] ?? true );
+			$connector  = isset( $row['connector'] ) && is_string( $row['connector'] ) && '' !== $row['connector'] ? $row['connector'] : null;
+			$variants   = array();
+			foreach ( is_array( $row['variants'] ?? null ) ? $row['variants'] : array() as $variant ) {
+				if ( is_array( $variant ) && isset( $variant['id'] ) && is_string( $variant['id'] ) ) {
+					$variants[] = array(
+						'id'        => $variant['id'],
+						'label'     => (string) ( $variant['label'] ?? $variant['id'] ),
+						'available' => $registry->has( $variant['id'] ),
+					);
+				}
+			}
+			$available = null !== $connector && $registry->has( $connector );
+			foreach ( $variants as $variant ) {
+				$available = $available || $variant['available'];
+			}
+			$available = $available && $selectable;
+			if ( $selectable ) {
+				$wanted[] = null !== $connector && $registry->has( $connector ) ? $connector : '';
+				foreach ( $variants as $variant ) {
+					$wanted[] = $variant['available'] ? $variant['id'] : '';
+				}
+			}
+			$prepared[] = array( $row, $connector, $variants, $available, $selectable );
+		}
+		$forms = $this->forms->forConnectors( $wanted );
+		$out   = array();
+		foreach ( $prepared as list( $row, $connector, $variants, $available, $selectable ) ) {
+			$method = (string) ( $row['connection_method'] ?? 'unknown' );
+			foreach ( $variants as $index => $variant ) {
+				$variants[ $index ] += self::formOf( $selectable && $variant['available'] ? $forms[ $variant['id'] ] ?? null : null, $method );
+			}
+			$out[] = array(
 				'name'              => (string) $row['name'],
 				'type'              => (string) ( $row['type'] ?? 'erp' ),
 				'regions'           => (string) ( $row['regions'] ?? '' ),
 				'connector'         => $connector,
-				'connection_method' => (string) ( $row['connection_method'] ?? 'unknown' ),
+				'connection_method' => $method,
 				'needs'             => (string) ( $row['needs'] ?? '' ),
-				'available'         => null !== $connector && null !== $registry->get( $connector ),
+				'available'         => $available,
+				'verified'          => ! empty( $row['verified'] ),
+				'variants'          => $variants,
+				'hosts'             => array_values( array_map( 'strval', is_array( $row['hosts'] ?? null ) ? $row['hosts'] : array() ) ),
+				'terms_url'         => (string) ( $row['terms_url'] ?? '' ),
+				'privacy_url'       => (string) ( $row['privacy_url'] ?? '' ),
+				'developer_url'     => (string) ( $row['developer_url'] ?? '' ),
+				'steps'             => array_values( array_map( 'strval', is_array( $row['steps'] ?? null ) ? $row['steps'] : array() ) ),
 				'wave'              => (int) ( $row['wave'] ?? 0 ),
-			);
+			) + self::formOf( $selectable && null !== $connector ? $forms[ $connector ] ?? null : null, $method );
 		}
 		return $out;
+	}
+
+	/**
+	 * The form part of a catalog row or variant: fields, whether the person signs in on the system's page, and the sign-in style.
+	 * A system that cannot be chosen (not installed, or not selectable yet) has no fields and cannot sign in.
+	 *
+	 * @param array<string,mixed>|null $form   From CatalogForms, or null.
+	 * @param string                   $method The row's connection method, for the style when the connector does not name one.
+	 * @return array{credential_fields:array<int,array<string,mixed>>,can_sign_in:bool,auth_style:string}
+	 */
+	private static function formOf( ?array $form, string $method ): array {
+		$style = null === $form ? '' : (string) ( $form['auth_style'] ?? '' );
+		return array(
+			'credential_fields' => null === $form ? array() : array_values( (array) ( $form['credential_fields'] ?? array() ) ),
+			'can_sign_in'       => null !== $form && ! empty( $form['can_sign_in'] ),
+			'auth_style'        => '' !== $style ? $style : CatalogForms::styleFromMethod( $method ),
+		);
 	}
 
 	/**
@@ -507,16 +698,16 @@ final class ConnectionService {
 	/**
 	 * Keep the connector's own non-secret fields, and a small map of options.
 	 *
-	 * @param ConnectorInterface  $connector Connector.
-	 * @param array<mixed>        $config    Submitted config.
-	 * @param bool                $partial   Whether fields may be left out.
+	 * @param ConnectorInterface $connector Connector.
+	 * @param array<mixed>       $config    Submitted config.
+	 * @param bool               $partial   Whether fields may be left out.
 	 * @return array<string,mixed>
 	 */
 	private function cleanConfig( ConnectorInterface $connector, array $config, bool $partial = false ): array {
 		unset( $partial );
 		$clean = array();
 		foreach ( $connector->credentialFields() as $field ) {
-			if ( ! $field->secret && array_key_exists( $field->name, $config ) && is_scalar( $config[ $field->name ] ) ) {
+			if ( ! $field->secret && 'display' !== $field->type && array_key_exists( $field->name, $config ) && is_scalar( $config[ $field->name ] ) ) {
 				$clean[ $field->name ] = mb_substr( trim( (string) $config[ $field->name ] ), 0, self::MAX_VALUE );
 			}
 		}
@@ -636,10 +827,15 @@ final class ConnectionService {
 			'ok'                  => $result->ok,
 			'version'             => $result->version,
 			'company'             => $result->company,
-			'warehouses'          => array_values( array_map( static fn( array $warehouse ): array => array(
-				'id'   => (string) $warehouse['id'],
-				'name' => (string) $warehouse['name'],
-			), $result->warehouses ) ),
+			'warehouses'          => array_values(
+				array_map(
+					static fn( array $warehouse ): array => array(
+						'id'   => (string) $warehouse['id'],
+						'name' => (string) $warehouse['name'],
+					),
+					$result->warehouses
+				)
+			),
 			'product_count'       => isset( $result->detected['product_count'] ) ? (int) $result->detected['product_count'] : null,
 			'permissions'         => array_map( 'boolval', $result->permissions ),
 			'missing_permissions' => $result->missingPermissions(),
@@ -696,7 +892,13 @@ final class ConnectionService {
 	 * @param TestResult $result Failed result.
 	 */
 	private function failure( TestResult $result ): JobException {
-		$error  = $result->error ?? new ConnectorError( ErrorCode::Val002, array( 'field' => 'connection', 'reason' => __( 'The test failed.', 'estasoft-erp-crm-sync-engine' ) ) );
+		$error  = $result->error ?? new ConnectorError(
+			ErrorCode::Val002,
+			array(
+				'field'  => 'connection',
+				'reason' => __( 'The test failed.', 'estasoft-erp-crm-sync-engine' ),
+			)
+		);
 		$mapped = array(
 			'ok'                  => false,
 			'version'             => $result->version,

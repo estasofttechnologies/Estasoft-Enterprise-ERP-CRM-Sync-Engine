@@ -15,7 +15,7 @@ defined( 'ABSPATH' ) || exit;
  * Every key is prefixed so the Delete data tool, which removes options and transients that start with the plugin prefix,
  * finds them.
  */
-final class TransientStore implements KeyValueStore {
+final class TransientStore implements AtomicKeyValueStore {
 
 	/**
 	 * Prefix of every transient this store writes.
@@ -51,5 +51,20 @@ final class TransientStore implements KeyValueStore {
 	 */
 	public function delete( string $key ): void {
 		delete_transient( self::PREFIX . $key );
+	}
+
+	/**
+	 * Read a value and delete it. WordPress deletes the row with one `DELETE` and reports whether it removed one, so of two callers that
+	 * read the same value only the one whose delete succeeded keeps it.
+	 *
+	 * @param string $key Key without the prefix.
+	 * @return mixed The value, or null when it is missing, expired or somebody else took it first.
+	 */
+	public function take( string $key ): mixed {
+		$value = get_transient( self::PREFIX . $key );
+		if ( false === $value ) {
+			return null;
+		}
+		return delete_transient( self::PREFIX . $key ) ? $value : null;
 	}
 }

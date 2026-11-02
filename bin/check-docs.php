@@ -75,6 +75,15 @@ if ( ! is_readable( $index ) ) {
 		if ( 'spec/README.md' === $relative ) {
 			continue;
 		}
+		// One document per connector: docs/connectors/README.md (generated from the documents' front matter) lists them,
+		// and docs/spec/README.md lists that index.
+		if ( 0 === strpos( $relative, 'connectors/' ) && 'connectors/README.md' !== $relative ) {
+			$connectors_index = (string) file_get_contents( $root . '/docs/connectors/README.md' );
+			if ( false === strpos( $connectors_index, basename( $relative ) ) ) {
+				$problems[] = "docs/{$relative} is not listed in docs/connectors/README.md (run php bin/generate-catalog-from-docs.php).";
+			}
+			continue;
+		}
 		if ( false === strpos( $index_text, $relative ) && false === strpos( $index_text, basename( $relative ) ) ) {
 			$problems[] = "docs/{$relative} is not listed in docs/spec/README.md.";
 		}

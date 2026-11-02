@@ -24,6 +24,7 @@ use Estasoft\SyncEngine\Jobs\Adapters\WpMailer;
 use Estasoft\SyncEngine\Jobs\Adapters\WpTransients;
 use Estasoft\SyncEngine\Jobs\Capacity\CapacityTest;
 use Estasoft\SyncEngine\Jobs\Capacity\TemporaryTableCapacityStore;
+use Estasoft\SyncEngine\Jobs\Connections\CatalogForms;
 use Estasoft\SyncEngine\Jobs\Connections\ConnectionService;
 use Estasoft\SyncEngine\Jobs\Connections\SignInPauses;
 use Estasoft\SyncEngine\Jobs\Dashboard\DashboardService;
@@ -548,7 +549,9 @@ final class JobsModule implements ModuleInterface {
 				$c->get( Services::LOGGER ),
 				$c->get( Services::CLOCK ),
 				$c->get( Services::PAUSE_CONTROLLER ),
-				$c->get( SignInPauses::class )
+				$c->get( SignInPauses::class ),
+				null,
+				CatalogForms::cached( self::registry( $c ) )
 			)
 		);
 		$this->add(

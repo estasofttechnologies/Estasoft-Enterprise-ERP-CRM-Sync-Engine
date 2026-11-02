@@ -14,6 +14,8 @@
 # that talks to the network, so every request obeys the same timeout and TLS rules). A hit is a failure.
 # If one is legitimate, add "path:label" to bin/red-flags-allowlist.txt with a comment explaining why.
 #
+# Connector index: includes/Connectors/providers.php must match the providers on disk (bin/generate-connector-index.php --check).
+#
 # Exit: 0 passed, 1 failed.
 
 set -euo pipefail
@@ -58,6 +60,10 @@ if [[ "${CHECK_FLAGS}" -eq 1 ]]; then
 	fi
 	# The plugin declares PHP 8.1 as its minimum; this finds syntax and functions from newer versions on any PHP.
 	if ! php "${ROOT_DIR}/bin/check-php-version.php" --root="${ROOT_DIR}"; then
+		status=1
+	fi
+	# includes/Connectors/providers.php is generated from the provider classes; it must be up to date (fix: php bin/generate-connector-index.php).
+	if ! php "${ROOT_DIR}/bin/generate-connector-index.php" --check; then
 		status=1
 	fi
 fi

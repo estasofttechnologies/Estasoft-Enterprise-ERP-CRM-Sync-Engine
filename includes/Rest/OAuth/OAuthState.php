@@ -11,6 +11,7 @@ namespace Estasoft\SyncEngine\Rest\OAuth;
 
 defined( 'ABSPATH' ) || exit;
 
+use Estasoft\SyncEngine\Rest\Support\AtomicKeyValueStore;
 use Estasoft\SyncEngine\Rest\Support\KeyValueStore;
 
 /**
@@ -26,6 +27,8 @@ final class OAuthState {
 	public const TTL = 600;
 
 	/**
+	 * Set up with what it depends on.
+	 *
 	 * @param KeyValueStore $store Short-lived storage.
 	 */
 	public function __construct( private readonly KeyValueStore $store ) {
@@ -92,7 +95,30 @@ final class OAuthState {
 	}
 
 	/**
-	 * Use a state: return what was stored and make it invalid.
+	 * Use a state without knowing the connection beforehand (the stable callback address carries no connection id): the state says which
+	 * connection it belongs to. It is made invalid at once, exactly as consume() does.
+	 *
+	 * @param string $state State from the callback.
+	 * @return array{user:int,connection:int,verifier:string,route:string}|null Null when it is unknown, expired or malformed.
+	 */
+	public function consumeAny( string $state ): ?array {
+		if ( ! self::wellFormed( $state ) ) {
+			return null;
+		}
+		$entry = $this->claim( $state );
+		if ( null === $entry ) {
+			return null;
+		}
+		return array(
+			'user'       => (int) ( $entry['user'] ?? 0 ),
+			'connection' => (int) ( $entry['connection'] ?? 0 ),
+			'verifier'   => (string) ( $entry['verifier'] ?? '' ),
+			'route'      => (string) ( $entry['route'] ?? '/connections' ),
+		);
+	}
+
+	/**
+	 * Use a state: return what was stored and make it invalid. Of two callbacks that arrive together only one gets it.
 	 *
 	 * @param string $state        State from the callback.
 	 * @param int    $connectionId The connection of the callback route.
@@ -100,10 +126,28 @@ final class OAuthState {
 	 */
 	public function consume( string $state, int $connectionId ): ?array {
 		$entry = $this->peek( $state, $connectionId );
-		if ( null !== $entry ) {
-			$this->store->delete( $this->key( $state ) );
+		if ( null === $entry || null === $this->claim( $state ) ) {
+			return null;
 		}
 		return $entry;
+	}
+
+	/**
+	 * Take the stored entry out of the store. With a store that can do it (`AtomicKeyValueStore`) reading and deleting are one step, so two
+	 * simultaneous callbacks cannot both succeed; any other store reads and then deletes.
+	 *
+	 * @param string $state State.
+	 * @return array<string,mixed>|null
+	 */
+	private function claim( string $state ): ?array {
+		$key = $this->key( $state );
+		if ( $this->store instanceof AtomicKeyValueStore ) {
+			$entry = $this->store->take( $key );
+		} else {
+			$entry = $this->store->get( $key );
+			$this->store->delete( $key );
+		}
+		return is_array( $entry ) ? $entry : null;
 	}
 
 	/**

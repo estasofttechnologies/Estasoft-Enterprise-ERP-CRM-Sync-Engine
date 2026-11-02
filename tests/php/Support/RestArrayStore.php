@@ -9,12 +9,12 @@ declare(strict_types=1);
 
 namespace Estasoft\SyncEngine\Tests\Support;
 
-use Estasoft\SyncEngine\Rest\Support\KeyValueStore;
+use Estasoft\SyncEngine\Rest\Support\AtomicKeyValueStore;
 
 /**
  * Keeps values in an array and remembers the lifetime asked for, so a test can check it and can expire a value.
  */
-final class RestArrayStore implements KeyValueStore {
+final class RestArrayStore implements AtomicKeyValueStore {
 
 	/**
 	 * Values by key.
@@ -66,5 +66,16 @@ final class RestArrayStore implements KeyValueStore {
 	public function expireAll(): void {
 		$this->values = array();
 		$this->ttl    = array();
+	}
+
+	/**
+	 * Read a value and delete it.
+	 *
+	 * @param string $key Key.
+	 */
+	public function take( string $key ): mixed {
+		$value = $this->values[ $key ] ?? null;
+		unset( $this->values[ $key ], $this->ttl[ $key ] );
+		return $value;
 	}
 }
