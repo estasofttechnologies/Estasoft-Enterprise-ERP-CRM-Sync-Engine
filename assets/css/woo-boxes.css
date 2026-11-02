@@ -1,0 +1,119 @@
+/*
+ * ESTASOFT SYNC: the small server-rendered pieces on WooCommerce screens (order box, orders list column,
+ * product box, user profile section). Loaded only on those screens. The main app has its own stylesheet.
+ * Logical properties throughout, so the same file serves right-to-left admin languages.
+ */
+
+.estasoft-sync-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	min-block-size: 20px;
+	padding-inline: 6px 8px;
+	border: 1px solid transparent;
+	border-radius: 999px;
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 16px;
+	white-space: nowrap;
+}
+
+.estasoft-sync-chip__icon {
+	font-size: 12px;
+	line-height: 1;
+}
+
+.estasoft-sync-chip__extra {
+	font-weight: 400;
+}
+
+.estasoft-sync-chip--synced {
+	color: #1f6b38;
+	background: #e6f4ea;
+	border-color: #b7d9c1;
+}
+
+.estasoft-sync-chip--queued {
+	color: #4b5563;
+	background: #eef0f3;
+	border-color: #d3d7dd;
+}
+
+.estasoft-sync-chip--syncing {
+	color: #12355b;
+	background: #e7eef6;
+	border-color: #b9cde1;
+}
+
+.estasoft-sync-chip--retrying {
+	color: #8a5200;
+	background: #fdf1dc;
+	border-color: #e8cb92;
+}
+
+.estasoft-sync-chip--failed {
+	color: #a32424;
+	background: #fbe9e9;
+	border-color: #e5b3b3;
+}
+
+.estasoft-sync-chip--neutral {
+	color: #374151;
+	background: #e5e7eb;
+	border-color: #c9cdd3;
+}
+
+.estasoft-sync-muted {
+	color: #646970;
+}
+
+.estasoft-sync-box__state {
+	margin-block: 0 8px;
+}
+
+.estasoft-sync-box__facts {
+	display: grid;
+	grid-template-columns: minmax(80px, auto) minmax(0, 1fr);
+	gap: 4px 12px;
+	margin-block: 0 8px;
+}
+
+.estasoft-sync-box__facts dt {
+	color: #50575e;
+}
+
+.estasoft-sync-box__facts dd {
+	margin: 0;
+	min-inline-size: 0;
+	overflow-wrap: anywhere;
+}
+
+.estasoft-sync-box__note {
+	margin-block: 8px;
+	color: #50575e;
+}
+
+.estasoft-sync-box__exclude {
+	margin-block: 12px 4px;
+}
+
+.estasoft-sync-box__actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+	margin-block: 12px 0;
+}
+
+.estasoft-sync-link {
+	display: inline-flex;
+	align-items: center;
+	min-block-size: 32px;
+}
+
+@media screen and (max-width: 782px) {
+	.estasoft-sync-box__actions .button,
+	.estasoft-sync-link {
+		min-block-size: 44px;
+	}
+}
