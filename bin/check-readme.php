@@ -325,7 +325,8 @@ if ( isset( $sections['External services'] ) ) {
 		$errors[] = 'External services still holds placeholder text; run: php bin/generate-external-services.php';
 	}
 
-	// One entry per document: "= Name =", a paragraph with "Data sent:" and "When:", and a "Terms: ... | Privacy: ..." line with an https address or words.
+	// The introduction says once what is sent and when. One entry per document: "= Name =", a paragraph with "Used for:", "Sends:" and
+	// "Contacts:", and a "Terms: ... | Privacy: ..." line with an https address or words.
 	$entries = array();
 	$name    = '';
 	foreach ( $sections['External services'] as $line ) {
@@ -334,6 +335,18 @@ if ( isset( $sections['External services'] ) ) {
 			$entries[ $name ] = '';
 		} elseif ( '' !== $name ) {
 			$entries[ $name ] .= $line . "\n";
+		}
+	}
+	$introduction = '';
+	foreach ( $sections['External services'] as $line ) {
+		if ( 1 === preg_match( '/^= (.+) =\s*$/', $line ) ) {
+			break;
+		}
+		$introduction .= $line . "\n";
+	}
+	foreach ( array( 'Test connection', 'queued order', 'nothing else', 'Used for', 'Sends' ) as $phrase ) {
+		if ( false === strpos( $introduction, $phrase ) ) {
+			$errors[] = "The introduction of External services must say what is sent and when for every system; it lacks '{$phrase}'.";
 		}
 	}
 	foreach ( ESTASOFT_README_DOCS as $doc ) {
@@ -345,7 +358,7 @@ if ( isset( $sections['External services'] ) ) {
 			continue;
 		}
 		$body = $entries[ $doc['name'] ];
-		foreach ( array( 'Data sent:', 'When:', 'Contacts:', 'Terms:', 'Privacy:' ) as $label ) {
+		foreach ( array( 'Used for:', 'Sends:', 'Contacts:', 'Terms:', 'Privacy:' ) as $label ) {
 			if ( false === strpos( $body, $label ) ) {
 				$errors[] = "External services entry '{$doc['name']}' lacks '{$label}'.";
 			}
@@ -364,15 +377,26 @@ if ( isset( $sections['External services'] ) ) {
 	}
 }
 
+// WordPress.org shows every section it does not know (External services, Third-party libraries and services) under the Description and
+// cuts the whole at 2,500 words (Plugin Check: readme_parser_warnings_trimmed_section_description). A cut in the middle of External
+// services would hide systems from the disclosure, so the words are counted the way the parser counts them.
+if ( isset( $sections['Description'] ) ) {
+	$known_sections = array( 'Description', 'Installation', 'Frequently Asked Questions', 'Screenshots', 'Changelog', 'Upgrade Notice' );
+	$combined       = implode( "\n", $sections['Description'] );
+	foreach ( $sections as $section_name => $section_lines ) {
+		if ( ! in_array( $section_name, $known_sections, true ) ) {
+			$combined .= "\n<h3>{$section_name}</h3>" . implode( "\n", $section_lines );
+		}
+	}
+	$combined_words = count( (array) preg_split( '/\s+/u', trim( $combined ), -1, PREG_SPLIT_NO_EMPTY ) );
+	if ( $combined_words > 2300 ) {
+		$errors[] = "The Description with External services and Third-party libraries and services appended is {$combined_words} words; WordPress.org cuts it at 2,500 words, so keep it under 2,300.";
+	}
+}
+
 // Every system of the connector documents is named in the readme, and the numbers it quotes match the documents and the catalog.
 if ( isset( $sections['Description'] ) ) {
 	$description = implode( "\n", $sections['Description'] );
-	// The WordPress.org parser cuts the Description at 2,500 characters and counts them after the Markdown became HTML (Plugin Check:
-	// readme_parser_warnings_trimmed_section_description). The tags add about 5 to 10 percent, so the text itself stays under 2,300.
-	$description_length = mb_strlen( trim( $description ) );
-	if ( $description_length > 2300 ) {
-		$errors[] = "The Description section is {$description_length} characters; keep it under 2,300 (WordPress.org cuts it at 2,500 after the Markdown is turned into HTML).";
-	}
 	foreach ( ESTASOFT_README_DOCS as $doc ) {
 		if ( false === strpos( $description, $doc['name'] ) ) {
 			$errors[] = "The Description does not name the system '{$doc['name']}' (connector document {$doc['slug']}.md).";

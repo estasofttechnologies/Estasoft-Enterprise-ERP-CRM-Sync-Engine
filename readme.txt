@@ -44,163 +44,165 @@ All product and company names are trademarks of their owners, used only to say w
 
 The plugin has no telemetry, no analytics, no update server and no Estasoft server. It contacts only the system you connect, and only after you have entered that system's credentials and saved the connection. It sends only the data your mapping selects, to create orders, customers and credit notes there and read stock, tracking and status back. Full card numbers are never read, and nothing is sent to anyone else. Where a system has a sign-in page, your own browser goes to it. A host written `*.example.com` stands for the address of your own account with that vendor. Private network addresses are refused unless a site owner allows them.
 
+For every system below the plugin does the same thing. It creates the records named under "Used for" for your WooCommerce orders and reads stock, tracking and status back where the system offers them. It sends the credentials or sign-in tokens named under "Sends", plus the order, customer and product data your mapping selects (order number, date, totals, line items with SKU, quantity, price and tax, shipping, fees, coupons, name, email, phone, addresses and buyer tax number); nothing else. It does so when you press Test connection, for each queued order, refund or customer event, and for the scheduled stock, tracking, status and reconciliation reads.
+
 = Acumatica =
-Creates sales orders, customers and credit notes in Acumatica for your WooCommerce orders, and reads stock and tracking back where offered. Data sent: the client ID and secret of your own app, and its sign-in tokens, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: only the address you enter (your own server or your provider's).
+Used for: sales orders, customers and credit notes. Sends: the client ID and secret of your own app, and its sign-in tokens. Contacts: only the address you enter (your own server or your provider's).
 
 Terms: https://www.acumatica.com/terms-of-use/ | Privacy: https://www.acumatica.com/website-privacy-statement
 
 = Dynamics 365 Finance and Supply Chain =
-Creates sales orders, customers and credit notes in Dynamics 365 Finance and Supply Chain for your WooCommerce orders, and reads stock and tracking back where offered. Data sent: your app's client ID and secret (or signed assertion), and its access tokens, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: `*.dynamics.com`, `login.microsoftonline.com`.
+Used for: sales orders, customers and credit notes. Sends: your app's client ID and secret (or signed assertion), and its access tokens. Contacts: `*.dynamics.com`, `login.microsoftonline.com`.
 
 Terms: https://learn.microsoft.com/en-us/legal/microsoft-apis/terms-of-use | Privacy: https://privacy.microsoft.com/privacystatement
 
 = ERPNext =
-Creates sales orders, customers and credit notes in ERPNext for your WooCommerce orders, and reads stock and tracking back where offered. Data sent: your API key or token, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: only the address you enter (your own server or your provider's).
+Used for: sales orders, customers and credit notes. Sends: your API key or token. Contacts: only the address you enter (your own server or your provider's).
 
 Terms: https://frappe.io/terms | Privacy: https://docs.frappe.io/legal/policies/privacy-policy
 
 = Holded =
-Creates sales orders, customers and credit notes in Holded for your WooCommerce orders, and reads stock and tracking back where offered. Data sent: your API key or token, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: `api.holded.com`.
+Used for: sales orders, customers and credit notes. Sends: your API key or token. Contacts: `api.holded.com`.
 
 Terms: https://www.holded.com/tac | Privacy: https://www.holded.com/privacy
 
 = Microsoft Dynamics 365 Business Central =
-Creates sales orders, customers and credit notes in Microsoft Dynamics 365 Business Central for your WooCommerce orders, and reads stock and tracking back where offered. Data sent: your app's client ID and secret (or signed assertion), and its access tokens, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: `api.businesscentral.dynamics.com`, `login.microsoftonline.com`.
+Used for: sales orders, customers and credit notes. Sends: your app's client ID and secret (or signed assertion), and its access tokens. Contacts: `api.businesscentral.dynamics.com`, `login.microsoftonline.com`.
 
 Terms: https://learn.microsoft.com/en-us/legal/microsoft-apis/terms-of-use | Privacy: https://privacy.microsoft.com/privacystatement
 
 = NetSuite =
-Creates sales orders, customers and credit notes in NetSuite for your WooCommerce orders, and reads stock and tracking back where offered. Data sent: your app's client ID and secret (or signed assertion), and its access tokens, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: `*.suitetalk.api.netsuite.com`.
+Used for: sales orders, customers and credit notes. Sends: your app's client ID and secret (or signed assertion), and its access tokens. Contacts: `*.suitetalk.api.netsuite.com`.
 
 Terms: https://www.oracle.com/legal/terms/ | Privacy: https://www.oracle.com/legal/privacy/privacy-policy.html
 
 = Odoo =
-Creates sales orders, customers and credit notes in Odoo for your WooCommerce orders, and reads stock and tracking back where offered. Data sent: your API key or token, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: only the address you enter (your own server or your provider's).
+Used for: sales orders, customers and credit notes. Sends: your API key or token. Contacts: only the address you enter (your own server or your provider's).
 
 Terms: https://www.odoo.com/legal | Privacy: https://www.odoo.com/privacy
 
 = Oracle Fusion Cloud ERP =
-Creates sales orders, customers and credit notes in Oracle Fusion Cloud ERP for your WooCommerce orders, and reads stock and tracking back where offered. Data sent: your app's client ID and secret (or signed assertion), and its access tokens, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: `*.oraclecloud.com`.
+Used for: sales orders, customers and credit notes. Sends: your app's client ID and secret (or signed assertion), and its access tokens. Contacts: `*.oraclecloud.com`.
 
 Terms: https://www.oracle.com/legal/terms/ | Privacy: https://www.oracle.com/legal/privacy/privacy-policy.html
 
 = Sage 200 =
-Creates sales orders, customers and credit notes in Sage 200 for your WooCommerce orders, and reads stock and tracking back where offered. Data sent: the client ID and secret of your own app, and its sign-in tokens, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: `id.sage.com`, `api.columbus.sage.com`.
+Used for: sales orders, customers and credit notes. Sends: the client ID and secret of your own app, and its sign-in tokens. Contacts: `id.sage.com`, `api.columbus.sage.com`.
 
 Terms: https://www.sage.com/en-gb/legal/ | Privacy: https://www.sage.com/en-gb/legal/privacy-and-cookies/
 
 = Sage 300 =
-Creates sales orders, customers and credit notes in Sage 300 for your WooCommerce orders, and reads stock and tracking back where offered. Data sent: your user name and password, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: only the address you enter (your own server or your provider's).
+Used for: sales orders, customers and credit notes. Sends: your user name and password. Contacts: only the address you enter (your own server or your provider's).
 
 Terms: https://developer.sage.com/300/ | Privacy: https://www.sage.com/en-gb/legal/privacy-and-cookies/
 
 = Sage X3 =
-Creates sales orders, customers and credit notes in Sage X3 for your WooCommerce orders, and reads stock and tracking back where offered. Data sent: your sign-in details, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: only the address you enter (your own server or your provider's).
+Used for: sales orders, customers and credit notes. Sends: your sign-in details. Contacts: only the address you enter (your own server or your provider's).
 
 Terms: https://www.sage.com/en-gb/legal/ | Privacy: https://www.sage.com/en-gb/legal/privacy-and-cookies/
 
 = SAP Business One =
-Creates sales orders, customers and credit notes in SAP Business One for your WooCommerce orders, and reads stock and tracking back where offered. Data sent: your user name and password, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: only the address you enter (your own server or your provider's).
+Used for: sales orders, customers and credit notes. Sends: your user name and password. Contacts: only the address you enter (your own server or your provider's).
 
 Terms: https://www.sap.com/about/legal/terms-of-use.html | Privacy: https://www.sap.com/about/legal/privacy.html
 
 = SAP S/4HANA =
-Creates sales orders, customers and credit notes in SAP S/4HANA for your WooCommerce orders, and reads stock and tracking back where offered. Data sent: your app's client ID and secret (or signed assertion), and its access tokens, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: `*.s4hana.cloud.sap`.
+Used for: sales orders, customers and credit notes. Sends: your app's client ID and secret (or signed assertion), and its access tokens. Contacts: `*.s4hana.cloud.sap`.
 
 Terms: https://www.sap.com/about/legal/terms-of-use.html | Privacy: https://www.sap.com/about/legal/privacy.html
 
 = Daftra =
-Creates invoices (or sales orders), credit notes and customers in Daftra for your WooCommerce orders, and reads stock and invoice status back where offered. Data sent: your API key or token, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: `*.daftara.com`, `*.daftra.com`.
+Used for: invoices or sales orders, credit notes and customers. Sends: your API key or token. Contacts: `*.daftara.com`, `*.daftra.com`.
 
 Terms: https://www.daftra.com/en/terms-conditions/ | Privacy: https://www.daftra.com/en/privacy-policy/
 
 = Exact Online =
-Creates invoices (or sales orders), credit notes and customers in Exact Online for your WooCommerce orders, and reads stock and invoice status back where offered. Data sent: the client ID and secret of your own app, and its sign-in tokens, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: `start.exactonline.nl`, `start.exactonline.be`, `start.exactonline.de`, `start.exactonline.fr`, `start.exactonline.co.uk`, `start.exactonline.es`, `start.exactonline.com`.
+Used for: invoices or sales orders, credit notes and customers. Sends: the client ID and secret of your own app, and its sign-in tokens. Contacts: `start.exactonline.nl`, `start.exactonline.be`, `start.exactonline.de`, `start.exactonline.fr`, `start.exactonline.co.uk`, `start.exactonline.es`, `start.exactonline.com`.
 
 Terms: https://files.exact.com/static/downloads/terms-and-conditions/2018/Exact-Exact-Online-App-Center-Terms-and-Conditions-of-Use-October-2018.pdf | Privacy: https://files.exact.com/static/web/pdf/Privacy-Policy-for-Exact-Services-EN.pdf
 
 = Fortnox =
-Creates invoices (or sales orders), credit notes and customers in Fortnox for your WooCommerce orders, and reads stock and invoice status back where offered. Data sent: the client ID and secret of your own app, and its sign-in tokens, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: `api.fortnox.se`, `apps.fortnox.se`.
+Used for: invoices or sales orders, credit notes and customers. Sends: the client ID and secret of your own app, and its sign-in tokens. Contacts: `api.fortnox.se`, `apps.fortnox.se`.
 
 Terms: https://www.fortnox.se/developer/guides-and-good-to-know/legal-and-change-policies | Privacy: https://www.fortnox.se/om-fortnox/integritet-och-sakerhet
 
 = Lexware Office =
-Creates invoices (or sales orders), credit notes and customers in Lexware Office for your WooCommerce orders, and reads stock and invoice status back where offered. Data sent: your API key or token, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: `api.lexware.io`.
+Used for: invoices or sales orders, credit notes and customers. Sends: your API key or token. Contacts: `api.lexware.io`.
 
 Terms: https://agb.lexware.de/lexware-office/public-api-lizenz--und-nutzungsbedingungen | Privacy: https://datenschutz.lexware.de/
 
 = Moneybird =
-Creates invoices (or sales orders), credit notes and customers in Moneybird for your WooCommerce orders, and reads stock and invoice status back where offered. Data sent: your API key or token, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: `moneybird.com`.
+Used for: invoices or sales orders, credit notes and customers. Sends: your API key or token. Contacts: `moneybird.com`.
 
 Terms: https://www.moneybird.nl/terms/ | Privacy: https://www.moneybird.nl/privacy/
 
 = MYOB =
-Creates invoices (or sales orders), credit notes and customers in MYOB for your WooCommerce orders, and reads stock and invoice status back where offered. Data sent: the client ID and secret of your own app, and its sign-in tokens, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: `api.myob.com`, `arl2.api.myob.com`, `secure.myob.com`.
+Used for: invoices or sales orders, credit notes and customers. Sends: the client ID and secret of your own app, and its sign-in tokens. Contacts: `api.myob.com`, `arl2.api.myob.com`, `secure.myob.com`.
 
 Terms: https://developer.myob.com/program/terms-conditions/ | Privacy: https://www.myob.com/au/legal/privacy-policy
 
 = Qoyod =
-Creates invoices (or sales orders), credit notes and customers in Qoyod for your WooCommerce orders, and reads stock and invoice status back where offered. Data sent: your API key or token, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: `api.qoyod.com`.
+Used for: invoices or sales orders, credit notes and customers. Sends: your API key or token. Contacts: `api.qoyod.com`.
 
 Terms: https://www.qoyod.com/en/terms-and-conditions/ | Privacy: https://www.qoyod.com/privacy-policy/
 
 = QuickBooks Online =
-Creates invoices (or sales orders), credit notes and customers in QuickBooks Online for your WooCommerce orders, and reads stock and invoice status back where offered. Data sent: the client ID and secret of your own app, and its sign-in tokens, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: `quickbooks.api.intuit.com`, `sandbox-quickbooks.api.intuit.com`, `appcenter.intuit.com`, `oauth.platform.intuit.com`.
+Used for: invoices or sales orders, credit notes and customers. Sends: the client ID and secret of your own app, and its sign-in tokens. Contacts: `quickbooks.api.intuit.com`, `sandbox-quickbooks.api.intuit.com`, `appcenter.intuit.com`, `oauth.platform.intuit.com`.
 
 Terms: https://developer.intuit.com/app/developer/qbo/docs/legal-agreements/intuit-terms-of-service-for-intuit-developer-services | Privacy: https://www.intuit.com/privacy/statement/
 
 = Sage Business Cloud Accounting =
-Creates invoices (or sales orders), credit notes and customers in Sage Business Cloud Accounting for your WooCommerce orders, and reads stock and invoice status back where offered. Data sent: the client ID and secret of your own app, and its sign-in tokens, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: `api.accounting.sage.com`, `oauth.accounting.sage.com`, `www.sageone.com`.
+Used for: invoices or sales orders, credit notes and customers. Sends: the client ID and secret of your own app, and its sign-in tokens. Contacts: `api.accounting.sage.com`, `oauth.accounting.sage.com`, `www.sageone.com`.
 
 Terms: https://www.sage.com/en-gb/legal/ | Privacy: https://www.sage.com/en-gb/legal/privacy-and-cookies/
 
 = sevDesk =
-Creates invoices (or sales orders), credit notes and customers in sevDesk for your WooCommerce orders, and reads stock and invoice status back where offered. Data sent: your API key or token, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: `my.sevdesk.de`.
+Used for: invoices or sales orders, credit notes and customers. Sends: your API key or token. Contacts: `my.sevdesk.de`.
 
 Terms: https://sevdesk.de/agb/ | Privacy: https://sevdesk.de/datenschutz/
 
 = Wafeq =
-Creates invoices (or sales orders), credit notes and customers in Wafeq for your WooCommerce orders, and reads stock and invoice status back where offered. Data sent: your API key or token, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: `api.wafeq.com`.
+Used for: invoices or sales orders, credit notes and customers. Sends: your API key or token. Contacts: `api.wafeq.com`.
 
 Terms: https://wafeq.com/en/terms-of-service | Privacy: https://wafeq.com/en/privacy-policy
 
 = Xero =
-Creates invoices (or sales orders), credit notes and customers in Xero for your WooCommerce orders, and reads stock and invoice status back where offered. Data sent: the client ID and secret of your own app, and its sign-in tokens, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: `api.xero.com`, `identity.xero.com`, `login.xero.com`.
+Used for: invoices or sales orders, credit notes and customers. Sends: the client ID and secret of your own app, and its sign-in tokens. Contacts: `api.xero.com`, `identity.xero.com`, `login.xero.com`.
 
 Terms: https://developer.xero.com/xero-developer-platform-terms-conditions/ | Privacy: https://www.xero.com/legal/privacy/
 
 = Zoho Books =
-Creates invoices (or sales orders), credit notes and customers in Zoho Books for your WooCommerce orders, and reads stock and invoice status back where offered. Data sent: the client ID and secret of your own app, and its sign-in tokens, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: `accounts.zoho.com`, `accounts.zoho.eu`, `accounts.zoho.in`, `accounts.zoho.com.au`, `accounts.zoho.jp`, `accounts.zoho.sa`, `accounts.zohocloud.ca`, `accounts.zoho.com.cn`, `www.zohoapis.com`, `www.zohoapis.eu`, `www.zohoapis.in`, `www.zohoapis.com.au`, `www.zohoapis.jp`, `www.zohoapis.sa`, `www.zohoapis.ca`, `www.zohoapis.com.cn`.
+Used for: invoices or sales orders, credit notes and customers. Sends: the client ID and secret of your own app, and its sign-in tokens. Contacts: `accounts.zoho.com`, `accounts.zoho.eu`, `accounts.zoho.in`, `accounts.zoho.com.au`, `accounts.zoho.jp`, `accounts.zoho.sa`, `accounts.zohocloud.ca`, `accounts.zoho.com.cn`, `www.zohoapis.com`, `www.zohoapis.eu`, `www.zohoapis.in`, `www.zohoapis.com.au`, `www.zohoapis.jp`, `www.zohoapis.sa`, `www.zohoapis.ca`, `www.zohoapis.com.cn`.
 
 Terms: https://www.zoho.com/books/terms.html | Privacy: https://www.zoho.com/privacy.html
 
 = Dynamics 365 Sales =
-Creates deals (or opportunities), contacts and refund notes in Dynamics 365 Sales for your WooCommerce orders. Data sent: your app's client ID and secret (or signed assertion), and its access tokens, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: `*.dynamics.com`, `login.microsoftonline.com`.
+Used for: deals or opportunities, contacts and refund notes. Sends: your app's client ID and secret (or signed assertion), and its access tokens. Contacts: `*.dynamics.com`, `login.microsoftonline.com`.
 
 Terms: https://learn.microsoft.com/en-us/legal/microsoft-apis/terms-of-use | Privacy: https://privacy.microsoft.com/privacystatement
 
 = HubSpot =
-Creates deals (or opportunities), contacts and refund notes in HubSpot for your WooCommerce orders. Data sent: your API key or token, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: `api.hubapi.com`.
+Used for: deals or opportunities, contacts and refund notes. Sends: your API key or token. Contacts: `api.hubapi.com`.
 
 Terms: https://legal.hubspot.com/developer-terms | Privacy: https://legal.hubspot.com/privacy-policy
 
 = Pipedrive =
-Creates deals (or opportunities), contacts and refund notes in Pipedrive for your WooCommerce orders. Data sent: your API key or token, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: `*.pipedrive.com`.
+Used for: deals or opportunities, contacts and refund notes. Sends: your API key or token. Contacts: `*.pipedrive.com`.
 
 Terms: https://www.pipedrive.com/en/terms-of-service | Privacy: https://www.pipedrive.com/en/privacy
 
 = Salesforce =
-Creates deals (or opportunities), contacts and refund notes in Salesforce for your WooCommerce orders. Data sent: the client ID and secret of your own app, and its sign-in tokens, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: `*.salesforce.com`.
+Used for: deals or opportunities, contacts and refund notes. Sends: the client ID and secret of your own app, and its sign-in tokens. Contacts: `*.salesforce.com`.
 
 Terms: https://www.salesforce.com/company/legal/program-agreement/ | Privacy: https://www.salesforce.com/company/privacy/
 
 = SuiteCRM =
-Creates deals (or opportunities), contacts and refund notes in SuiteCRM for your WooCommerce orders. Data sent: your API key or token, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: only the address you enter (your own server or your provider's).
+Used for: deals or opportunities, contacts and refund notes. Sends: your API key or token. Contacts: only the address you enter (your own server or your provider's).
 
 Terms: none; SuiteCRM is open source software (AGPL) that runs on your own server, so no vendor processes your data | Privacy: https://suitecrm.com/privacy
 
 = Zoho CRM =
-Creates deals (or opportunities), contacts and refund notes in Zoho CRM for your WooCommerce orders. Data sent: the client ID and secret of your own app, and its sign-in tokens, and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: `accounts.zoho.com`, `accounts.zoho.eu`, `accounts.zoho.in`, `accounts.zoho.com.au`, `accounts.zoho.jp`, `accounts.zoho.sa`, `accounts.zohocloud.ca`, `accounts.zoho.com.cn`, `www.zohoapis.com`, `www.zohoapis.eu`, `www.zohoapis.in`, `www.zohoapis.com.au`, `www.zohoapis.jp`, `www.zohoapis.sa`, `www.zohoapis.ca`, `www.zohoapis.com.cn`.
+Used for: deals or opportunities, contacts and refund notes. Sends: the client ID and secret of your own app, and its sign-in tokens. Contacts: `accounts.zoho.com`, `accounts.zoho.eu`, `accounts.zoho.in`, `accounts.zoho.com.au`, `accounts.zoho.jp`, `accounts.zoho.sa`, `accounts.zohocloud.ca`, `accounts.zoho.com.cn`, `www.zohoapis.com`, `www.zohoapis.eu`, `www.zohoapis.in`, `www.zohoapis.com.au`, `www.zohoapis.jp`, `www.zohoapis.sa`, `www.zohoapis.ca`, `www.zohoapis.com.cn`.
 
 Terms: https://www.zoho.com/crm/zohocrm-terms.html | Privacy: https://www.zoho.com/privacy.html
 

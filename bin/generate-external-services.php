@@ -82,9 +82,9 @@ const ESTASOFT_EXT_FALLBACK = array(
 	),
 );
 const ESTASOFT_EXT_PURPOSE = array(
-	'erp'        => 'Creates sales orders, customers and credit notes in %s for your WooCommerce orders, and reads stock and tracking back where offered.',
-	'accounting' => 'Creates invoices (or sales orders), credit notes and customers in %s for your WooCommerce orders, and reads stock and invoice status back where offered.',
-	'crm'        => 'Creates deals (or opportunities), contacts and refund notes in %s for your WooCommerce orders.',
+	'erp'        => 'sales orders, customers and credit notes',
+	'accounting' => 'invoices or sales orders, credit notes and customers',
+	'crm'        => 'deals or opportunities, contacts and refund notes',
 );
 
 /**
@@ -306,9 +306,10 @@ function estasoft_ext_hosts( array $service ): string {
  */
 function estasoft_ext_paragraph( array $service ): string {
 	$type    = isset( ESTASOFT_EXT_PURPOSE[ $service['type'] ] ) ? (string) $service['type'] : 'accounting';
-	$purpose = sprintf( ESTASOFT_EXT_PURPOSE[ $type ], $service['name'] );
 	$creds   = ESTASOFT_EXT_CREDENTIALS[ $service['method'] ] ?? ESTASOFT_EXT_CREDENTIALS['unknown'];
-	return $purpose . ' Data sent: ' . $creds . ', and the order, customer and product data your mapping selects; nothing else. When: Test connection, each queued order, refund or customer event, and scheduled reads. Contacts: ' . estasoft_ext_hosts( $service ) . '.';
+	// What is sent and when is the same for every system and is said once, in the hand-written introduction of the readme section:
+	// WordPress.org counts the section toward the 2,500 words of the Description and cuts what is over.
+	return 'Used for: ' . ESTASOFT_EXT_PURPOSE[ $type ] . '. Sends: ' . $creds . '. Contacts: ' . estasoft_ext_hosts( $service ) . '.';
 }
 
 /**
