@@ -26,6 +26,11 @@ use Estasoft\SyncEngine\Domain\Item;
 final class QuickBooksOrderSender {
 
 	/**
+	 * Most creates in one pass when the answer keeps naming an invoice that was deleted.
+	 */
+	private const ROUNDS = 3;
+
+	/**
 	 * Set up with what it depends on.
 	 *
 	 * @param QuickBooksDocuments       $documents    Documents.
@@ -90,13 +95,25 @@ final class QuickBooksOrderSender {
 		}
 		$createdNow = false;
 		if ( null === $invoice ) {
-			$made = $this->create( $parsed, $warnings );
-			if ( $made instanceof ConnectorError ) {
-				return SendResult::failure( $made );
+			$body = $this->prepare( $parsed, $warnings );
+			if ( $body instanceof ConnectorError ) {
+				return SendResult::failure( $body );
 			}
-			list( $invoice, $createdNow ) = $made;
+			$dead = array();
+			$done = null;
+			for ( $round = 0; $round < self::ROUNDS && null === $done; ++$round ) {
+				list( $invoice, $createdNow ) = $this->post( $parsed, $body, $dead );
+				$done                         = $this->finish( $invoice, $parsed, $warnings );
+				if ( null === $done ) {
+					$dead[] = QuickBooksPayloadReader::text( $invoice['Id'] ?? '' );
+				}
+			}
+		} else {
+			$done = $this->finish( $invoice, $parsed, $warnings );
 		}
-		$done = $this->finish( $invoice, $parsed, $warnings );
+		if ( null === $done ) {
+			return SendResult::failure( QuickBooksErrors::refused( 'Invoice', __( 'QuickBooks keeps answering with an invoice that no longer exists. Try again later.', 'estasoft-erp-crm-sync-engine' ) ) );
+		}
 		if ( $done instanceof ConnectorError ) {
 			return SendResult::failure( $done );
 		}
@@ -105,15 +122,15 @@ final class QuickBooksOrderSender {
 	}
 
 	/**
-	 * Create the invoice after everything it needs has been resolved.
+	 * Check everything the invoice needs, resolve the item and customer, and build the body.
 	 *
 	 * @param QuickBooksOrderPayload $parsed   Checked payload.
 	 * @param array<int,string>      $warnings Receives notes.
-	 * @return array{0:array<string,mixed>,1:bool}|ConnectorError The invoice and whether this pass made it.
+	 * @return array<string,mixed>|ConnectorError
 	 *
 	 * @throws ApiException On a failed call.
 	 */
-	private function create( QuickBooksOrderPayload $parsed, array &$warnings ): array|ConnectorError {
+	private function prepare( QuickBooksOrderPayload $parsed, array &$warnings ): array|ConnectorError {
 		if ( ! $this->company->customNumbers() ) {
 			return QuickBooksErrors::refused(
 				'DocNumber',
@@ -121,8 +138,9 @@ final class QuickBooksOrderSender {
 			);
 		}
 		$home     = $this->company->homeCurrency();
+		$multi    = $this->company->multiCurrency();
 		$currency = '' !== $parsed->currency ? $parsed->currency : $home;
-		if ( $currency !== $home && ! $this->company->multiCurrency() ) {
+		if ( $currency !== $home && ! $multi ) {
 			return QuickBooksErrors::refused(
 				'CurrencyRef',
 				sprintf(
@@ -149,14 +167,29 @@ final class QuickBooksOrderSender {
 			$kinds[] = 'generic';
 		}
 		$named = $this->items->forKinds( $kinds, $this->options );
-		$body  = $this->builder->invoice( $parsed, '', $currency, $home, $us, $found, $named, $warnings );
+		$body  = $this->builder->invoice( $parsed, '', $currency, $home, $multi, $us, $found, $named, $warnings );
 		if ( $body instanceof ConnectorError ) {
 			return $body;
 		}
-		$customer            = $this->customers->resolve( $parsed->partner, $parsed->delivery, $warnings );
+		$customer            = $this->customers->resolve( $parsed->partner, $parsed->delivery, $warnings, $currency, $home, $multi );
 		$body['CustomerRef'] = array( 'value' => QuickBooksPayloadReader::text( $customer['Id'] ?? '' ) );
+		return $body;
+	}
+
+	/**
+	 * Create the invoice. The request id is made from the reference, the step and the body, so a retry of the same request replays the first answer; ids of invoices that
+	 * were found deleted are part of it, so a create that follows a deletion is a new request.
+	 *
+	 * @param QuickBooksOrderPayload $parsed Checked payload.
+	 * @param array<string,mixed>    $body   Body of the invoice.
+	 * @param array<int,string>      $dead   Ids of invoices a replayed answer named that no longer exist.
+	 * @return array{0:array<string,mixed>,1:bool} The invoice and whether this pass made it.
+	 *
+	 * @throws ApiException On a failed call.
+	 */
+	private function post( QuickBooksOrderPayload $parsed, array $body, array $dead ): array {
 		try {
-			return array( $this->documents->create( 'invoice', $body, $this->requestId( $parsed->clientRef, 'invoice', $parsed->attempt, $body ) ), true );
+			return array( $this->documents->create( 'invoice', $body, $this->requestId( $parsed->clientRef, 'invoice', $dead, $body ) ), true );
 		} catch ( ApiException $exception ) {
 			if ( ! QuickBooksErrors::has( $exception->response(), '6140' ) ) {
 				throw $exception;
@@ -175,21 +208,27 @@ final class QuickBooksOrderSender {
 	 * @param array<string,mixed>    $invoice  The invoice as QuickBooks last returned it.
 	 * @param QuickBooksOrderPayload $parsed   Checked payload.
 	 * @param array<int,string>      $warnings Receives notes.
-	 * @return array<string,mixed>|ConnectorError
+	 * @return array<string,mixed>|ConnectorError|null The finished invoice, the failure, or null when the invoice turned out not to exist any more (a replayed answer).
 	 *
 	 * @throws ApiException On a failed call.
 	 */
-	private function finish( array $invoice, QuickBooksOrderPayload $parsed, array &$warnings ): array|ConnectorError {
+	private function finish( array $invoice, QuickBooksOrderPayload $parsed, array &$warnings ): array|ConnectorError|null {
 		if ( QuickBooksDocuments::isUnchecked( $invoice ) ) {
 			$problem = $this->totals->check( $invoice, $parsed->currency, $this->company->homeCurrency(), $parsed->totalMinor );
 			if ( null !== $problem ) {
 				if ( 'warn' !== $this->options->choice( 'total_mismatch', array( 'fail', 'warn' ), 'fail' ) ) {
+					if ( null === $this->documents->fetch( 'invoice', QuickBooksPayloadReader::text( $invoice['Id'] ?? '' ) ) ) {
+						return null;
+					}
 					$this->discard( 'invoice', $invoice );
 					return $problem;
 				}
 				$warnings[] = (string) ( $problem->context['reason'] ?? '' );
 			}
 			$invoice = $this->documents->markChecked( 'invoice', $invoice );
+			if ( null === $invoice ) {
+				return null;
+			}
 		}
 		if ( $this->options->pays() && '' !== $parsed->paymentDate ) {
 			$invoice = $this->pay( $invoice, $parsed );
@@ -235,7 +274,7 @@ final class QuickBooksOrderSender {
 		if ( '' !== $deposit ) {
 			$payment['DepositToAccountRef'] = array( 'value' => $deposit );
 		}
-		$this->documents->pay( $payment, $this->requestId( $parsed->clientRef, 'payment', $parsed->attempt, $payment ) );
+		$this->documents->pay( $payment, $this->requestId( $parsed->clientRef, 'payment', array(), $payment ) );
 		return $this->documents->invoice( $id ) ?? $invoice;
 	}
 
@@ -311,15 +350,15 @@ final class QuickBooksOrderSender {
 	}
 
 	/**
-	 * A requestid: the same body in the same try replays the first answer; a corrected body, or the next try, gets a new id. The document number is what
-	 * guards against duplicates across tries, so a try never receives the answer about an invoice it deleted. At most 50 characters.
+	 * A requestid from the reference, the step and the body: the same request sent again gets the first answer, so an invoice made by a request whose answer was lost is
+	 * not made twice. A corrected body is a new request, and so is a create that follows a deletion (the ids of deleted invoices are part of it). At most 50 characters.
 	 *
 	 * @param string              $reference Client reference.
 	 * @param string              $step      invoice or payment.
-	 * @param int                 $attempt   Tries the queue made so far.
+	 * @param array<int,string>   $dead      Ids of invoices that were found deleted.
 	 * @param array<string,mixed> $body      Request body.
 	 */
-	private function requestId( string $reference, string $step, int $attempt, array $body ): string {
-		return 'wc-' . substr( sha1( $this->connectionId . '|' . $reference . '|' . $step . '|' . $attempt . '|' . (string) wp_json_encode( $body ) ), 0, 40 );
+	private function requestId( string $reference, string $step, array $dead, array $body ): string {
+		return 'wc-' . substr( sha1( $this->connectionId . '|' . $reference . '|' . $step . '|' . implode( ',', $dead ) . '|' . (string) wp_json_encode( $body ) ), 0, 40 );
 	}
 }

@@ -90,7 +90,7 @@ final class SapBusinessOneKit {
 		$this->gateway  = new SapBusinessOneGateway( $api, $options->apiVersion() );
 		$this->partners = new SapBusinessOnePartners( $this->gateway, $options, $system );
 		$this->orders   = new SapBusinessOneOrders( $this->gateway, $this->partners, $options, $this->amounts, new ShopTotalMarker( $this->amounts ), $system );
-		$this->refunds  = new SapBusinessOneRefunds( $this->gateway, $this->orders, $options, $this->amounts, $system );
+		$this->refunds  = new SapBusinessOneRefunds( $this->gateway, $this->orders, $options, $this->amounts, new ShopTotalMarker( $this->amounts ), $system );
 		$this->reader   = new SapBusinessOneReader( $this->gateway, $this->orders, $this->amounts );
 		$this->total    = new TotalCheck( $this->amounts, $system, $options->totalMismatch() );
 	}

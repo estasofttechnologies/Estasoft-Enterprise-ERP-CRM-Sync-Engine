@@ -63,6 +63,16 @@ final class FakeLexwareOfficeServer {
 	public array $rates = array( 0, 7, 19 );
 
 	/**
+	 * How many of the next reads of an invoice by id time out (the answer to a read-back that never comes).
+	 */
+	public int $failInvoiceReads = 0;
+
+	/**
+	 * When set, every document is stored with this voucher date (ISO text), as a vendor that overwrites the date would.
+	 */
+	public ?string $overrideDate = null;
+
+	/**
 	 * Counter for ids and numbers.
 	 */
 	private int $counter = 0;
@@ -149,7 +159,7 @@ final class FakeLexwareOfficeServer {
 		$s->route( 'GET', '/v1/articles', $auth( fn( ApiFakeRequest $r ) => $this->listArticles( $r ) ) );
 		$s->route( 'GET', '/v1/voucherlist', $auth( fn( ApiFakeRequest $r ) => $this->voucherList( $r ) ) );
 		$s->route( 'POST', '/v1/invoices', $auth( fn( ApiFakeRequest $r ) => $this->createDocument( $r, 'invoice' ) ) );
-		$s->route( 'GET', '/v1/invoices/{id}', $auth( fn( ApiFakeRequest $r ) => $this->invoices[ $r->params['id'] ] ?? null ) );
+		$s->route( 'GET', '/v1/invoices/{id}', $auth( fn( ApiFakeRequest $r ) => $this->readInvoice( $r ) ) );
 		$s->route( 'POST', '/v1/credit-notes', $auth( fn( ApiFakeRequest $r ) => $this->createDocument( $r, 'creditnote' ) ) );
 		$s->route( 'GET', '/v1/credit-notes/{id}', $auth( fn( ApiFakeRequest $r ) => $this->creditNotes[ $r->params['id'] ] ?? null ) );
 	}
@@ -268,10 +278,10 @@ final class FakeLexwareOfficeServer {
 		foreach ( $body['lineItems'] as $line ) {
 			$rate = (float) ( $line['unitPrice']['taxRatePercentage'] ?? -1 );
 			if ( ! in_array( (int) $rate, $this->rates, true ) || (float) (int) $rate !== $rate ) {
-				return $this->invalid( 'tax_rate_not_supported' );
+				return $this->invalid( 'tax_rate_not_supported', 'lineItems[0].unitPrice.taxRatePercentage' );
 			}
 			if ( $gross !== isset( $line['unitPrice']['grossAmount'] ) && 'text' !== $line['type'] ) {
-				return $this->invalid( 'amount_type_mismatch' );
+				return $this->invalid( 'amount_type_mismatch', 'taxConditions.taxType' );
 			}
 		}
 		$status = 'draft';
@@ -298,6 +308,9 @@ final class FakeLexwareOfficeServer {
 			'version'         => 1,
 		);
 		$doc['totalPrice'] = array( 'currency' => 'EUR' ) + $totals;
+		if ( null !== $this->overrideDate ) {
+			$doc['voucherDate'] = $this->overrideDate;
+		}
 		if ( 'creditnote' === $type && '' !== $linked ) {
 			$this->invoices[ $linked ]['relatedVouchers'][] = array( 'id' => $id, 'voucherNumber' => $doc['voucherNumber'], 'voucherType' => 'creditnote' );
 		}
@@ -307,6 +320,20 @@ final class FakeLexwareOfficeServer {
 			$this->creditNotes[ $id ] = $doc;
 		}
 		return $this->created( $id, 'invoice' === $type ? 'invoices' : 'credit-notes' );
+	}
+
+	/**
+	 * Read an invoice, unless a read-back is set to time out.
+	 *
+	 * @param ApiFakeRequest $request Request.
+	 * @return array<string,mixed>|HttpResponse|null
+	 */
+	private function readInvoice( ApiFakeRequest $request ): array|HttpResponse|null {
+		if ( $this->failInvoiceReads > 0 ) {
+			--$this->failInvoiceReads;
+			return FakeHttpClient::timeout();
+		}
+		return $this->invoices[ $request->params['id'] ] ?? null;
 	}
 
 	/**
@@ -393,10 +420,11 @@ final class FakeLexwareOfficeServer {
 	/**
 	 * A 406 with an IssueList.
 	 *
-	 * @param string $key Issue key.
+	 * @param string $key    Issue key.
+	 * @param string $source Where the problem is, as a field path.
 	 */
-	private function invalid( string $key ): HttpResponse {
-		return FakeHttpClient::json( array( 'IssueList' => array( array( 'i18nKey' => $key, 'source' => 'request', 'type' => 'validation_failure' ) ) ), 406 );
+	private function invalid( string $key, string $source = 'request' ): HttpResponse {
+		return FakeHttpClient::json( array( 'IssueList' => array( array( 'i18nKey' => $key, 'source' => $source, 'type' => 'validation_failure' ) ) ), 406 );
 	}
 
 	/**

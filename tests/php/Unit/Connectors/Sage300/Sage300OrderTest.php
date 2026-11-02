@@ -234,9 +234,24 @@ final class Sage300OrderTest extends Sage300TestCase {
 		$this->assertCount( 1, $result->ref->extra['warnings'] );
 	}
 
-	public function test_an_answer_without_a_total_is_accepted_with_a_note_that_it_was_not_verified(): void {
+	public function test_an_answer_without_a_total_is_refused_so_price_lists_cannot_change_prices_unnoticed(): void {
 		$this->server->totalInAnswer = false;
-		$result                      = $this->sendOrder();
+		$refused                     = $this->sendOrder();
+
+		$this->assertFalse( $refused->isSuccess() );
+		$this->assertSame( ErrorCode::Val002, $refused->error->code );
+		$this->assertSame( 'total_property', $refused->error->context['field'] );
+		$this->assertStringContainsString( 'stays in Sage 300', $this->why( $refused ) );
+		$this->assertCount( 1, $this->server->all( 'OE/OEOrders' ) );
+
+		$again = $this->sendOrder();
+		$this->assertFalse( $again->isSuccess(), 'The order that was made is checked again, not trusted.' );
+		$this->assertCount( 1, $this->server->all( 'OE/OEOrders' ) );
+	}
+
+	public function test_an_answer_without_a_total_is_accepted_with_a_note_when_the_person_chose_to_continue(): void {
+		$this->server->totalInAnswer = false;
+		$result                      = $this->sendOrder( array( 'total_mismatch' => 'warn' ) );
 
 		$this->assertTrue( $result->isSuccess(), $this->why( $result ) );
 		$this->assertStringContainsString( 'not verified', $result->ref->extra['warnings'][0] );

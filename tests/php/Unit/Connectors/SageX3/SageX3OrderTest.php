@@ -50,7 +50,7 @@ final class SageX3OrderTest extends SageX3TestCase {
 		$this->server->failNext(
 			'POST',
 			'#/SORDER$#',
-			FakeHttpClient::json( array( 'CUSORDREF' => 'WC-100' ), 201, array( 'location' => FakeSageX3Server::ADDRESS . "/api1/x3/erp/SEED/SORDER('SOH00777')" ) )
+			FakeHttpClient::json( array( 'CUSORDREF' => 'WC-100', 'ORDINVATI' => 459.9 ), 201, array( 'location' => FakeSageX3Server::ADDRESS . "/api1/x3/erp/SEED/SORDER('SOH00777')" ) )
 		);
 		$result = $this->sendOrder();
 
@@ -260,12 +260,59 @@ final class SageX3OrderTest extends SageX3TestCase {
 		$this->assertCount( 1, $result->ref->extra['warnings'] );
 	}
 
-	public function test_without_a_total_property_the_total_is_not_checked_and_the_result_says_so(): void {
-		$result = $this->connector()->send( $this->connection(), $this->item( EntityType::Order, '100' ), $this->order() );
+	public function test_without_a_total_property_nothing_is_sent_unless_the_person_chose_to_continue_with_a_warning(): void {
+		$refused = $this->sendOrder( array( 'total_property' => '' ) );
 
-		$this->assertTrue( $result->isSuccess(), $this->why( $result ) );
-		$this->assertStringContainsString( 'total_property', $result->ref->extra['warnings'][0] );
-		$this->assertArrayNotHasKey( 'total_minor', $result->ref->extra );
+		$this->assertSame( ErrorCode::Val002, $refused->error->code );
+		$this->assertSame( 'total_property', $refused->error->context['field'] );
+		$this->assertSame( 0, $this->kit->http->count(), 'Refused before any request, because the total could not be compared.' );
+
+		$warned = $this->sendOrder( array( 'total_property' => '', 'total_mismatch' => 'warn' ) );
+		$this->assertTrue( $warned->isSuccess(), $this->why( $warned ) );
+		$this->assertStringContainsString( 'total_property', $warned->ref->extra['warnings'][0] );
+		$this->assertArrayNotHasKey( 'total_minor', $warned->ref->extra );
+	}
+
+	public function test_an_answer_without_the_total_is_refused_after_the_create_unless_the_person_chose_to_continue(): void {
+		$this->server->totalInAnswer = false;
+		$refused                     = $this->sendOrder();
+		$this->assertSame( 'total_property', $refused->error->context['field'] );
+		$this->assertStringContainsString( 'stays in Sage X3', $this->why( $refused ) );
+		$this->assertCount( 1, $this->server->all( 'SORDER' ) );
+
+		$again = $this->sendOrder();
+		$this->assertFalse( $again->isSuccess(), 'The order that was made is checked again, not trusted.' );
+		$this->assertCount( 1, $this->server->all( 'SORDER' ) );
+
+		$warned = $this->sendOrder( array( 'total_mismatch' => 'warn' ), array(), '101' );
+		$this->assertTrue( $warned->isSuccess(), $this->why( $warned ) );
+		$this->assertCount( 1, $warned->ref->extra['warnings'] );
+	}
+
+	public function test_a_next_page_link_on_another_server_is_not_followed(): void {
+		$this->server->failNext(
+			'GET',
+			'#/SORDER$#',
+			FakeHttpClient::json( array( '$resources' => array(), '$links' => array( '$next' => array( '$url' => 'https://evil.example.test/api1/x3/erp/SEED/SORDER?page=2' ) ) ) )
+		);
+		$result = $this->sendOrder();
+
+		$this->assertSame( ErrorCode::Val002, $result->error->code );
+		$this->assertSame( 'address', $result->error->context['field'] );
+		foreach ( $this->server->calls as $call ) {
+			$this->assertSame( 'x3.example.test', $call['host'], 'Nothing was sent to the other server.' );
+		}
+		$hosts = array_map( static fn( array $request ): string => (string) wp_parse_url( $request['url'], PHP_URL_HOST ), $this->kit->http->requests );
+		$this->assertNotContains( 'evil.example.test', $hosts );
+	}
+
+	public function test_a_next_page_link_that_is_a_path_on_the_same_server_is_followed(): void {
+		$this->server->pageSize = 1;
+		$this->server->records['SORDER'][] = array( 'SOHNUM' => 'OLD1', 'CUSORDREF' => 'WC-1', 'CUR' => 'AED' );
+		$this->server->records['SORDER'][] = array( 'SOHNUM' => 'OLD2', 'CUSORDREF' => 'WC-100', 'CUR' => 'AED' );
+		$found = $this->connector()->findExisting( $this->connection(), $this->item( EntityType::Order, '100' ) );
+
+		$this->assertSame( 'OLD2', $found->ref );
 	}
 
 	public function test_a_line_discount_lowers_the_unit_price_in_whole_numbers(): void {

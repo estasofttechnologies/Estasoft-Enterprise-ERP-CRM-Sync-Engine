@@ -89,6 +89,13 @@ final class FakeSuiteCrmServer {
 	public array $links = array();
 
 	/**
+	 * Custom fields a module has besides the stock ones (Studio fields end in `_c`): module => field names. A filter on any other field is an error.
+	 *
+	 * @var array<string,array<int,string>>
+	 */
+	public array $customFields = array();
+
+	/**
 	 * Valid access tokens.
 	 *
 	 * @var array<string,bool>
@@ -354,7 +361,7 @@ final class FakeSuiteCrmServer {
 		$or     = 'or' === strtolower( (string) ( $filter['operator'] ?? 'and' ) );
 		unset( $filter['operator'] );
 		foreach ( array_keys( $filter ) as $field ) {
-			if ( ! in_array( $field, self::FIELDS[ $module ], true ) ) {
+			if ( ! in_array( $field, array_merge( self::FIELDS[ $module ], $this->customFields[ $module ] ?? array() ), true ) ) {
 				return $this->error( 400, 'Bad Request', 'Filter field ' . $field . ' in ' . self::OBJECTS[ $module ] . ' module is not found' );
 			}
 		}

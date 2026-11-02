@@ -15,7 +15,9 @@ use Estasoft\SyncEngine\Connectors\Support\ApiClient;
 use Estasoft\SyncEngine\Connectors\Support\ApiResponse;
 
 /**
- * Date-versioned object paths (/crm/objects/{version}/{object}/...), search paging and the daily quota header.
+ * Date-versioned object paths (/crm/objects/{version}/{object}/...), search paging, the properties of an object and one cheap probe. HubSpot
+ * sends its rate-limit headers on every answer except those of the search endpoints ("Responses from the search API endpoints will not
+ * include any of the rate limit headers", usage guidelines), and the daily ones not for OAuth requests, so nothing here depends on them.
  */
 final class HubSpotRecords {
 
@@ -30,26 +32,12 @@ final class HubSpotRecords {
 	private const PAGE = 100;
 
 	/**
-	 * Daily requests HubSpot said are left, from the last answer that carried the header.
-	 *
-	 * @var int|null
-	 */
-	private ?int $dailyRemaining = null;
-
-	/**
 	 * Create the object.
 	 *
 	 * @param ApiClient $api     Client for api.hubapi.com.
 	 * @param string    $version API version such as 2026-03.
 	 */
 	public function __construct( private readonly ApiClient $api, private readonly string $version ) {
-	}
-
-	/**
-	 * Requests left today according to HubSpot, when it said.
-	 */
-	public function dailyRemaining(): ?int {
-		return $this->dailyRemaining;
 	}
 
 	/**
@@ -87,8 +75,7 @@ final class HubSpotRecords {
 				$body['after'] = $after;
 			}
 			$response = $this->api->post( "/crm/objects/{$this->version}/{$type}/search", array(), $body, array( 'action' => __( 'search records', 'estasoft-erp-crm-sync-engine' ) ) );
-			$this->note( $response );
-			$json = $response->json();
+			$json     = $response->json();
 			foreach ( (array) ( $json['results'] ?? array() ) as $row ) {
 				if ( is_array( $row ) ) {
 					$found[] = $row;
@@ -124,7 +111,6 @@ final class HubSpotRecords {
 				'action' => __( 'create records', 'estasoft-erp-crm-sync-engine' ),
 			)
 		);
-		$this->note( $response );
 		return $response;
 	}
 
@@ -136,9 +122,7 @@ final class HubSpotRecords {
 	 * @param array<string,mixed> $properties Properties.
 	 */
 	public function update( string $type, string $id, array $properties ): ApiResponse {
-		$response = $this->api->patch( "/crm/objects/{$this->version}/{$type}/" . rawurlencode( $id ), array(), array( 'properties' => $properties ), array( 'action' => __( 'change records', 'estasoft-erp-crm-sync-engine' ) ) );
-		$this->note( $response );
-		return $response;
+		return $this->api->patch( "/crm/objects/{$this->version}/{$type}/" . rawurlencode( $id ), array(), array( 'properties' => $properties ), array( 'action' => __( 'change records', 'estasoft-erp-crm-sync-engine' ) ) );
 	}
 
 	/**
@@ -148,7 +132,7 @@ final class HubSpotRecords {
 	 * @param string $id     Record id.
 	 */
 	public function archive( string $type, string $id ): void {
-		$this->note( $this->api->delete( "/crm/objects/{$this->version}/{$type}/" . rawurlencode( $id ), array(), null, array( 'action' => __( 'delete records', 'estasoft-erp-crm-sync-engine' ) ) ) );
+		$this->api->delete( "/crm/objects/{$this->version}/{$type}/" . rawurlencode( $id ), array(), null, array( 'action' => __( 'delete records', 'estasoft-erp-crm-sync-engine' ) ) );
 	}
 
 	/**
@@ -166,14 +150,45 @@ final class HubSpotRecords {
 	}
 
 	/**
-	 * Remember the daily quota header.
+	 * One property definition of an object. A 403 (no schema scope) and a 404 (no such property) come back as answers to read.
 	 *
-	 * @param ApiResponse $response Answer.
+	 * @param string $type Object type.
+	 * @param string $name Internal property name.
 	 */
-	private function note( ApiResponse $response ): void {
-		$left = $response->header( 'X-HubSpot-RateLimit-Daily-Remaining' );
-		if ( null !== $left && ctype_digit( trim( $left ) ) ) {
-			$this->dailyRemaining = (int) trim( $left );
-		}
+	public function property( string $type, string $name ): ApiResponse {
+		return $this->api->get(
+			"/crm/properties/{$this->version}/{$type}/" . rawurlencode( $name ),
+			array(),
+			null,
+			array(
+				'allow'  => array( 403, 404 ),
+				'action' => __( 'read the property definitions', 'estasoft-erp-crm-sync-engine' ),
+			)
+		);
+	}
+
+	/**
+	 * Create a property on an object. A refusal (400, 403) and a name already in use (409) come back as answers to read.
+	 *
+	 * @param string              $type       Object type.
+	 * @param array<string,mixed> $definition name, label, type, fieldType, groupName, hasUniqueValue.
+	 */
+	public function createProperty( string $type, array $definition ): ApiResponse {
+		return $this->api->post(
+			"/crm/properties/{$this->version}/{$type}",
+			array(),
+			$definition,
+			array(
+				'allow'  => array( 400, 403, 409 ),
+				'action' => __( 'create properties', 'estasoft-erp-crm-sync-engine' ),
+			)
+		);
+	}
+
+	/**
+	 * One cheap read that proves the key works and may read deals (the circuit-breaker probe).
+	 */
+	public function probe(): bool {
+		return $this->api->get( "/crm/objects/{$this->version}/deals", array( 'limit' => 1 ), null, array( 'action' => __( 'read records', 'estasoft-erp-crm-sync-engine' ) ) )->isSuccess();
 	}
 }

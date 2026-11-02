@@ -17,6 +17,7 @@ use Estasoft\SyncEngine\Connectors\EuAccountingCommon\Options;
 use Estasoft\SyncEngine\Connectors\EuAccountingCommon\OrderPayload;
 use Estasoft\SyncEngine\Connectors\EuAccountingCommon\PayloadReader;
 use Estasoft\SyncEngine\Connectors\EuAccountingCommon\Refusal;
+use Estasoft\SyncEngine\Connectors\EuAccountingCommon\Tolerance;
 use Estasoft\SyncEngine\Connectors\Support\ApiClient;
 use Estasoft\SyncEngine\Connectors\Support\ApiException;
 use Estasoft\SyncEngine\Contract\ConnectorError;
@@ -177,7 +178,7 @@ final class SevdeskDocuments {
 		if ( null === $invoice ) {
 			return SendResult::failure( Refusal::value( SevdeskConnector::LABEL, 'invoice', __( 'sevDesk could not read the invoice back.', 'estasoft-erp-crm-sync-engine' ), 'read back failed' ) );
 		}
-		$problem = $this->check( $invoice, $order->totalMinor, $options, $warnings );
+		$problem = $this->check( $invoice, $order->totalMinor, $options, $warnings, $order->rows(), $order->date );
 		if ( null !== $problem ) {
 			if ( $fresh && self::DRAFT === (int) ( $invoice['status'] ?? 0 ) ) {
 				$api->delete( 'Invoice/' . rawurlencode( $id ), array(), null, array( 'allow' => array( 404 ) ) );
@@ -198,10 +199,18 @@ final class SevdeskDocuments {
 			if ( self::DRAFT === (int) ( $invoice['status'] ?? 0 ) ) {
 				$warnings[] = 'stays_draft';
 			}
+			if ( LocalDate::differs( $invoice['invoiceDate'] ?? null, $order->date, $options->text( 'timezone' ) ) ) {
+				$warnings[] = 'date_differs';
+			}
 		}
 		$account = $options->text( 'payment_account' );
 		if ( '' !== $account && $order->isPaid() && (int) ( $invoice['status'] ?? 0 ) === self::OPEN ) {
-			$invoice = $this->book( $api, $id, $invoice, $account, $order, $options ) ?? $invoice;
+			$date = $this->paymentDate( $order, $options );
+			if ( null === $date ) {
+				$warnings[] = 'payment_date_unreadable';
+			} else {
+				$invoice = $this->book( $api, $id, $invoice, $account, $date ) ?? $invoice;
+			}
 		}
 		return SendResult::created( $this->ref( $invoice, $warnings ) );
 	}
@@ -226,12 +235,17 @@ final class SevdeskDocuments {
 	 * @param array<string,mixed> $document Invoice or credit note.
 	 * @param int|null            $expected Expected total in minor units, or null for no check.
 	 * @param Options             $options  Settings.
-	 * @param array<int,string>   $warnings Warnings, extended when the totals differ and the setting is warn.
+	 * @param array<int,string>   $warnings Warnings, extended when the totals differ and the setting is warn, or when the date differs.
+	 * @param int                 $rows     Rows of the document, for the default tolerance.
+	 * @param string              $utcDate  The date (UTC text) the connector converted into the document date, or empty for no date check.
 	 */
-	public function check( array $document, ?int $expected, Options $options, array &$warnings ): ?ConnectorError {
+	public function check( array $document, ?int $expected, Options $options, array &$warnings, int $rows = 1, string $utcDate = '' ): ?ConnectorError {
 		$currency = strtoupper( PayloadReader::text( $document['currency'] ?? 'EUR' ) );
 		if ( 'EUR' !== $currency ) {
 			return $this->currencyRefusal( $currency );
+		}
+		if ( '' !== $utcDate && LocalDate::differs( $document['invoiceDate'] ?? $document['creditNoteDate'] ?? null, $utcDate, $options->text( 'timezone' ) ) ) {
+			$warnings[] = 'date_differs';
 		}
 		if ( null === $expected ) {
 			return null;
@@ -240,7 +254,7 @@ final class SevdeskDocuments {
 		if ( null === $actual ) {
 			return Refusal::value( SevdeskConnector::LABEL, 'sumGross', __( 'sevDesk returned no total for the document.', 'estasoft-erp-crm-sync-engine' ), 'no total' );
 		}
-		if ( abs( $actual - $expected ) <= 1 ) {
+		if ( Tolerance::accepts( $actual, $expected, $options, $rows ) ) {
 			return null;
 		}
 		if ( $options->is( 'total_mismatch', 'warn' ) ) {
@@ -251,22 +265,37 @@ final class SevdeskDocuments {
 	}
 
 	/**
-	 * Book the payment on an open invoice, once.
+	 * The booking date for `bookAmount` as a whole number: yyyymmdd by default, a Unix timestamp of local midnight with the option
+	 * `payment_date_format` = `unix`. Null when the order's payment date cannot be read.
+	 *
+	 * @param OrderPayload $order   Order.
+	 * @param Options      $options Settings.
+	 */
+	public function paymentDate( OrderPayload $order, Options $options ): ?int {
+		$timezone = $options->text( 'timezone' );
+		return $options->is( 'payment_date_format', 'unix' )
+			? LocalDate::midnightTimestamp( $order->paymentDate, $timezone )
+			: LocalDate::ymdNumber( $order->paymentDate, $timezone );
+	}
+
+	/**
+	 * Book the payment on an open invoice, once. The invoice is read again first, so a booking that went through but whose answer was lost (or a
+	 * payment a person entered meanwhile) is seen and nothing is booked twice.
 	 *
 	 * @param ApiClient           $api     Client.
 	 * @param string              $id      Invoice id.
-	 * @param array<string,mixed> $invoice Invoice as read.
+	 * @param array<string,mixed> $invoice Invoice as read earlier in the pass.
 	 * @param string              $account Bank account id.
-	 * @param OrderPayload        $order   Order.
-	 * @param Options             $options Settings.
+	 * @param int                 $date    Booking date as `paymentDate()` gives it.
 	 * @return array<string,mixed>|null The invoice after booking, or null when nothing was booked.
 	 *
 	 * @throws ApiException On failure.
 	 */
-	private function book( ApiClient $api, string $id, array $invoice, string $account, OrderPayload $order, Options $options ): ?array {
-		$total = SevdeskJson::minor( $invoice['sumGross'] ?? null );
-		$paid  = SevdeskJson::minor( $invoice['paidAmount'] ?? 0 ) ?? 0;
-		if ( null === $total || $paid >= $total ) {
+	private function book( ApiClient $api, string $id, array $invoice, string $account, int $date ): ?array {
+		$invoice = $this->read( $api, $id ) ?? $invoice;
+		$total   = SevdeskJson::minor( $invoice['sumGross'] ?? null );
+		$paid    = SevdeskJson::minor( $invoice['paidAmount'] ?? 0 ) ?? 0;
+		if ( self::OPEN !== (int) ( $invoice['status'] ?? 0 ) || null === $total || $paid >= $total ) {
 			return null;
 		}
 		$api->put(
@@ -274,7 +303,7 @@ final class SevdeskDocuments {
 			array(),
 			array(
 				'amount'       => $this->amounts->number( $this->amounts->decimal( $total - $paid, 2 ) ),
-				'date'         => LocalDate::dmy( $order->paymentDate, $options->text( 'timezone' ) ),
+				'date'         => $date,
 				'type'         => 'FULL_PAYMENT',
 				'checkAccount' => SevdeskJson::ref( $account, 'CheckAccount' ),
 				'createFeed'   => false,

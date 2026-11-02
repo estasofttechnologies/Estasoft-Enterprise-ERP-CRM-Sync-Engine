@@ -66,11 +66,12 @@ final class SageAmounts {
 	/**
 	 * Whether two totals agree within the tolerance.
 	 *
-	 * @param int $expected Total the shop expects.
-	 * @param int $actual   Total the system worked out.
+	 * @param int $expected  Total the shop expects.
+	 * @param int $actual    Total the system worked out.
+	 * @param int $tolerance Most the two may differ, in minor units (at least one).
 	 */
-	public function agree( int $expected, int $actual ): bool {
-		return abs( $expected - $actual ) <= self::TOLERANCE;
+	public function agree( int $expected, int $actual, int $tolerance = self::TOLERANCE ): bool {
+		return abs( $expected - $actual ) <= max( self::TOLERANCE, $tolerance );
 	}
 
 	/**
@@ -129,5 +130,25 @@ final class SageAmounts {
 		$scale = (int) round( $percent * 100 );
 		$gross = $amount * $scale;
 		return $gross >= 0 ? intdiv( $gross + 5000, 10000 ) : -intdiv( -$gross + 5000, 10000 );
+	}
+
+	/**
+	 * The net amount inside a gross amount, in whole minor units. The rule: net = gross x 1,000,000 / (1,000,000 + rate), rounded half away from zero. When that net
+	 * plus the tax worked out on it (taxOn) does not give the gross back, the neighbour (one less, then one more) that does is taken; when none does, the rounded
+	 * net stays and the line is off by one minor unit.
+	 *
+	 * @param int $gross Gross amount in minor units (negative for a discount).
+	 * @param int $rate  Rate in ten-thousandths of a percent.
+	 */
+	public function netFromGross( int $gross, int $rate ): int {
+		$divisor = 1000000 + $rate;
+		$scaled  = $gross * 1000000;
+		$net     = $scaled >= 0 ? intdiv( $scaled + intdiv( $divisor, 2 ), $divisor ) : -intdiv( -$scaled + intdiv( $divisor, 2 ), $divisor );
+		foreach ( array( $net, $net - 1, $net + 1 ) as $candidate ) {
+			if ( $candidate + $this->taxOn( $candidate, $rate ) === $gross ) {
+				return $candidate;
+			}
+		}
+		return $net;
 	}
 }

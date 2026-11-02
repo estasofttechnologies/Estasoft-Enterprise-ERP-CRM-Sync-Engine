@@ -41,6 +41,8 @@ All fetched on 2026-11-02.
 | Audit Trail Transactions Grouped (Sage community) | https://communityhub.sage.com/gb/sage-50-accounts/f/general-discussion-uk/195651/sage-50---data-import---audit-transactions-grouped/490122 | `[third-party]` Grouping by transaction type, account reference, date and non-blank reference (and exchange rate in foreign currency) |
 | Research note | `docs/research/integration-research-export-formats.md` section 11.2 and 11.3 | Menu path File, Import, "Audit Trail Transactions" for the UK; sample templates in `C:\Program Files (x86)\Sage\Accounts\Import Templates`; one user only while importing; back up first |
 
+`terms_url` and `privacy_url` are empty: the Sage legal pages are not on the fetch allow-list or fail (client error), and the only link seen, `http://www.sage.com/us/legal#privacy` on the U.S. help page, is U.S. only and could not be read.
+
 The UK field limits and the tax-code range come from the research note, which gives them as third-party. The shell is blocked by policy from the Sage and Making It Happen hosts; every fact above came through the fetch tool.
 
 ## 2. How the merchant connects
@@ -71,7 +73,7 @@ Common:
 | `edition` | `uk`, `us` (default `uk`) | Layout |
 | `currency` | ISO code, required (GBP, EUR or USD) | Orders in another currency are left out |
 | `encoding` | `windows-1252`, `utf-8-bom` (default `windows-1252`) | Sage 50 is an ANSI program `[inferred]`; see section 13 |
-| `header_row` | yes/no, default yes | Heading row with the field names |
+| `header_row` | yes/no, default no | Heading row with the field names. No source confirms that the UK audit-trail import skips a first row, so it is off until the person has confirmed it with their own Sage 50 (a heading row that is not skipped is read as a transaction) |
 | `record_payments` | yes/no, default no | UK only: add a receipt line (`SR`) for paid orders |
 | `payment_accounts` | table: method id => bank nominal | UK only |
 | `fee_tax_code` | text | Tax code for fee lines (fees carry no rate) |
@@ -130,7 +132,7 @@ Rows: one row for every product line, every shipping line and every fee line (so
 
 Limits `[third-party]`/`[inferred]`: Net Amount up to 8 digits plus 2 decimals (99999999.99); tax code `T0` to `T99`; Account Reference at most 8 characters; Reference at most 30; Details at most 60 (longer text is cut to 57 characters plus `...` and a warning is logged); Extra Reference at most 30. A Reference or Account Reference over its limit leaves the order out (it is the key).
 
-The header row (when `header_row`) uses the names of the table. Version 12 and later only: before version 12 column K is Extra Reference and there is no Exchange Rate `[third-party]`.
+The heading row is written only when `header_row` is yes (default no, because no source confirms that the import skips it; confirm it with a test import before switching it on) and uses the names of the table. Version 12 and later only: before version 12 column K is Extra Reference and there is no Exchange Rate `[third-party]`.
 
 ### 6.2 US: Sales Journal
 
@@ -204,7 +206,7 @@ None. Sage 50 is a desktop program that does not answer, so the plugin cannot re
 
 ## 13. Encoding
 
-`windows-1252` writes the ANSI code page: German, Nordic, French and Spanish letters stay exact; characters it cannot hold (Arabic and others) become `?` and the Exports preview counts them. `utf-8-bom` writes UTF-8 with a byte order mark so Arabic stays intact; Sage 50's reading of it is not verified. Line ends are CR LF. The format says `rawBytes`: the bytes are already in the chosen character set and the engine adds nothing. The encoding and the heading-row setting are read from the connection when the file is made (`$batch->connection()`), so a change made after an order was queued applies to the file; the edition, accounts, codes and dates stay as the order saw them, because its rows were written with them. Spreadsheet formulas: the file is written through the engine's `CsvWriter`. In the columns that hold free text (UK: Reference, Details, Extra Reference, User Name; US: Invoice/CM #, Apply to Invoice Number, Customer PO, Description) a text that starts with `=`, `+`, `-` or `@`, a tab or a carriage return, and is not a plain number such as `-12.50`, gets one space in front, so Excel shows it as text and does not run it; Sage reads the space as padding `[inferred]`. The space counts toward the field length, so the text is shortened after it is added and a longer text ends with three dots inside the limit. Every other column (type, account reference, nominal or G/L code, customer ID, item ID, tax code, sales tax agency, dates, quantities, amounts) is written as it is. CSV quoting follows RFC 4180: a field with a comma, a quote or a line break is quoted and inner quotes doubled; line breaks inside names are replaced by a space.
+`windows-1252` writes the ANSI code page: German, Nordic, French and Spanish letters stay exact; characters it cannot hold (Arabic and others) become `?`, and the loss is reported three ways: the preview names the orders and the characters, the export carries a second file "Notes" (`notes.txt`) that lists every replaced character of every order, and the log gets one warning for the file. Windows-1252 stays the default because no Sage page says that Sage 50 reads UTF-8 (the UK program is ANSI `[inferred]`); choose `utf-8-bom` when your Sage 50 reads it. `utf-8-bom` writes UTF-8 with a byte order mark so Arabic stays intact; Sage 50's reading of it is not verified. Line ends are CR LF. The format says `rawBytes`: the bytes are already in the chosen character set and the engine adds nothing. The encoding and the heading-row setting are read from the connection when the file is made (`$batch->connection()`), so a change made after an order was queued applies to the file; the edition, accounts, codes and dates stay as the order saw them, because its rows were written with them. Spreadsheet formulas: the file is written through the engine's `CsvWriter`. In the columns that hold free text (UK: Reference, Details, Extra Reference, User Name; US: Invoice/CM #, Apply to Invoice Number, Customer PO, Description) a text that starts with `=`, `+`, `-` or `@`, a tab or a carriage return, and is not a plain number such as `-12.50`, gets one space in front, so Excel shows it as text and does not run it; Sage reads the space as padding `[inferred]`. The space counts toward the field length, so the text is shortened after it is added and a longer text ends with three dots inside the limit. Every other column (type, account reference, nominal or G/L code, customer ID, item ID, tax code, sales tax agency, dates, quantities, amounts) is written as it is. CSV quoting follows RFC 4180: a field with a comma, a quote or a line break is quoted and inner quotes doubled; line breaks inside names are replaced by a space.
 
 ## 14. Rate limits and pacing
 
@@ -247,7 +249,7 @@ Catalog capabilities: `order_document = voucher_file`, `refund_document = credit
 ## 18. Not verified
 
 - That Sage 50 trims the one space that the connector puts in front of a free text that starts like a formula. If it does not, the text shows with a space in front.
-- Every UK fact is third-party. No official Sage 50 UK import layout page was found; no real import was run. Column count of the audit-trail layout, tax code range, field lengths, the behaviour of a blank Tax Amount, the heading row being skipped by the import, and the 0.5 MB limit are unconfirmed.
+- Every UK fact is third-party. No official Sage 50 UK import layout page was found; no real import was run. Column count of the audit-trail layout, tax code range, field lengths, the behaviour of a blank Tax Amount, the heading row being skipped by the import (which is why `header_row` defaults to no and must be confirmed before it is switched on), and the 0.5 MB limit are unconfirmed.
 - US row semantics: that the header fields repeat on every distribution row, that the Accounts Receivable debit is implicit, that tax lines are accepted as distributions with Tax Type 0, the sign of amounts, `MM/DD/YYYY` (the official table shows `##/##/##`), and whether `Recur Number`, `Recur Frequency` and `Voided by Transaction` are really required (the field table says yes, a community answer says remove them).
 - US Transaction Number: the field table says export-only, the tips page says outside transactions need one. If an import asks for it, the Invoice/CM # groups the rows instead.
 - Sage 50 Canada and Sage 50 Accounts before version 12 are not covered.
@@ -265,6 +267,6 @@ UK (Sage 50 Accounts with a sample company):
 
 US (Sage 50 U.S. sample company):
 1. Create customer `WEB`, the accounts and the sales tax agency.
-2. Create the Sales Journal import template with the fields of 6.2 in order, heading row checked.
+2. Create the Sales Journal import template with the fields of 6.2 in order. The connector writes no heading row unless `header_row` is yes: when you switch it on, check the template's option that the first row holds headings.
 3. Import, then open the Sales Journal: check lines, tax and totals against the order.
 4. Import again and confirm Sage refuses the repeated invoice numbers.

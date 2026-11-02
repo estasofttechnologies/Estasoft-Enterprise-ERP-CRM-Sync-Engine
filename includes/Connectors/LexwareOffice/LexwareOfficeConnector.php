@@ -69,7 +69,7 @@ final class LexwareOfficeConnector extends AbstractApiConnector {
 		),
 		'customer_policy'    => array(
 			'default' => 'match_or_create',
-			'allowed' => array( 'match_or_create', 'match_only', 'always_create' ),
+			'allowed' => array( 'match_or_create', 'match_only' ),
 		),
 		'duplicate_customer' => array(
 			'default' => 'oldest',
@@ -83,6 +83,7 @@ final class LexwareOfficeConnector extends AbstractApiConnector {
 			'default' => 'fail',
 			'allowed' => array( 'fail', 'warn' ),
 		),
+		'total_tolerance'    => array( 'default' => '' ),
 		'shipping_type'      => array(
 			'default' => 'delivery',
 			'allowed' => array( 'delivery', 'service', 'none' ),
@@ -168,6 +169,23 @@ final class LexwareOfficeConnector extends AbstractApiConnector {
 	 */
 	protected function vendorError( ApiResponse $response ): ?ConnectorError {
 		return ( new LexwareErrorMapper() )->map( $response );
+	}
+
+	/**
+	 * Is the key accepted: one cheap read, no search. A key past its end date answers no without a request.
+	 *
+	 * @param Connection $connection Connection.
+	 */
+	public function ping( Connection $connection ): bool {
+		if ( $this->expiry( $connection ) instanceof ConnectorError ) {
+			return false;
+		}
+		try {
+			return $this->api( $connection )->get( 'profile' )->isSuccess();
+		} catch ( \Throwable $throwable ) {
+			unset( $throwable );
+			return false;
+		}
 	}
 
 	/**

@@ -226,7 +226,11 @@ final class NetSuiteConnector extends AbstractApiConnector {
 		$kit = $this->kit( $connection );
 		if ( EntityType::Refund === $item->entityType ) {
 			$row = $kit->refunds->find( $item->clientReference() );
-			return null === $row ? null : $kit->refunds->reference( $row, $kit->lookups->symbolOf( (string) ( $row['currency'] ?? '' ) ) );
+			if ( null === $row ) {
+				return null;
+			}
+			$error = $kit->refunds->checkMarked( $row, $kit->total );
+			return $error ?? $kit->refunds->reference( $row, $kit->lookups->symbolOf( (string) ( $row['currency'] ?? '' ) ) );
 		}
 		if ( EntityType::Order !== $item->entityType ) {
 			return null;
@@ -408,12 +412,29 @@ final class NetSuiteConnector extends AbstractApiConnector {
 		if ( $refund instanceof ConnectorError ) {
 			return SendResult::failure( $refund );
 		}
-		$row = $kit->refunds->find( $refund->reference );
-		if ( null !== $row ) {
-			return SendResult::existing( $kit->refunds->reference( $row, $kit->lookups->symbolOf( (string) ( $row['currency'] ?? '' ) ) ) );
+		$expected = $kit->refunds->expected( $refund );
+		$row      = $kit->refunds->find( $refund->reference );
+		$existed  = null !== $row;
+		$warnings = new Warnings();
+		$row      = $row ?? $kit->refunds->create( $refund, $warnings );
+		$currency = $kit->lookups->symbolOf( (string) ( $row['currency'] ?? '' ) );
+		$error    = $kit->refunds->check( $row, $expected, $currency, $kit->total, $warnings );
+		if ( null !== $error ) {
+			if ( ! $existed && 'fail' === $kit->options->totalMismatch() ) {
+				$removed = $kit->refunds->remove( (string) ( $row['id'] ?? '' ) );
+				$error   = Problem::validation(
+					self::SYSTEM,
+					'credit memo total',
+					(string) $error->context['reason'] . ' ' . ( $removed ? __( 'The credit memo was removed. Credit the customer in NetSuite.', 'estasoft-erp-crm-sync-engine' ) : __( 'The credit memo could not be removed and stays in NetSuite; correct or delete it there.', 'estasoft-erp-crm-sync-engine' ) )
+				);
+			}
+			return SendResult::failure( $error );
 		}
-		$row = $kit->refunds->create( $refund, new Warnings() );
-		return SendResult::created( $kit->refunds->reference( $row, $kit->lookups->symbolOf( (string) ( $row['currency'] ?? '' ) ) ) );
+		$ref = $kit->refunds->reference( $row, $currency );
+		if ( $warnings->any() ) {
+			$ref = new ExternalRef( $ref->id, $ref->ref, $ref->url, $ref->extra + array( 'warnings' => $warnings->all() ) );
+		}
+		return $existed ? SendResult::existing( $ref ) : SendResult::created( $ref );
 	}
 
 	/**

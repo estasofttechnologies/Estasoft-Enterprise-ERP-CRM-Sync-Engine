@@ -269,7 +269,7 @@ final class SageAccountingConnector extends AbstractApiConnector implements OAut
 	 */
 	public function ping( Connection $connection ): bool {
 		try {
-			$this->servicesFor( $connection, false )->business->businesses();
+			$this->servicesFor( $connection, false )->business->probe();
 			return true;
 		} catch ( \Throwable $throwable ) {
 			unset( $throwable );

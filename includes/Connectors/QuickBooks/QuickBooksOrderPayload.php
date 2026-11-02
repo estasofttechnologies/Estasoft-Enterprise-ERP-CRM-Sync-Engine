@@ -36,7 +36,6 @@ final class QuickBooksOrderPayload {
 	 * @param int|null                       $totalMinor       Total the shop expects QuickBooks to show (order total less the part left out), or null.
 	 * @param string                         $paymentReference Payment reference (transaction id).
 	 * @param string                         $paymentDate      Day the order was paid, or empty when it is not paid.
-	 * @param int                            $attempt          Tries the queue made so far; part of the request id so a retry never gets the answer of a document that was deleted.
 	 */
 	private function __construct(
 		public readonly string $clientRef,
@@ -51,7 +50,6 @@ final class QuickBooksOrderPayload {
 		public readonly ?int $totalMinor,
 		public readonly string $paymentReference,
 		public readonly string $paymentDate,
-		public readonly int $attempt = 0,
 	) {
 	}
 
@@ -105,8 +103,7 @@ final class QuickBooksOrderPayload {
 			QuickBooksPayloadReader::flag( $payload['prices_include_tax'] ?? null, false ),
 			$total,
 			QuickBooksPayloadReader::text( $paymentBlock['reference'] ?? '' ),
-			QuickBooksPayloadReader::day( $paymentBlock['date'] ?? '' ),
-			$item->attempt
+			QuickBooksPayloadReader::day( $paymentBlock['date'] ?? '' )
 		);
 	}
 

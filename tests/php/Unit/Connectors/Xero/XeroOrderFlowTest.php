@@ -150,15 +150,33 @@ final class XeroOrderFlowTest extends XeroTestCase {
 		$this->assertSame( array( 'DELETED', 'AUTHORISED' ), $statuses );
 	}
 
-	public function test_the_next_try_after_a_deleted_draft_gets_a_new_idempotency_key_even_when_the_body_is_the_same(): void {
-		$this->send( '1048', array( 'total' => 9999 ) );
+	public function test_a_retry_after_a_time_out_sends_the_same_key_and_gets_the_first_invoice_not_a_second(): void {
+		$this->xero->addContact( 'Layla Haddad', 'layla@example.test' );
+		$this->xero->loseNextAnswer = true;
+		$this->assertFalse( $this->send( '1047' )->isSuccess() );
+		$this->xero->hideDocuments = 1;
 
-		$retry = $this->connector->send( $this->connection, $this->item( '1048', \Estasoft\SyncEngine\Domain\EntityType::Order, 1 ), $this->payload( '1048' ) );
+		$retry = $this->connector->send( $this->connection, $this->item( '1047', \Estasoft\SyncEngine\Domain\EntityType::Order, 3 ), $this->payload( '1047' ) );
+
+		$this->assertTrue( $retry->isSuccess(), (string) $retry->error?->message() );
+		$this->assertCount( 1, $this->xero->invoices, 'The search did not see the first invoice yet; the same key made Xero answer with it instead of making another.' );
+		$keys = array_map( static fn( $r ): string => (string) $r->header( 'Idempotency-Key' ), $this->xero->calls( 'PUT', '/Invoices' ) );
+		$this->assertCount( 2, $keys );
+		$this->assertSame( $keys[0], $keys[1], 'A later queue attempt does not change the key.' );
+	}
+
+	public function test_the_key_changes_only_after_the_connector_deleted_its_own_draft(): void {
+		$this->send( '1048', array( 'total' => 9999 ) );
+		$this->assertSame( 'DELETED', array_values( $this->xero->invoices )[0]['Status'] );
+
+		$retry = $this->send( '1048' );
 
 		$this->assertTrue( $retry->isSuccess(), (string) $retry->error?->message() );
 		$keys = array_map( static fn( $r ): string => (string) $r->header( 'Idempotency-Key' ), $this->xero->calls( 'PUT', '/Invoices' ) );
 		$this->assertCount( 2, $keys );
-		$this->assertNotSame( $keys[0], $keys[1], 'Same body, next try: a new key, so Xero does not answer with the deleted draft.' );
+		$this->assertNotSame( $keys[0], $keys[1], 'Same body, but the first draft was deleted: a new key, so Xero does not answer with the deleted draft.' );
+		$third = $this->send( '1048' );
+		$this->assertTrue( $third->alreadyExisted );
 	}
 
 	public function test_warn_mode_keeps_the_invoice_and_reports_the_difference(): void {

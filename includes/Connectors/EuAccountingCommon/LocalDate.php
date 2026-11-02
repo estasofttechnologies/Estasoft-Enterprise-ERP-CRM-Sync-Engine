@@ -92,4 +92,54 @@ final class LocalDate {
 		}
 		return array( $moment->setTime( 0, 0, 0 )->getTimestamp(), $moment->setTime( 23, 59, 59 )->getTimestamp() );
 	}
+
+	/**
+	 * The calendar day as the whole number yyyymmdd (for example 20261103), or null when the text is not a date.
+	 *
+	 * @param string $utc      UTC text.
+	 * @param string $timezone Time zone.
+	 */
+	public static function ymdNumber( string $utc, string $timezone ): ?int {
+		$moment = self::at( $utc, $timezone );
+		return null === $moment ? null : (int) $moment->format( 'Ymd' );
+	}
+
+	/**
+	 * Midnight of the calendar day as a Unix timestamp, or null when the text is not a date.
+	 *
+	 * @param string $utc      UTC text.
+	 * @param string $timezone Time zone.
+	 */
+	public static function midnightTimestamp( string $utc, string $timezone ): ?int {
+		$moment = self::at( $utc, $timezone );
+		return null === $moment ? null : $moment->setTime( 0, 0, 0 )->getTimestamp();
+	}
+
+	/**
+	 * Whether the date a vendor shows for a document is another calendar day than the one the connector sent. A vendor value that cannot be read
+	 * (empty, not starting with yyyy-mm-dd) is not a difference, because nothing can be said about it.
+	 *
+	 * @param mixed  $vendorValue The date field of the document as read back.
+	 * @param string $utc         The order date (UTC text) the connector converted.
+	 * @param string $timezone    Time zone the connector used.
+	 */
+	public static function differs( mixed $vendorValue, string $utc, string $timezone ): bool {
+		$expected = self::ymd( $utc, $timezone );
+		if ( '' === $expected || ! is_string( $vendorValue ) ) {
+			return false;
+		}
+		$value = trim( $vendorValue );
+		if ( 1 !== preg_match( '/^(\d{4}-\d{2}-\d{2})(?:[T ]\d{2}:\d{2}.*?(Z|[+-]\d{2}:?\d{2})?)?$/', $value, $parts ) ) {
+			return false;
+		}
+		$seen = $parts[1];
+		if ( isset( $parts[2] ) && '' !== $parts[2] ) {
+			try {
+				$seen = ( new \DateTimeImmutable( $value ) )->setTimezone( new \DateTimeZone( '' === $timezone ? 'UTC' : $timezone ) )->format( 'Y-m-d' );
+			} catch ( \Exception $e ) {
+				unset( $e );
+			}
+		}
+		return $seen !== $expected;
+	}
 }

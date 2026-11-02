@@ -6,8 +6,8 @@ connection_method: own_app
 available: true
 verified: false
 hosts: [api.accounting.sage.com, oauth.accounting.sage.com, www.sageone.com]
-terms_url: https://developer.sage.com/accounting/
-privacy_url: https://www.sage.com/en-gb/legal/privacy-and-cookies/
+terms_url: https://www.sage.com/en-gb/legal/                                 # Sage's legal hub; the URL is in the search index of sage.com on 2026-11-02, but sage.com refuses automated fetches, so the content was not read: the owner confirms it
+privacy_url: https://www.sage.com/en-gb/legal/privacy-and-cookies/           # same note
 developer_url: https://developerselfservice.sageone.com/
 variants: [{id: sage-accounting, label: Sage Business Cloud Accounting}, {id: sage50-export, label: Sage 50 (export file)}]
 ---
@@ -103,7 +103,7 @@ Payload paths follow the Odoo connector's names.
 | `client_order_ref` (always the item's `WC-{id}`) | `sales_invoice.reference` |
 | `date_order` | `date` (YYYY-MM-DD); `due_date` = date + `due_days` |
 | `currency` | must equal the business currency; otherwise SYNC-VAL-002 (foreign-currency documents are not built because the exchange-rate rules are not documented) |
-| `prices_include_tax` | refused with SYNC-VAL-002 before any request: the guide documents no way to send tax-inclusive prices; the shop's default (prices without tax) works |
+| `prices_include_tax` | supported, per country (section 9): in the UK, Ireland and France each line carries `unit_price_includes_tax: true` and Sage works the tax out; in Canada and Spain the connector converts to net itself |
 | `note` | `notes` |
 | `total`, `excluded_total` | not sent; the expected total for the check |
 | `partner.name`, `email`, `company_name` | contact `name` (company if given, 200), `email`, `reference` (the email when it is 50 characters or fewer, so the next search finds the contact) |
@@ -120,28 +120,38 @@ Refunds: `order_ref`, `date`, `reason`, `amount`, `prices_include_tax`, `refund_
 
 ## 7. Flow of an order
 
-1. Check the payload before any request: customer, date, product lines, whole-number minor units, `prices_include_tax` false, a sales ledger account option.
+1. Check the payload before any request: customer, date, product lines, whole-number minor units, a sales ledger account option.
 2. Find the invoice: `GET /sales_invoices?search=WC-{id}` with `items_per_page=200` and all pages, then an exact comparison of `reference` [search syntax inferred]. A voided invoice (status `VOID`) stops the item with SYNC-VAL-002.
 3. If none: read the base currency (`GET /financial_settings`, `base_currency.id`; a different order currency is SYNC-VAL-002), resolve the tax rates (`GET /tax_rates`, cached, retired rates left out), the ledger accounts (`GET /ledger_accounts`, matched on `nominal_code` or `id`), products (`GET /products?search={sku}`, exact `item_code`, retired products unknown), build the body, and only then the contact (below). Unknown SKU stops with SYNC-MAP-001; an unknown tax rate with SYNC-MAP-002; an unknown ledger account or a line with no tax key with SYNC-VAL-002; all before the contact or the invoice is created.
 4. Create the invoice as a draft: `POST /sales_invoices` with `status_id` `DRAFT` and `idempotency_id` (section 8).
-5. Compare the draft's total with `total - excluded_total` (one minor unit allowed). A difference is SYNC-VAL-002 naming both totals; with `fail` the draft is deleted first. The invoice currency is compared too.
+5. Compare the draft's total with `total - excluded_total` (one minor unit allowed; with prices that include tax, one minor unit per line, shipping included, because every line is rounded on its own). The invoice currency is compared too. A difference is SYNC-VAL-002 naming both totals. What happens to the draft then:
+   - With `total_mismatch = fail` and a draft made by this pass, the connector asks Sage to void it: `DELETE /sales_invoices/{id}` with the body `{"void_reason": "Created with the wrong total by the WooCommerce sync"}` [the invoicing guide documents `DELETE` with a `void_reason` for an invoice that is `UNPAID`; whether Sage accepts it for a `DRAFT` is not documented].
+   - Sage's refusal (a 4xx) is not swallowed and not turned into a claim. The draft is read again, and the failure is reported as "removed" only when Sage no longer has it or shows it as `VOID`. Otherwise the same SYNC-VAL-002 gets the note "The draft invoice WC-{id} is still in Sage (nothing is posted for a draft). Delete it in Sage, then retry."
+   - A draft found by a later pass with a wrong total is never touched by the connector: that pass fails with the same note, so a person decides.
+   - If the draft is gone or `VOID` when it is checked or released (the replayed answer of an earlier create named a draft that was voided), the connector creates again with a new `idempotency_id` (section 8); three rounds at most.
 6. Release it (`POST /sales_invoices/{id}/release`) unless `documents = invoice_draft`.
 7. `invoice_paid` with a payment date: `POST /contact_payments` (`CUSTOMER_RECEIPT`, the bank account, `total_amount` = the invoice's outstanding amount read just before, one allocation to the invoice, `reference` `WC-{id}`, `idempotency_id`). If nothing is outstanding nothing is created.
 8. Result: external id = invoice `id`, reference = `invoice_number` (the `reference` while still a draft), `extra` = total in minor units, status.
 
-Replays: create and payment run once per pass. An HTTP 500 on a POST may have succeeded [documented], so the pass ends and the next one starts at step 2 (or the `idempotency_id` replays the first answer). Release is safe to repeat after a read.
+Replays: create and payment run once per pass. An HTTP 500 or a time-out on a POST may have succeeded [documented], so the pass ends and the next one starts at step 2; if the search does not show the first invoice yet, the retry sends the same `idempotency_id` with the same body and Sage replays the first answer instead of making a second invoice (section 8). Release is safe to repeat after a read.
 
 Contacts: `GET /contacts?search={email}&contact_type_id=CUSTOMER&attributes=email,reference` (all pages); an exact case-insensitive match on `email` or `reference` is used; none: `POST /contacts` (`contact_type_ids` `["CUSTOMER"]`, `name`, `email`, `reference`, `main_address`) with an `idempotency_id`. Sage's `email` filter looks at contact people only [third-party], so the connector searches by `search` and compares itself.
 
 ## 8. Duplicate protection
 
 - Reference field: `reference` on `sales_invoice` and `sales_credit_note` (`WC-{order id}`, `WC-{refund id}`), searched before every create.
-- `idempotency_id`: 32 hex characters (md5 of connection id, reference, step, try number and the body), in the resource's object, kept 7 days, replaying the first answer for the same request [documented]. A different body gets a different id, so a corrected order is not blocked; the try number (the queue item's `attempt`) is in the hash so that a retry after a deleted draft is not handed the answer about the draft that was deleted. A reused id on another resource type is `IdempotencyResourceMismatch` and shows as SYNC-VAL-002.
+- `idempotency_id`: 32 hex characters (md5 of connection id, reference, step, the ids of the documents of this reference that the connector voided itself, and the body), in the resource's object, kept 7 days, replaying the first answer for the same request [documented]. The queue item's `attempt` is not in it: a retry after a time-out sends the same id with the same body and gets the first result, which matters because Sage references are not unique. A different body gets a different id, so a corrected order is not blocked. The id changes after the connector voided its own document: the search lists `VOID` rows whose `void_reason` is the connector's own text, and their ids go into the hash, so a create after that void is not handed the answer about the voided document (a document voided for another reason stops the item instead). The credit note and payment ids follow the same rule. A reused id on another resource type is `IdempotencyResourceMismatch` and shows as SYNC-VAL-002.
 - `findExisting()` returns an invoice only when it is finished for the connection's settings (released, and paid for `invoice_paid`); a draft returns null so `send()` finishes it.
 
 ## 9. Taxes
 
-Tax codes are Sage tax rate ids (for example `GB_STANDARD`). `listTaxCodes()` reads `GET /tax_rates` (id, name, percentage). Sage does not work the tax out for you: `tax_amount` is sent by the caller, calculated as `net_amount x percentage / 100` rounded to two decimals, and must be left out for zero, no-tax and exempt rates [documented]. The connector calculates it in whole numbers (cents, the rate in ten-thousandths, half away from zero) per line, and the same for shipping. The total check compares the draft with the shop's total, so a rounding difference over one minor unit is reported, not hidden.
+Tax codes are Sage tax rate ids (for example `GB_STANDARD`). `listTaxCodes()` reads `GET /tax_rates` (id, name, percentage). Sage does not work the tax out for you: `tax_amount` is sent by the caller, calculated as `net_amount x percentage / 100` rounded to two decimals, and must be left out for zero, no-tax and exempt rates [documented]. The connector calculates it in whole numbers (cents, the rate in ten-thousandths, half away from zero) per line, and the same for shipping. The total check compares the draft with the shop's total, so a rounding difference over the allowed units is reported, not hidden.
+
+Prices that include tax (`prices_include_tax`). The invoicing guide shows `unit_price_includes_tax` on invoice lines [documented in the guide's examples; as a request property it is in a third-party API description, and a community answer says it works for the UK, Ireland, the US and France, so it is not relied on elsewhere]. By country of the business:
+- United Kingdom, Ireland, France: each line is sent with `unit_price` as the shop's price (tax included), `unit_price_includes_tax: true`, and no `tax_amount`; Sage works the tax out. A percentage discount becomes `discount_amount` on the tax-inclusive line amount.
+- Canada, Spain: the connector converts to net itself with integer arithmetic. Rule: line amount (after any discount) in minor units, `net = round_half_away_from_zero(gross x 1,000,000 / (1,000,000 + rate))`, the rate in ten-thousandths of a percent (20.00 percent is 200,000). If `net + tax(net)` does not give the gross back, the neighbour `net - 1`, then `net + 1`, that does is taken; if none does, the rounded net stays and the line is one minor unit off. `unit_price` is the net divided by the quantity when it divides exactly, otherwise the line is sent with quantity 1 and the whole net as its price, and the quantity is added to the description. In Canada `tax_amount` is worked out on the net as before; in Spain no `tax_amount` is sent at all.
+- Shipping has no such flag in the documented fields, so its amount is always converted to net, in every country.
+- After the create the draft's total is compared with the shop's: one minor unit per line is allowed (the rule above can leave a line one unit off), and a larger difference is the usual mismatch failure. Refunds follow the same rule per credit note line.
 
 ## 10. Payments
 
@@ -149,7 +159,7 @@ Off unless `documents = invoice_paid` and `payment_bank_account` is set. Needs a
 
 ## 11. Refunds
 
-A refund finds the order's invoice, takes its contact, and creates `POST /sales_credit_notes` with `credit_note_lines` (same line fields as invoices), `reference` `WC-{refund id}` and `notes` `Refund of WC-{order id}` plus the reason, checking the total against `amount`. A mismatch calls `DELETE` with a `void_reason` (fixed text, "Created with the wrong total by the WooCommerce sync"); a credit note voided with that reason is the connector's own discard and does not stop a later try, while one voided for another reason, or with no reason shown, was a person's choice and stops the item. Amounts with tax in them are refused as for orders; an amount-only refund is one line with the no-tax rate. Sage has no draft credit note: if the void call itself fails, the next pass accepts the credit note as it is and the nightly check compares its total. With `refund_allocation = invoice`, the connector then reads the invoice's open amount and, if it is above 0, creates `POST /contact_allocations` (`CUSTOMER_ALLOCATION`, the invoice with a positive and the credit note with a negative amount of the smaller value) [documented in the community answer and the guide]. Every pass reads first and does only the missing step.
+A refund finds the order's invoice, takes its contact, and creates `POST /sales_credit_notes` with `credit_note_lines` (same line fields as invoices), `reference` `WC-{refund id}` and `notes` `Refund of WC-{order id}` plus the reason, checking the total against `amount`. Amounts with tax in them are sent as for orders (section 9); an amount-only refund is one line with the no-tax rate. Sage has no draft credit note, and the guides document no way to delete or void one [unverified]. So a credit note with a wrong total is handled like this: the connector calls `DELETE /sales_credit_notes/{id}` with the body `{"void_reason": "Created with the wrong total by the WooCommerce sync"}` once, reads the credit note again, and says it was removed only if Sage no longer has it or shows it as `VOID`. Otherwise the item fails with SYNC-VAL-002 naming both totals and the note "The credit note WC-{id} is still in Sage and could not be removed by the connector. Void it in Sage, then retry." The wrong credit note is never accepted: every pass that finds an existing credit note compares its total again (without a second `DELETE`), so a retry fails the same way until the person has voided or corrected it, and it is never counted as done. A credit note voided with the connector's own reason does not stop a later try (a new one is created with a new `idempotency_id`), while one voided for another reason, or with no reason shown, was a person's choice and stops the item. With `refund_allocation = invoice`, the connector then reads the invoice's open amount and, if it is above 0, creates `POST /contact_allocations` (`CUSTOMER_ALLOCATION`, the invoice with a positive and the credit note with a negative amount of the smaller value) [documented in the community answer and the guide]. Every pass reads first and does only the missing step.
 
 ## 12. Reading from Sage
 
@@ -159,6 +169,8 @@ A refund finds the order's invoice, takes its contact, and creates `POST /sales_
 - `searchProducts`: `GET /products?search={text}`, at most 25.
 
 ## 13. Rate limits and pacing
+
+The circuit breaker's health probe (`ping()`) is one `GET /businesses` (a page of up to 200), made fresh every time; it is false on any failure. It does not need a chosen business.
 
 1,296,000 requests a day and 150 concurrent per app, shared by the user's businesses; 429 when exceeded [documented]. Sage asks not to POST contacts, products and sales documents in parallel [documented], so the connector runs one call at a time, at most 3 a second. A 429 waits for `Retry-After` or 30 seconds.
 
@@ -181,7 +193,7 @@ Sage's error list: `[{"$severity":"error","$dataCode":"...","$message":"...","$s
 | token endpoint `invalid_grant` / `invalid_client` | handled by the engine (SYNC-AUTH-002 / SYNC-AUTH-001) |
 | unknown SKU, `refuse` | SYNC-MAP-001 |
 | tax rate not in Sage (or retired) | SYNC-MAP-002 |
-| currency differs, tax-inclusive prices, a line without a tax key, totals differ, no or unknown ledger account, no or unknown bank account | SYNC-VAL-002 |
+| currency differs, a line without a tax key, totals differ (also when the wrong document could not be removed), no or unknown ledger account, no or unknown bank account | SYNC-VAL-002 |
 
 ## 15. Capabilities
 
@@ -199,13 +211,16 @@ Sage's error list: `[{"$severity":"error","$dataCode":"...","$message":"...","$s
 - The envelope of list answers (`$items`, `$next`, `$total`), the `status`, `total_amount`, `outstanding_amount`, `invoice_number` and `currency` fields of the invoice answer, and the fields of businesses, tax rates (`percentage`), ledger accounts (`nominal_code`) and products (`item_code`): the endpoint reference pages could not be fetched.
 - `search` on `/sales_invoices` and `/products`, `from_date` on invoices, and the `financial_settings` field that holds the base currency.
 - `status_id` `DRAFT` on create and `POST .../release` (documented as transitions; the request body for create with a draft status was not shown).
-- Negative lines (discounts) and `DELETE` with `void_reason` on credit notes; that a voided credit note is still listed and shows its `void_reason`.
+- Negative lines (discounts), and whether a discount together with `unit_price_includes_tax` is worked out the way the connector assumes (the discount is taken off the tax-inclusive amount).
+- Whether `unit_price_includes_tax` is accepted on a create request (it appears in the guide's examples and a third-party API description; the country list comes from a community answer), and whether it also works on credit note lines. In Canada and Spain the connector converts to net instead; whether Sage Spain refuses `tax_amount` is from the guide, and the connector sends none there.
+- Whether Sage accepts `DELETE /sales_invoices/{id}` with a `void_reason` for a `DRAFT` (documented for `UNPAID` only). If not, a wrong draft stays in Sage and the failure says so.
+- Voiding a credit note: no page documents `DELETE` or a void for `sales_credit_notes`. The call is made once and its result is read back; the connector never claims a removal it did not see. That a voided credit note is still listed and shows its `void_reason` is also unverified.
 - That the list rows of `/sales_credit_notes` carry `notes` (the nightly refund total depends on it) and that `DELETE` of a draft invoice removes it.
 - The body of `POST /contact_payments` beyond what the payments guide shows (no `payment_method_id` is sent), and `POST /contact_allocations` as written in the community answer.
 - Contact `reference` length, and that a duplicate reference is refused.
 - Whether `description` and names have length limits.
 - Whether the access token refresh invalidates the old refresh token at once (the page does not say).
-- Terms, privacy and developer-portal URLs are the usual Sage addresses; the fetch tool could not open them.
+- Terms and privacy URLs are left empty: Sage's UK privacy page could not be fetched (the site refused the request) and no page with the API terms was found. The developer-portal URL is the usual Sage address and was not opened.
 - No live business was available. Behaviour above the wire is tested against `FakeSageAccountingServer` and fixtures written from the guides.
 
 ## 17. Manual smoke test
@@ -215,4 +230,5 @@ Sage's error list: `[{"$severity":"error","$dataCode":"...","$message":"...","$s
 3. Enter the nominal code of a sales account. Place an order for a product whose `item_code` equals the SKU: one released invoice, reference `WC-{order id}`, the shop's date, the right total with tax. Retry: no second invoice.
 4. `invoice_draft`: a draft with no number. `invoice_paid` with a bank account: the invoice shows paid.
 5. Refund with `refund_allocation = invoice`: a credit note allocated to the invoice.
-6. Place an order with `prices_include_tax` mapped on: SYNC-VAL-002 before anything is created.
+6. Place an order with `prices_include_tax` mapped on (UK, Ireland or France business): the draft's total equals the shop's and each line shows the tax Sage worked out. In a Canadian or Spanish business the lines are sent net and the total still equals the shop's.
+7. Map a tax rate whose percentage differs from the shop's, with `total_mismatch = fail`, and place an order: the item fails with the two totals, and the note says whether the draft was voided or is still in Sage.

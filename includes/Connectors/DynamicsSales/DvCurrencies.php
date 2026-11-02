@@ -19,8 +19,9 @@ use Estasoft\SyncEngine\Contract\ConnectorError;
 
 /**
  * Money columns in Dataverse are in the record's currency, a row of `transactioncurrencies`, and are stored with that currency's decimal
- * places. An order is therefore always pinned to a currency row with the order's ISO code, and refused when that row keeps fewer
- * decimals than the currency has (a KWD row set up with two places would round the third digit away).
+ * places, except the price of a product (`priceperunit`), which follows the organization's Pricing Decimal Precision. An order is
+ * therefore always pinned to a currency row with the order's ISO code, and refused early when that row, or the pricing precision of the
+ * organization, keeps fewer decimals than the currency has (a KWD price of 1.234 would be stored as 1.23 on a default organization).
  */
 final class DvCurrencies {
 
@@ -37,7 +38,7 @@ final class DvCurrencies {
 	 * The currency row for an ISO code.
 	 *
 	 * @param string $iso ISO 4217 code.
-	 * @return array{id:string,precision:int}|ConnectorError
+	 * @return array{id:string,precision:int,pricing:int}|ConnectorError
 	 *
 	 * @throws ApiException On failure.
 	 */
@@ -66,9 +67,25 @@ final class DvCurrencies {
 						'currency precision'
 					);
 				}
+				$pricing = $this->pricingPrecision();
+				if ( $pricing < Amounts::exponent( $iso ) ) {
+					return Failures::invalid(
+						$this->system,
+						'pricing_decimal_precision',
+						sprintf(
+							/* translators: 1: currency code, 2: decimal places of the organization's pricing precision, 3: decimal places the currency has. */
+							__( 'Prices in %1$s need %3$d decimal places, but the Pricing Decimal Precision of Dynamics 365 is %2$d, so product prices would be rounded. Raise the setting Pricing Decimal Precision (Advanced settings, Administration, System Settings, General), then try again.', 'estasoft-erp-crm-sync-engine' ),
+							$iso,
+							$pricing,
+							Amounts::exponent( $iso )
+						),
+						'pricing precision'
+					);
+				}
 				return array(
 					'id'        => (string) OData::guid( $row['transactioncurrencyid'] ),
 					'precision' => $precision,
+					'pricing'   => $pricing,
 				);
 			}
 		}
@@ -82,6 +99,17 @@ final class DvCurrencies {
 			),
 			'currency missing'
 		);
+	}
+
+	/**
+	 * Decimal places the organization keeps for the price of a product (`organizations.pricingdecimalprecision`; the Dataverse default is 2).
+	 *
+	 * @throws ApiException On failure.
+	 */
+	private function pricingPrecision(): int {
+		$org = $this->dv->first( 'organizations', array( '$select' => 'pricingdecimalprecision' ) );
+		$set = $org['pricingdecimalprecision'] ?? null;
+		return is_int( $set ) || ( is_string( $set ) && ctype_digit( $set ) ) ? (int) $set : 2;
 	}
 
 	/**

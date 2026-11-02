@@ -20,11 +20,6 @@ use Estasoft\SyncEngine\Domain\Connection;
 final class QoyodOptions {
 
 	/**
-	 * Hosts the API answers on.
-	 */
-	public const ENDPOINTS = array( 'api.qoyod.com', 'www.qoyod.com' );
-
-	/**
 	 * Set up with what it depends on.
 	 *
 	 * @param array<string,string> $values Raw option values by key.
@@ -41,7 +36,7 @@ final class QoyodOptions {
 		$values = array();
 		$nested = $connection->config( 'options' );
 		$nested = is_array( $nested ) ? $nested : array();
-		foreach ( array( 'endpoint', 'inventory_id', 'currency', 'approval', 'record_payment', 'payment_account_id', 'line_tax_field', 'shipping_product_sku', 'fee_product_sku', 'total_mismatch' ) as $key ) {
+		foreach ( array( 'inventory_id', 'currency', 'untaxed_rows', 'approval', 'record_payment', 'payment_account_id', 'line_tax_field', 'shipping_product_sku', 'fee_product_sku', 'total_mismatch' ) as $key ) {
 			$value = $connection->config( $key );
 			if ( null === $value && array_key_exists( $key, $nested ) ) {
 				$value = $nested[ $key ];
@@ -54,10 +49,15 @@ final class QoyodOptions {
 	}
 
 	/**
-	 * The host to call.
+	 * What a row without a tax code becomes: the tax code to send, or an empty string to refuse the row. Zero-rated and exempt sales are
+	 * different in tax law and in the e-invoice, so the connector never picks one for the merchant.
 	 */
-	public function endpoint(): string {
-		return $this->choice( 'endpoint', self::ENDPOINTS, 'api.qoyod.com' );
+	public function untaxedCode(): string {
+		return match ( $this->choice( 'untaxed_rows', array( 'refuse', 'zero_rated', 'exempt' ), 'refuse' ) ) {
+			'zero_rated' => QoyodLines::ZERO_RATED,
+			'exempt'     => QoyodLines::EXEMPT,
+			default      => '',
+		};
 	}
 
 	/**

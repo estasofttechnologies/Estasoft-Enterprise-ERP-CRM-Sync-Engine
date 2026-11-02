@@ -111,7 +111,7 @@ final class OAuthTokenManager {
 	public function accessToken( Connection $connection, ?OAuthProvider $provider = null ): string {
 		$provider = $this->provider( $connection, $provider );
 		$known    = $this->current( $connection );
-		if ( '' !== $known['token'] && $known['expires'] - $this->now() > self::margin( $known['lifetime'] ) ) {
+		if ( $this->usable( $known, $provider->config( $connection ) ) ) {
 			return $known['token'];
 		}
 		return $this->obtain( $connection, $provider, $known['token'] );
@@ -127,7 +127,24 @@ final class OAuthTokenManager {
 	 */
 	public function refreshNow( Connection $connection, ?OAuthProvider $provider = null ): string {
 		$provider = $this->provider( $connection, $provider );
-		return $this->obtain( $connection, $provider, $this->current( $connection )['token'] );
+		$known    = $this->current( $connection );
+		if ( '' !== $known['token'] && ! $this->mayRefreshNow( $connection, $provider ) ) {
+			return $known['token']; // The vendor refuses a refresh this early: the token in hand is the one to use.
+		}
+		return $this->obtain( $connection, $provider, $known['token'] );
+	}
+
+	/**
+	 * Whether a refresh may be asked for now. False only for a vendor that refuses to refresh a young token (`OAuthConfig::$minTokenAgeSeconds`)
+	 * while the token is still younger than that and has not run out. A caller that answers a 401 checks this first: a 401 before the minimum age
+	 * is not answered with a refresh.
+	 *
+	 * @param Connection         $connection Connection.
+	 * @param OAuthProvider|null $provider   Provider; found through the registry when null.
+	 */
+	public function mayRefreshNow( Connection $connection, ?OAuthProvider $provider = null ): bool {
+		$known = $this->current( $connection );
+		return '' === $known['token'] || ! $this->tooYoung( $known, $this->provider( $connection, $provider )->config( $connection ) );
 	}
 
 	/**
@@ -256,14 +273,14 @@ final class OAuthTokenManager {
 				throw new OAuthException( new ConnectorError( ErrorCode::Net001, array( 'system' => '' ), null, null, null, 'token refresh in progress elsewhere' ) );
 			}
 			( $this->sleep )( 250000 );
-			$reuse = $this->reusable( $connection->id, $stale );
+			$reuse = $this->reusable( $connection->id, $stale, $config );
 			if ( null !== $reuse ) {
 				return $reuse;
 			}
 			$owner = $this->lock->acquire( $key, self::LOCK_TTL );
 		}
 		try {
-			$reuse = $this->reusable( $connection->id, $stale );
+			$reuse = $this->reusable( $connection->id, $stale, $config );
 			if ( null !== $reuse ) {
 				return $reuse;
 			}
@@ -277,26 +294,55 @@ final class OAuthTokenManager {
 	/**
 	 * A token another worker stored since the caller read its own.
 	 *
-	 * @param int    $connectionId Connection.
-	 * @param string $stale        The out-of-date token.
+	 * @param int         $connectionId Connection.
+	 * @param string      $stale        The out-of-date token.
+	 * @param OAuthConfig $config       Settings (the minimum token age).
 	 */
-	private function reusable( int $connectionId, string $stale ): ?string {
+	private function reusable( int $connectionId, string $stale, OAuthConfig $config ): ?string {
 		$fresh = $this->storage->load( $connectionId );
 		if ( null === $fresh ) {
 			return null;
 		}
-		$token    = $fresh->secret( self::ACCESS_TOKEN );
-		$expires  = (int) $fresh->secret( self::EXPIRES_AT );
-		$lifetime = (int) $fresh->secret( self::LIFETIME );
-		if ( '' === $token || $token === $stale || $expires - $this->now() <= self::margin( $lifetime ) ) {
+		$known = array(
+			'token'    => $fresh->secret( self::ACCESS_TOKEN ),
+			'expires'  => (int) $fresh->secret( self::EXPIRES_AT ),
+			'lifetime' => (int) $fresh->secret( self::LIFETIME ),
+		);
+		if ( '' === $known['token'] || $known['token'] === $stale || ! $this->usable( $known, $config ) ) {
 			return null;
 		}
-		$this->memory[ $this->memoryKey( $fresh ) ] = array(
-			'token'    => $token,
-			'expires'  => $expires,
-			'lifetime' => $lifetime,
-		);
-		return $token;
+		$this->memory[ $this->memoryKey( $fresh ) ] = $known;
+		return $known['token'];
+	}
+
+	/**
+	 * Whether a token can be used as it is: it has more than the margin left, or the vendor does not accept a refresh yet (the token is younger
+	 * than the minimum age) and it has not run out. The time to refresh is the later of "margin before expiry" and "minimum age".
+	 *
+	 * @param array{token:string,expires:int,lifetime:int} $known  Token.
+	 * @param OAuthConfig                                  $config Settings.
+	 */
+	private function usable( array $known, OAuthConfig $config ): bool {
+		if ( '' === $known['token'] ) {
+			return false;
+		}
+		$left = $known['expires'] - $this->now();
+		return $left > self::margin( $known['lifetime'] ) || ( $left > 0 && $this->tooYoung( $known, $config ) );
+	}
+
+	/**
+	 * Whether the vendor would refuse a refresh of this token because it is too young. The age is the token's life minus what is left; a token of
+	 * unknown life, or a vendor with no minimum, is never too young. A minimum longer than the token's life counts as the whole life.
+	 *
+	 * @param array{token:string,expires:int,lifetime:int} $known  Token.
+	 * @param OAuthConfig                                  $config Settings.
+	 */
+	private function tooYoung( array $known, OAuthConfig $config ): bool {
+		if ( $config->minTokenAgeSeconds <= 0 || $known['lifetime'] <= 0 ) {
+			return false;
+		}
+		$age = $this->now() - ( $known['expires'] - $known['lifetime'] );
+		return $age < min( $config->minTokenAgeSeconds, $known['lifetime'] ) && $known['expires'] > $this->now();
 	}
 
 	/**

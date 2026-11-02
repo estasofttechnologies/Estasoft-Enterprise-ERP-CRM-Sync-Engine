@@ -13,18 +13,12 @@ defined( 'ABSPATH' ) || exit;
 
 use Estasoft\SyncEngine\Connectors\Support\ApiClient;
 use Estasoft\SyncEngine\Connectors\Support\ApiException;
-use Estasoft\SyncEngine\Core\Support\Clock;
 
 /**
- * Holded's v1 operations list has no product filter and no tax resource [third-party]. Products are read page by page and kept for ten minutes
- * in memory (a plan has a monthly call quota), indexed by SKU; the tax rate of a line is a plain percentage typed in the tax mapping.
+ * Holded's v1 operations list has no product filter and no tax resource [third-party]. Products are found through the product index
+ * (`HoldedIndex`), kept between requests and read page by page; the tax rate of a line is a plain percentage typed in the tax mapping.
  */
 final class HoldedCatalog {
-
-	/**
-	 * Seconds a product list is kept.
-	 */
-	public const TTL = 600;
 
 	/**
 	 * The rates offered as suggestions on the tax mapping screen (Spanish VAT). Any other percentage can be typed.
@@ -32,69 +26,56 @@ final class HoldedCatalog {
 	public const SUGGESTED_RATES = array( '21', '10', '4', '0' );
 
 	/**
-	 * Products by connection: [expires at, products by upper-case SKU].
-	 *
-	 * @var array<int,array{0:int,1:array<string,array<string,mixed>>}>
+	 * Name of the product index.
 	 */
-	private array $products = array();
+	public const INDEX = 'products';
+
+	/**
+	 * Seconds a finished product index is trusted for a SKU it does not hold; after that the list is read again, so a product added in Holded
+	 * is found within minutes.
+	 */
+	public const MISS_TTL = 300;
+
+	/**
+	 * Path of the product list.
+	 */
+	private const PATH = 'invoicing/v1/products';
 
 	/**
 	 * Set up with what it depends on.
 	 *
-	 * @param HoldedPager $pager Reads every page of a list.
-	 * @param Clock       $clock Time source.
+	 * @param HoldedIndex $index Persistent indexes.
 	 */
-	public function __construct( private readonly HoldedPager $pager, private readonly Clock $clock ) {
+	public function __construct( private readonly HoldedIndex $index ) {
 	}
 
 	/**
-	 * The products by upper-case SKU. A product without a SKU is left out.
-	 *
-	 * @param ApiClient $api          Client.
-	 * @param int       $connectionId Connection id.
-	 * @return array<string,array<string,mixed>>
-	 *
-	 * @throws ApiException On failure.
-	 */
-	public function products( ApiClient $api, int $connectionId ): array {
-		$now = $this->clock->now()->getTimestamp();
-		if ( isset( $this->products[ $connectionId ] ) && $this->products[ $connectionId ][0] > $now ) {
-			return $this->products[ $connectionId ][1];
-		}
-		$index = array();
-		foreach ( $this->pager->all( $api, 'invoicing/v1/products' ) as $row ) {
-			$sku = strtoupper( HoldedPayloadReader::text( $row['sku'] ?? '' ) );
-			if ( '' !== $sku && ! isset( $index[ $sku ] ) ) {
-				$index[ $sku ] = $row;
-			}
-		}
-		$this->products[ $connectionId ] = array( $now + self::TTL, $index );
-		return $index;
-	}
-
-	/**
-	 * The product with a SKU (exact, case-insensitive).
+	 * The product with a SKU (exact, case-insensitive): its id, name and SKU as Holded writes it.
 	 *
 	 * @param ApiClient $api          Client.
 	 * @param int       $connectionId Connection id.
 	 * @param string    $sku          SKU.
-	 * @return array<string,mixed>|null
+	 * @return array{id:string,name:string,sku:string}|null
 	 *
 	 * @throws ApiException On failure.
 	 */
 	public function productBySku( ApiClient $api, int $connectionId, string $sku ): ?array {
 		$sku = strtoupper( trim( $sku ) );
-		return '' === $sku ? null : ( $this->products( $api, $connectionId )[ $sku ] ?? null );
+		if ( '' === $sku ) {
+			return null;
+		}
+		$value = $this->index->find( $api, $connectionId, self::INDEX, self::PATH, $this->entry(), $sku, self::MISS_TTL );
+		return null === $value ? null : $this->decode( $value );
 	}
 
 	/**
-	 * Products whose name or SKU contains a search text.
+	 * Products whose name or SKU contains a search text. This reads the whole product list.
 	 *
 	 * @param ApiClient $api          Client.
 	 * @param int       $connectionId Connection id.
 	 * @param string    $query        Search text.
 	 * @param int       $limit        Most products returned.
-	 * @return array<int,array<string,mixed>>
+	 * @return array<int,array{id:string,name:string,sku:string}>
 	 *
 	 * @throws ApiException On failure.
 	 */
@@ -104,14 +85,47 @@ final class HoldedCatalog {
 			return array();
 		}
 		$found = array();
-		foreach ( $this->products( $api, $connectionId ) as $sku => $row ) {
-			if ( str_contains( mb_strtolower( $sku . ' ' . HoldedPayloadReader::text( $row['name'] ?? '' ) ), $query ) ) {
-				$found[] = $row;
+		foreach ( $this->index->all( $api, $connectionId, self::INDEX, self::PATH, $this->entry() ) as $value ) {
+			$product = $this->decode( $value );
+			if ( str_contains( mb_strtolower( $product['sku'] . ' ' . $product['name'] ), $query ) ) {
+				$found[] = $product;
 			}
 			if ( count( $found ) >= $limit ) {
 				break;
 			}
 		}
 		return $found;
+	}
+
+	/**
+	 * Turns a product record into its index entry: the upper-case SKU, and `id`, `name`, `sku` on separate lines.
+	 *
+	 * @return callable(array<string,mixed>):?array{0:string,1:string}
+	 */
+	private function entry(): callable {
+		return static function ( array $row ): ?array {
+			$sku = HoldedPayloadReader::text( $row['sku'] ?? '' );
+			$id  = HoldedPayloadReader::text( $row['id'] ?? '' );
+			if ( '' === $sku || '' === $id ) {
+				return null;
+			}
+			$name = HoldedPayloadReader::shorten( str_replace( array( "\r", "\n" ), ' ', HoldedPayloadReader::text( $row['name'] ?? '' ) ), 80 );
+			return array( strtoupper( $sku ), $id . "\n" . $name . "\n" . str_replace( array( "\r", "\n" ), ' ', $sku ) );
+		};
+	}
+
+	/**
+	 * An index entry as a product.
+	 *
+	 * @param string $value The entry.
+	 * @return array{id:string,name:string,sku:string}
+	 */
+	private function decode( string $value ): array {
+		$parts = explode( "\n", $value, 3 );
+		return array(
+			'id'   => $parts[0],
+			'name' => $parts[1] ?? '',
+			'sku'  => $parts[2] ?? '',
+		);
 	}
 }

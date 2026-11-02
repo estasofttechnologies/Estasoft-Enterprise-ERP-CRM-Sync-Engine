@@ -99,7 +99,7 @@ final class NetSuiteKit {
 		$this->lookups   = new NetSuiteLookups( $this->gateway, $options );
 		$this->customers = new NetSuiteCustomers( $this->gateway, $this->lookups, $options, $system );
 		$this->orders    = new NetSuiteOrders( $this->gateway, $this->lookups, $this->customers, $options, $this->amounts, new ShopTotalMarker( $this->amounts ), $system, $host );
-		$this->refunds   = new NetSuiteRefunds( $this->gateway, $this->lookups, $this->orders, $options, $this->amounts, $system, $host );
+		$this->refunds   = new NetSuiteRefunds( $this->gateway, $this->lookups, $this->orders, $options, $this->amounts, new ShopTotalMarker( $this->amounts ), $system, $host );
 		$this->reader    = new NetSuiteReader( $this->gateway, $this->lookups, $this->amounts, $host );
 		$this->total     = new TotalCheck( $this->amounts, $system, $options->totalMismatch() );
 	}

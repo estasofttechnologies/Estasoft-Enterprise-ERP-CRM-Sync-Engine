@@ -14,6 +14,7 @@ use Estasoft\SyncEngine\Contract\ExternalRef;
 use Estasoft\SyncEngine\Domain\EntityType;
 use Estasoft\SyncEngine\Domain\ErrorClass;
 use Estasoft\SyncEngine\Domain\ErrorCode;
+use Estasoft\SyncEngine\Tests\Support\FakeHttpClient;
 
 final class WafeqOrderFlowTest extends WafeqTestCase {
 
@@ -54,6 +55,81 @@ final class WafeqOrderFlowTest extends WafeqTestCase {
 		$this->assertMatchesRegularExpression( '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/', $post['headers']['X-Wafeq-Idempotency-Key'] );
 		$this->assertSame( ( new WafeqIds() )->idempotencyKey( $this->item(), 'invoice' ), $post['headers']['X-Wafeq-Idempotency-Key'] );
 		$this->assertSame( 'application/json', $post['headers']['Content-Type'] );
+	}
+
+	public function test_the_tax_authority_report_is_not_asked_for_unless_the_connection_says_so(): void {
+		$result = $this->connector()->send( $this->connection(), $this->item(), $this->payload() );
+		$this->assertTrue( $result->isSuccess() );
+		$this->assertCount( 0, $this->requests( 'POST', '#/tax-authority/report#' ) );
+		$this->assertArrayNotHasKey( 'tax_authority', $result->ref->extra );
+	}
+
+	public function test_a_finalized_invoice_is_reported_when_the_connection_asks_and_the_status_is_kept(): void {
+		$result = $this->connector()->send( $this->connection( array( 'tax_authority_report' => 'yes' ) ), $this->item(), $this->payload() );
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$reports = $this->requests( 'POST', '#/v1/invoices/[^/]+/tax-authority/report/$#' );
+		$this->assertCount( 1, $reports );
+		$this->assertSame( 'pending', $result->ref->extra['tax_authority'] );
+		$this->assertArrayHasKey( 'x-wafeq-idempotency-key', array_change_key_case( $reports[0]['headers'] ) );
+		$this->assertSame( array(), $result->ref->extra['warnings'] ?? array() );
+	}
+
+	public function test_a_report_already_running_is_not_an_error(): void {
+		$this->kit->http->route( 'POST', '#/tax-authority/report#', static fn( array $request ) => FakeHttpClient::json( array( 'code' => 'report_in_progress' ), 409 ) );
+		$result = $this->connector()->send( $this->connection( array( 'tax_authority_report' => 'yes' ) ), $this->item(), $this->payload() );
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$this->assertSame( 'in_progress', $result->ref->extra['tax_authority'] );
+		$this->assertCount( 1, $this->server->all( 'invoices' ) );
+	}
+
+	public function test_a_retry_of_the_same_report_gets_the_stored_answer_for_the_same_key(): void {
+		$connector = $this->connector();
+		$config    = array( 'tax_authority_report' => 'yes' );
+		$connector->send( $this->connection( $config ), $this->item(), $this->payload() );
+		$again = $connector->send( $this->connection( $config ), $this->item(), $this->payload() );
+		$this->assertTrue( $again->alreadyExisted );
+		$this->assertSame( 'pending', $again->ref->extra['tax_authority'] );
+		$keys = array_map( static fn( array $request ): string => array_change_key_case( $request['headers'] )['x-wafeq-idempotency-key'] ?? '', $this->requests( 'POST', '#/tax-authority/report#' ) );
+		$this->assertCount( 1, array_unique( $keys ), 'Both requests carry the same key.' );
+	}
+
+	public function test_a_report_wafeq_refuses_is_a_warning_and_the_invoice_stays_done(): void {
+		$this->server->reportRefused = true;
+		$result                      = $this->connector()->send( $this->connection( array( 'tax_authority_report' => 'yes' ) ), $this->item(), $this->payload() );
+		$this->assertTrue( $result->isSuccess() );
+		$this->assertSame( 'refused', $result->ref->extra['tax_authority'] );
+		$this->assertStringContainsString( 'not registered', implode( ' ', $result->ref->extra['warnings'] ) );
+	}
+
+	public function test_a_report_that_fails_for_a_reason_a_retry_can_cure_fails_the_item_so_it_retries(): void {
+		$this->server->failWriteAfter( 3, 'server_error' );
+		$result = $this->connector()->send( $this->connection( array( 'tax_authority_report' => 'yes' ) ), $this->item(), $this->payload() );
+		$this->assertFalse( $result->isSuccess() );
+		$this->assertSame( ErrorCode::Net002, $result->error->code );
+		$this->assertSame( 'FINALIZED', $this->server->all( 'invoices' )[0]['status'] );
+		$retry = $this->connector()->send( $this->connection( array( 'tax_authority_report' => 'yes' ) ), $this->item(), $this->payload() );
+		$this->assertTrue( $retry->isSuccess(), (string) $retry->error?->message() );
+		$this->assertSame( 'pending', $retry->ref->extra['tax_authority'] );
+		$this->assertCount( 1, $this->server->all( 'invoices' ) );
+	}
+
+	public function test_a_draft_is_never_reported(): void {
+		$result = $this->connector()->send( $this->connection( array( 'tax_authority_report' => 'yes', 'invoice_state' => 'draft' ) ), $this->item(), $this->payload() );
+		$this->assertTrue( $result->isSuccess() );
+		$this->assertCount( 0, $this->requests( 'POST', '#/tax-authority/report#' ) );
+	}
+
+	public function test_a_customer_is_found_by_name_when_the_keyword_search_does_not_cover_the_email(): void {
+		$this->server->tables['contacts']['cnt_old'] = array( 'id' => 'cnt_old', 'name' => 'نور المنصوري', 'email' => 'Noor@Example.com', 'external_id' => '' );
+		$this->kit->http->route(
+			'GET',
+			'#/v1/contacts/.*keyword=noor%40example\.com#i',
+			static fn( array $request ) => FakeHttpClient::json( array( 'count' => 0, 'next' => null, 'previous' => null, 'results' => array() ) )
+		);
+		$result = $this->connector()->send( $this->connection(), $this->item(), $this->payload() );
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$this->assertCount( 1, $this->server->all( 'contacts' ), 'The contact made by hand is used, no second one.' );
+		$this->assertSame( 'cnt_old', $this->server->all( 'invoices' )[0]['contact'] );
 	}
 
 	public function test_a_second_send_links_to_the_same_invoice_and_creates_nothing(): void {

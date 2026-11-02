@@ -134,7 +134,7 @@ final class XeroRefundSender {
 		if ( $body instanceof ConnectorError ) {
 			return $body;
 		}
-		return $this->invoices->createCreditNote( $body, 'wc-' . $this->connectionId . '-' . $parsed->clientRef . '-creditnote-' . substr( sha1( $parsed->attempt . '|' . (string) wp_json_encode( $body ) ), 0, 16 ) );
+		return $this->invoices->createCreditNote( $body, 'wc-' . $this->connectionId . '-' . $parsed->clientRef . '-creditnote-' . substr( sha1( implode( ',', $this->invoices->deadIds( $parsed->clientRef ) ) . '|' . (string) wp_json_encode( $body ) ), 0, 16 ) );
 	}
 
 	/**

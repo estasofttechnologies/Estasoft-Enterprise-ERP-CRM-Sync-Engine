@@ -16,7 +16,7 @@ variants: [{ id: sage300, label: "Sage 300 (Web API on your own web server)" }]
 
 Connector id `sage300`, type ERP, contract version 1. Code: `includes/Connectors/Sage300/` (shared order and money helpers in `includes/Connectors/ErpCommon/`). One of the three products of the catalog row "Sage 200, Sage 300 and Sage X3". This is Sage 300 ERP (formerly Accpac), not Sage 300 CRE or Sage 300 People, which have different products and APIs.
 
-The connector sends WooCommerce orders to Sage 300 as Order Entry orders (`OE/OEOrders`) and refunds as Order Entry credit notes (`OE/OECreditDebitNotes`). By default every order goes on one customer account chosen by the merchant. It does not read stock, tracking or invoices back (no documented endpoint, section 14).
+The connector sends WooCommerce orders to Sage 300 as Order Entry orders (`OE/OEOrders`) and refunds as Order Entry credit notes (`OE/OECreditDebitNotes`). Totals are compared with the shop on both: an order whose answer holds no total, and a refund without the setting `refund_total_property`, are refused unless the person chose "Continue with a warning". By default every order goes on one customer account chosen by the merchant. It does not read stock, tracking or invoices back (no documented endpoint, section 14).
 
 The Sage 300 Web API is installed by the merchant on their own IIS server (the "Web Screens" option of the Sage 300 setup). **Whether Sage allows a free, open-source plugin to use the Web API without partner status is not answered in any document read. Ask Sage before launch** (docs/spec/scope-update.md, open item 5). The Technical Partner Program Agreement and the Partner Code of Conduct are linked from https://developer.sage.com/300/ and were not readable; the plugin never says or implies that Sage endorses it.
 
@@ -48,7 +48,7 @@ Plan gate: none stated. The Web API must be installed and the IIS site must allo
 
 ## 3. Authentication
 
-HTTP Basic on every request: `Authorization: Basic base64(user:password)` (`BasicAuth` of the shared base). If security is switched off for the system database, the password is empty; the plugin requires a password. The company ID (org ID) is part of every URL. Stored: `address`, `company`, `username` (config), `password` (secret). IIS stops an idle application after 20 minutes, so the first request after a pause can be slow (the 30 s timeout still applies).
+The connector never follows an address the server sends back (no `@odata.nextLink`, no `Location`); lists are paged with `$top` and `$skip`, so the Basic credentials only go to the address the merchant typed. HTTP Basic on every request: `Authorization: Basic base64(user:password)` (`BasicAuth` of the shared base). If security is switched off for the system database, the password is empty; the plugin requires a password. The company ID (org ID) is part of every URL. Stored: `address`, `company`, `username` (config), `password` (secret). IIS stops an idle application after 20 minutes, so the first request after a pause can be slow (the 30 s timeout still applies).
 
 ## 4. Data sent and when (External services disclosure)
 
@@ -59,7 +59,6 @@ Host: the web server address the merchant typed. Nothing else is contacted.
 | Test connection | Nothing | `$metadata` of the Order Entry module, one customer, one order, locations, tax groups |
 | Order synced | Order number, order date, line item numbers, quantities, prices, shipping and fee amounts, order note, tax group | The customer, the items by SKU, the order by order number, totals back |
 | Refund synced | Refund lines, quantities, amounts, refund number | Items, credit note by refund number |
-| Nightly check | Date window | Orders with `WC-` references |
 
 ## 5. Objects and field mapping
 
@@ -78,7 +77,7 @@ Order payload paths are the shared ones of the ERP connectors (without the partn
 | `discount.total` | a Miscellaneous line with `discount_charge_code` and a negative `ExtendedAmount` | Refused when the option is empty |
 | `order_line[].tax` | `TaxGroup` of the order | One tax group per order |
 
-Options (config): `customer_policy` (`fixed` default, `match_only`), `customer_number`, `location`, `shipping_charge_code`, `fee_charge_code`, `discount_charge_code`, `refund_charge_code`, `reference_property`, `total_property`, `total_mismatch` (`fail`, `warn`).
+Options (config): `refund_total_property`, `customer_policy` (`fixed` default, `match_only`), `customer_number`, `location`, `shipping_charge_code`, `fee_charge_code`, `discount_charge_code`, `refund_charge_code`, `reference_property`, `total_property`, `total_mismatch` (`fail`, `warn`).
 
 Customer policy `fixed`: every order goes on `customer_number`; the buyer's name and address are not sent (Sage 300 customer records need an account set, a group and terms that differ per company). `match_only`: the buyer's email is searched in the property of `ARCustomers` whose name contains "Email" (discovered from `$metadata`; the first one); no customer is created; an unknown buyer stops the item with SYNC-VAL-002 naming `partner.email`, and an order without an email stops it with SYNC-MAP-003. With the `fixed` policy the buyer's name, email and address are not needed and are not sent. The connector does not create customers: the required fields (account set, group code, terms, tax group, currency) are company setup and the sample does not show address or email property names.
 
@@ -91,7 +90,7 @@ Currency: Sage 300 orders follow the customer's currency. The customer's `Curren
 3. Find the order: `GET OE/OEOrders?$filter=<reference> eq 'WC-{id}'`. If it exists it is never created again; the pass goes to step 6.
 4. Resolve each SKU: `GET IC/ICItems('{sku}')`. A `RecordNotFound` is SYNC-MAP-001, before the order. The tax group (if any) is checked against `TX/TXTaxGroups`.
 5. `POST OE/OEOrders` with the header and `OrderDetails`, partial payload, properties in the documented order (`CustomerNumber`, `OrderDate`, reference, description, details). The answer holds the inserted record with its system-generated keys (`OrderUniquifier`).
-6. Check: `total_property` (default: the first of `OrderTotal`, `TotalOrderAmount` present in the answer) against `total - excluded_total` within one minor unit. A difference stops the item (`fail` default) or goes on with a warning (`warn`); the order stays in Sage 300 for the person, and the next pass finds it and checks again. When none of the total properties is present the check cannot run and the result carries a warning "total not verified".
+6. Check: `total_property` (default: the first of `OrderTotal`, `TotalOrderAmount` present in the answer) against `total - excluded_total` within one minor unit. A difference stops the item (`fail` default) or goes on with a warning (`warn`); the order stays in Sage 300 for the person, and the next pass finds it and checks again. When none of the total properties is present the check cannot run, because price lists in Sage 300 can replace the `UnitPrice` that was sent without anyone noticing: the item stops with SYNC-VAL-002 (field `total_property`), the order stays in Sage 300, and every later pass checks it again; only when the person chose `total_mismatch = warn` does the result carry a warning "total not verified" instead.
 
 The reference returned is `OrderUniquifier` (else the order number) with the order number as its number; `extra` has `currency` (the customer's) and `total_minor` when the answer has a total. `findExisting()` returns a reference for an existing order (there are no later steps); `send()` reads an existing order back and checks its total again, so a wrong total is reported on every pass until the person deletes the order in Sage 300. Dates: `OrderDate` as sent. Test connection runs the same checks of the property names (reference, `UnitPrice`, the customer) and fails with the setting named.
 
@@ -109,11 +108,11 @@ Not implemented. Receipts go through `AR/ARReceiptAndAdjustmentBatches`, which a
 
 ## 10. Refunds
 
-A refund is a `POST OE/OECreditDebitNotes` with `CreditDebitNoteType: CreditNote`, `CustomerNumber` of the order's customer (read from the order), `Reference = WC-{refund id}`, `Description` ("Refund of WC-{order id}" and the reason, 60 characters), `CreditDebitNoteDate`, and `CreditDebitDetails` per refunded product (`LineType: Item`, `Item`, `Location`, `QuantityReturned`, `CreditDebitNoteUOM` = the item's stocking unit read from `ICItems.StockingUnitOfMeasure`, `UnitPrice` the line amount divided by the quantity). Refunded shipping is a Miscellaneous line with the `shipping_charge_code`, a refund without lines one with the `refund_charge_code` (`ExtendedAmountMiscellaneousCharge`, the amount as the shop gives it). The total of the credit note is **not** compared with the refund: the property that would hold it is not documented. The note is not linked to the original invoice. The original order must exist (`WC-{order id}`), otherwise SYNC-VAL-002. Posting of the credit note is done by a person in Sage 300 (the posting process endpoints exist but are not used).
+A refund is a `POST OE/OECreditDebitNotes` with `CreditDebitNoteType: CreditNote`, `CustomerNumber` of the order's customer (read from the order), `Reference = WC-{refund id}`, `Description` ("Refund of WC-{order id}" and the reason, 60 characters), `CreditDebitNoteDate`, and `CreditDebitDetails` per refunded product (`LineType: Item`, `Item`, `Location`, `QuantityReturned`, `CreditDebitNoteUOM` = the item's stocking unit read from `ICItems.StockingUnitOfMeasure`, `UnitPrice` the line amount divided by the quantity). Refunded shipping is a Miscellaneous line with the `shipping_charge_code`, a refund without lines one with the `refund_charge_code` (`ExtendedAmountMiscellaneousCharge`, the amount as the shop gives it). The total of the credit note is compared with the refund amount (one minor unit). The property that holds it is not documented, so it is the setting `refund_total_property`: without it a refund is refused before anything is made (SYNC-VAL-002, field `refund_total_property`) unless the person chose `total_mismatch = warn`; a credit note whose answer has no value there, or a different total, is reported on that pass and on every later one until the person deletes it in Sage 300 (`warn` only warns). The note is not linked to the original invoice. The original order must exist (`WC-{order id}`), otherwise SYNC-VAL-002. Posting of the credit note is done by a person in Sage 300 (the posting process endpoints exist but are not used).
 
 ## 11. Reading from Sage 300
 
-- `listForReconcile`: `GET OE/OEOrders?$filter=OrderDate ge datetime'<date>T00:00' and startswith(<reference>,'WC-')&$top=100&$skip=N` until a short page; the window starts one day before the date asked for. If the server refuses the `startswith` form (400), the date filter alone is used and the prefix is applied after reading every page of the window. The currency of each row is the currency of its customer; `total_minor` is present only when the order answer has a total property. **Limit:** credit notes are not tied to an order here, so `refunded_minor` is always 0 and the nightly check will report a `refund_missing` difference for an order that was refunded in the shop; `email` is empty.
+- **No nightly list.** `listForReconcile` is not provided and the `reconciliation` flag is off: credit notes are not tied to an order, so a list with `refunded_minor` always 0 would raise a false `refund_missing` every night for every refunded order.
 - `lookupCustomer` (when the email property is known), `lookupProduct` (`ICItems('{sku}')`), `searchProducts` (`substringof('{q}',ItemNumber)`; falls back to the key lookup), `listTaxCodes`: read-only helpers.
 - **No stock read**: the endpoint list has no stock quantity resource (`ICItems` holds item master data). **No tracking read**: no shipment resource with a tracking number in the lists. **No invoice read-back**: `OEInvoices` is listed as GET only but its property names are not documented in anything read.
 
@@ -154,13 +153,13 @@ Passwords, user names, the company ID and the host are scrubbed from every messa
 | tracking_in | no | No shipment/tracking endpoint |
 | prices_in | no | |
 | invoice_readback | no | Property names undocumented |
-| reconciliation | yes | `OEOrders` by date |
+| reconciliation | no | Credit notes cannot be tied to their order, so the nightly check would report `refund_missing` for every refunded order; the flag is off rather than wrong |
 | webhooks | no | None |
 | shadow_lookup | yes | Read-only |
 
 ## 15. Not verified
 
-- **Partner status**: whether Sage lets a free third-party plugin call the Sage 300 Web API (open item 5). Not answered anywhere read.
+- **Partner status**: whether Sage lets a free third-party plugin call the Sage 300 Web API (open item 5). Still not answered. What was read on 2026-11-02: the Sage 300 developer page (https://developer.sage.com/300) lists a "Technical Partner Program Agreement" and says the Product SDK is "available for registered partners" (partner ID required); the North America developer partner programme sheet (https://developer.sage.com/300/guides/Sage%20NA%20Developer%20Partner%20Program.pdf) says joining for Sage 300 needs an application, a signed Developer Partner Program Agreement, a $2,000 sign-up fee and a $1,000 annual renewal, and lists the SDK as a programme benefit; neither mentions the Web API.
 - The Order Entry property names beyond the official sample: `PONumber`, `Reference` (as order reference), `UnitPrice` on order lines, `TaxGroup` on the order, the total property, the customer email property. The connector discovers them from `$metadata` and refuses with a clear message when they are absent; their types and lengths were not read.
 - The key of `ICItems` (formatted or unformatted item number) for `ICItems('{sku}')`.
 - The property names `ItemNumber`, `StockingUnitOfMeasure`, `CustomerNumber`, `CustomerName`, `CurrencyCode` on the customer and the item, `CreditDebitNoteNumber` and `CreditDebitNoteUniquifier` on the credit note, `OrderNumber` and `OrderUniquifier` on the order, `Location` and `Description` of `ICLocations`; the shape of the `$metadata` document (read as OData CSDL with `EntityType`, `Property`, `NavigationProperty` and `EntitySet`; a server that does not describe itself is tried with the documented names); and the `Accept: application/json` header.
@@ -169,7 +168,7 @@ Passwords, user names, the company ID and the host are scrubbed from every messa
 - Sage 300 versions before 2020 may not expose `OECreditDebitNotes`; the endpoint reference read is from August 2022.
 - Behaviour with several companies on one server beyond the company ID in the URL; with Sage 300 multicurrency; with inventory locations that need lot or serial numbers.
 - Latest release and support dates (the research said 2027).
-- The privacy address in the front matter was not fetched; the terms address is the Sage 300 developer page (it links the Technical Partner Program Agreement).
+- The privacy address in the front matter is listed by web search but was not read (the fetch tool failed on it); the terms address is the Sage 300 developer page, which was read (it lists the Technical Partner Program Agreement without its text).
 
 ## 16. Manual smoke test against a real Sage 300
 

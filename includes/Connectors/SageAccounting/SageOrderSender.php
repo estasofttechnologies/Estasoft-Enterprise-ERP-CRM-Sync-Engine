@@ -25,6 +25,11 @@ use Estasoft\SyncEngine\Domain\Item;
 final class SageOrderSender {
 
 	/**
+	 * Most creates in one pass when the answer keeps naming an invoice that no longer exists.
+	 */
+	private const ROUNDS = 3;
+
+	/**
 	 * Set up with what it depends on.
 	 *
 	 * @param SageInvoices $invoices     Invoices.
@@ -84,9 +89,6 @@ final class SageOrderSender {
 		if ( $parsed instanceof ConnectorError ) {
 			return SendResult::failure( $parsed );
 		}
-		if ( $parsed->pricesIncludeTax ) {
-			return SendResult::failure( SageErrors::refused( 'prices_include_tax', __( 'Sage takes prices without tax and works the tax out from the tax rate. Send prices without tax.', 'estasoft-erp-crm-sync-engine' ) ) );
-		}
 		if ( '' === $this->options->text( 'sales_ledger_account' ) ) {
 			return SendResult::failure( $this->needsLedger( 'sales_ledger_account' ) );
 		}
@@ -97,13 +99,26 @@ final class SageOrderSender {
 		}
 		$createdNow = false;
 		if ( null === $invoice ) {
-			$invoice = $this->create( $parsed, $warnings );
-			if ( $invoice instanceof ConnectorError ) {
-				return SendResult::failure( $invoice );
+			$body = $this->prepare( $parsed, $warnings );
+			if ( $body instanceof ConnectorError ) {
+				return SendResult::failure( $body );
 			}
-			$createdNow = true;
+			$dead = $this->invoices->deadIds( 'sales_invoices', $parsed->clientRef );
+			$done = null;
+			for ( $round = 0; $round < self::ROUNDS && null === $done; ++$round ) {
+				$invoice    = $this->invoices->create( 'sales_invoices', 'sales_invoice', $this->withKey( $body, $parsed->clientRef, 'invoice', $dead ) );
+				$createdNow = true;
+				$done       = $this->finish( $invoice, $parsed, true, $warnings );
+				if ( null === $done ) {
+					$dead[] = SagePayloadReader::text( $invoice['id'] ?? '' );
+				}
+			}
+		} else {
+			$done = $this->finish( $invoice, $parsed, false, $warnings );
 		}
-		$done = $this->finish( $invoice, $parsed, $createdNow, $warnings );
+		if ( null === $done ) {
+			return SendResult::failure( SageErrors::refused( 'sales_invoice', __( 'Sage keeps answering with an invoice that no longer exists. Try again later.', 'estasoft-erp-crm-sync-engine' ) ) );
+		}
 		if ( $done instanceof ConnectorError ) {
 			return SendResult::failure( $done );
 		}
@@ -112,7 +127,7 @@ final class SageOrderSender {
 	}
 
 	/**
-	 * Create the draft invoice after everything it needs has been resolved.
+	 * Resolve everything the draft invoice needs and build its body.
 	 *
 	 * @param SageOrderPayload  $parsed   Checked payload.
 	 * @param array<int,string> $warnings Receives notes.
@@ -120,7 +135,7 @@ final class SageOrderSender {
 	 *
 	 * @throws ApiException On a failed call.
 	 */
-	private function create( SageOrderPayload $parsed, array &$warnings ): array|ConnectorError {
+	private function prepare( SageOrderPayload $parsed, array &$warnings ): array|ConnectorError {
 		$currency = $this->business->currency();
 		if ( '' !== $parsed->currency && '' !== $currency && $parsed->currency !== $currency ) {
 			return SageErrors::refused(
@@ -149,10 +164,25 @@ final class SageOrderSender {
 		if ( $body instanceof ConnectorError ) {
 			return $body;
 		}
-		$contact                = $this->contacts->resolve( $parsed->partner, $parsed->delivery, $this->id( (string) ( $parsed->partner['email'] ?? '' ), 'contact', 0, array() ), $warnings );
-		$body['contact_id']     = SagePayloadReader::text( $contact['id'] ?? '' );
-		$body['idempotency_id'] = $this->id( $parsed->clientRef, 'invoice', $parsed->attempt, $body );
-		return $this->invoices->create( 'sales_invoices', 'sales_invoice', $body );
+		$contact            = $this->contacts->resolve( $parsed->partner, $parsed->delivery, $this->id( (string) ( $parsed->partner['email'] ?? '' ), 'contact', array(), array() ), $warnings );
+		$body['contact_id'] = SagePayloadReader::text( $contact['id'] ?? '' );
+		return $body;
+	}
+
+	/**
+	 * The body with its idempotency id, made from the reference, the step and the body. The same request sent again gets the first answer, so a create whose answer was
+	 * lost is not made twice (Sage references are not unique, so a search cannot be trusted to find it). The ids of documents the connector voided or found gone are
+	 * part of it, so a create that follows its own void is a new request.
+	 *
+	 * @param array<string,mixed> $body      Body.
+	 * @param string              $reference Client reference.
+	 * @param string              $step      invoice or payment.
+	 * @param array<int,string>   $dead      Ids of documents voided or found gone.
+	 * @return array<string,mixed>
+	 */
+	private function withKey( array $body, string $reference, string $step, array $dead ): array {
+		$body['idempotency_id'] = $this->id( $reference, $step, $dead, $body );
+		return $body;
 	}
 
 	/**
@@ -162,25 +192,34 @@ final class SageOrderSender {
 	 * @param SageOrderPayload    $parsed     Checked payload.
 	 * @param bool                $createdNow True when this pass created the invoice.
 	 * @param array<int,string>   $warnings   Receives notes.
-	 * @return array<string,mixed>|ConnectorError
+	 * @return array<string,mixed>|ConnectorError|null The invoice, the failure, or null when the invoice turned out not to exist any more (a replayed answer).
 	 *
 	 * @throws ApiException On a failed call.
 	 */
-	private function finish( array $invoice, SageOrderPayload $parsed, bool $createdNow, array &$warnings ): array|ConnectorError {
+	private function finish( array $invoice, SageOrderPayload $parsed, bool $createdNow, array &$warnings ): array|ConnectorError|null {
 		$id     = SagePayloadReader::text( $invoice['id'] ?? '' );
 		$status = SageInvoices::status( $invoice );
 		if ( 'DRAFT' === $status ) {
-			$problem = $this->totals->check( $invoice, $this->business->currency(), $parsed->totalMinor );
+			$problem = $this->totals->check( $invoice, $this->business->currency(), $parsed->totalMinor, $this->tolerance( $parsed ) );
 			if ( null !== $problem ) {
 				if ( 'warn' !== $this->options->choice( 'total_mismatch', array( 'fail', 'warn' ), 'fail' ) ) {
-					$this->discard( $id, $createdNow );
-					return $problem;
+					if ( $createdNow && $this->invoices->isGone( 'sales_invoices', $id ) ) {
+						return null;
+					}
+					return $this->wrong( $problem, $invoice, $createdNow );
 				}
 				$warnings[] = (string) ( $problem->context['reason'] ?? '' );
 			}
 			if ( $this->options->releases() ) {
-				$invoice = $this->invoices->release( $id );
-				$status  = SageInvoices::status( $invoice );
+				try {
+					$invoice = $this->invoices->release( $id );
+				} catch ( ApiException $exception ) {
+					if ( $createdNow && $this->invoices->isGone( 'sales_invoices', $id ) ) {
+						return null;
+					}
+					throw $exception;
+				}
+				$status = SageInvoices::status( $invoice );
 			}
 		}
 		if ( $this->options->pays() && '' !== $parsed->paymentDate && in_array( $status, array( 'UNPAID', 'PART_PAID' ), true ) ) {
@@ -191,6 +230,38 @@ final class SageOrderSender {
 			$invoice = $paid;
 		}
 		return $invoice;
+	}
+
+	/**
+	 * The failure for a draft whose total is wrong. A draft made by this pass is voided if Sage lets it; the answer says what really happened, because the guide
+	 * documents voiding for an unpaid invoice only and whether a draft can be voided is not stated.
+	 *
+	 * @param ConnectorError      $problem    The mismatch.
+	 * @param array<string,mixed> $invoice    The draft.
+	 * @param bool                $createdNow True when this pass made it.
+	 */
+	private function wrong( ConnectorError $problem, array $invoice, bool $createdNow ): ConnectorError {
+		$id = SagePayloadReader::text( $invoice['id'] ?? '' );
+		if ( $createdNow && '' !== $id && $this->invoices->remove( 'sales_invoices', $id ) ) {
+			return $problem;
+		}
+		return SageErrors::withNote(
+			$problem,
+			sprintf(
+				/* translators: %s: the shop's reference of the order, such as WC-1042. */
+				__( 'The draft invoice %s is still in Sage (nothing is posted for a draft). Delete it in Sage, then retry.', 'estasoft-erp-crm-sync-engine' ),
+				SagePayloadReader::text( $invoice['reference'] ?? '' )
+			)
+		);
+	}
+
+	/**
+	 * Most the totals may differ. Prices that include tax are converted line by line (or worked out by Sage line by line), and each line can be off by one minor unit.
+	 *
+	 * @param SageOrderPayload $parsed Checked payload.
+	 */
+	private function tolerance( SageOrderPayload $parsed ): int {
+		return $parsed->pricesIncludeTax ? max( 1, count( $parsed->lines ) + count( $parsed->extras ) + ( 0 !== $parsed->shippingMinor ? 1 : 0 ) ) : 1;
 	}
 
 	/**
@@ -239,7 +310,7 @@ final class SageOrderSender {
 				),
 			),
 		);
-		$payment['idempotency_id'] = $this->id( $parsed->clientRef, 'payment', $parsed->attempt, $payment );
+		$payment['idempotency_id'] = $this->id( $parsed->clientRef, 'payment', array(), $payment );
 		$this->invoices->pay( $payment );
 		return $this->invoices->get( 'sales_invoices', $id ) ?? $invoice;
 	}
@@ -290,23 +361,6 @@ final class SageOrderSender {
 			$ledgers[ $kind ] = $id;
 		}
 		return $ledgers;
-	}
-
-	/**
-	 * Remove a draft this pass made, so a wrong document does not stay behind. A failure here is not worse than leaving it.
-	 *
-	 * @param string $id     Invoice id.
-	 * @param bool   $remove True when the draft may be removed (this pass made it).
-	 */
-	private function discard( string $id, bool $remove ): void {
-		if ( ! $remove || '' === $id ) {
-			return;
-		}
-		try {
-			$this->invoices->remove( 'sales_invoices', $id );
-		} catch ( ApiException $exception ) {
-			unset( $exception );
-		}
 	}
 
 	/**
@@ -405,14 +459,14 @@ final class SageOrderSender {
 	}
 
 	/**
-	 * An idempotency id: 32 hex characters. The same body in the same try replays; a corrected body or the next try gets a new id.
+	 * An idempotency id: 32 hex characters from the connection, the reference, the step, the ids of documents found voided or gone, and the body.
 	 *
 	 * @param string              $reference Client reference.
 	 * @param string              $step      invoice, payment or contact.
-	 * @param int                 $attempt   Tries the queue made so far.
+	 * @param array<int,string>   $dead      Ids of documents voided or found gone.
 	 * @param array<string,mixed> $body      Request body.
 	 */
-	private function id( string $reference, string $step, int $attempt, array $body ): string {
-		return md5( $this->connectionId . '|' . $reference . '|' . $step . '|' . $attempt . '|' . (string) wp_json_encode( $body ) );
+	private function id( string $reference, string $step, array $dead, array $body ): string {
+		return md5( $this->connectionId . '|' . $reference . '|' . $step . '|' . implode( ',', $dead ) . '|' . (string) wp_json_encode( $body ) );
 	}
 }

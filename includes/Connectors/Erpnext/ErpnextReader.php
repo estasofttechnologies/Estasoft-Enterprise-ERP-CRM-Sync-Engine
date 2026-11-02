@@ -65,7 +65,7 @@ final class ErpnextReader {
 			if ( array() !== $warehouses ) {
 				$filters[] = array( 'warehouse', 'in', array_values( $warehouses ) );
 			}
-			foreach ( $this->client->rows( 'Bin', $filters, array( 'item_code', 'warehouse', 'actual_qty', 'reserved_qty' ), 'item_code asc', 5000 ) as $row ) {
+			foreach ( $this->client->complete( 'Bin', $filters, array( 'item_code', 'warehouse', 'actual_qty', 'reserved_qty' ), 'item_code asc' ) as $row ) {
 				$low                      = strtolower( (string) $row['item_code'] );
 				$sums[ $low ]['quantity'] = ( $sums[ $low ]['quantity'] ?? 0.0 ) + (float) ( $row['actual_qty'] ?? 0 );
 				$sums[ $low ]['held']     = ( $sums[ $low ]['held'] ?? 0.0 ) + (float) ( $row['reserved_qty'] ?? 0 );
@@ -92,7 +92,7 @@ final class ErpnextReader {
 	 */
 	public function tracking( \DateTimeImmutable $since ): array {
 		$from = $since->setTimezone( new \DateTimeZone( 'UTC' ) )->modify( '-1 day' )->format( 'Y-m-d H:i:s' );
-		$rows = $this->client->rows(
+		$rows = $this->client->complete(
 			'Delivery Note',
 			array( array( 'docstatus', '=', 1 ), array( 'is_return', '=', 0 ), array( 'modified', '>=', $from ), array( 'po_no', 'like', '%WC-%' ) ),
 			array( 'name', 'po_no', 'lr_no', 'transporter_name', 'lr_date', 'posting_date', 'modified' ),
@@ -150,14 +150,14 @@ final class ErpnextReader {
 	 */
 	public function reconcile( \DateTimeImmutable $from ): array {
 		$date     = $from->setTimezone( new \DateTimeZone( 'UTC' ) )->format( 'Y-m-d' );
-		$orders   = $this->client->rows(
+		$orders   = $this->client->complete(
 			'Sales Order',
 			array( array( 'po_no', 'like', 'WC-%' ), array( 'transaction_date', '>=', $date ), array( 'docstatus', '=', 1 ) ),
 			array( 'name', 'po_no', 'grand_total', 'currency', 'contact_email', 'transaction_date' ),
 			'transaction_date asc'
 		);
 		$refunded = array();
-		$notes    = $this->client->rows(
+		$notes    = $this->client->complete(
 			'Sales Invoice',
 			array( array( 'is_return', '=', 1 ), array( 'docstatus', '=', 1 ), array( 'po_no', 'like', 'WC-%' ), array( 'posting_date', '>=', $date ) ),
 			array( 'name', 'grand_total', 'currency', 'remarks' ),

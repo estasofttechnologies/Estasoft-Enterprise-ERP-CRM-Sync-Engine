@@ -120,6 +120,37 @@ final class OracleFusionGateway {
 	}
 
 	/**
+	 * Change a record (PATCH).
+	 *
+	 * @param string              $collection Resource name.
+	 * @param string              $key        Key (a number).
+	 * @param array<string,mixed> $body       Attributes to change.
+	 * @return array<string,mixed> The record as Fusion answers.
+	 *
+	 * @throws ApiException On failure.
+	 */
+	public function update( string $collection, string $key, array $body ): array {
+		return $this->api->patch( $collection . '/' . rawurlencode( $key ), array(), $body, array( 'content_type' => self::BODY_TYPE ) )->json();
+	}
+
+	/**
+	 * Delete a record.
+	 *
+	 * @param string $collection Resource name.
+	 * @param string $key        Key (a number).
+	 * @return bool False when Fusion refused (the record stays and a person deletes it).
+	 */
+	public function delete( string $collection, string $key ): bool {
+		try {
+			$this->api->delete( $collection . '/' . rawurlencode( $key ) );
+			return true;
+		} catch ( ApiException $exception ) {
+			unset( $exception );
+			return false;
+		}
+	}
+
+	/**
 	 * Whether a resource can be read (a permission probe).
 	 *
 	 * @param string $collection Resource name.

@@ -151,7 +151,7 @@ final class OracleFusionReader {
 	private function window( string $attribute, \DateTimeImmutable $from ): string {
 		return $attribute . ' like ' . $this->gateway->literal( 'WC-%' )
 			. ' and BusinessUnit = ' . $this->gateway->literal( $this->options->businessUnit() )
-			. ' and TransactionDate >= ' . $this->gateway->literal( $from->setTimezone( new \DateTimeZone( 'UTC' ) )->format( 'Y-m-d' ) );
+			. ' and TransactionDate >= ' . $this->gateway->literal( $from->setTimezone( new \DateTimeZone( 'UTC' ) )->modify( '-1 day' )->format( 'Y-m-d' ) );
 	}
 
 	/**

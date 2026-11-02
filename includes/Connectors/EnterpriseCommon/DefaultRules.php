@@ -57,7 +57,20 @@ final class DefaultRules {
 		$rules   = array_merge(
 			array(
 				$this->rule( 'order-client-ref', 'client_ref', 'order.client_ref', array(), true, 'SYNC-VAL-002' ),
-				$this->rule( 'order-date', 'order_date', 'order.created_at', array( $this->transform( 'date_utc', array( 'format' => 'mysql' ) ) ) ),
+				$this->rule(
+					'order-date',
+					'order_date',
+					'order.created_at',
+					array(
+						$this->transform(
+							'date_utc',
+							array(
+								'format'          => 'mysql',
+								'output_timezone' => 'store',
+							)
+						),
+					)
+				),
 				$this->rule( 'order-currency', 'currency', 'order.currency', array(), true, 'SYNC-VAL-002' ),
 				$this->rule( 'order-note', 'note', 'order.note', array( $this->transform( 'trim' ) ) ),
 				$this->rule( 'order-total', 'total', 'order.total' ),
@@ -110,7 +123,20 @@ final class DefaultRules {
 			: $this->rule( 'refund-line-product', 'refund_line[].product', 'refund.lines[].sku', array( $this->transform( 'sku_match', array( 'output' => $this->skuOutput ) ) ) );
 		$rules = array(
 			$this->rule( 'refund-order-ref', 'order_ref', 'refund.order_id', array( $this->transform( 'prefix', array( 'value' => 'WC-' ) ) ), true, 'SYNC-VAL-002' ),
-			$this->rule( 'refund-date', 'date', 'refund.created_at', array( $this->transform( 'date_utc', array( 'format' => 'mysql' ) ) ) ),
+			$this->rule(
+				'refund-date',
+				'date',
+				'refund.created_at',
+				array(
+					$this->transform(
+						'date_utc',
+						array(
+							'format'          => 'mysql',
+							'output_timezone' => 'store',
+						)
+					),
+				)
+			),
 			$this->rule( 'refund-reason', 'reason', 'refund.reason', array( $this->transform( 'trim' ) ) ),
 			$this->rule( 'refund-amount', 'amount', 'refund.amount' ),
 			$line,

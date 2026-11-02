@@ -211,7 +211,9 @@ final class AcumaticaConnectionTest extends AcumaticaTestCase {
 	}
 
 	public function test_ping_is_cheap_and_never_throws(): void {
-		$this->assertTrue( $this->connector()->ping( $this->connection() ) );
+		$connection = $this->connection();
+		$this->assertTrue( $this->connector()->ping( $connection ) );
+		$this->assertSame( 1, $this->kit->http->count(), 'One cheap call, not the whole Test connection.' );
 		$this->server->failNext( 'GET', '#/Customer$#', FakeHttpClient::status( 500, 'boom' ) );
 		$this->assertFalse( $this->connector()->ping( $this->connection() ) );
 	}

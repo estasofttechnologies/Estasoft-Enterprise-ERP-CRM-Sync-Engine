@@ -178,9 +178,9 @@ final class DatevConnector extends LedgerExportConnector {
 	/**
 	 * A short look at the file for the Exports screen.
 	 *
-	 * @param array<int,array{item_id:int,order:string,row:array<string,mixed>}> $first    The first rows.
-	 * @param array{orders:int,lines:int,lost:int}                               $stats    Counts.
-	 * @param array<string,mixed>                                                $settings The file's settings.
+	 * @param array<int,array{item_id:int,order:string,row:array<string,mixed>}>                $first    The first rows.
+	 * @param array{orders:int,lines:int,lost:int,lost_orders:int,lost_lines:array<int,string>} $stats Counts, and which orders have characters the file cannot hold.
+	 * @param array<string,mixed>                                                               $settings The file's settings.
 	 */
 	protected function preview( array $first, array $stats, array $settings ): string {
 		$charset = $this->charsetFor( $settings );
@@ -202,10 +202,15 @@ final class DatevConnector extends LedgerExportConnector {
 		);
 		if ( $stats['lost'] > 0 ) {
 			$lines[] = sprintf(
-				/* translators: %d: number of characters */
-				_n( '%d character cannot be written in Windows-1252 and becomes a question mark.', '%d characters cannot be written in Windows-1252 and become question marks.', $stats['lost'], 'estasoft-erp-crm-sync-engine' ),
-				$stats['lost']
+				/* translators: 1: number of characters, 2: number of orders */
+				_n( '%1$d character cannot be written in Windows-1252 and becomes a question mark (%2$d orders).', '%1$d characters cannot be written in Windows-1252 and become question marks (%2$d orders).', $stats['lost'], 'estasoft-erp-crm-sync-engine' ),
+				$stats['lost'],
+				$stats['lost_orders']
 			);
+			$lines = array_merge( $lines, $stats['lost_lines'] );
+			if ( $stats['lost_orders'] > count( $stats['lost_lines'] ) ) {
+				$lines[] = '...';
+			}
 		}
 		$lines[] = '';
 		$shown   = 0;
@@ -343,7 +348,7 @@ final class DatevConnector extends LedgerExportConnector {
 				__( 'File encoding', 'estasoft-erp-crm-sync-engine' ),
 				false,
 				false,
-				__( 'Windows-1252 is the "ANSI" of the DATEV description. UTF-8 keeps Arabic and other scripts; ask your adviser whether their DATEV reads it.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Windows-1252 is the "ANSI" of the DATEV description, which does not mention UTF-8. It cannot hold Arabic and other scripts: each such character becomes a question mark, and the export lists them in its notes file. Ask your adviser whether their DATEV reads UTF-8 before you choose it.', 'estasoft-erp-crm-sync-engine' ),
 				'windows-1252',
 				'select',
 				array(

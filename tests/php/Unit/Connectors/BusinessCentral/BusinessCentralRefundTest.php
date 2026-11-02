@@ -96,6 +96,24 @@ final class BusinessCentralRefundTest extends BusinessCentralTestCase {
 		$this->assertCount( 1, array_filter( $this->bc->actions, static fn( array $a ): bool => 'salesCreditMemos.post' === $a['action'] ), 'Never posted twice.' );
 	}
 
+	public function test_a_draft_credit_memo_that_failed_its_total_check_is_neither_finished_nor_linked(): void {
+		$this->sendOrder();
+		$item   = $this->orderItem( '3110', EntityType::Refund );
+		$wrong  = $this->refund( array( 'amount' => 1999 ) );
+		$failed = $this->connector->send( $this->connection, $item, $wrong );
+		$this->assertSame( ErrorCode::Val002, $failed->error->code, 'A draft memo with the wrong money is refused too.' );
+		$this->assertStringContainsString( '19.99 AED', $failed->error->message() );
+		$this->assertNull( $this->connector->findExisting( $this->connection, $item ) );
+		$this->assertCount( 3, $this->linesOfOnly( 'salesCreditMemos' ), 'The two notes and the product line, no marker.' );
+		$this->assertSame( ErrorCode::Val002, $this->connector->send( $this->connection, $item, $wrong )->error->code );
+
+		$right = $this->connector->send( $this->connection, $item, $this->refund() );
+		$this->assertTrue( $right->isSuccess(), (string) $right->error?->message() );
+		$this->assertCount( 1, $this->bc->all( 'salesCreditMemos' ) );
+		$this->assertNotNull( $this->connector->findExisting( $this->connection, $item ) );
+		$this->assertCount( 4, $this->linesOfOnly( 'salesCreditMemos' ) );
+	}
+
 	public function test_shipping_and_a_remaining_amount_need_their_targets(): void {
 		$this->sendOrder();
 		$payload   = $this->refund( array( 'shipping' => array( 'total' => 500 ), 'other' => array( 'total' => 100 ), 'amount' => 2699 ) );

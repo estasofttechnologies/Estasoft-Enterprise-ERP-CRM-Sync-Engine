@@ -61,6 +61,11 @@ final class FakeQoyodServer {
 	public int $blindSearches = 0;
 
 	/**
+	 * The server ignores the Ransack filters `q[...]` and answers the whole list.
+	 */
+	public bool $ignoreFilters = false;
+
+	/**
 	 * Refuse the allocation of credit notes.
 	 */
 	public bool $refuseAllocations = false;
@@ -302,7 +307,7 @@ final class FakeQoyodServer {
 			$rows = array();
 		}
 		$q = isset( $query['q'] ) && is_array( $query['q'] ) ? $query['q'] : array();
-		foreach ( $q as $predicate => $value ) {
+		foreach ( $this->ignoreFilters ? array() : $q as $predicate => $value ) {
 			$rows = array_values( array_filter( $rows, fn( array $row ): bool => $this->matches( $row, (string) $predicate, $value ) ) );
 		}
 		$page = $this->ignorePage ? 1 : max( 1, (int) ( $query['page'] ?? 1 ) );

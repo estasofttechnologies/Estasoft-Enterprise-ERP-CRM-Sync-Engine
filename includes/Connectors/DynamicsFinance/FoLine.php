@@ -43,11 +43,21 @@ final class FoLine {
 	}
 
 	/**
+	 * A calendar date as F&O date fields are written over OData: a date and time with an offset (the usual Edm.DateTimeOffset), at midday UTC
+	 * so that a time zone on the other side can never move it to another day.
+	 *
+	 * @param string $date Date YYYY-MM-DD.
+	 */
+	public static function stamp( string $date ): string {
+		return $date . 'T12:00:00Z';
+	}
+
+	/**
 	 * The body of the POST that creates the line.
 	 *
 	 * @param string $orderNumber   Sales order number.
 	 * @param string $currency      Currency of the order.
-	 * @param string $shippingDate  Requested shipping date YYYY-MM-DD.
+	 * @param string $shippingDate  Requested shipping date, as written by stamp().
 	 * @param string $warehouse     Shipping warehouse, or empty.
 	 * @param string $site          Shipping site, or empty.
 	 * @return array<string,mixed>

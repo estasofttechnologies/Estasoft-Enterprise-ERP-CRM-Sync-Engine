@@ -4,6 +4,7 @@ name: SMACC
 catalog_row: SMACC
 connection_method: none
 available: false
+unavailable_reason: SMACC has not published an API reference, so there is nothing for the plugin to connect to yet.
 verified: false
 hosts: []
 terms_url: https://smacc.com/ww/en/terms-and-conditions
@@ -72,6 +73,8 @@ The message the person reads is the code's template with the reason filled in: "
 ## 9. Capabilities
 
 Every flag is false: there is no API to support any of them. Catalog capabilities: `order_document = none`, `refund_document = none`, `reference_field = none`, `requires = SMACC publishes no API`.
+
+Tests: `tests/php/Unit/Connectors/Smacc/SmaccConnectorTest.php` (the connector refuses everything and explains why) and, against the real plugin, `tests/php/Integration/Connectors/SmaccRoutesTest.php`: the catalog lists SMACC as not available with no form, `POST /connections` for SMACC answers 422 and saves nothing, `POST /connections/test` answers a failed result with SYNC-VAL-002 and the reason, and no request leaves the site.
 
 ## 10. Not verified
 

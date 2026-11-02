@@ -583,7 +583,7 @@ final class ConnectionService {
 						'id'        => $variant['id'],
 						'label'     => (string) ( $variant['label'] ?? $variant['id'] ),
 						'available' => $registry->has( $variant['id'] ),
-					);
+					) + ( isset( $variant['unavailable_reason'] ) && '' !== (string) $variant['unavailable_reason'] ? array( 'unavailable_reason' => (string) $variant['unavailable_reason'] ) : array() );
 				}
 			}
 			$available = null !== $connector && $registry->has( $connector );
@@ -607,21 +607,22 @@ final class ConnectionService {
 				$variants[ $index ] += self::formOf( $selectable && $variant['available'] ? $forms[ $variant['id'] ] ?? null : null, $method );
 			}
 			$out[] = array(
-				'name'              => (string) $row['name'],
-				'type'              => (string) ( $row['type'] ?? 'erp' ),
-				'regions'           => (string) ( $row['regions'] ?? '' ),
-				'connector'         => $connector,
-				'connection_method' => $method,
-				'needs'             => (string) ( $row['needs'] ?? '' ),
-				'available'         => $available,
-				'verified'          => ! empty( $row['verified'] ),
-				'variants'          => $variants,
-				'hosts'             => array_values( array_map( 'strval', is_array( $row['hosts'] ?? null ) ? $row['hosts'] : array() ) ),
-				'terms_url'         => (string) ( $row['terms_url'] ?? '' ),
-				'privacy_url'       => (string) ( $row['privacy_url'] ?? '' ),
-				'developer_url'     => (string) ( $row['developer_url'] ?? '' ),
-				'steps'             => array_values( array_map( 'strval', is_array( $row['steps'] ?? null ) ? $row['steps'] : array() ) ),
-				'wave'              => (int) ( $row['wave'] ?? 0 ),
+				'name'               => (string) $row['name'],
+				'type'               => (string) ( $row['type'] ?? 'erp' ),
+				'regions'            => (string) ( $row['regions'] ?? '' ),
+				'connector'          => $connector,
+				'connection_method'  => $method,
+				'needs'              => (string) ( $row['needs'] ?? '' ),
+				'available'          => $available,
+				'unavailable_reason' => (string) ( $row['unavailable_reason'] ?? '' ),
+				'verified'           => ! empty( $row['verified'] ),
+				'variants'           => $variants,
+				'hosts'              => array_values( array_map( 'strval', is_array( $row['hosts'] ?? null ) ? $row['hosts'] : array() ) ),
+				'terms_url'          => (string) ( $row['terms_url'] ?? '' ),
+				'privacy_url'        => (string) ( $row['privacy_url'] ?? '' ),
+				'developer_url'      => (string) ( $row['developer_url'] ?? '' ),
+				'steps'              => array_values( array_map( 'strval', is_array( $row['steps'] ?? null ) ? $row['steps'] : array() ) ),
+				'wave'               => (int) ( $row['wave'] ?? 0 ),
 			) + self::formOf( $selectable && null !== $connector ? $forms[ $connector ] ?? null : null, $method );
 		}
 		return $out;

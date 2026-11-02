@@ -12,6 +12,7 @@ namespace Estasoft\SyncEngine\Connectors\SageX3;
 defined( 'ABSPATH' ) || exit;
 
 use Estasoft\SyncEngine\Connectors\ErpCommon\Problems;
+use Estasoft\SyncEngine\Connectors\ErpCommon\SameOrigin;
 use Estasoft\SyncEngine\Connectors\Support\ApiClient;
 use Estasoft\SyncEngine\Connectors\Support\ApiException;
 use Estasoft\SyncEngine\Connectors\Support\ApiResponse;
@@ -77,7 +78,12 @@ final class SageX3Client {
 			if ( count( $rows ) >= $max || ! is_string( $next ) || '' === $next ) {
 				break;
 			}
-			$response = $this->api->get( str_starts_with( $next, 'http' ) ? $next : $this->origin . '/' . ltrim( $next, '/' ), array(), null, array( 'action' => 'read ' . $classCode ) );
+			$url = SameOrigin::resolve( $next, $this->origin );
+			if ( null === $url ) {
+				$exception = new ApiException( Problems::refused( $this->system, 'address', __( 'The server pointed to the next page on another server, so it was not followed.', 'estasoft-erp-crm-sync-engine' ), 'foreign next link' ), $response );
+				throw $exception;
+			}
+			$response = $this->api->get( $url, array(), null, array( 'action' => 'read ' . $classCode ) );
 		}
 		return array_slice( $rows, 0, $max );
 	}

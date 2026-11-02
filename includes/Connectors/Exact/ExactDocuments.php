@@ -94,13 +94,17 @@ final class ExactDocuments {
 	}
 
 	/**
-	 * Whether a record is finished: its check passed (no pending marker) and, when invoices are to be processed, it is processed.
+	 * Whether a record is finished: its check passed (no pending marker), a credit note really reduces what the customer owes (a negative
+	 * amount) and, when invoices are to be processed, it is processed.
 	 *
 	 * @param array<string,mixed> $row         Record from find().
 	 * @param bool                $creditNote  Whether it is a credit note.
 	 */
 	public function isComplete( array $row, bool $creditNote = false ): bool {
 		if ( str_contains( (string) ( $row['Description'] ?? '' ), trim( self::PENDING ) ) ) {
+			return false;
+		}
+		if ( $creditNote && ! self::reducesReceivables( $row, '' ) ) {
 			return false;
 		}
 		if ( $this->wantsProcessing( $creditNote ) && 50 !== (int) ( $row['Status'] ?? 0 ) ) {
@@ -317,6 +321,22 @@ final class ExactDocuments {
 	}
 
 	/**
+	 * Whether a credit note reduces what the customer owes: its amount in the document's currency is zero or negative. A credit note that
+	 * Exact Online books as a positive amount would raise the receivable, so it is never accepted, whatever the total option says.
+	 *
+	 * @param array<string,mixed> $row      Credit note as read back.
+	 * @param string              $currency Currency of the refund, used when the row names none.
+	 */
+	private static function reducesReceivables( array $row, string $currency ): bool {
+		$code = '' !== trim( (string) ( $row['Currency'] ?? '' ) ) ? strtoupper( trim( (string) $row['Currency'] ) ) : $currency;
+		if ( '' === $code ) {
+			return false;
+		}
+		$amount = Amounts::minor( $row['AmountFC'] ?? null, $code );
+		return null !== $amount && $amount <= 0;
+	}
+
+	/**
 	 * Compare a document with the order or refund. A document the connector just made is deleted again when it is wrong and Exact allows it.
 	 *
 	 * @param array<string,mixed> $row         Document.
@@ -329,9 +349,14 @@ final class ExactDocuments {
 	 */
 	private function verify( array $row, string $currency, ?int $totalMinor, bool $creditNote, bool $justCreated, string $endpoint ): void {
 		$reason = '';
+		$firm   = false;
 		$actual = (string) ( $row['Currency'] ?? '' );
 		if ( $creditNote && isset( $row['Type'] ) && 8021 !== (int) $row['Type'] ) {
 			$reason = __( 'Exact Online did not make a credit note.', 'estasoft-erp-crm-sync-engine' );
+			$firm   = true;
+		} elseif ( $creditNote && ! self::reducesReceivables( $row, $currency ) ) {
+			$reason = __( 'Exact Online recorded the credit note with an amount that is not negative, which would add to what the customer owes.', 'estasoft-erp-crm-sync-engine' );
+			$firm   = true;
 		} elseif ( '' !== $actual && '' !== $currency && strtoupper( trim( $actual ) ) !== $currency ) {
 			/* translators: 1: currency of the order, 2: currency in Exact Online */
 			$reason = sprintf( __( 'The order is in %1$s but Exact Online recorded it in %2$s.', 'estasoft-erp-crm-sync-engine' ), $currency, trim( $actual ) );
@@ -345,7 +370,7 @@ final class ExactDocuments {
 		if ( '' === $reason ) {
 			return;
 		}
-		if ( 'warn' === $this->options->choice( 'total_mismatch', array( 'fail', 'warn' ), 'fail' ) && ! ( $creditNote && isset( $row['Type'] ) && 8021 !== (int) $row['Type'] ) ) {
+		if ( ! $firm && 'warn' === $this->options->choice( 'total_mismatch', array( 'fail', 'warn' ), 'fail' ) ) {
 			$this->warnings[] = $reason;
 			return;
 		}

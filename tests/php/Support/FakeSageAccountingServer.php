@@ -114,6 +114,35 @@ final class FakeSageAccountingServer {
 	public bool $showVoidReason = true;
 
 	/**
+	 * Country of the business (lower-case ISO code). It decides how tax works: gb, ie and fr work tax out of a price that includes it, ca and es do not, and es
+	 * refuses a tax_amount.
+	 *
+	 * @var string
+	 */
+	public string $country = 'gb';
+
+	/**
+	 * Whether a DELETE with a void_reason is accepted for a draft invoice (the guide documents voiding from UNPAID only).
+	 *
+	 * @var bool
+	 */
+	public bool $draftsCanBeVoided = false;
+
+	/**
+	 * Whether a DELETE with a void_reason is accepted for a credit note (the guide documents none).
+	 *
+	 * @var bool
+	 */
+	public bool $creditNotesCanBeVoided = false;
+
+	/**
+	 * Number of searches by reference that answer "none found" although the document exists (a create that finished late).
+	 *
+	 * @var int
+	 */
+	public int $hideDocuments = 0;
+
+	/**
 	 * Failure scripted for the next write.
 	 *
 	 * @var array{0:string,1:int}|null
@@ -168,6 +197,7 @@ final class FakeSageAccountingServer {
 			'oauth_access_token'       => $access,
 			'oauth_refresh_token'      => $refresh,
 			'oauth_expires_at'         => (string) ( $now + 300 ),
+			'oauth_lifetime'           => '300',
 			'oauth_refresh_expires_at' => (string) ( $now + 31 * 86400 ),
 		);
 	}
@@ -458,6 +488,10 @@ final class FakeSageAccountingServer {
 		$search = strtolower( (string) ( $request->query['search'] ?? '' ) );
 		$from   = (string) ( $request->query['from_date'] ?? '' );
 		$out    = array();
+		if ( $this->hideDocuments > 0 && '' !== $search && in_array( 'reference', $fields, true ) && 1 === count( $fields ) ) {
+			--$this->hideDocuments;
+			return array();
+		}
 		foreach ( $rows as $row ) {
 			if ( false === ( $row['active'] ?? true ) ) {
 				continue;
@@ -619,6 +653,17 @@ final class FakeSageAccountingServer {
 		$gross    = $this->roundDiv( $this->scaled( (string) $line['quantity'] ) * $unit, 1000000 );
 		$discount = isset( $line['discount_amount'] ) ? $this->minor( (string) $line['discount_amount'] ) : 0;
 		$net      = $gross - $discount;
+		if ( ! empty( $line['unit_price_includes_tax'] ) ) {
+			if ( ! in_array( $this->country, array( 'gb', 'ie', 'fr' ), true ) ) {
+				return $this->error( 422, 'InvalidValue', 'unit_price_includes_tax is not applicable in this region.', $source . '.unit_price_includes_tax' );
+			}
+			$percentage = (int) round( (float) $rate['percentage'] * 10000 );
+			$tax        = $this->roundDiv( $net * $percentage, 1000000 + $percentage );
+			if ( isset( $line['tax_amount'] ) && $this->minor( (string) $line['tax_amount'] ) !== $tax ) {
+				return $this->error( 422, 'InvalidValue', 'tax_amount is not correct for the price and the tax rate.', $source . '.tax_amount' );
+			}
+			return array( $net - $tax, $tax );
+		}
 		return $this->tax( $net, $rate, $line['tax_amount'] ?? null, $source );
 	}
 
@@ -647,6 +692,9 @@ final class FakeSageAccountingServer {
 	 */
 	private function tax( int $net, array $rate, mixed $sent, string $source ): array|HttpResponse {
 		$percentage = (int) round( (float) $rate['percentage'] * 10000 );
+		if ( 'es' === $this->country ) {
+			return null === $sent ? array( $net, $this->roundDiv( $net * $percentage, 1000000 ) ) : $this->error( 422, 'InvalidValue', 'tax_amount is not allowed for a Spanish business.', $source );
+		}
 		if ( 0 === $percentage ) {
 			return null === $sent ? array( $net, 0 ) : $this->error( 422, 'InvalidValue', 'tax_amount must be left out for a rate of zero.', $source );
 		}
@@ -688,23 +736,25 @@ final class FakeSageAccountingServer {
 		if ( null === $document ) {
 			return $this->error( 404, 'RecordNotFound', 'The record was not found.' );
 		}
+		if ( '' === (string) ( $request->json()['void_reason'] ?? '' ) ) {
+			return $this->error( 422, 'RequiredFieldMissing', 'The body must include a void_reason.', 'void_reason' );
+		}
 		if ( 'invoice' === $entity ) {
-			if ( 'DRAFT' !== $document['status']['id'] ) {
-				return $this->error( 422, 'InvalidTransition', 'Only a draft can be deleted.', 'status' );
+			if ( 'DRAFT' === $document['status']['id'] && ! $this->draftsCanBeVoided ) {
+				return $this->error( 422, 'InvalidTransition', 'Only an unpaid invoice can be voided.', 'status' );
 			}
-			unset( $this->store['invoice'][ $id ] );
-			return FakeHttpClient::status( 204, '' );
+			if ( ! in_array( $document['status']['id'], array( 'DRAFT', 'UNPAID' ), true ) ) {
+				return $this->error( 422, 'InvalidTransition', 'You cannot directly void an invoice that has payments or allocations.', 'status' );
+			}
+		} elseif ( ! $this->creditNotesCanBeVoided ) {
+			return $this->error( 405, 'MethodNotAllowed', 'A credit note cannot be deleted or voided.' );
 		}
-		$reason = (string) ( $request->json()['void_reason'] ?? '' );
-		if ( '' === $reason ) {
-			return $this->error( 422, 'RequiredFieldMissing', 'void_reason is required.', 'void_reason' );
-		}
-		$document['status']              = array( 'id' => 'VOID' );
-		$document['outstanding_amount']  = $this->decimal( 0 );
+		$document['status']             = array( 'id' => 'VOID' );
+		$document['outstanding_amount'] = $this->decimal( 0 );
 		if ( $this->showVoidReason ) {
-			$document['void_reason'] = $reason;
+			$document['void_reason'] = (string) $request->json()['void_reason'];
 		}
-		$this->store['credit'][ $id ] = $document;
+		$this->store[ $entity ][ $id ] = $document;
 		return FakeHttpClient::status( 204, '' );
 	}
 

@@ -87,6 +87,7 @@ final class MoneybirdConnector extends AbstractApiConnector {
 			'default' => 'fail',
 			'allowed' => array( 'fail', 'warn' ),
 		),
+		'total_tolerance'         => array( 'default' => '' ),
 		'sales_ledger_account'    => array( 'default' => '' ),
 		'shipping_ledger_account' => array( 'default' => '' ),
 		'workflow_id'             => array( 'default' => '' ),
@@ -107,7 +108,7 @@ final class MoneybirdConnector extends AbstractApiConnector {
 			entities: array( EntityType::Order, EntityType::Refund, EntityType::Customer ),
 			auth: AuthStyle::Key,
 			regions: array( 'NL' ),
-			rateLimit: new RateLimitHints( 0.5, 1, 30 ),
+			rateLimit: new RateLimitHints( 0.4, 1, 24 ),
 			hosts: array( 'moneybird.com' )
 		);
 	}
@@ -185,6 +186,20 @@ final class MoneybirdConnector extends AbstractApiConnector {
 	}
 
 	/**
+	 * Are the token and the administration accepted: one cheap read inside the administration (a token that cannot reach it gets 404).
+	 *
+	 * @param Connection $connection Connection.
+	 */
+	public function ping( Connection $connection ): bool {
+		try {
+			return $this->api( $connection )->get( 'workflows.json' )->isSuccess();
+		} catch ( \Throwable $throwable ) {
+			unset( $throwable );
+			return false;
+		}
+	}
+
+	/**
 	 * Test connection.
 	 *
 	 * @param Connection $connection Connection.
@@ -258,12 +273,12 @@ final class MoneybirdConnector extends AbstractApiConnector {
 	 */
 	public function findExisting( Connection $connection, Item $item ): ExternalRef|ConnectorError|null {
 		$options = Options::fromConnection( $connection, self::OPTIONS );
-		$invoice = $this->documents()->findByReference( $this->api( $connection ), $item->clientReference() );
+		$refund  = EntityType::Refund === $item->entityType;
+		$invoice = $this->documents()->findByReference( $this->api( $connection ), $item->clientReference(), $refund );
 		if ( null === $invoice ) {
 			return null;
 		}
 		$state    = (string) ( $invoice['state'] ?? '' );
-		$refund   = EntityType::Refund === $item->entityType;
 		$wantSent = $refund ? ( 'sent' === $options->choice( 'refund_state' ) || ( 'follow' === $options->choice( 'refund_state' ) && $options->is( 'invoice_state', 'sent' ) ) ) : $options->is( 'invoice_state', 'sent' );
 		if ( ( $wantSent && 'draft' === $state ) || ( ! $refund && '' !== $options->text( 'payment_account' ) && 'paid' !== $state ) ) {
 			return null;

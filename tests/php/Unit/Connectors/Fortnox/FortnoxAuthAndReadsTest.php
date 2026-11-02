@@ -159,6 +159,17 @@ final class FortnoxAuthAndReadsTest extends FortnoxTestCase {
 		$this->assertSame( ErrorCode::Auth006, $licence->error->code );
 	}
 
+	public function test_ping_is_one_read_of_the_company_information(): void {
+		$connection = $this->connection();
+		$before     = count( $this->server->log );
+		$this->assertTrue( $this->connector->ping( $connection ) );
+		$calls = array_slice( $this->server->log, $before );
+		$this->assertCount( 1, $calls, 'One call, not the whole test connection.' );
+		$this->assertStringContainsString( 'companyinformation', $calls[0] );
+		$this->server->fail( 'GET', '#companyinformation#', FakeHttpClient::status( 500, 'down' ) );
+		$this->assertFalse( $this->connector->ping( $this->connection( array(), array(), 'fx-access-7' ) ) );
+	}
+
 	public function test_the_company_is_the_only_organisation(): void {
 		$connector = new FortnoxConnector( $this->kit->deps );
 		$connection = $this->connection();

@@ -65,6 +65,11 @@ final class FakeDaftraServer {
 	public bool $refuseDelete = false;
 
 	/**
+	 * Ignore the `filter[...]` parameter, as a server that does not support it for a list would.
+	 */
+	public bool $ignoreFilters = false;
+
+	/**
 	 * Timeouts seen on requests.
 	 *
 	 * @var array<int,int>
@@ -314,8 +319,11 @@ final class FakeDaftraServer {
 		if ( 'invoices' === $table && isset( $query['po_number'] ) ) {
 			$rows = array_values( array_filter( $rows, static fn( array $row ): bool => $row['po_number'] === $query['po_number'] ) );
 		}
-		if ( 'credit_notes' === $table && isset( $query['created_from'] ) ) {
-			$rows = array_values( array_filter( $rows, static fn( array $row ): bool => $row['created'] >= $query['created_from'] ) );
+		if ( 'credit_notes' === $table && isset( $query['client_id'] ) ) {
+			$rows = array_values( array_filter( $rows, static fn( array $row ): bool => (string) ( $row['client_id'] ?? '' ) === (string) $query['client_id'] ) );
+		}
+		if ( 'clients' === $table && isset( $query['filter']['email'] ) && is_string( $query['filter']['email'] ) && ! $this->ignoreFilters ) {
+			$rows = array_values( array_filter( $rows, static fn( array $row ): bool => ( $row['email'] ?? '' ) === $query['filter']['email'] ) );
 		}
 		if ( 'products' === $table && isset( $query['product_code'] ) ) {
 			$rows = array_values( array_filter( $rows, static fn( array $row ): bool => str_contains( strtolower( $row['product_code'] ), strtolower( (string) $query['product_code'] ) ) ) );

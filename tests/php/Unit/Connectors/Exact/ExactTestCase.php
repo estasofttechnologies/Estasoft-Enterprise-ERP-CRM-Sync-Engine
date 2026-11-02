@@ -60,6 +60,8 @@ abstract class ExactTestCase extends TestCase {
 		$this->kit    = ApiTestKit::make();
 		$this->server = new FakeExactServer();
 		$this->kit->http->fallback( $this->server->handler() );
+		$this->server->now           = fn(): int => $this->kit->clock->now()->getTimestamp();
+		$this->server->minRefreshAge = ExactConnector::MIN_TOKEN_AGE;
 		$this->server->addItem( 'CS-MUG-01', '0' );
 		$this->server->addItem( 'CS-TEE-02', '2' );
 		$this->server->addItem( 'SHIP-01', '0', false );
@@ -93,6 +95,7 @@ abstract class ExactTestCase extends TestCase {
 			'oauth_access_token' => $token,
 			'oauth_refresh_token' => 'refresh-' . $token,
 			'oauth_expires_at'   => (string) ( $this->kit->clock->now()->getTimestamp() + 600 ),
+			'oauth_lifetime'     => '600',
 		);
 		return $this->kit->connection( 'exact-online', $config, $secrets );
 	}

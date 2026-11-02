@@ -3,11 +3,12 @@ id: pennylane
 name: Pennylane
 catalog_row: Pennylane
 connection_method: key
-available: true
+available: false
+unavailable_reason: "Pennylane requires OAuth for production integrations (its company tokens are for sandbox testing) and its API terms limit use to internal business purposes, so this connector cannot be offered until both are cleared with Pennylane."
 verified: false
 hosts: [app.pennylane.com]
 terms_url: https://pennylane.readme.io/page/api-contract-terms     # fetched 2026-11-02; read the legal note in section 16 before publishing
-privacy_url: https://www.pennylane.com/fr/privacy-policy/          # not verified by fetch (page not reachable from the build session)
+privacy_url: https://www.pennylane.com/fr/legal/privacy            # fetched 2026-11-02 (Politique de confidentialité, last updated 30 January 2026)
 developer_url: https://pennylane.readme.io/docs/generating-my-api-token   # fetched 2026-11-02; the token is made in the Pennylane app under Settings, Connectivity, Developers
 variants: []
 ---
@@ -17,6 +18,8 @@ variants: []
 Connector id `pennylane`, type accounting, contract version 1. Code: `includes/Connectors/Pennylane/`. Pennylane (Pennylane SAS, France) is an accounting and invoicing platform. The connector sends WooCommerce orders as customer invoices (draft by default) and customers as company or individual customers. It reads back the invoice number and status and a night's list of invoices. **Refunds are not sent in this release**: the endpoint that creates a credit note is documented, but its request body could not be read (section 9). Pennylane has no stock and no shipment records. Code shared by the Lexware Office, sevDesk, Moneybird and Pennylane connectors (payload reading, exact money arithmetic, local dates, option reading and the standard refusals) lives in `includes/Connectors/EuAccountingCommon/`; a change there affects all four.
 
 Fact tags: `[documented]` official page (URL, fetched 2026-11-02), `[third-party]`, `[inferred]`. Section 16 lists what is unconfirmed. Nobody has run this against a live Pennylane company.
+
+**This connector is not offered yet (`available: false`).** The code and the tests stay in the plugin, but the Choose a system screen shows Pennylane as not available, for two reasons that the owner has to resolve with Pennylane first. (1) Pennylane's own guide (`docs/create-a-customer-invoice-use-case`) says a company API token is for testing in the sandbox and that production integrations must use OAuth; this connector takes a pasted company token. (2) Pennylane's API contract terms (section 16, Legal) limit use to the client's internal business purposes, forbid putting API components under open-source licence terms and grant Pennylane rights over "integrations". What must happen before it can ship: (a) written confirmation from Pennylane that a free open-source plugin may be used with merchants' own company tokens in production, or an OAuth 2 sign-in version of this connector (a registered Pennylane app, a different connection method and the token refresh of the base; not written); (b) a decision by the owner on the contract terms; (c) a run of the smoke test in section 17 against a Pennylane sandbox, which also settles the unconfirmed paths and bodies in section 16. Then set `available: true`, remove `unavailable_reason` and run `php bin/generate-catalog-from-docs.php`.
 
 ## 1. Sources
 
@@ -46,7 +49,7 @@ Plan gate: Essential plan or higher (a Starter company must upgrade) [documented
 
 Header `Authorization: Bearer <token>` [documented]. Base address `https://app.pennylane.com/api/external/v2` [documented]. HostPolicy allows `app.pennylane.com` only. `GET /me` returns the active scopes and needs no scope [documented]; the test reads it. Test connection lists a scope that `/me` does not show as a missing permission and stays green, because the shape of `/me` and the scope names it uses could not be verified (section 16); the first write with such a token is what fails. A missing scope answers 403 with a message such as "Missing scope: customer_invoices:all" [documented]; a bad or expired token answers 401.
 
-Credential fields: `api_token` (secret, required, write-only), `token_lifetime` (select: `1`, `6`, `12`, `unlimited`; default `12`). Advanced options: section 12. The 2026 behaviour change (14 Jan to 1 Jul 2026; cursor pagination on ledger endpoints, `ledger` scope replaced) is complete on 2 Nov 2026 [documented]; the connector uses no ledger endpoint and sends no opt-in header.
+Credential fields: `api_token` (secret, required, write-only), `token_lifetime` (select: `1`, `6`, `12`, `unlimited`; default `12`). Pennylane shows no end date, so the end date is the day of the first test plus the lifetime. A later test of the same token and lifetime keeps that first date instead of sliding it forward with every test (so the warning before it still comes); a new token or another lifetime starts again from the day of the test. To tell the tokens apart the test stores a fingerprint, the first 16 hex characters of the SHA-256 of the token, next to the date in the connection's detected facts; the token itself is never stored there. Advanced options: section 12. The 2026 behaviour change (14 Jan to 1 Jul 2026; cursor pagination on ledger endpoints, `ledger` scope replaced) is complete on 2 Nov 2026 [documented]; the connector uses no ledger endpoint and sends no opt-in header.
 
 ## 4. Data sent and when (WordPress.org "External services")
 
@@ -99,7 +102,7 @@ Filters are a JSON array in the `filter` query parameter, URL-encoded: `[{"field
 
 ## 6. Duplicate protection
 
-`external_reference = WC-{order id}` on create, and before every create `GET /customer_invoices?filter=[{"field":"external_reference","operator":"eq","value":"WC-{id}"}]&limit=100` [documented filter]. The answer is cursor-paged (`items`, `has_more`, `next_cursor`) [documented]; the connector follows `next_cursor` to the end and re-sends the filter with every page (the cursor does not hold it [documented]). Credit notes (`credit_note` true) and the connector's own invoices are both visible; only invoices are matched.
+`external_reference = WC-{order id}` on create, and before every create `GET /customer_invoices?filter=[{"field":"external_reference","operator":"eq","value":"WC-{id}"}]&limit=100` [documented filter]. The answer is cursor-paged (`items`, `has_more`, `next_cursor`) [documented]; the connector follows `next_cursor` to the end and re-sends the filter with every page (the cursor does not hold it [documented]). Credit notes (`credit_note` true) and the connector's own invoices are both visible; only invoices are matched, and only a row whose `external_reference` is present and exactly the wanted one counts (a row without the field, which a server that ignores the filter could return, is never taken for the invoice).
 
 `findExisting` returns a record only when `send()` finished it: draft mode: the draft exists and its totals were checked; finalised mode: the invoice is finalised. Otherwise `send()` carries on from the state it finds. Replays: create is never repeated; a timeout after the `POST` is an unknown outcome and the next pass finds the invoice by its reference. Pennylane enforces idempotency only for supplier-invoice imports [documented], so the reference search is the only protection. Weakness: a person editing `external_reference` of a draft.
 
@@ -109,13 +112,13 @@ Filters are a JSON array in the `filter` query parameter, URL-encoded: `[{"field
 2. `findExisting`; customer (section 8); product lookups (unknown SKU: SYNC-MAP-001, or with `unknown_sku = custom` a free-text line).
 3. Taxes. The tax mapping code is a Pennylane VAT code (`FR_200`, `exempt`, ...). `FR_200` (20 %), `any` (not tied to a rate; shown as N/A in red in the Pennylane interface) and `exempt` are [documented]; the other French codes offered by `listTaxCodes` are labelled "to be confirmed" (section 16). A code Pennylane refuses answers 422; a message that names the VAT code is SYNC-MAP-002. Prices are sent net: when the payload prices include tax, the net unit price is derived with whole-number arithmetic (the rate comes from the tax mapping row); a line whose rate the code does not state (any code that is not `FR_nnn` or `exempt`) is refused with SYNC-VAL-002 unless the mapping supplies the rate in the field `lines[].tax_rate` (percent; `shipping.tax_rate` and `fees[].tax_rate` for those rows).
 4. `POST /customer_invoices` with `draft` true. Read it back (`GET /customer_invoices/{id}`): `currency_amount` (with tax), `currency_tax`, `currency_amount_before_tax`, `status`, `invoice_number` [documented in the use-case example response].
-5. Total check: `currency_amount` against `total - excluded_total` in minor units, tolerance one unit. More: option `total_mismatch` `fail` (default): the item fails with SYNC-VAL-002 naming both totals and the draft stays in Pennylane for a person to delete (no delete endpoint was documented); the next pass finds that draft by its reference, re-checks it and never makes a second one. `warn` goes on.
+5. Total check: `currency_amount` against `total - excluded_total` in minor units. WooCommerce rounds the tax of each line and Pennylane the tax of each rate group, so the default tolerance is one minor unit per document row (lines, shipping, fees), at most 10 (ten lines of 0.99 EUR at 20 % differ by 2 cents); the option `total_tolerance` (0 to 50; empty means the default) replaces it. More: option `total_mismatch` `fail` (default): the item fails with SYNC-VAL-002 naming both totals and the draft stays in Pennylane for a person to delete (no delete endpoint was documented); the next pass finds that draft by its reference, re-checks it and never makes a second one. `warn` goes on.
 6. Finalised mode: after a passing check the draft is finalised by `PUT /customer_invoices/{id}/finalize` [inferred path; the 2026 guide names "finalizing invoices" as an operation]. If the call answers 404 or 405 the invoice stays a draft and the item fails with SYNC-VAL-002 saying so; nothing is issued by accident. The state is read back.
-7. The invoice date is the order date; the read-back date is compared and warned about.
+7. The invoice date is the order date (local day, Europe/Paris). The read-back `date` is compared with the day sent, after creation and again after finalising; if it is another day the result carries the warning `date_differs`. The date is never written back.
 
 ## 8. Customers
 
-Pennylane's customer filter fields are `id`, `customer_type`, `ledger_account_id`, `name` (prefix only), `external_reference` and `reg_no`; **email is not filterable** [documented]. `lookupCustomer( email )` therefore searches `external_reference = WC-C-<hash>` (exact [documented]), which finds customers this connector created, not ones the merchant typed by hand; a returning buyer who is already a hand-made customer appears twice. Policies (option `customer_policy`): `match_or_create` (default), `collective` (every order on one existing customer, id in `collective_customer_id`; the buyer's name goes into the invoice label of the first line), `always_create`. The customer is never updated.
+Pennylane's customer filter fields are `id`, `customer_type`, `ledger_account_id`, `name` (prefix only), `external_reference` and `reg_no`; **email is not filterable** [documented]. `lookupCustomer( email )` therefore searches `external_reference = WC-C-<hash>` (exact [documented]), which finds customers this connector created, not ones the merchant typed by hand; a returning buyer who is already a hand-made customer appears twice. The hash is the first 16 hex characters of the SHA-256 of the customer type (`individual` or `company`) and the lower-case email, because a company customer and an individual customer are different resources and updating through the wrong endpoint corrupts the record [documented]: the same email as a person and as a company gives two customers. `lookupCustomer` tries the individual reference first, then the company one. Policies (option `customer_policy`): `match_or_create` (default), `collective` (every order on one existing customer, id in `collective_customer_id`; the buyer's name goes into the invoice label of the first line), `always_create`. The customer is never updated.
 
 ## 9. Refunds
 
@@ -141,6 +144,7 @@ Not recorded. Pennylane documents payment matching by a `transaction_reference` 
 | `collective_customer_id` | Pennylane customer id | empty |
 | `unknown_sku` | `refuse`, `custom` | `refuse` (set `custom` when you keep no product list in Pennylane) |
 | `total_mismatch` | `fail`, `warn` | `fail` |
+| `total_tolerance` | 0 to 50 minor units, or empty | empty: one per document row, at most 10 |
 | `payment_days` | 0 to 90 | 30 |
 | `sales_ledger_account` | ledger account id | empty |
 | `shipping_ledger_account` | ledger account id | empty |
@@ -149,7 +153,7 @@ Not recorded. Pennylane documents payment matching by a `transaction_reference` 
 
 ## 13. Rate limits and pacing
 
-25 requests every 5 seconds per token, in production and sandbox, all endpoints [documented]. Over the limit: 429 with `retry-after` (seconds), `ratelimit-limit`, `ratelimit-remaining`, `ratelimit-reset` (Unix time) [documented]. `rateLimitHints()` returns 4.0 requests per second (a margin under 5), concurrency 1. 429 → SYNC-RATE-001 with the `retry-after` value.
+25 requests every 5 seconds per token, in production and sandbox, all endpoints [documented]. Over the limit: 429 with `retry-after` (seconds), `ratelimit-limit`, `ratelimit-remaining`, `ratelimit-reset` (Unix time) [documented]. `rateLimitHints()` returns 4.0 requests per second (a margin under 5), concurrency 1. `ping()` is one call, `GET /me` (it needs no scope). 429 → SYNC-RATE-001 with the `retry-after` value.
 
 ## 14. Error mapping
 
@@ -200,7 +204,7 @@ Entities sent: order, customer. Capability record: `order_document` `invoice`, `
 - French e-invoicing (the reform dates are recalled in the research only) and its effect on finalised invoices.
 - Multi-currency (EUR only here).
 - What happens when a token reaches its end date (401 expected).
-- The privacy URL (not fetched).
+- The privacy policy (fetched, dated 30 January 2026) was read only to confirm what it is, not in full.
 
 ## 17. Manual smoke test (real company or sandbox, no secrets in the repository)
 

@@ -108,9 +108,20 @@ final class ErpnextOrderSender {
 	public function send( Item $item, OrderPayload $payload ): SendResult {
 		$existing = $this->findOrder( $payload->clientRef );
 		$warnings = array();
+		$created  = null;
 
 		if ( null === $existing ) {
-			$created = $this->create( $payload );
+			try {
+				$created = $this->create( $payload );
+			} catch ( ApiException $exception ) {
+				// The site says the order already exists (a duplicate name or reference): it is the same order, so it is linked, not an error.
+				$existing = self::isDuplicate( $exception ) ? $this->findOrder( $payload->clientRef ) : null;
+				if ( null === $existing ) {
+					throw $exception;
+				}
+			}
+		}
+		if ( null !== $created ) {
 			if ( $created instanceof ConnectorError ) {
 				return SendResult::failure( $created );
 			}
@@ -153,6 +164,15 @@ final class ErpnextOrderSender {
 
 		$ref = $this->reference( $order, $invoice, $payment, $warnings );
 		return null === $existing ? SendResult::created( $ref ) : SendResult::existing( $ref );
+	}
+
+	/**
+	 * Whether a failure is the site saying that a record with this name already exists (DuplicateEntryError, HTTP 409).
+	 *
+	 * @param ApiException $exception Failure.
+	 */
+	public static function isDuplicate( ApiException $exception ): bool {
+		return 409 === $exception->status() && 'DuplicateEntryError' === ( $exception->error()->context['field'] ?? '' );
 	}
 
 	/**

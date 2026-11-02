@@ -18,8 +18,10 @@ use Estasoft\SyncEngine\Tests\Support\SalesContractTestCase;
 final class SalesforceConnectorContractTest extends SalesContractTestCase {
 
 	protected function makeServer(): FakeSalesServer {
-		$server                = new FakeSalesforce();
-		$server->multiCurrency = true;
+		$server                      = new FakeSalesforce();
+		$server->multiCurrency       = true;
+		$server->opportunityFields[] = SalesforceConnector::REFERENCE_FIELD; // A fully set up org: the merchant has added the reference field.
+		$server->uniqueFields[]      = SalesforceConnector::REFERENCE_FIELD;
 		return $server;
 	}
 

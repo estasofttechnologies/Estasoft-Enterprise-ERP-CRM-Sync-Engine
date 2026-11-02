@@ -135,7 +135,7 @@ final class QuickBooksUnitTest extends TestCase {
 	}
 
 	public function test_the_client_reference_always_comes_from_the_queue_item_and_the_excluded_total_is_taken_off(): void {
-		$item    = new Item( 9, 1, EntityType::Order, '9', 'created', 'order:9', 'k', ItemState::Syncing, attempt: 3 );
+		$item    = new Item( 9, 1, EntityType::Order, '9', 'created', 'order:9', 'k', ItemState::Syncing );
 		$payload = QuickBooksOrderPayload::parse(
 			array(
 				'client_order_ref' => 'WC-EVIL',
@@ -148,7 +148,6 @@ final class QuickBooksUnitTest extends TestCase {
 		);
 		$this->assertSame( 'WC-9', $payload->clientRef );
 		$this->assertSame( 3800, $payload->totalMinor );
-		$this->assertSame( 3, $payload->attempt );
 	}
 
 	public function test_a_refund_payload_needs_the_order_it_belongs_to(): void {
@@ -220,22 +219,24 @@ final class QuickBooksUnitTest extends TestCase {
 		);
 		$warnings = array();
 
-		$noItem = $builder->invoice( $parsed, '12', 'GBP', 'GBP', false, array(), array(), $warnings );
+		$noItem = $builder->invoice( $parsed, '12', 'GBP', 'GBP', false, false, array(), array(), $warnings );
 		$this->assertInstanceOf( ConnectorError::class, $noItem );
 		$this->assertStringContainsString( 'generic_item', (string) $noItem->context['reason'] );
 
-		$body = $builder->invoice( $parsed, '12', 'GBP', 'GBP', false, array(), array( 'generic' => array( 'Id' => '77', 'Name' => 'General' ) ), $warnings );
+		$body = $builder->invoice( $parsed, '12', 'GBP', 'GBP', false, false, array(), array( 'generic' => array( 'Id' => '77', 'Name' => 'General' ) ), $warnings );
 		$this->assertSame( 'WC-9', $body['DocNumber'] );
 		$this->assertSame( 'WC-9 [unchecked]', $body['PrivateNote'] );
 		$this->assertSame( 19.99, $body['Line'][0]['SalesItemLineDetail']['UnitPrice'] );
 		$this->assertSame( 59.97, $body['Line'][0]['Amount'] );
 		$this->assertSame( 'TaxExcluded', $body['GlobalTaxCalculation'] );
-		$this->assertArrayNotHasKey( 'CurrencyRef', $body );
+		$this->assertArrayNotHasKey( 'CurrencyRef', $body, 'One currency in the company: nothing to name.' );
+		$multi = $builder->invoice( $parsed, '12', 'GBP', 'GBP', true, false, array(), array( 'generic' => array( 'Id' => '77', 'Name' => 'General' ) ), $warnings );
+		$this->assertSame( 'GBP', $multi['CurrencyRef']['value'], 'With more than one currency a document names its currency, the home one too.' );
 		$this->assertArrayNotHasKey( 'TxnDate', $body, 'No date in the payload, no date sent: QuickBooks uses today.' );
 
-		$us = $builder->invoice( $parsed, '12', 'USD', 'USD', true, array(), array( 'generic' => array( 'Id' => '77', 'Name' => 'General' ) ), $warnings );
+		$us = $builder->invoice( $parsed, '12', 'USD', 'USD', false, true, array(), array( 'generic' => array( 'Id' => '77', 'Name' => 'General' ) ), $warnings );
 		$this->assertArrayNotHasKey( 'GlobalTaxCalculation', $us );
-		$foreign = $builder->invoice( $parsed, '12', 'EUR', 'GBP', false, array(), array( 'generic' => array( 'Id' => '77', 'Name' => 'General' ) ), $warnings );
+		$foreign = $builder->invoice( $parsed, '12', 'EUR', 'GBP', true, false, array(), array( 'generic' => array( 'Id' => '77', 'Name' => 'General' ) ), $warnings );
 		$this->assertSame( 'EUR', $foreign['CurrencyRef']['value'] );
 	}
 }

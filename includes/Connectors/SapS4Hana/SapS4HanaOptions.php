@@ -75,6 +75,16 @@ final class SapS4HanaOptions {
 	}
 
 	/**
+	 * Name of a free text property of the sales order header where the connector writes the shop's net amount ("Shop net 59.97 AED"), so
+	 * that a later pass can tell a wrong order from a right one. Empty (default) writes nothing, because a property name the tenant does
+	 * not have makes S/4HANA refuse the whole order.
+	 */
+	public function totalField(): string {
+		$name = $this->options->text( 'total_field' );
+		return 1 === preg_match( '/^[A-Za-z][A-Za-z0-9_]{0,40}$/', $name ) ? $name : '';
+	}
+
+	/**
 	 * `fail` (default) or `warn`.
 	 */
 	public function totalMismatch(): string {

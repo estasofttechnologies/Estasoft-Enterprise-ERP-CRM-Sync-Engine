@@ -73,6 +73,13 @@ final class FakeExactServer {
 	public bool $keepCreditType = true;
 
 	/**
+	 * Whether a credit note keeps a positive amount (false: Exact books it as a negative amount, as its own screens show it).
+	 *
+	 * @var bool
+	 */
+	public bool $creditAmountPositive = false;
+
+	/**
 	 * Accounts by id.
 	 *
 	 * @var array<string,array<string,mixed>>
@@ -150,6 +157,27 @@ final class FakeExactServer {
 	public array $refreshTokens = array();
 
 	/**
+	 * Seconds an access token must be old before its refresh token is accepted (Exact Online: 570 for a 600 second token). 0 accepts at once.
+	 *
+	 * @var int
+	 */
+	public int $minRefreshAge = 0;
+
+	/**
+	 * Clock of the test, in Unix seconds; needed for `minRefreshAge`.
+	 *
+	 * @var \Closure|null
+	 */
+	public ?\Closure $now = null;
+
+	/**
+	 * Time each refresh token was issued.
+	 *
+	 * @var array<string,int>
+	 */
+	public array $issuedAt = array();
+
+	/**
 	 * Scripted failures: [method, pattern, response, times left].
 	 *
 	 * @var array<int,array{0:string,1:string,2:HttpResponse,3:int}>
@@ -196,6 +224,7 @@ final class FakeExactServer {
 	public function allowTokens( string $access, string $refresh ): void {
 		$this->accessTokens[ $access ]   = true;
 		$this->refreshTokens[ $refresh ] = true;
+		$this->issuedAt[ $refresh ]      = null !== $this->now ? (int) ( $this->now )() : 0;
 	}
 
 	/**
@@ -306,6 +335,9 @@ final class FakeExactServer {
 			if ( empty( $this->refreshTokens[ $old ] ) ) {
 				return new HttpResponse( 400, '{"error":"invalid_grant"}', array( 'content-type' => 'application/json' ) );
 			}
+			if ( $this->minRefreshAge > 0 && null !== $this->now && (int) ( $this->now )() - ( $this->issuedAt[ $old ] ?? 0 ) < $this->minRefreshAge ) {
+				return new HttpResponse( 400, '{"error":"invalid_grant","error_description":"The token is too young to be refreshed."}', array( 'content-type' => 'application/json' ) );
+			}
 			unset( $this->refreshTokens[ $old ] );
 		} elseif ( 'authorization_code' !== ( $form['grant_type'] ?? '' ) || 'good-code' !== ( $form['code'] ?? '' ) ) {
 			return new HttpResponse( 400, '{"error":"invalid_grant"}', array( 'content-type' => 'application/json' ) );
@@ -386,7 +418,7 @@ final class FakeExactServer {
 			$id     = $this->guid();
 			$lines  = (array) ( $body[ $invoice ? 'SalesInvoiceLines' : 'SalesOrderLines' ] ?? array() );
 			$credit = $invoice && 8021 === (int) ( $body['Type'] ?? 0 ) && $this->keepCreditType;
-			$total  = $this->total( $lines, $this->decimalsFor( (string) ( $body['Currency'] ?? $this->currency ) ) ) * $this->totalFactor * ( $credit ? -1 : 1 );
+			$total  = $this->total( $lines, $this->decimalsFor( (string) ( $body['Currency'] ?? $this->currency ) ) ) * $this->totalFactor * ( $credit && ! $this->creditAmountPositive ? -1 : 1 );
 			$number = ++$this->counter + 5000;
 			$doc    = array(
 				$idField                                    => $id,

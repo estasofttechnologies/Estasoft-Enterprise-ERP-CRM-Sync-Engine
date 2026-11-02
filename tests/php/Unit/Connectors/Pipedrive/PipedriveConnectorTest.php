@@ -60,7 +60,6 @@ final class PipedriveConnectorTest extends TestCase {
 		$this->assertSame( 'WC-123', $deal['title'] );
 		$this->assertSame( 50.0, (float) $deal['value'] );
 		$this->assertSame( 'EUR', $deal['currency'] );
-		$this->assertSame( '2026-11-01T00:00:00Z', $deal['add_time'] );
 		$this->assertSame( 'open', $deal['status'] );
 		$this->assertCount( 1, $this->pd->live( 'persons' ) );
 		$this->assertSame( 'dana.example@example.test', $this->pd->live( 'persons' )[0]['emails'][0]['value'] );
@@ -294,5 +293,120 @@ final class PipedriveConnectorTest extends TestCase {
 			$this->assertStringNotContainsString( FakePipedrive::KEY, $request['url'] );
 			$this->assertSame( FakePipedrive::KEY, $request['headers']['x-api-token'] );
 		}
+	}
+
+	/**
+	 * The JSON body of every request that created a deal.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function dealCreateBodies(): array {
+		$bodies = array();
+		foreach ( $this->kit->http->requests as $request ) {
+			if ( 'POST' === $request['method'] && str_ends_with( (string) parse_url( (string) $request['url'], PHP_URL_PATH ), '/api/v2/deals' ) ) {
+				$bodies[] = (array) json_decode( (string) $request['body'], true );
+			}
+		}
+		return $bodies;
+	}
+
+	public function test_a_deal_is_made_without_add_time_so_a_token_that_is_not_an_admins_still_works(): void {
+		list( $item, $payload ) = SalesFixtures::order( '170' );
+		$result                 = $this->connector->send( $this->connection(), $item, $payload );
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$bodies = $this->dealCreateBodies();
+		$this->assertCount( 1, $bodies );
+		$this->assertArrayNotHasKey( 'add_time', $bodies[0], 'add_time "Requires admin user API token"; the order date is in the note.' );
+		$this->assertStringContainsString( '2026-11-01', end( $this->pd->rows['notes'] )['content'] );
+	}
+
+	public function test_test_connection_makes_the_reference_field_once_and_every_deal_carries_it_beside_the_title(): void {
+		$this->pd->strictFields = true;
+		$first                  = $this->connector->test( $this->connection() );
+		$this->assertTrue( $first->ok, (string) $first->error?->message() );
+		$this->assertTrue( $first->permissions['create_reference_field'] );
+		$key = $first->detected['reference_field'];
+		$this->assertSame( 40, strlen( $key ) );
+		$this->assertSame( 'field', $first->detected['reference_mode'] );
+		$this->assertArrayNotHasKey( 'warning', $first->detected );
+		$this->assertSame( array( $key => 'WooCommerce order reference' ), $this->pd->dealFields );
+
+		$this->connector->test( $this->connection() );
+		$this->assertSame( 1, $this->pd->countCalls( 'POST /api/v2/dealFields' ), 'The second test finds it.' );
+
+		list( $item, $payload ) = SalesFixtures::order( '171' );
+		$sent                   = $this->connector->send( $this->connection( array( 'detected' => $first->detected ) ), $item, $payload );
+		$this->assertTrue( $sent->isSuccess(), (string) $sent->error?->message() );
+		$deal = $this->pd->live( 'deals' )[0];
+		$this->assertSame( 'WC-171', $deal['title'] );
+		$this->assertSame( array( $key => 'WC-171' ), $deal['custom_fields'] );
+	}
+
+	public function test_a_rep_who_renames_the_deal_does_not_break_replays_refunds_or_reconciliation(): void {
+		$this->pd->strictFields  = true;
+		$connection              = $this->connection( array( 'detected' => $this->connector->test( $this->connection() )->detected ) );
+		list( $order, $payload ) = SalesFixtures::order( '172' );
+		$first                   = $this->connector->send( $connection, $order, $payload );
+		$this->pd->rows['deals'][ $first->ref->id ]['title'] = 'Dana - big mug order';
+
+		$replay = $this->connector->send( $connection, $order, $payload );
+		$this->assertTrue( $replay->alreadyExisted );
+		$this->assertCount( 1, $this->pd->live( 'deals' ), 'No second deal.' );
+		$this->assertSame( $first->ref->id, $this->connector->findExisting( $connection, $order )->id );
+
+		list( $refund, $rpayload ) = SalesFixtures::refund( '57', '172' );
+		$this->assertTrue( $this->connector->send( $connection, $refund, $rpayload )->isSuccess() );
+		$this->assertSame( $first->ref->id, $this->connector->findExisting( $connection, $refund )->extra['deal_id'] );
+
+		$list = $this->connector->listForReconcile( $connection, new \DateTimeImmutable( '2026-01-01T00:00:00Z' ) );
+		$this->assertArrayHasKey( 'WC-172', $list, 'The custom field is read, not the new title.' );
+		$this->assertSame( 5000, $list['WC-172']->extra['total_minor'] );
+	}
+
+	public function test_a_deal_made_before_the_field_existed_is_still_found_by_its_title(): void {
+		$legacy = $this->pd->addDeal( 'WC-173', 50.0 );
+		$this->pd->rows['persons']['1'] = array( 'id' => 1, 'name' => 'Dana Example', 'emails' => array( array( 'value' => 'dana.example@example.test' ) ), 'deleted' => false, 'update_time' => '2026-01-01T00:00:00Z' );
+		$this->pd->rows['notes']['2']   = array( 'id' => 2, 'content' => 'WC-173<br>Order', 'deal_id' => (int) $legacy, 'deleted' => false, 'update_time' => '2026-01-01T00:00:00Z' );
+		$connection             = $this->connection( array( 'detected' => array( 'reference_field' => str_repeat( 'a', 40 ) ) ) );
+		list( $item, $payload ) = SalesFixtures::order( '173' );
+		$result                 = $this->connector->send( $connection, $item, $payload );
+		$this->assertTrue( $result->alreadyExisted );
+		$this->assertSame( (int) $legacy, (int) $result->ref->id );
+		$this->assertCount( 1, $this->pd->live( 'deals' ) );
+		$this->assertArrayHasKey( 'WC-173', $this->connector->listForReconcile( $connection, new \DateTimeImmutable( '2026-01-01T00:00:00Z' ) ) );
+	}
+
+	public function test_when_the_field_cannot_be_made_the_title_stays_the_key_and_the_test_says_so(): void {
+		$this->pd->strictFields    = true;
+		$this->pd->canCreateFields = false;
+		$test                      = $this->connector->test( $this->connection() );
+		$this->assertTrue( $test->ok, 'Orders still work; only the safer key is missing.' );
+		$this->assertFalse( $test->permissions['create_reference_field'] );
+		$this->assertSame( array( 'create_reference_field' ), $test->missingPermissions() );
+		$this->assertSame( 'name', $test->detected['reference_mode'] );
+		$this->assertSame( 'reference_field', $test->detected['warning'] );
+		$this->assertArrayNotHasKey( 'reference_field', $test->detected );
+
+		list( $item, $payload ) = SalesFixtures::order( '174' );
+		$result                 = $this->connector->send( $this->connection( array( 'detected' => $test->detected ) ), $item, $payload );
+		$this->assertTrue( $result->isSuccess(), 'Nothing is written to a field that does not exist.' );
+		$this->assertArrayNotHasKey( 'custom_fields', $this->pd->live( 'deals' )[0] );
+	}
+
+	public function test_naming_the_title_on_purpose_creates_nothing_and_warns_about_nothing(): void {
+		$test = $this->connector->test( $this->connection( array( 'reference_field' => 'title' ) ) );
+		$this->assertTrue( $test->ok );
+		$this->assertSame( 0, $this->pd->countCalls( 'POST /api/v2/dealFields' ) );
+		$this->assertArrayNotHasKey( 'create_reference_field', $test->permissions );
+		$this->assertArrayNotHasKey( 'warning', $test->detected );
+		$this->assertSame( 'name', $test->detected['reference_mode'] );
+	}
+
+	public function test_ping_is_one_cheap_call_and_false_for_a_refused_token(): void {
+		$this->assertTrue( $this->connector->ping( $this->connection() ) );
+		$this->assertSame( array( 'GET /api/v1/users/me' ), $this->pd->calls );
+
+		$bad = $this->kit->connection( 'pipedrive', array( 'company_domain' => 'example' ), array( 'api_token' => 'wrong-token-0002' ), 2 );
+		$this->assertFalse( $this->connector->ping( $bad ) );
 	}
 }

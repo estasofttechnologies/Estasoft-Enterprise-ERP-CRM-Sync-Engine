@@ -557,4 +557,100 @@ final class PennylaneFlowTest extends TestCase {
 		$this->assertSame( $pages[0]->query['filter'], $pages[1]->query['filter'], 'The cursor does not hold the filter, so every page sends it.' );
 		$this->assertArrayHasKey( 'cursor', $pages[1]->query );
 	}
+
+	public function test_a_list_row_without_an_external_reference_is_never_taken_for_the_invoice(): void {
+		$this->fake->invoices[7002] = array( 'id' => 7002, 'status' => 'upcoming', 'draft' => false, 'credit_note' => false, 'currency' => 'EUR', 'currency_amount' => '53.98' );
+		$this->fake->ignoreFilters  = true;
+		$result                     = $this->connector()->send( $this->connection(), $this->order(), $this->payload() );
+
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$this->assertFalse( $result->alreadyExisted );
+		$this->assertNotSame( '7002', $result->ref->id );
+		$this->assertCount( 2, $this->fake->invoices );
+	}
+
+	public function test_a_person_and_a_company_with_the_same_email_are_two_customers_and_either_is_found(): void {
+		$this->connector()->send( $this->connection(), $this->order(), $this->payload() );
+		$payload                        = $this->payload();
+		$payload['customer']['company'] = 'Exemple SAS';
+		$this->connector()->send( $this->connection(), $this->order( '5002' ), $payload );
+
+		$this->assertCount( 2, $this->fake->customers, 'The type is part of the identity.' );
+		$references = array_column( $this->fake->customers, 'external_reference' );
+		$this->assertCount( 2, array_unique( $references ) );
+
+		$again = $this->payload();
+		$again['customer']['company'] = 'Exemple SAS';
+		$this->connector()->send( $this->connection(), $this->order( '5003' ), $again );
+		$this->assertCount( 2, $this->fake->customers, 'The company is found again.' );
+
+		$found = $this->connector()->lookupCustomer( $this->connection(), 'anna@example.test' );
+		$this->assertInstanceOf( ExternalRef::class, $found );
+		$this->assertSame( 'Anna Beispiel', $found->ref, 'The individual customer comes first.' );
+		$this->fake->customers = array_filter( $this->fake->customers, static fn( array $c ): bool => 'company' === $c['customer_type'] );
+		$this->assertSame( 'Exemple SAS', $this->connector()->lookupCustomer( $this->connection(), 'anna@example.test' )->ref );
+	}
+
+	public function test_a_later_test_of_the_same_token_keeps_the_first_end_date(): void {
+		$first   = $this->connector()->test( $this->connection() );
+		$expires = $first->detected['credential_expires_at'];
+		$this->kit->clock->advance( 10 * 86400 );
+
+		$stored = $first->detected;
+		unset( $stored['credential_expires_at'] );
+		$second = $this->connector()->test( $this->connection( array(), array( 'detected' => $stored ) ) );
+		$this->assertSame( $expires, $second->detected['credential_expires_at'], 'The date does not slide forward with every test.' );
+
+		$other = $stored;
+		$other['token_fingerprint'] = 'another-token-0000';
+		$renewed = $this->connector()->test( $this->connection( array(), array( 'detected' => $other ) ) );
+		$this->assertGreaterThan( $expires, $renewed->detected['credential_expires_at'], 'A new token starts again.' );
+
+		$changed = $this->connector()->test( $this->connection( array(), array( 'token_lifetime' => '6', 'detected' => $stored ) ) );
+		$this->assertSame( $this->kit->clock->now()->modify( '+6 months' )->format( 'Y-m-d H:i:s' ), $changed->detected['credential_expires_at'], 'Another lifetime starts again.' );
+		$this->assertStringNotContainsString( FakePennylaneServer::TOKEN, (string) wp_json_encode( $first->detected ), 'Only a short fingerprint is kept, never the token.' );
+	}
+
+	public function test_the_default_tolerance_is_one_unit_per_row_and_the_option_replaces_it(): void {
+		$lines = array();
+		for ( $i = 0; $i < 10; $i++ ) {
+			$lines[] = array( 'sku' => 'CS-MUG-01', 'name' => 'Mug ' . $i, 'quantity' => 1, 'total' => 99, 'tax_code' => 'FR_200' );
+		}
+		// WooCommerce rounds the tax of each line (0.198 becomes 0.20, ten lines 2.00), Pennylane the tax of the rate group (1.98): 2 cents apart.
+		$payload = $this->payload( array( 'lines' => $lines, 'shipping' => array(), 'total' => 1190 ) );
+
+		$default = $this->connector()->send( $this->connection(), $this->order(), $payload );
+		$this->assertTrue( $default->isSuccess(), (string) $default->error?->message() );
+		$this->assertSame( 1188, $default->ref->extra['total_minor'] );
+
+		$strict = $this->connector()->send( $this->connection( array( 'total_tolerance' => '1' ) ), $this->order( '5002' ), $payload );
+		$this->assertSame( ErrorCode::Val002, $strict->error->code );
+		$this->assertStringContainsString( '11.90', $strict->error->message() );
+		$this->assertStringContainsString( '11.88', $strict->error->message() );
+
+		$this->assertTrue( $this->connector()->send( $this->connection( array( 'total_tolerance' => '2' ) ), $this->order( '5003' ), $payload )->isSuccess() );
+		$this->assertSame( ErrorCode::Val002, $this->connector()->send( $this->connection(), $this->order( '5004' ), $this->payload( array( 'total' => 5398 + 3 ) ) )->error->code, 'Two rows allow two units, not three.' );
+	}
+
+	public function test_a_date_the_vendor_changed_is_noted(): void {
+		$this->fake->overrideDate = '2026-11-09';
+		$result                   = $this->connector()->send( $this->connection(), $this->order(), $this->payload() );
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$this->assertContains( 'date_differs', $result->ref->extra['warnings'] );
+
+		$this->fake->overrideDate = null;
+		$clean                    = $this->connector()->send( $this->connection(), $this->order( '5002' ), $this->payload() );
+		$this->assertArrayNotHasKey( 'warnings', $clean->ref->extra );
+	}
+
+	public function test_ping_is_one_cheap_call(): void {
+		$this->assertTrue( $this->connector()->ping( $this->connection() ) );
+		$this->assertCount( 1, $this->kit->http->requests );
+		$this->assertStringEndsWith( '/api/external/v2/me', $this->kit->http->requests[0]['url'] );
+
+		$bad = $this->kit->connection( 'pennylane', array(), array( 'api_token' => 'wrong-token-0000' ), 9 );
+		$this->assertFalse( $this->connector()->ping( $bad ) );
+		$this->fake->expired = true;
+		$this->assertFalse( $this->connector()->ping( $this->connection() ) );
+	}
 }

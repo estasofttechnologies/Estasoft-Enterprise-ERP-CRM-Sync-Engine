@@ -6,8 +6,8 @@ connection_method: key
 available: true
 verified: false
 hosts: [api.wafeq.com]
-terms_url: https://wafeq.com/terms        # not verified by fetch (page not reachable from the build session)
-privacy_url: https://wafeq.com/privacy    # not verified by fetch (page not reachable from the build session)
+terms_url: https://wafeq.com/en/terms-of-service     # fetched 2026-11-02: "Terms of Service" (End User License Agreement and Terms of Service)
+privacy_url: https://wafeq.com/en/privacy-policy     # fetched 2026-11-02: "Privacy Policy", last updated 2024-09-01
 developer_url: https://developer.wafeq.com/reference/get-your-api-key
 variants: []
 ---
@@ -48,7 +48,7 @@ Plan gate: Starter or higher [documented]. Without the API switched on every req
 
 Header `Authorization: Api-Key <key>` on every request [documented]. The key is the only secret (`api_key`, stored encrypted, redacted from every message). Keys belong to one organisation [third-party], so no organisation id is needed or sent. Base address `https://api.wafeq.com/v1/` [documented]. HostPolicy allows `api.wafeq.com` only.
 
-Credential fields: `api_key` (secret, required). Advanced (stored in the connection config, not secret): `sales_account`, `payment_account`, `record_payment`, `invoice_state`, `unknown_sku`, `invoice_number_prefix`, `place_of_supply`, `total_mismatch`, `language` (section 12).
+Credential fields: `api_key` (secret, required). Advanced (stored in the connection config, not secret): `sales_account`, `payment_account`, `record_payment`, `invoice_state`, `unknown_sku`, `invoice_number_prefix`, `place_of_supply`, `tax_authority_report`, `total_mismatch`, `language` (section 12).
 
 ## 4. Data sent and when (WordPress.org "External services")
 
@@ -57,9 +57,10 @@ Host: `api.wafeq.com` (Wafeq), only the host above, only after the merchant conn
 | Action | Request | Data sent |
 | --- | --- | --- |
 | Test connection | `GET /v1/organization/`, `GET /v1/accounts/`, `GET /v1/tax-rates/` | The key only |
-| Order synced | `GET /v1/invoices/?external_id=`, `GET /v1/contacts/`, `POST /v1/contacts/` (new customer), `GET /v1/items/`, `POST /v1/invoices/`, `GET /v1/invoices/{id}/`, `PATCH /v1/invoices/{id}/`, `POST /v1/payments/` (if switched on) | Customer name, email, phone, address, company and tax number; order number as reference; order date, currency, notes; product SKU, name, quantity, unit price, tax; shipping, fees and discount; for a payment the amount, date and bank reference |
+| Health probe | `GET /v1/organization/` | The key only |
+| Order synced | `GET /v1/invoices/?external_id=`, `GET /v1/contacts/`, `POST /v1/contacts/` (new customer), `GET /v1/items/` (page by page, until the SKU is found), `POST /v1/invoices/`, `GET /v1/invoices/{id}/`, `PATCH /v1/invoices/{id}/`, `POST /v1/payments/` (if switched on), `POST /v1/invoices/{id}/tax-authority/report/` (if switched on) | Customer name, email, phone, address, company and tax number; order number as reference; order date, currency, notes; product SKU, name, quantity, unit price, tax; shipping, fees and discount; for a payment the amount, date and bank reference |
 | Refund synced | `GET /v1/credit-notes/?external_id=`, `POST /v1/credit-notes/`, `POST /v1/invoice-credit-notes/` | Refund amounts and lines, the order reference, the reason as a note |
-| Customer lookup | `GET /v1/contacts/` | Email, as a search term |
+| Customer lookup | `GET /v1/contacts/` | Email, and the customer's name when the email finds nothing, as search terms |
 
 Card data is never part of the canonical model and is never sent.
 
@@ -122,14 +123,15 @@ Every pass reads before it writes; every step can be resumed.
 7. Read back `GET /v1/invoices/{id}/`: the currency must equal the order's currency and the total must equal `order.total - order.excluded_total` within one minor unit (the total check, section 10). A mismatch with `total_mismatch = fail` (default) stops before finalizing and leaves the draft with its `(unchecked)` mark; the next pass finds the draft, checks it again, and a person fixes the cause (a draft is not posted to the ledger). It never makes a second invoice.
 8. One `PATCH /v1/invoices/{id}/`: `reference` without the mark, the invoice and due date when Wafeq shows another date than the order's, and `{status: FINALIZED}` unless `invoice_state = draft`. A repeat on a finalized invoice is not sent (status is read first). The invoice is read again: if it is not finalized the order stops with SYNC-VAL-002 "Wafeq did not finalize the invoice"; a date Wafeq still shows differently is a warning.
 9. Payment (`record_payment = yes`, order paid, invoice finalized): search `GET /v1/payments/?external_id=WC-{id}-PAY`; if none, `POST /v1/payments/` for the invoice total with the idempotency header. The payment account comes from the `payment_account` option; without it the order stops with SYNC-VAL-002.
-10. Result reference: id = Wafeq invoice id, ref = `invoice_number`; `extra` has `total_minor`, `currency`, `state` (`finalized` or `draft`) and `warnings`.
+10. Tax authority report (`tax_authority_report = yes` and the invoice is finalized): `POST /v1/invoices/{id}/tax-authority/report/` with the idempotency header. A first request is answered with the status `PENDING` (the authority's verdict is outstanding) and a request made while a report runs with 409 `report_in_progress` [documented]; both are kept as `extra.tax_authority` (`pending`, `in_progress`). A 400 is a warning ("Wafeq did not accept the request to report the invoice") and the invoice stays done, a network, rate-limit or server failure fails the item so it retries.
+11. Result reference: id = Wafeq invoice id, ref = `invoice_number`; `extra` has `total_minor`, `currency`, `state` (`finalized` or `draft`), `tax_authority` when a report was requested, and `warnings`.
 
-Saudi and UAE e-invoicing: reporting to the tax authority is a separate Wafeq call (`POST /v1/invoices/{id}/tax-authority/report/`, `409 report_in_progress` while running) [documented]. The connector does not call it: Wafeq reports automatically on the Plus and Premium plans [documented in the research; repo research 6.1] and the status field of the invoice is not described on the reference pages, so a status read-back or a retry loop would be a guess. `InvoiceReadback` is not flagged. See Not verified.
+Saudi and UAE e-invoicing: reporting to the tax authority is a separate Wafeq call, `POST /v1/invoices/{id}/tax-authority/report/` [documented]. The reference page lists only the invoice id and the idempotency header, the status `PENDING` and the 409 `report_in_progress`; it does not say which plans or organisations need it, and it does not name the invoice field that holds the final status ("retrieve the invoice to read the final status"). The Wafeq Public API vs ZATCA API page says only that the invoice is created and then reported "through the Public API tax-authority reporting action". The repo research says Wafeq reports automatically on the Plus and Premium plans [documented in the research, not re-checked]. The connector therefore does not guess: by default (`tax_authority_report = no`) it does not call the report, Test connection says "left to Wafeq", and the connect screen tells the merchant to check the plan; with `yes` it asks Wafeq to report every invoice it finalizes (order step 10). Whether a repeated request for an invoice that was already reported is refused is not documented; a 400 is a warning, never a failed order.
 
 ## 7. Customers, products and taxes
 
-- Customers: found by `external_id` (documented exact filter), then by `keyword` search verified against `email` (no documented email filter, so the keyword result is checked locally for an exact case-insensitive match; all pages are read). A found contact is used as it is (names as typed, no overwrite). `customer_policy` is fixed to match-or-create.
-- Products: matched by SKU. Wafeq's item list filters only by `external_id`, `created_ts_*`, `modified_ts_*` [documented]; there is no SKU filter. The connector reads the item list page by page (all pages, `page_size` as large as the server allows, cached for 10 minutes per connection) and matches `sku` exactly, case-insensitively. An unknown SKU is SYNC-MAP-001 before anything is sent, unless `unknown_sku = free_text` (a line without `item`, on the sales account, with the product name).
+- Customers: found by `external_id` (documented exact filter), then by `keyword` search verified against `email` (no documented email filter, so the keyword result is checked locally for an exact case-insensitive match; all pages are read). The reference does not say which fields `keyword` searches, so when the email finds nothing the search is repeated with the customer's name before a contact is created; a contact made by hand whose fields neither search reaches can still be duplicated. A found contact is used as it is (names as typed, no overwrite). `customer_policy` is fixed to match-or-create.
+- Products: matched by SKU. Wafeq's item list filters only by `external_id`, `created_ts_*`, `modified_ts_*` [documented]; there is no SKU filter. The connector keeps an index `SKU => item id` in a transient (one per connection, an hour) and builds it page by page (`page_size` 100, following `next`): a read stops as soon as the SKU is found, remembers where it stopped, and the next read, in this request or a later one, goes on from there, so a rate limit in the middle loses nothing and a catalogue of thousands of items is not read for every order. The SKU is matched exactly, case-insensitively. A SKU missing from a finished index is unknown for five minutes, then the list is read again from the start, so a product added in Wafeq is found soon. If Wafeq refuses an item id when a document is created (`line_items.item`), the index is dropped. At most 20,000 SKUs are kept; a longer list stops with SYNC-VAL-002 asking for the products to be mapped by hand. A name or SKU search for the mapping screen still reads the whole list. An unknown SKU is SYNC-MAP-001 before anything is sent, unless `unknown_sku = free_text` (a line without `item`, on the sales account, with the product name).
 - Taxes: `GET /v1/tax-rates/` lists the rates [documented]; the response schema is not rendered, so `id`, `name` and `rate` are read defensively (`rate`, then `percentage`, then `rate_percent`). `listTaxCodes()` returns `code` = tax rate id, `name`, `rate_percent`. The tax mapping rows (`country + rate -> system_code`) store the id. A mapped code Wafeq does not know is SYNC-MAP-002.
 - Tax-inclusive prices: Wafeq has a document-level `tax_amount_type` [documented]. The connector sends tax-exclusive unit prices and `TAX_EXCLUSIVE`. When the payload says `prices_include_tax`, the unit price is converted to net with whole-number arithmetic per line for a single percentage rate, or refused with SYNC-VAL-002 naming the code.
 - Accounts: `GET /v1/accounts/` (all pages, cached) resolves the `sales_account` and `payment_account` options by id, then code, then exact name; with no option set the one `REVENUE` account is used when there is exactly one, otherwise SYNC-VAL-002 asks the person to choose.
@@ -162,7 +164,7 @@ A refund item creates a credit note linked to the original invoice.
 
 - Stock: Wafeq has no stock quantity field [documented: items carry `is_tracked_inventory` but no quantity]. `StockIn` is not flagged.
 - Tracking: no shipment records. `TrackingIn` is not flagged.
-- Invoice read-back: not flagged (see section 6). `fetchInvoice` returns null.
+- Invoice read-back: flagged. `fetchInvoice` reads the invoice (`GET /v1/invoices/{id}/`) and returns its number, its `status` (lower case; DRAFT, SENT and FINALIZED are the lifecycle states) and its date. `authority_status` is empty unless the document status is something other than those three, in which case it carries that status: the report page says to read the invoice for the final status and names no field, so the document status is the only candidate, and this reading is `[inferred]`. `pdf_url` and `qr` are empty. The connector does not know the authority's verdict from any documented field.
 - Reconciliation: not flagged. The invoice list has `modified_ts_after` and `external_id` filters [documented] but the invoice response fields that hold totals are not rendered on the reference, so a nightly total comparison would be a guess.
 - Webhooks: Wafeq's webhooks cover ZATCA events only [third-party]. Not used.
 - Shadow lookup: flagged (`findExisting` is a read).
@@ -178,12 +180,13 @@ A refund item creates a credit note linked to the original invoice.
 | `unknown_sku` | `refuse`, `free_text` | `refuse` |
 | `invoice_number_prefix` | up to 12 characters | `WC-` |
 | `place_of_supply` | `none`, `ABU_DHABI`, `AJMAN`, `DUBAI`, `FUJAIRAH`, `RAS_AL_KHAIMAH`, `SHARJAH`, `UMM_AL_QUWAIN`, `OUTSIDE_UAE` | `none` (UAE organisations must choose) |
+| `tax_authority_report` | `no`, `yes` | `no` |
 | `language` | `en`, `ar` | `en` |
 | `total_mismatch` | `fail`, `warn` | `fail` |
 
 ## 13. Rate limits and pacing
 
-Documented: 429 means back off and retry; the number is not given on the pages read [documented: Authenticate page and Design a reliable integration]. The repo research records 60 requests a minute per organisation and record type [documented in the research]. The connector therefore paces at one request per second (`RateLimitHints( requestsPerSecond: 1.0, concurrency: 1, requestsPerMinute: 60 )`), reads `Retry-After` when present (default wait 30 s when absent, the Apideck advice), and returns SYNC-RATE-001 with the wait. The item, account and tax-rate lists are kept in memory for 10 minutes per connection to save calls.
+Documented: 429 means back off and retry; the number is not given on the pages read [documented: Authenticate page and Design a reliable integration]. The repo research records 60 requests a minute per organisation and record type [documented in the research]. The connector therefore paces at one request per second (`RateLimitHints( requestsPerSecond: 1.0, concurrency: 1, requestsPerMinute: 60 )`), reads `Retry-After` when present (default wait 30 s when absent, the Apideck advice), and returns SYNC-RATE-001 with the wait. The account and tax-rate lists are kept in memory for 10 minutes per connection and the SKU index in a transient for an hour (section 7). The health probe (`ping`) is one call, `GET /v1/organization/`.
 
 ## 14. Error mapping
 
@@ -216,7 +219,7 @@ The 403 plan gate is a heuristic and is listed under Not verified: Wafeq does no
 | `stock_in` | no | no quantity in the documented item fields |
 | `tracking_in` | no | no shipment records |
 | `prices_in` | no | not offered |
-| `invoice_readback` | no | status field of the e-invoicing report not documented |
+| `invoice_readback` | yes | number, status and date of the invoice; the authority status is inferred (section 11) |
 | `reconciliation` | no | total fields not documented |
 | `webhooks` | no | ZATCA events only |
 
@@ -225,8 +228,9 @@ Entities: order, refund, customer. Regions: AE, SA, plus the other Gulf states W
 ## 16. Not verified
 
 - The rate-limit page was not reachable; the figure 60 a minute per organisation and record type comes from the repo research.
+- The invoice field that holds the tax authority's verdict (the report page says to read the invoice and names none), the plans that report automatically, and whether a second report request for the same invoice is refused.
 - Response schemas are not rendered on the reference: the names of the total (`amount`/`total`), the `credit_notes` applications on an invoice, the tax-rate fields (`id`, `name`, `rate`), the account fields (`code`, `name`, `classification`) and the item fields (`sku`, `revenue_account`) are read defensively and were not seen in a real answer.
-- Spelling of the `relationship` tag in the contact body, and whether `keyword` searches the email field.
+- Spelling of the `relationship` tag in the contact body, and which fields `keyword` searches (the name is tried as a second search; the email may not be covered by either).
 - Whether Wafeq rounds line totals itself (unit amount times quantity at its own precision); the total check would report a difference.
 - Whether `invoice_number` must be unique across the organisation (official: yes; Apideck: not enforced).
 - The body of a 403 for a key whose API is not enabled; the AUTH-006 patterns are a guess.

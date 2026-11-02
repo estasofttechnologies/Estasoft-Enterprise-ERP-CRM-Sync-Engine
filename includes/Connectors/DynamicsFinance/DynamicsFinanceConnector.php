@@ -113,6 +113,14 @@ final class DynamicsFinanceConnector extends AbstractApiConnector {
 				$text( 'customer_group', __( 'Customer group for new customers', 'estasoft-erp-crm-sync-engine' ), __( 'Needed to create customers: a customer group ID of the legal entity.', 'estasoft-erp-crm-sync-engine' ) ),
 				$text( 'shipping_item', __( 'Item for shipping', 'estasoft-erp-crm-sync-engine' ), __( 'A service or non-stock item number.', 'estasoft-erp-crm-sync-engine' ) ),
 				$text( 'fee_item', __( 'Item for fees', 'estasoft-erp-crm-sync-engine' ) ),
+				$choice(
+					'order_numbering',
+					__( 'Sales order numbers', 'estasoft-erp-crm-sync-engine' ),
+					array(
+						'automatic'      => __( 'Assigned by the number sequence of the legal entity', 'estasoft-erp-crm-sync-engine' ),
+						'shop_reference' => __( 'Use the shop reference (WC-123) as the number', 'estasoft-erp-crm-sync-engine' ),
+					)
+				),
 				$text( 'shipping_warehouse', __( 'Shipping warehouse', 'estasoft-erp-crm-sync-engine' ) ),
 				$text( 'shipping_site', __( 'Shipping site', 'estasoft-erp-crm-sync-engine' ) ),
 				$choice(
@@ -127,7 +135,7 @@ final class DynamicsFinanceConnector extends AbstractApiConnector {
 					'total_mismatch',
 					__( 'Total differs from the shop', 'estasoft-erp-crm-sync-engine' ),
 					array(
-						'fail' => __( 'Stop and show an error', 'estasoft-erp-crm-sync-engine' ),
+						'fail' => __( 'Stop and show an error (also when Finance and Operations gives no total)', 'estasoft-erp-crm-sync-engine' ),
 						'warn' => __( 'Go on with a warning', 'estasoft-erp-crm-sync-engine' ),
 					)
 				),

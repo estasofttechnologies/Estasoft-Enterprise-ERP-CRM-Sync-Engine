@@ -155,6 +155,13 @@ final class FakeXeroServer {
 	public bool $refuseClient = false;
 
 	/**
+	 * Number of searches by reference that answer "none found" although the document exists (a create that finished late).
+	 *
+	 * @var int
+	 */
+	public int $hideDocuments = 0;
+
+	/**
 	 * Process the next write but lose the answer (a time-out after Xero did the work).
 	 *
 	 * @var bool
@@ -629,6 +636,10 @@ final class FakeXeroServer {
 	 */
 	private function listDocuments( ApiFakeRequest $request, string $kind ): array {
 		$rows = array_values( 'Invoices' === $kind ? $this->invoices : $this->creditNotes );
+		if ( $this->hideDocuments > 0 && 1 === preg_match( '/Reference=="/', (string) ( $request->query['where'] ?? '' ) ) ) {
+			--$this->hideDocuments;
+			$rows = array();
+		}
 		foreach ( $this->conditions( (string) ( $request->query['where'] ?? '' ) ) as $condition ) {
 			if ( 1 === preg_match( '/^Type=="(\w+)"$/', $condition, $m ) ) {
 				$rows = array_values( array_filter( $rows, static fn( array $d ): bool => $d['Type'] === $m[1] ) );

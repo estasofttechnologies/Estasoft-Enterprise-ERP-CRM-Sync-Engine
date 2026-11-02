@@ -158,6 +158,63 @@ final class HostPolicy {
 	}
 
 	/**
+	 * Refuse an absolute link that points somewhere other than the connection's own server: a next-page link, a `Location` header or any
+	 * address the other side sent. It has to have the scheme, host and port of the base address, or be on one of the connector's declared fixed
+	 * hosts (a leading `*.` matches subdomains; the port is then the default one or the base address's). This is checked before the request is
+	 * built, so no credential is ever applied to a request for a stranger's address.
+	 *
+	 * @param string $url     Absolute URL taken from a path argument.
+	 * @param string $baseUrl Base address of the connection.
+	 * @param string $system  System name for the message.
+	 *
+	 * @throws ApiException With SYNC-VAL-002 (field address) when the link is on another origin.
+	 */
+	public function assertFollowable( string $url, string $baseUrl, string $system = '' ): void {
+		if ( $this->followable( $url, $baseUrl ) ) {
+			return;
+		}
+		throw new ApiException(
+			new ConnectorError(
+				ErrorCode::Val002,
+				array(
+					'system' => $system,
+					'field'  => 'address',
+					'reason' => __( 'The system sent a link to a different server than the one this connection uses.', 'estasoft-erp-crm-sync-engine' ),
+				),
+				null,
+				null,
+				null,
+				'link to another origin refused'
+			)
+		);
+	}
+
+	/**
+	 * Whether an absolute link is on the same origin as the base address, or on a declared fixed host.
+	 *
+	 * @param string $url     Absolute URL.
+	 * @param string $baseUrl Base address.
+	 */
+	private function followable( string $url, string $baseUrl ): bool {
+		$link = wp_parse_url( $url );
+		$base = wp_parse_url( $baseUrl );
+		if ( ! is_array( $link ) || ! is_array( $base ) || empty( $link['scheme'] ) || empty( $link['host'] ) || empty( $base['scheme'] ) || empty( $base['host'] ) ) {
+			return false;
+		}
+		$scheme     = strtolower( (string) $link['scheme'] );
+		$host       = strtolower( trim( (string) $link['host'], '[]' ) );
+		$baseHost   = strtolower( trim( (string) $base['host'], '[]' ) );
+		$baseScheme = strtolower( (string) $base['scheme'] );
+		$port       = isset( $link['port'] ) ? (int) $link['port'] : ( 'http' === $scheme ? 80 : 443 );
+		$basePort   = isset( $base['port'] ) ? (int) $base['port'] : ( 'http' === $baseScheme ? 80 : 443 );
+		if ( $scheme === $baseScheme && $host === $baseHost && $port === $basePort ) {
+			return true;
+		}
+		// Another host the connector declares (a vendor with an API host and a download host), on https and the usual port or the base port.
+		return array() !== $this->hosts && ! $this->merchantHost && 'https' === $scheme && $this->matchesFixed( $host ) && ( 443 === $port || $port === $basePort );
+	}
+
+	/**
 	 * Whether a host is a private or reserved IP address, or a local name (localhost, a name without a dot, `.local`, `.internal`, `.lan`).
 	 * A host name that is not local is not looked up here; violation() resolves it.
 	 *

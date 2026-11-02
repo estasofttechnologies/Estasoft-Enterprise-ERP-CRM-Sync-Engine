@@ -121,7 +121,9 @@ final class Sage300ConnectionTest extends Sage300TestCase {
 	}
 
 	public function test_ping_is_cheap_and_never_throws(): void {
-		$this->assertTrue( $this->connector()->ping( $this->connection() ) );
+		$connection = $this->connection();
+		$this->assertTrue( $this->connector()->ping( $connection ) );
+		$this->assertSame( 1, $this->kit->http->count(), 'One cheap call, not the whole Test connection.' );
 		$this->assertFalse( $this->connector()->ping( $this->connection( array(), 'wrong-password-0000' ) ) );
 	}
 
@@ -139,10 +141,10 @@ final class Sage300ConnectionTest extends Sage300TestCase {
 
 	public function test_the_flags_say_what_the_connector_really_does(): void {
 		$flags = $this->connector()->capabilities();
-		foreach ( array( Capability::Orders, Capability::Refunds, Capability::Reconciliation, Capability::ShadowLookup ) as $on ) {
+		foreach ( array( Capability::Orders, Capability::Refunds, Capability::ShadowLookup ) as $on ) {
 			$this->assertTrue( $flags[ $on->value ], $on->value );
 		}
-		foreach ( array( Capability::Customers, Capability::StockIn, Capability::TrackingIn, Capability::InvoiceReadback, Capability::PricesIn, Capability::Webhooks ) as $off ) {
+		foreach ( array( Capability::Customers, Capability::Reconciliation, Capability::StockIn, Capability::TrackingIn, Capability::InvoiceReadback, Capability::PricesIn, Capability::Webhooks ) as $off ) {
 			$this->assertFalse( $flags[ $off->value ], $off->value );
 		}
 		$this->assertSame( array( EntityType::Order, EntityType::Refund ), $this->connector()->supportedEntities() );

@@ -6,8 +6,8 @@ connection_method: key
 available: true
 verified: false
 hosts: [api.holded.com]
-terms_url: https://www.holded.com/terms-and-conditions    # not verified by fetch (page not reachable from the build session)
-privacy_url: https://www.holded.com/privacy-policy        # not verified by fetch (page not reachable from the build session)
+terms_url: https://www.holded.com/tac            # fetched 2026-11-02: "Terms and Conditions | Holded"
+privacy_url: https://www.holded.com/privacy      # fetched 2026-11-02: "Privacy Policy | Holded" (HOLDED TECHNOLOGIES, S.L.)
 developer_url: https://help.holded.com/en/articles/6896051-how-to-build-and-use-the-holded-api
 variants: []
 ---
@@ -17,6 +17,8 @@ variants: []
 Connector id `holded`, type ERP, contract version 1. Code: `includes/Connectors/Holded/`. Spanish and European business suite. The connector sends WooCommerce orders as invoices or sales orders, refunds as credit notes, and customers as contacts, using Holded's invoicing API with the `key` header.
 
 Honesty note. Holded's own reference pages (developers.holded.com) were not reachable from the build session. The request and response shapes below come from the list of operations of the Holded invoicing API as published in an API catalogue, from open-source client libraries, and from Holded's help and rate-limit pages. They are marked `[third-party]` or `[inferred]`. The connector checks every created document by reading it back, and nothing about stock or payments is flagged because the field names could not be confirmed. Read "Not verified" before relying on this connector.
+
+Dependency on API v1. Every call uses the v1 interface and the `key` header. Holded's help article says v1 keys remain available "until further notice" and that the newer tokens (Bearer, `/api/v2/`) are a different interface [documented]. If Holded retires v1, this connector stops working and has to be moved to v2; nothing here is a promise that v1 will last. The Test connection result shows which interface it used (`API v1`).
 
 Tags: `[documented]` official Holded page (URL, fetched 2026-11-02), `[third-party]`, `[inferred]`.
 
@@ -43,7 +45,7 @@ All fetched 2026-11-02.
 5. Under Advanced, choose whether orders become invoices or sales orders.
 6. Under Tax mapping, type each tax rate as a percentage, for example `21`.
 
-Plan gate: a paid plan [documented]; each plan has a monthly call quota (Plus 500, Basic 2,000, Standard 7,500, Advanced 30,000, Premium 100,000 and more) [documented]. A small plan can run out in the month: the connector then returns SYNC-RATE-001 with the wait Holded sends. Because of this quota the connector keeps the contact and product lists in memory for 10 minutes and makes as few calls as it can (see section 10 for what one order costs). The key is a v1 key: the new tokens (Bearer, `/api/v2`) are a different interface that this connector does not use (see Not verified).
+Plan gate: a paid plan [documented]; each plan has a monthly call quota (Plus 500, Basic 2,000, Standard 7,500, Advanced 30,000, Premium 100,000 and more) [documented]. A small plan can run out in the month: the connector then returns SYNC-RATE-001 with the wait Holded sends. Because of this quota the connector keeps an index of the contacts and of the products in a transient for an hour, reads them only as far as it needs, and stops list reads with SYNC-RATE-001 when fewer than 10 calls are left (see section 10 for what one order costs). The key is a v1 key: the new tokens (Bearer, `/api/v2`) are a different interface that this connector does not use (see Not verified).
 
 ## 3. Authentication
 
@@ -56,6 +58,7 @@ Host: `api.holded.com`, only after the merchant connected a key.
 | Action | Request | Data sent |
 | --- | --- | --- |
 | Test connection | `GET /api/invoicing/v1/warehouse?page=1`, `GET /api/invoicing/v1/contacts?page=1` | The key |
+| Health probe | `GET /api/invoicing/v1/warehouse?page=1` | The key |
 | Order synced | `GET /api/invoicing/v1/documents/{type}` (date window), `GET /api/invoicing/v1/products`, `GET /api/invoicing/v1/contacts`, `POST /api/invoicing/v1/contacts`, `POST /api/invoicing/v1/documents/{type}`, `GET /api/invoicing/v1/documents/{type}/{id}`, `DELETE` of a sales order that failed its check | Customer name, email, phone, address, tax number; order number and total inside the notes; date, currency; product name, SKU, quantity, unit price, tax |
 | Refund synced | `GET .../documents/creditnote`, `GET .../documents/{type}` (to find the order), `GET .../documents/{type}/{id}`, `POST .../documents/creditnote`, `GET .../documents/creditnote/{id}` | Refund lines, amounts, the order reference, the reason |
 
@@ -95,10 +98,10 @@ Refund lines that carry only the tax amount have their rate found from the amoun
 
 1. Parse and check the payload (email, name, lines, amounts, currency). A missing email is SYNC-MAP-003.
 2. Search for the order's document: `GET .../documents/{type}?starttmp=&endtmp=` over all pages for the window from one day before the order date to the end of the third day after it [window parameters `[third-party]`]. A document whose notes or description contain `[WC-{id}]` is the order. If one is found, `send()` reads it back, checks currency and total against the payload (`total_mismatch` decides between an error and a warning) and returns it as already existing. It never makes a second document.
-3. Products: the product list is read page by page and kept in memory for 10 minutes, indexed by SKU (exact, case-insensitive). A known SKU is sent as `sku` so Holded links the product. An unknown SKU is SYNC-MAP-001 naming it and nothing is created, or, with `unknown_sku = free_text`, a text line without `sku`. A line with no SKU is a text line.
+3. Products: found through the product index, an `SKU => product` list kept in a transient (an hour, one per connection) and built page by page: a read stops as soon as the SKU is found, remembers the page it reached, and the next read, in this request or a later one, goes on from there. The SKU is matched exactly, case-insensitively. A known SKU is sent as `sku` so Holded links the product. A SKU missing from a finished index is unknown for five minutes, then the list is read again from the start, so a product added in Holded is found soon. An unknown SKU is SYNC-MAP-001 naming it and nothing is created, or, with `unknown_sku = free_text`, a text line without `sku`. A line with no SKU is a text line.
 4. Prices: `lines[].total` (after discounts, tax-exclusive) divided by the quantity, split in two lines when it does not divide (3 units for 10.00 are 2 at 3.33 and 1 at 3.34); a quantity with a fraction is one line of quantity 1 whose name says the quantity. Shipping and fees are text lines. When the payload says its totals include tax, each line is converted to net with whole-number arithmetic, then Holded adds the percentage.
 5. Local check, before anything is sent: the lines are added up (net plus tax rounded per line) and compared with `order.total - order.excluded_total`. A difference of more than one minor unit per document line is SYNC-VAL-002 naming both figures; nothing is created, not even the contact. `total_mismatch = warn` goes on and records a warning.
-6. Contact: the contact list is read page by page (kept 10 minutes) and matched on `email`, case-insensitively and exactly; no match creates the contact and adds it to the kept list. If the answer to a contact create is lost, the kept list is dropped so the retry reads it again and finds the contact.
+6. Contact: found through the contact index, an `email => contact id` list kept in a transient (an hour, one per connection) and built the same way, page by page, matching the email case-insensitively and exactly. A finished index is trusted for a missing email for the hour it lives, because the connector adds every contact it creates and a new customer is the usual case; a contact made in Holded by hand during that hour may be made a second time. No match creates the contact. If the answer to a contact create is lost, the index is dropped so the retry reads the list again and finds the contact.
 7. `POST .../documents/{docType}`. There is no draft step in v1, so the document is complete at once.
 8. Read back `GET .../documents/{docType}/{id}`: the currency must be the order's and the total must equal the expected total within one minor unit per line. If not:
    - a sales order is deleted (`DELETE`) and the error says why; if the delete is refused the error says "Delete it in Holded";
@@ -137,7 +140,9 @@ Holded handles VeriFactu, Facturae and FACe itself; the connector neither drives
 
 Per account, not per key: per-minute 60 (Plus, Basic), 120 (Standard, Advanced), 600 (Premium); per-month 500, 2,000, 7,500, 30,000, 100,000+ [documented]. Two counters, whichever fills first answers 429 with a problem-details body and the headers `Retry-After`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, `X-RateLimit-Window` (`minute` or `month`) [documented]. The help article says 100 a minute; the rate-limit page says 60 to 600; the connector uses the lowest figure: one request a second (60 a minute), one at a time. On 429 it returns SYNC-RATE-001 with `Retry-After`; when the window is `month` the wait can be long and the queue caps it at 24 hours. Test connection reads `X-RateLimit-Remaining` and `X-RateLimit-Window` from its warehouse answer and shows them.
 
-What an order costs: a list read is one request per page plus one empty page that ends it (the page size is not documented, so the connector does not guess where a list ends). The first invoice order of a run on an account with no documents or contacts yet makes 7 calls: the document window, the products and the empty page after them, the contacts, creating the contact, creating the invoice, reading it back. The next order within 10 minutes makes 4, because the products and contacts are kept; each list that already has records adds its empty page. A refund makes 8 when nothing is kept: the credit note window, the order window and its empty page, reading the order, the products and their empty page, creating the credit note, reading it back. A small plan (500 calls a month) therefore covers only a few dozen orders: choose a plan to match, and watch the remaining calls on Test connection.
+What an order costs: a list read is one request per page, and the end of a list is an empty page (the page size is not documented, so the connector does not guess where a list ends); an index that stops because it found its key does not read the empty page. The first invoice order on a cold store, with one product on the first page and no contacts or documents yet, makes 6 calls: the document window, the product, the contacts, creating the contact, creating the invoice, reading it back. The next order, even in a later request within the hour, makes 4: the indexes come from the store, and only the document window (a page and its empty page), the create and the read-back remain. A refund on a cold store makes 7: the credit note window, the order window and its empty page, reading the order, the product, creating the credit note, reading it back. A small plan (500 calls a month) therefore still covers only about a hundred orders: choose a plan to match, and watch the remaining calls on Test connection.
+
+Quota guard. Every answer carries `X-RateLimit-Remaining` and `X-RateLimit-Window` and sometimes `X-RateLimit-Reset` [documented]. The connector remembers the last reading (in memory and in a transient, for a minute when the window is `minute` and an hour when it is `month`), and a list read (an index page, a document window) that would start with fewer than 10 calls left stops first with SYNC-RATE-001, without making the request. The wait is the reset time when Holded sends one (read as seconds from now, or as a Unix time, because the documentation does not say which), otherwise 60 seconds for a minute window and 6 hours for a month window. Creates and read-backs are not held back; Holded answers 429 to those itself. An index that was stopped keeps the pages it read and goes on from there.
 
 ## 11. Options (advanced fields)
 
@@ -187,7 +192,8 @@ Entities: order, refund, customer. Regions: ES and the EU. Rate limit hints: 1 a
 - Every request and response field name of the v1 interface (documents, contacts, products) is `[third-party]` or `[inferred]`; the official reference pages were not reachable. The pre-send total check and the read-back after creation are the guards, and the fake server used in the tests follows the same assumptions, so passing tests do not prove the live API agrees.
 - Whether the `key` header is accepted for keys made after Holded's v2 launch; the help article says v1 keys remain available "until further notice" and are reached from a link in the token screen. If Holded retires v1 the connector must move to `/api/v2` with a Bearer token.
 - The date-window parameters `starttmp` and `endtmp`, and whether the list returns `notes` (the connector reads each document when no row has a notes field, but only up to 50).
-- The page size of lists and where `page` starts (the connector assumes 1 and ends a list at an empty page or a page with no new record).
+- The page size of lists and where `page` starts (the connector assumes 1 and ends a list at an empty page or a page whose first record is the one before it).
+- The format of `X-RateLimit-Reset` (seconds or a Unix time); the connector accepts both.
 - Whether Holded accepts the currency in lower case, a `billAddress` object on contacts, `sku` on an item as the link to a product, and `tax` as a plain percentage number.
 - How Holded rounds tax (per line or on the whole); the connector allows one minor unit per document line.
 - Whether a numbered invoice or credit note created through the API can be deleted (the connector does not try); whether a sales order can (it does, and reports a refusal).

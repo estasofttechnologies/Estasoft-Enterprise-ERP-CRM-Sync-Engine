@@ -98,7 +98,15 @@ final class FoOptions {
 	}
 
 	/**
-	 * What a total that differs does: fail or warn.
+	 * How a new sales order gets its number: automatic (the number sequence of the legal entity assigns it, the connector sends none) or
+	 * shop_reference (the connector sends the shop reference `WC-123` as the number, for a legal entity whose sales order sequence is manual).
+	 */
+	public function orderNumbering(): string {
+		return $this->raw->choice( 'order_numbering', array( 'automatic', 'shop_reference' ), 'automatic' );
+	}
+
+	/**
+	 * What a total that differs, or one that F&O does not give, does: fail or warn.
 	 */
 	public function totalMismatch(): string {
 		return $this->raw->choice( 'total_mismatch', array( 'fail', 'warn' ), 'fail' );

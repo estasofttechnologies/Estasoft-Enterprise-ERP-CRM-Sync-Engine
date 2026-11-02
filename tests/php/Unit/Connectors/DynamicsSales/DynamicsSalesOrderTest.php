@@ -26,7 +26,7 @@ final class DynamicsSalesOrderTest extends DynamicsSalesTestCase {
 		$this->assertSame( 62.97, $deals[0]['estimatedvalue'] );
 		$this->assertSame( '2026-11-01', $deals[0]['estimatedclosedate'] );
 		$this->assertStringStartsWith( 'Gift wrap please', $deals[0]['description'] );
-		$this->assertStringEndsWith( 'Estasoft Sync WC-1001 lines=1 email=jane.doe@example.test', $deals[0]['description'] );
+		$this->assertStringEndsWith( 'Estasoft Sync WC-1001 lines=1 email=jane.doe@example.test verified', $deals[0]['description'], 'The marker is sealed once the total was checked.' );
 		$this->assertSame( $this->dv->all( 'transactioncurrencies' )[0]['transactioncurrencyid'], $deals[0]['_transactioncurrencyid_value'] );
 		$contacts = $this->dv->all( 'contacts' );
 		$this->assertCount( 1, $contacts );
@@ -177,7 +177,72 @@ final class DynamicsSalesOrderTest extends DynamicsSalesTestCase {
 		$this->assertCount( 0, $this->dv->all( 'opportunities' ) );
 	}
 
+	public function test_an_organization_with_two_price_decimals_is_refused_for_a_three_decimal_currency_before_anything_is_written(): void {
+		// The currency row keeps three places (the fake default), but PricePerUnit follows the organization's Pricing Decimal Precision.
+		$this->assertSame( 3, $this->dv->all( 'transactioncurrencies' )[1]['currencyprecision'] );
+		$payload                                = $this->payload( array( 'currency' => 'KWD', 'total' => 1234 ) );
+		$payload['order_line'][0]['price_unit'] = 1234;
+		$payload['order_line'][0]['quantity']   = 1;
+		$payload['order_line'][0]['tax_amount'] = 0;
+		$refused                                = $this->connector->send( $this->connection, $this->item( '1040' ), $payload );
+
+		$this->assertSame( ErrorCode::Val002, $refused->error->code );
+		$this->assertStringContainsString( 'Pricing Decimal Precision', $refused->error->message() );
+		$this->assertStringContainsString( 'KWD', $refused->error->message() );
+		$this->assertCount( 0, $this->dv->all( 'opportunities' ) );
+		$this->assertCount( 0, $this->dv->all( 'contacts' ) );
+
+		$this->dv->setPricingPrecision( 3 );
+		$this->assertTrue( $this->connector->send( $this->connection, $this->item( '1040' ), $payload )->isSuccess() );
+		$this->assertSame( 1.234, $this->linesOfDeal()[0]['priceperunit'] );
+
+		// AED is fine on the default organization, and a precision of 0 is too low even for AED.
+		$aed = $this->connector->send( $this->connection, $this->item( '1041' ), $this->payload() );
+		$this->assertTrue( $aed->isSuccess(), (string) $aed->error?->message() );
+		$this->dv->setPricingPrecision( 0 );
+		$none = $this->connector->send( $this->connection, $this->item( '1042' ), $this->payload() );
+		$this->assertSame( ErrorCode::Val002, $none->error->code );
+	}
+
+	public function test_a_deal_that_failed_its_total_check_is_never_linked_by_a_retry_and_is_finished_when_it_passes(): void {
+		$item   = $this->item( '1043' );
+		$failed = $this->connector->send( $this->connection, $item, $this->payload( array( 'total' => 5997 ) ) );
+		$this->assertSame( ErrorCode::Val002, $failed->error->code );
+		$this->assertNull( $this->connector->findExisting( $this->connection, $item ), 'The marker is not verified, so the deal is not finished.' );
+		$this->assertStringEndsNotWith( 'verified', $this->dv->all( 'opportunities' )[0]['description'] );
+		$this->assertSame( ErrorCode::Val002, $this->connector->send( $this->connection, $item, $this->payload( array( 'total' => 5997 ) ) )->error->code );
+		$this->assertNull( $this->connector->findExisting( $this->connection, $item ) );
+		$this->assertCount( 1, $this->dv->all( 'opportunities' ), 'No second deal, no second product.' );
+		$this->assertCount( 1, $this->dv->all( 'opportunityproducts' ) );
+
+		$fixed = $this->connector->send( $this->connection, $item, $this->payload() );
+		$this->assertTrue( $fixed->isSuccess(), (string) $fixed->error?->message() );
+		$this->assertNotNull( $this->connector->findExisting( $this->connection, $item ) );
+		$this->assertCount( 1, $this->dv->all( 'opportunities' ) );
+	}
+
+	public function test_warn_mode_seals_a_deal_whose_total_differs(): void {
+		$item = $this->item( '1044' );
+		$this->assertTrue( $this->connector->send( $this->connection( array( 'total_mismatch' => 'warn' ) ), $item, $this->payload( array( 'total' => 5997 ) ) )->isSuccess() );
+		$this->assertNotNull( $this->connector->findExisting( $this->connection, $item ) );
+	}
+
+	public function test_a_marker_a_person_removed_is_written_again_by_the_next_send(): void {
+		$item = $this->item( '1045' );
+		$this->connector->send( $this->connection, $item, $this->payload() );
+		$this->dv->data['opportunities'][0]['description'] = 'Gift wrap please';
+		$this->assertNull( $this->connector->findExisting( $this->connection, $item ), 'Without its marker the deal is unfinished.' );
+
+		$again = $this->connector->send( $this->connection, $item, $this->payload() );
+		$this->assertTrue( $again->isSuccess(), (string) $again->error?->message() );
+		$this->assertCount( 1, $this->dv->all( 'opportunities' ) );
+		$this->assertCount( 1, $this->dv->all( 'opportunityproducts' ) );
+		$this->assertSame( "Gift wrap please\nEstasoft Sync WC-1045 lines=1 email=jane.doe@example.test verified", $this->dv->all( 'opportunities' )[0]['description'] );
+		$this->assertNotNull( $this->connector->findExisting( $this->connection, $item ) );
+	}
+
 	public function test_three_decimal_currencies_keep_every_digit(): void {
+		$this->dv->setPricingPrecision( 3 );
 		$payload                             = $this->payload( array( 'currency' => 'KWD', 'total' => 37035 ) );
 		$payload['order_line'][0]['price_unit'] = 12345;
 		$payload['order_line'][0]['tax_amount'] = 0;

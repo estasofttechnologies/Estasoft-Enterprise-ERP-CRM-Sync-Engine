@@ -76,6 +76,17 @@ final class FakeNetSuiteServer {
 	public ?string $forceCurrency = null;
 
 	/**
+	 * What the lines of a credit memo transform do with the lines copied from the invoice: `replace` (the body's lines are the memo's lines)
+	 * or `add` (they come on top of the copied ones). The NetSuite page does not say which, so a test can run both.
+	 */
+	public string $creditMemoLines = 'replace';
+
+	/**
+	 * Whether DELETE of a credit memo is refused.
+	 */
+	public bool $refuseCreditMemoDelete = false;
+
+	/**
 	 * Items by id.
 	 *
 	 * @var array<string,array<string,string>>
@@ -366,6 +377,13 @@ final class FakeNetSuiteServer {
 		if ( 'PUT' === $method && $byEid ) {
 			return $this->upsert( $type, $key, $body, $found );
 		}
+		if ( 'DELETE' === $method && null !== $found && 'creditMemo' === $type ) {
+			if ( $this->refuseCreditMemoDelete ) {
+				return $this->error( 400, 'Bad Request', 'USER_ERROR', 'This transaction cannot be deleted.' );
+			}
+			unset( $this->records[ $type ][ (string) $found['id'] ] );
+			return new HttpResponse( 204 );
+		}
 		if ( 'PATCH' === $method && null !== $found ) {
 			$this->records[ $type ][ (string) $found['id'] ] = $body + $found;
 			return $this->created( $type, (string) $found['id'] );
@@ -463,6 +481,9 @@ final class FakeNetSuiteServer {
 			$total  = 0;
 			foreach ( (array) ( $body['item']['items'] ?? array() ) as $line ) {
 				$total += (int) $this->amounts->fromWire( $line['amount'] ?? 0, $symbol );
+			}
+			if ( 'add' === $this->creditMemoLines ) {
+				$total += (int) $this->amounts->fromWire( $from['total'] ?? 0, $symbol );
 			}
 			$this->records['creditMemo'][ $new ] = array(
 				'id'          => $new,
@@ -633,6 +654,7 @@ final class FakeNetSuiteServer {
 			'tranid'       => (string) $memo['tranId'],
 			'foreigntotal' => $memo['total'],
 			'currency'     => (string) $memo['currency']['id'],
+			'memo'         => (string) ( $memo['memo'] ?? '' ),
 		);
 	}
 

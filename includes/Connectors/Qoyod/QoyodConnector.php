@@ -131,17 +131,18 @@ final class QoyodConnector extends AbstractApiConnector {
 			auth: AuthStyle::Key,
 			regions: array( 'SA' ),
 			rateLimit: new RateLimitHints( 1.0, 1 ),
-			hosts: QoyodOptions::ENDPOINTS
+			hosts: array( 'api.qoyod.com' )
 		);
 	}
 
 	/**
-	 * The base address: the API version 2.0 on the chosen host.
+	 * The base address: the API version 2.0 on api.qoyod.com, the only host the documentation names.
 	 *
 	 * @param Connection $connection Connection.
 	 */
 	protected function baseUrl( Connection $connection ): string {
-		return 'https://' . QoyodOptions::fromConnection( $connection )->endpoint() . '/2.0/';
+		unset( $connection );
+		return 'https://api.qoyod.com/2.0/';
 	}
 
 	/**
@@ -172,17 +173,6 @@ final class QoyodConnector extends AbstractApiConnector {
 		$advanced = static fn( string $name, string $label, string $hint, string $preset = '', string $type = 'text', array $options = array() ): CredentialField => new CredentialField( $name, $label, false, false, $hint, $preset, $type, $options, 'advanced' );
 		return array(
 			CredentialFields::apiKey( 'api_key', __( 'API key', 'estasoft-erp-crm-sync-engine' ), __( 'Make it under Settings, General Settings in Qoyod (Pro or Advanced plan). Saved encrypted. It is never shown again.', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced(
-				'endpoint',
-				__( 'Qoyod address', 'estasoft-erp-crm-sync-engine' ),
-				__( 'Leave as it is unless Qoyod tells you to use the other address.', 'estasoft-erp-crm-sync-engine' ),
-				'api.qoyod.com',
-				'select',
-				array(
-					'api.qoyod.com' => 'api.qoyod.com',
-					'www.qoyod.com' => 'www.qoyod.com',
-				)
-			),
 			$advanced( 'inventory_id', __( 'Branch number', 'estasoft-erp-crm-sync-engine' ), __( 'The branch (inventory) that documents are booked to. Empty: the only branch.', 'estasoft-erp-crm-sync-engine' ) ),
 			$advanced( 'currency', __( 'Account currency', 'estasoft-erp-crm-sync-engine' ), __( 'Qoyod makes invoices in this currency. Orders in another currency are stopped.', 'estasoft-erp-crm-sync-engine' ), 'SAR' ),
 			$advanced(
@@ -194,6 +184,18 @@ final class QoyodConnector extends AbstractApiConnector {
 				array(
 					'after_check' => __( 'Approve after the total is checked', 'estasoft-erp-crm-sync-engine' ),
 					'draft'       => __( 'Leave as draft', 'estasoft-erp-crm-sync-engine' ),
+				)
+			),
+			$advanced(
+				'untaxed_rows',
+				__( 'Lines without tax', 'estasoft-erp-crm-sync-engine' ),
+				__( 'A line the shop sent without a tax. Zero-rated and exempt sales are different in tax law, so choose; by default the order stops.', 'estasoft-erp-crm-sync-engine' ),
+				'refuse',
+				'select',
+				array(
+					'refuse'     => __( 'Stop the order', 'estasoft-erp-crm-sync-engine' ),
+					'zero_rated' => __( 'Zero-rated (code 2)', 'estasoft-erp-crm-sync-engine' ),
+					'exempt'     => __( 'Exempt (code 3)', 'estasoft-erp-crm-sync-engine' ),
 				)
 			),
 			$advanced(
@@ -276,6 +278,21 @@ final class QoyodConnector extends AbstractApiConnector {
 				'currency' => $options->currency(),
 			)
 		);
+	}
+
+	/**
+	 * Cheap health probe: one page of the branch list.
+	 *
+	 * @param Connection $connection Connection.
+	 */
+	public function ping( Connection $connection ): bool {
+		try {
+			$this->api( $connection )->get( 'inventories', array( 'page' => 1 ) );
+			return true;
+		} catch ( \Throwable $throwable ) {
+			unset( $throwable );
+			return false;
+		}
 	}
 
 	/**

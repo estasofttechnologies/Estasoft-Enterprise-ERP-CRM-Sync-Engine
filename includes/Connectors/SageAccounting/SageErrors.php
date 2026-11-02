@@ -104,6 +104,16 @@ final class SageErrors {
 	}
 
 	/**
+	 * The same rejection with a sentence added to its reason (what is still to be done by hand).
+	 *
+	 * @param ConnectorError $error Error from refused().
+	 * @param string         $note  Sentence to add.
+	 */
+	public static function withNote( ConnectorError $error, string $note ): ConnectorError {
+		return self::refused( (string) ( $error->context['field'] ?? 'request' ), trim( (string) ( $error->context['reason'] ?? '' ) . ' ' . $note ), $error->httpStatus );
+	}
+
+	/**
 	 * The exception for a rejection the connector found itself.
 	 *
 	 * @param ConnectorError   $error    Error.

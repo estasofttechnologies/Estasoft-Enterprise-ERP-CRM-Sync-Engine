@@ -104,7 +104,11 @@ final class MyobOrderSender {
 			$createdNow = true;
 		}
 		if ( $this->options->pays() && '' !== $parsed->paymentDate ) {
-			$invoice = $this->pay( $invoice, $parsed, $currency );
+			$paid = $this->pay( $invoice, $parsed, $currency );
+			if ( $paid instanceof ConnectorError ) {
+				return SendResult::failure( $paid );
+			}
+			$invoice = $paid;
 		}
 		$ref = $this->reference( $invoice, $warnings );
 		return $createdNow ? SendResult::created( $ref ) : SendResult::existing( $ref );
@@ -211,16 +215,16 @@ final class MyobOrderSender {
 	}
 
 	/**
-	 * Record the payment, once, for the balance.
+	 * Record the payment, once, for the balance, and read the invoice again: the pass is finished only when MYOB shows a balance of 0.
 	 *
 	 * @param array<string,mixed> $invoice  The invoice.
 	 * @param MyobOrderPayload    $parsed   Checked payload.
 	 * @param string              $currency Currency of the file.
-	 * @return array<string,mixed> The invoice after the payment.
+	 * @return array<string,mixed>|ConnectorError The invoice after the payment, or the failure when it still has a balance.
 	 *
 	 * @throws ApiException On a failed call.
 	 */
-	private function pay( array $invoice, MyobOrderPayload $parsed, string $currency ): array {
+	private function pay( array $invoice, MyobOrderPayload $parsed, string $currency ): array|ConnectorError {
 		$balance = $this->amounts->fromNumber( $invoice['BalanceDueAmount'] ?? null, $currency );
 		if ( null === $balance || $balance <= 0 ) {
 			return $invoice;
@@ -228,11 +232,11 @@ final class MyobOrderSender {
 		$uid     = MyobPayloadReader::text( $invoice['UID'] ?? '' );
 		$number  = $this->amounts->number( $balance, $currency );
 		$payment = array(
-			'Date'       => $parsed->paymentDate . ' 00:00:00',
-			'Customer'   => array( 'UID' => MyobPayloadReader::text( $invoice['Customer']['UID'] ?? '' ) ),
-			'Memo'       => MyobPayloadReader::limit( '' !== $parsed->paymentReference ? $parsed->clientRef . ' ' . $parsed->paymentReference : $parsed->clientRef, 255 ),
-			'AmountPaid' => $number,
-			'Invoices'   => array(
+			'Date'           => $parsed->paymentDate . ' 00:00:00',
+			'Customer'       => array( 'UID' => MyobPayloadReader::text( $invoice['Customer']['UID'] ?? '' ) ),
+			'Memo'           => MyobPayloadReader::limit( '' !== $parsed->paymentReference ? $parsed->clientRef . ' ' . $parsed->paymentReference : $parsed->clientRef, 255 ),
+			'AmountReceived' => $number,
+			'Invoices'       => array(
 				array(
 					'UID'           => $uid,
 					'Type'          => 'Invoice',
@@ -262,7 +266,22 @@ final class MyobOrderSender {
 			$payment['DepositTo'] = 'UndepositedFunds';
 		}
 		$this->invoices->pay( $payment );
-		return $this->invoices->get( $uid ) ?? $invoice;
+		$after = $this->invoices->get( $uid );
+		$left  = null === $after ? null : $this->amounts->fromNumber( $after['BalanceDueAmount'] ?? null, $currency );
+		if ( null !== $after && 0 === $left ) {
+			return $after;
+		}
+		return MyobErrors::refused(
+			'BalanceDueAmount',
+			null === $after || null === $left
+				? __( 'MYOB accepted the payment but the invoice cannot be read back to see its balance. Open the invoice in MYOB and check the payment.', 'estasoft-erp-crm-sync-engine' )
+				: sprintf(
+					/* translators: 1: invoice number, 2: balance MYOB still shows. */
+					__( 'MYOB accepted the payment but invoice %1$s still shows a balance of %2$s. Open the invoice in MYOB and check the payment; the next try pays only what is still due.', 'estasoft-erp-crm-sync-engine' ),
+					MyobPayloadReader::text( $after['Number'] ?? '' ),
+					$this->amounts->show( $left, $currency )
+				)
+		);
 	}
 
 	/**

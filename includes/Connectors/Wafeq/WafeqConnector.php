@@ -105,14 +105,15 @@ final class WafeqConnector extends AbstractApiConnector {
 	/**
 	 * Set up with what it depends on.
 	 *
-	 * @param ConnectorDependencies $deps Shared services.
+	 * @param ConnectorDependencies $deps  Shared services.
+	 * @param WafeqIndexStore|null  $store Where the item index is kept between requests (a transient by default).
 	 */
-	public function __construct( ConnectorDependencies $deps ) {
+	public function __construct( ConnectorDependencies $deps, ?WafeqIndexStore $store = null ) {
 		parent::__construct( $deps );
 		$pager          = new WafeqPager();
 		$this->amounts  = new WafeqAmounts();
 		$this->ids      = new WafeqIds();
-		$this->catalog  = new WafeqCatalog( $pager, $deps->clock, $this->amounts );
+		$this->catalog  = new WafeqCatalog( $pager, $deps->clock, $this->amounts, new WafeqItemIndex( $pager, $deps->clock, $store ?? new WafeqTransientStore() ) );
 		$this->contacts = new WafeqContacts( $pager, $this->ids );
 		$docs           = new WafeqDocuments( $pager );
 		$lines          = new WafeqLines( $this->amounts );
@@ -130,7 +131,7 @@ final class WafeqConnector extends AbstractApiConnector {
 			id: self::ID,
 			label: self::LABEL,
 			type: ConnectorType::Accounting,
-			capabilities: array( Capability::Orders, Capability::Customers, Capability::Refunds, Capability::ShadowLookup ),
+			capabilities: array( Capability::Orders, Capability::Customers, Capability::Refunds, Capability::InvoiceReadback, Capability::ShadowLookup ),
 			entities: array( EntityType::Order, EntityType::Refund, EntityType::Customer ),
 			auth: AuthStyle::Key,
 			regions: array( 'AE', 'SA' ),
@@ -239,6 +240,17 @@ final class WafeqConnector extends AbstractApiConnector {
 				)
 			),
 			$advanced(
+				'tax_authority_report',
+				__( 'Report to the tax authority', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Wafeq reports finalized invoices by itself on some plans. Choose Yes to ask Wafeq to report each invoice this plugin finalizes; check your plan first.', 'estasoft-erp-crm-sync-engine' ),
+				'no',
+				'select',
+				array(
+					'no'  => __( 'No, leave it to Wafeq', 'estasoft-erp-crm-sync-engine' ),
+					'yes' => __( 'Yes, ask Wafeq to report', 'estasoft-erp-crm-sync-engine' ),
+				)
+			),
+			$advanced(
 				'language',
 				__( 'Document language', 'estasoft-erp-crm-sync-engine' ),
 				'',
@@ -285,13 +297,40 @@ final class WafeqConnector extends AbstractApiConnector {
 			$permissions['payment_account'] = ! $this->catalog->paymentAccountId( $api, $connection->id, $options->paymentAccount() ) instanceof ConnectorError;
 		}
 		$detected = array(
-			'tax_rates' => count( $rates ),
+			'tax_rates'            => count( $rates ),
+			'tax_authority_report' => $options->reportsToAuthority() ? 'requested by the plugin' : 'left to Wafeq',
 		);
 		if ( '' !== $base ) {
 			$detected['base_currency'] = $base;
 		}
 		$error = $sales instanceof ConnectorError ? $sales : null;
 		return new TestResult( null === $error, 'API v1', $name, array(), $permissions, $error, $detected );
+	}
+
+	/**
+	 * Cheap health probe: the one call that names the organisation.
+	 *
+	 * @param Connection $connection Connection.
+	 */
+	public function ping( Connection $connection ): bool {
+		try {
+			$this->api( $connection )->get( 'organization/' );
+			return true;
+		} catch ( \Throwable $throwable ) {
+			unset( $throwable );
+			return false;
+		}
+	}
+
+	/**
+	 * The facts of the synced invoice: number, status, date.
+	 *
+	 * @param Connection  $connection Connection.
+	 * @param ExternalRef $ref        The synced order.
+	 * @return array{number:string,status:string,authority_status:string,pdf_url:string,qr:string,issued_at:string}|ConnectorError|null
+	 */
+	public function fetchInvoice( Connection $connection, ExternalRef $ref ): array|ConnectorError|null {
+		return $this->orders->facts( $this->api( $connection ), $ref );
 	}
 
 	/**

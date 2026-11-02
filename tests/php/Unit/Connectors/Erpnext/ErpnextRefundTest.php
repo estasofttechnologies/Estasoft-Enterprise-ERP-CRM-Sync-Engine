@@ -156,4 +156,22 @@ final class ErpnextRefundTest extends ErpnextTestCase {
 		$this->assertSame( 'SHIPPING', $notes[0]['items'][0]['item_code'] );
 		$this->assertSame( 2500, $refund->ref->extra['total_minor'] );
 	}
+
+	public function test_a_duplicate_entry_on_the_refunds_own_reference_links_the_credit_note_that_is_there(): void {
+		$this->invoicedOrder();
+		$server = $this->server;
+		$server->failNext(
+			'POST',
+			'#/api/resource/Sales Invoice$#',
+			function () use ( $server ): \Estasoft\SyncEngine\Contract\HttpResponse {
+				$server->put( 'Sales Invoice', array( 'name' => 'SINV-RACE', 'po_no' => 'WC-200', 'is_return' => 1, 'docstatus' => 0, 'status' => 'Draft', 'grand_total' => -219.0, 'currency' => 'AED' ) );
+				return FakeHttpClient::json( array( 'exc_type' => 'DuplicateEntryError' ), 409 );
+			}
+		);
+		$result = $this->sendRefund( array( 'documents' => 'order_invoice' ) );
+
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() . (string) ( $result->error->context['reason'] ?? '' ) );
+		$this->assertTrue( $result->alreadyExisted );
+		$this->assertSame( 'SINV-RACE', $result->ref->id );
+	}
 }

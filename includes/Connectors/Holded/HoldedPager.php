@@ -31,15 +31,43 @@ final class HoldedPager {
 	 * Set up with what it depends on.
 	 *
 	 * @param HoldedErrorMapper $errors Error mapping.
+	 * @param HoldedQuota       $quota  Call quota.
 	 */
-	public function __construct( private readonly HoldedErrorMapper $errors ) {
+	public function __construct( private readonly HoldedErrorMapper $errors, private readonly HoldedQuota $quota ) {
+	}
+
+	/**
+	 * One page of a list. A list read stops first when the call quota is nearly spent.
+	 *
+	 * @param ApiClient           $api   Client.
+	 * @param string              $path  List path such as `invoicing/v1/contacts`.
+	 * @param int                 $page  Page number, from 1.
+	 * @param array<string,mixed> $query Filters.
+	 * @return array<int,array<string,mixed>> The records of the page.
+	 *
+	 * @throws ApiException When the quota is nearly spent, a request fails or Holded refuses inside a 200.
+	 */
+	public function page( ApiClient $api, string $path, int $page, array $query = array() ): array {
+		$this->quota->guard( $api );
+		$response = $api->get( $path, $query + array( 'page' => $page ) );
+		$this->quota->note( $api, $response );
+		$json = $response->json();
+		$this->guard( $json );
+		$data = array_is_list( $json ) ? $json : ( is_array( $json['data'] ?? null ) ? $json['data'] : array() );
+		$rows = array();
+		foreach ( $data as $row ) {
+			if ( is_array( $row ) ) {
+				$rows[] = $row;
+			}
+		}
+		return $rows;
 	}
 
 	/**
 	 * All rows of a list.
 	 *
 	 * @param ApiClient           $api   Client.
-	 * @param string              $path  List path such as `invoicing/v1/contacts`.
+	 * @param string              $path  List path such as `invoicing/v1/documents/invoice`.
 	 * @param array<string,mixed> $query Filters.
 	 * @return array<int,array<string,mixed>>
 	 *
@@ -49,14 +77,8 @@ final class HoldedPager {
 		$rows = array();
 		$seen = array();
 		for ( $page = 1; $page <= self::MAX_PAGES; ++$page ) {
-			$json = $api->get( $path, $query + array( 'page' => $page ) )->json();
-			$this->guard( $json );
-			$data  = array_is_list( $json ) ? $json : ( is_array( $json['data'] ?? null ) ? $json['data'] : array() );
 			$fresh = 0;
-			foreach ( $data as $row ) {
-				if ( ! is_array( $row ) ) {
-					continue;
-				}
+			foreach ( $this->page( $api, $path, $page, $query ) as $row ) {
 				$id = HoldedPayloadReader::text( $row['id'] ?? ( $row['_id'] ?? '' ) );
 				if ( '' !== $id && isset( $seen[ $id ] ) ) {
 					continue;
@@ -71,7 +93,16 @@ final class HoldedPager {
 				return $rows;
 			}
 		}
-		$error = new ConnectorError(
+		throw new ApiException( $this->tooLong( $path ) ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
+	}
+
+	/**
+	 * SYNC-VAL-002 for a list longer than the cap.
+	 *
+	 * @param string $path List path.
+	 */
+	private function tooLong( string $path ): ConnectorError {
+		return new ConnectorError(
 			ErrorCode::Val002,
 			array(
 				'system' => HoldedConnector::LABEL,
@@ -83,7 +114,6 @@ final class HoldedPager {
 			null,
 			'list too long'
 		);
-		throw new ApiException( $error ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 	}
 
 	/**

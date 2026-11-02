@@ -11,6 +11,8 @@ namespace Estasoft\SyncEngine\Connectors\Acumatica;
 
 defined( 'ABSPATH' ) || exit;
 
+use Estasoft\SyncEngine\Connectors\ErpCommon\Problems;
+use Estasoft\SyncEngine\Connectors\ErpCommon\SameOrigin;
 use Estasoft\SyncEngine\Connectors\Support\ApiClient;
 use Estasoft\SyncEngine\Connectors\Support\ApiException;
 
@@ -29,6 +31,12 @@ final class AcumaticaClient {
 	 * Most rows a list helper collects before it stops.
 	 */
 	public const MAX_ROWS = 5000;
+
+	/**
+	 * Most rows a read of a whole period collects. It is the cap of the reconciliation service itself; a period with more rows is refused
+	 * with a message instead of being cut short.
+	 */
+	public const LARGE = 20000;
 
 	/**
 	 * Times the status of a running action is read before the connector goes on.
@@ -98,6 +106,36 @@ final class AcumaticaClient {
 				break;
 			}
 			$skip += $size;
+		}
+		return $rows;
+	}
+
+	/**
+	 * Every record that matches, however many pages: a read whose result must be complete (the nightly check, shipments).
+	 *
+	 * @param string              $entity Entity name such as SalesOrder.
+	 * @param array<string,mixed> $params $filter, $select, $expand.
+	 * @return array<int,array<string,mixed>>
+	 *
+	 * @throws ApiException On failure, and when more than LARGE records match (the list would be incomplete).
+	 */
+	public function queryAll( string $entity, array $params = array() ): array {
+		$rows = $this->query( $entity, $params, self::LARGE + 1 );
+		if ( count( $rows ) > self::LARGE ) {
+			$exception = new ApiException(
+				Problems::refused(
+					AcumaticaConnector::LABEL,
+					'window',
+					sprintf(
+						/* translators: 1: row limit, 2: entity name. */
+						__( 'Acumatica has more than %1$d %2$s records in the period asked for, so the list would be incomplete. Ask for a shorter period.', 'estasoft-erp-crm-sync-engine' ),
+						self::LARGE,
+						$entity
+					),
+					'too many rows'
+				)
+			);
+			throw $exception;
 		}
 		return $rows;
 	}
@@ -185,7 +223,11 @@ final class AcumaticaClient {
 		if ( null === $location || '' === $location ) {
 			return false;
 		}
-		$url = str_starts_with( $location, 'http' ) ? $location : AcumaticaSite::origin( $this->address ) . '/' . ltrim( $location, '/' );
+		$url = SameOrigin::resolve( $location, $this->address );
+		if ( null === $url ) {
+			$exception = new ApiException( Problems::refused( AcumaticaConnector::LABEL, 'location', __( 'The site answered with a status address on another server, so it was not followed.', 'estasoft-erp-crm-sync-engine' ), 'foreign location' ), $response );
+			throw $exception;
+		}
 		for ( $i = 0; $i < self::POLLS; $i++ ) {
 			$status = $this->api->get( $url, array(), null, array( 'action' => 'read ' . $action ) );
 			if ( 202 !== $status->status() ) {

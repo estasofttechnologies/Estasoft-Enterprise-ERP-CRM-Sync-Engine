@@ -138,7 +138,7 @@ final class XeroOrderSender {
 		}
 		$contact         = $this->contacts->resolve( $parsed->partner, $parsed->delivery, '', $warnings );
 		$body['Contact'] = array( 'ContactID' => XeroPayloadReader::text( $contact['ContactID'] ?? '' ) );
-		return $this->invoices->createInvoice( $body, $this->key( $parsed->clientRef, 'invoice', $parsed->attempt, $body ), $this->options->flag( 'allow_backorders', true ) );
+		return $this->invoices->createInvoice( $body, $this->key( $parsed->clientRef, 'invoice', $this->invoices->deadIds( $parsed->clientRef ), $body ), $this->options->flag( 'allow_backorders', true ) );
 	}
 
 	/**
@@ -218,7 +218,7 @@ final class XeroOrderSender {
 			'Amount'    => $this->amounts->number( $due, $currency ),
 			'Reference' => XeroPayloadReader::limit( $reference, 255 ),
 		);
-		$this->invoices->createPayment( $payment, $this->key( $parsed->clientRef, 'payment', $parsed->attempt, $payment ) );
+		$this->invoices->createPayment( $payment, $this->key( $parsed->clientRef, 'payment', array(), $payment ) );
 		return $this->invoices->invoice( $id ) ?? $invoice;
 	}
 
@@ -296,15 +296,16 @@ final class XeroOrderSender {
 	}
 
 	/**
-	 * An idempotency key: the same body in the same try replays; a corrected body, or the next try, gets a new key, so a retry after a deleted draft is not handed the
-	 * answer about the draft that was deleted. Across tries the duplicate protection is the reference, searched before every create.
+	 * An idempotency key from the reference, the step and the body. A retry of the same request gets the same key and so the first answer (Xero references are not
+	 * unique, so a create that finished late must not be made twice); the key changes when the body is corrected, and when the connector itself deleted a draft with this
+	 * reference (the ids of the deleted drafts are part of the key, so the new create is not answered with the deleted draft).
 	 *
 	 * @param string              $reference Client reference.
 	 * @param string              $step      invoice or payment.
-	 * @param int                 $attempt   Tries the queue made so far.
+	 * @param array<int,string>   $dead      Ids of deleted documents with this reference.
 	 * @param array<string,mixed> $body      Request body.
 	 */
-	private function key( string $reference, string $step, int $attempt, array $body ): string {
-		return 'wc-' . $this->connectionId . '-' . $reference . '-' . $step . '-' . substr( sha1( $attempt . '|' . (string) wp_json_encode( $body ) ), 0, 16 );
+	private function key( string $reference, string $step, array $dead, array $body ): string {
+		return 'wc-' . $this->connectionId . '-' . $reference . '-' . $step . '-' . substr( sha1( implode( ',', $dead ) . '|' . (string) wp_json_encode( $body ) ), 0, 16 );
 	}
 }

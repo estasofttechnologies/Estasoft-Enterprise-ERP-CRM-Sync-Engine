@@ -133,7 +133,11 @@ final class QoyodRefundFlowTest extends QoyodTestCase {
 		$this->assertSame( 'fee_product_sku', $refused->error->context['field'] );
 		$this->assertCount( 0, $this->server->all( 'credit_notes' ) );
 
-		$result = $this->connector()->send( $this->connection( array( 'fee_product_sku' => 'SRV-FEE' ) ), $this->refundItem(), $payload );
+		$noTax = $this->connector()->send( $this->connection( array( 'fee_product_sku' => 'SRV-FEE' ) ), $this->refundItem(), $payload );
+		$this->assertSame( 'lines[].tax_code', $noTax->error->context['field'], 'A refunded amount with no tax is not booked as zero-rated unless the merchant said so.' );
+		$this->assertCount( 0, $this->server->all( 'credit_notes' ) );
+
+		$result = $this->connector()->send( $this->connection( array( 'fee_product_sku' => 'SRV-FEE', 'untaxed_rows' => 'zero_rated' ) ), $this->refundItem(), $payload );
 		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
 		$lines = $this->server->all( 'credit_notes' )[0]['line_items'];
 		$this->assertCount( 1, $lines );

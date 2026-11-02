@@ -17,6 +17,7 @@ use Estasoft\SyncEngine\Connectors\CrmCommon\CrmFields;
 use Estasoft\SyncEngine\Connectors\CrmCommon\CrmMappings;
 use Estasoft\SyncEngine\Connectors\CrmCommon\CrmOptions;
 use Estasoft\SyncEngine\Connectors\CrmCommon\OrderData;
+use Estasoft\SyncEngine\Connectors\CrmCommon\ReferenceField;
 use Estasoft\SyncEngine\Connectors\CrmCommon\Summary;
 use Estasoft\SyncEngine\Connectors\CrmCommon\Text;
 use Estasoft\SyncEngine\Connectors\Support\ApiException;
@@ -56,6 +57,11 @@ final class SalesforceConnector extends AbstractSalesConnector implements OAuthC
 	 * Largest Description Salesforce takes, characters.
 	 */
 	private const DESCRIPTION_LIMIT = 32000;
+
+	/**
+	 * API name of the custom field the merchant adds to Opportunity for the order reference: Text(40), External ID, Unique.
+	 */
+	public const REFERENCE_FIELD = 'Woo_Order_Ref__c';
 
 	/**
 	 * Connector facts.
@@ -208,7 +214,10 @@ final class SalesforceConnector extends AbstractSalesConnector implements OAuthC
 	}
 
 	/**
-	 * Test connection: the API version, the org, and what the user may create.
+	 * Test connection: the API version, the org, what the user may create, the currency setup and the field that carries the order
+	 * reference. A single-currency org must say which currency it works in: an order in another currency would otherwise be stored as an
+	 * amount with no currency, which is wrong money. The reference field is looked for among the fields the user can see (the describe
+	 * answer lists exactly those); when it is missing the Opportunity name stays the key and the test says so.
 	 *
 	 * @param Connection $connection Connection.
 	 * @throws ApiException When Salesforce refuses the call.
@@ -232,10 +241,33 @@ final class SalesforceConnector extends AbstractSalesConnector implements OAuthC
 		);
 		$missing  = array_keys( array_filter( $permissions, static fn( bool $allowed ): bool => ! $allowed ) );
 		$error    = array() === $missing ? null : $this->noPermission( str_replace( array( 'create_', 'opportunitycontactrole' ), array( 'create ', 'contact roles' ), (string) $missing[0] ) );
-		if ( null === $error && ! $multi && '' === $options->text( 'org_currency' ) ) {
-			$detected['warning'] = 'org_currency';
+		if ( null === $error && ! $multi && '' === $this->orgCurrency( $options ) ) {
+			$error = $this->currencyMissing();
+		}
+		if ( null === $error && '' === $options->text( 'reference_field' ) ) {
+			// Not stored for later: the field is looked for in the describe answer on every pass, so it is used from the moment it exists.
+			$found                               = $sf->hasField( 'Opportunity', self::REFERENCE_FIELD );
+			$permissions['find_reference_field'] = $found;
+			$detected['reference_mode']          = $found ? 'field' : 'name';
+			if ( ! $found ) {
+				$detected['warning'] = 'reference_field';
+			}
 		}
 		return new TestResult( null === $error, 'Salesforce API ' . $version, (string) $org['name'], array(), $permissions, $error, $detected );
+	}
+
+	/**
+	 * Cheap health probe: one query that needs only API access.
+	 *
+	 * @param Connection $connection Connection.
+	 */
+	public function ping( Connection $connection ): bool {
+		try {
+			return array() !== $this->salesforce( $connection )->query( 'SELECT Id FROM Organization LIMIT 1' );
+		} catch ( \Throwable $throwable ) {
+			unset( $throwable );
+			return false;
+		}
 	}
 
 	/**
@@ -294,7 +326,7 @@ final class SalesforceConnector extends AbstractSalesConnector implements OAuthC
 	}
 
 	/**
-	 * Opportunities created since a date whose name is a WooCommerce reference.
+	 * Opportunities created since a date that carry a WooCommerce reference, in the reference field or in the name.
 	 *
 	 * @param Connection         $connection Connection.
 	 * @param \DateTimeImmutable $from       UTC window start.
@@ -302,20 +334,24 @@ final class SalesforceConnector extends AbstractSalesConnector implements OAuthC
 	 */
 	public function listForReconcile( Connection $connection, \DateTimeImmutable $from ): array|ConnectorError {
 		try {
-			$sf       = $this->salesforce( $connection );
-			$options  = $this->options( $connection );
-			$field    = $this->referenceField( $options );
-			$multi    = $sf->hasField( 'Opportunity', 'CurrencyIsoCode' );
-			$select   = 'Id, ' . $field . ', Amount, CreatedDate' . ( $multi ? ', CurrencyIsoCode' : '' );
-			$since    = $from->setTimezone( new \DateTimeZone( 'UTC' ) )->format( 'Y-m-d\TH:i:s\Z' );
-			$found    = array();
-			$fallback = '' !== $options->text( 'org_currency' ) ? $options->text( 'org_currency' ) : 'USD';
-			foreach ( $sf->query( "SELECT {$select} FROM Opportunity WHERE {$field} LIKE 'WC-%' AND CreatedDate >= {$since} ORDER BY CreatedDate ASC" ) as $row ) {
-				$reference = (string) ( $row[ $field ] ?? '' );
-				if ( 1 !== preg_match( '/^WC-\d+$/', $reference ) || isset( $found[ $reference ] ) ) {
+			$sf      = $this->salesforce( $connection );
+			$options = $this->options( $connection );
+			$ref     = $this->reference( $sf, $connection );
+			$multi   = $sf->hasField( 'Opportunity', 'CurrencyIsoCode' );
+			if ( ! $multi && '' === $this->orgCurrency( $options ) ) {
+				return $this->currencyMissing(); // Reading amounts with a guessed currency would make wrong money look right.
+			}
+			$columns = array_unique( array_merge( array( 'Id' ), $ref->searchFields(), array( 'Amount', 'CreatedDate' ), $multi ? array( 'CurrencyIsoCode' ) : array() ) );
+			$tests   = array_map( static fn( string $field ): string => "{$field} LIKE 'WC-%'", $ref->searchFields() );
+			$since   = $from->setTimezone( new \DateTimeZone( 'UTC' ) )->format( 'Y-m-d\TH:i:s\Z' );
+			$where   = count( $tests ) > 1 ? '(' . implode( ' OR ', $tests ) . ')' : $tests[0];
+			$found   = array();
+			foreach ( $sf->query( 'SELECT ' . implode( ', ', $columns ) . " FROM Opportunity WHERE {$where} AND CreatedDate >= {$since} ORDER BY CreatedDate ASC" ) as $row ) {
+				$reference = $ref->readFrom( $row );
+				if ( '' === $reference || isset( $found[ $reference ] ) ) {
 					continue;
 				}
-				$currency            = strtoupper( (string) ( $row['CurrencyIsoCode'] ?? $fallback ) );
+				$currency            = $multi ? strtoupper( (string) ( $row['CurrencyIsoCode'] ?? '' ) ) : $this->orgCurrency( $options );
 				$found[ $reference ] = new ExternalRef(
 					(string) $row['Id'],
 					$reference,
@@ -342,7 +378,7 @@ final class SalesforceConnector extends AbstractSalesConnector implements OAuthC
 	 */
 	protected function findOrder( Connection $connection, Item $item ): ExternalRef|ConnectorError|null {
 		$sf  = $this->salesforce( $connection );
-		$opp = $this->findOpportunity( $sf, $this->options( $connection ), $item->clientReference() );
+		$opp = $this->findOpportunity( $sf, $this->reference( $sf, $connection ), $item->clientReference() );
 		if ( null === $opp || ! $this->hasRole( $sf, (string) $opp['Id'] ) ) {
 			return null;
 		}
@@ -358,7 +394,7 @@ final class SalesforceConnector extends AbstractSalesConnector implements OAuthC
 	protected function findRefund( Connection $connection, Item $item ): ExternalRef|ConnectorError|null {
 		$sf    = $this->salesforce( $connection );
 		$order = 1 === preg_match( '/^order:(\d+)$/', $item->partitionKey, $parts ) ? 'WC-' . $parts[1] : '';
-		$opp   = '' === $order ? null : $this->findOpportunity( $sf, $this->options( $connection ), $order );
+		$opp   = '' === $order ? null : $this->findOpportunity( $sf, $this->reference( $sf, $connection ), $order );
 		if ( null === $opp ) {
 			return null;
 		}
@@ -380,7 +416,8 @@ final class SalesforceConnector extends AbstractSalesConnector implements OAuthC
 		}
 		$sf      = $this->salesforce( $connection );
 		$options = $this->options( $connection );
-		$opp     = $this->findOpportunity( $sf, $options, $order->reference );
+		$ref     = $this->reference( $sf, $connection );
+		$opp     = $this->findOpportunity( $sf, $ref, $order->reference );
 		$left    = $sf->remaining();
 		if ( null !== $left && $left < self::ALLOCATION_FLOOR ) {
 			return SendResult::failure( $this->waitFor( 3600 ) );
@@ -390,9 +427,17 @@ final class SalesforceConnector extends AbstractSalesConnector implements OAuthC
 		}
 
 		$multi = $sf->hasField( 'Opportunity', 'CurrencyIsoCode' );
-		if ( ! $multi && '' !== $options->text( 'org_currency' ) && strtoupper( $options->text( 'org_currency' ) ) !== $order->currency ) {
-			/* translators: 1: order currency, 2: org currency */
-			return SendResult::failure( $this->invalid( 'CurrencyIsoCode', sprintf( __( 'The order is in %1$s but this Salesforce org works in %2$s.', 'estasoft-erp-crm-sync-engine' ), $order->currency, strtoupper( $options->text( 'org_currency' ) ) ) ) );
+		if ( ! $multi ) {
+			// A single-currency org stores an Amount with no currency. It is only right when the order is in the org's currency, so the org
+			// currency must be known and equal; otherwise (an AED order in a USD org) the amount would be wrong money with no label.
+			$orgCurrency = $this->orgCurrency( $options );
+			if ( '' === $orgCurrency ) {
+				return SendResult::failure( $this->currencyMissing() );
+			}
+			if ( $orgCurrency !== $order->currency ) {
+				/* translators: 1: order currency, 2: org currency */
+				return SendResult::failure( $this->invalid( 'CurrencyIsoCode', sprintf( __( 'The order is in %1$s but this Salesforce org works in %2$s.', 'estasoft-erp-crm-sync-engine' ), $order->currency, $orgCurrency ) ) );
+			}
 		}
 		$lines = 'products' === $options->choice( 'lines', array( 'description', 'products' ), 'description' ) ? $this->resolveLines( $sf, $options, $order, $multi ) : null;
 		if ( $lines instanceof ConnectorError ) {
@@ -406,14 +451,13 @@ final class SalesforceConnector extends AbstractSalesConnector implements OAuthC
 			$contactId                 = $this->contactId( $sf, $order->contact, $accountId );
 			list( $description, $cut ) = Text::limit( Summary::order( $order ), self::DESCRIPTION_LIMIT );
 			$fields                    = array(
-				$this->referenceField( $options ) => $order->reference,
-				'StageName'                       => $order->paid ? $options->text( 'stage_paid', 'Closed Won' ) : $options->text( 'stage_unpaid', 'Prospecting' ),
-				'CloseDate'                       => $order->date,
-				'Description'                     => $description,
+				'Name'        => $order->reference,
+				'StageName'   => $order->paid ? $options->text( 'stage_paid', 'Closed Won' ) : $options->text( 'stage_unpaid', 'Prospecting' ),
+				'CloseDate'   => $order->date,
+				'Description' => $description,
 			);
-			if ( 'Name' !== $this->referenceField( $options ) ) {
-				/* translators: 1: order number */
-				$fields['Name'] = sprintf( __( 'Order %s', 'estasoft-erp-crm-sync-engine' ), substr( $order->reference, 3 ) );
+			if ( $ref->dedicated ) {
+				$fields[ $ref->field ] = $order->reference;
 			}
 			if ( null === $lines ) {
 				$fields['Amount'] = Amounts::number( $order->totalMinor, $order->currency );
@@ -485,7 +529,7 @@ final class SalesforceConnector extends AbstractSalesConnector implements OAuthC
 			return SendResult::failure( $refund );
 		}
 		$sf  = $this->salesforce( $connection );
-		$opp = $this->findOpportunity( $sf, $this->options( $connection ), $refund->orderRef );
+		$opp = $this->findOpportunity( $sf, $this->reference( $sf, $connection ), $refund->orderRef );
 		if ( null === $opp ) {
 			/* translators: 1: order reference */
 			return SendResult::failure( $this->invalid( 'Opportunity', sprintf( __( 'The order %s is not in Salesforce yet.', 'estasoft-erp-crm-sync-engine' ), $refund->orderRef ) ) );
@@ -564,13 +608,36 @@ final class SalesforceConnector extends AbstractSalesConnector implements OAuthC
 	}
 
 	/**
-	 * The field that carries the reference: Name unless the merchant made a field for it.
+	 * The fields that carry the reference: the merchant's own (option), else the External ID field the connector looks for among the fields
+	 * the user can see, else the Opportunity name. The describe answer is read anyway for the currency, so this costs no call.
+	 *
+	 * @param SalesforceApi $sf         API.
+	 * @param Connection    $connection Connection.
+	 */
+	private function reference( SalesforceApi $sf, Connection $connection ): ReferenceField {
+		$options = $this->options( $connection );
+		$chosen  = ReferenceField::choose( $connection, $options, 'reference_field', 'Name' );
+		if ( $chosen->dedicated || '' !== $options->text( 'reference_field' ) || ! $sf->hasField( 'Opportunity', self::REFERENCE_FIELD ) ) {
+			return $chosen;
+		}
+		return new ReferenceField( self::REFERENCE_FIELD, 'Name', true );
+	}
+
+	/**
+	 * The currency a single-currency org works in, upper case; empty when the connection does not say.
 	 *
 	 * @param CrmOptions $options Options.
 	 */
-	private function referenceField( CrmOptions $options ): string {
-		$field = $options->text( 'reference_field', 'Name' );
-		return 1 === preg_match( '/^[A-Za-z][A-Za-z0-9_]{0,60}$/', $field ) ? $field : 'Name';
+	private function orgCurrency( CrmOptions $options ): string {
+		$code = strtoupper( $options->text( 'org_currency' ) );
+		return 1 === preg_match( '/^[A-Z]{3}$/', $code ) ? $code : '';
+	}
+
+	/**
+	 * The error for a single-currency org whose currency is not known.
+	 */
+	private function currencyMissing(): ConnectorError {
+		return $this->invalid( 'org_currency', __( 'This Salesforce org does not use several currencies, so an amount carries no currency. Enter the currency of the org in the connection settings; orders in any other currency are then refused.', 'estasoft-erp-crm-sync-engine' ) );
 	}
 
 	/**
@@ -583,19 +650,21 @@ final class SalesforceConnector extends AbstractSalesConnector implements OAuthC
 	}
 
 	/**
-	 * The oldest Opportunity carrying the reference.
+	 * The oldest Opportunity carrying the reference: in the reference field first, then (the documented fallback, which also finds an
+	 * Opportunity made before the field existed) in the name.
 	 *
-	 * @param SalesforceApi $sf        API.
-	 * @param CrmOptions    $options   Options.
-	 * @param string        $reference WC-number.
+	 * @param SalesforceApi  $sf        API.
+	 * @param ReferenceField $ref       Fields that carry the reference.
+	 * @param string         $reference WC-number.
 	 * @return array<string,mixed>|null
 	 */
-	private function findOpportunity( SalesforceApi $sf, CrmOptions $options, string $reference ): ?array {
-		$field  = $this->referenceField( $options );
-		$select = 'Id, ' . $field . ', Amount' . ( $sf->hasField( 'Opportunity', 'CurrencyIsoCode' ) ? ', CurrencyIsoCode' : '' );
-		foreach ( $sf->query( "SELECT {$select} FROM Opportunity WHERE {$field} = " . $this->literal( $reference ) . ' ORDER BY CreatedDate ASC' ) as $row ) {
-			if ( Text::same( (string) ( $row[ $field ] ?? '' ), $reference ) ) {
-				return $row;
+	private function findOpportunity( SalesforceApi $sf, ReferenceField $ref, string $reference ): ?array {
+		$select = 'Id, ' . implode( ', ', $ref->searchFields() ) . ', Amount' . ( $sf->hasField( 'Opportunity', 'CurrencyIsoCode' ) ? ', CurrencyIsoCode' : '' );
+		foreach ( $ref->searchFields() as $field ) {
+			foreach ( $sf->query( "SELECT {$select} FROM Opportunity WHERE {$field} = " . $this->literal( $reference ) . ' ORDER BY CreatedDate ASC' ) as $row ) {
+				if ( Text::same( (string) ( $row[ $field ] ?? '' ), $reference ) ) {
+					return $row;
+				}
 			}
 		}
 		return null;

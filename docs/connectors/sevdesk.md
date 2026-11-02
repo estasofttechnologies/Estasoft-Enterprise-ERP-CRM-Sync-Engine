@@ -7,7 +7,7 @@ available: true
 verified: false
 hosts: [my.sevdesk.de]
 terms_url: https://sevdesk.de/agb/                       # fetched 2026-11-02 (general terms, section 4 on interface use)
-privacy_url: https://sevdesk.com/privacy-policy/         # linked from tech.sevdesk.com; not fetched
+privacy_url: https://sevdesk.de/datenschutz/             # fetched 2026-11-02 (Datenschutzerklärung; links to separate policies for the website, the web app and the mobile app)
 developer_url: https://my.sevdesk.de/                    # the API token is created inside the app (Settings, Users, API token [third-party]); a login page, not fetched
 variants: []
 ---
@@ -112,17 +112,17 @@ Contacts: `GET /Contact?customerNumber=<number>&depth=1`. The number is determin
 3. Customer (section 8). Products: `GET /Part?partNumber=<SKU>` [third-party filter]; found: `part` on the position; not found: SYNC-MAP-001, or with `unknown_sku = custom` a free-text position.
 4. Taxes. sevDesk takes one tax rule per document and the rate per position. The tax mapping code is the sevDesk rule id on 2.0 (`1` taxable sales, `2` exports, `3` intra-EU supply, `4` tax-free §4 UStG, `5` reverse charge §13b, `11` small business §19, `17` not taxable in Germany, `18`/`19`/`20` One-Stop-Shop goods/electronic services/other services, `21` reverse charge §18b [third-party, glama and the news posts]) and the type word on 1.0 (`default`, `eu`, `noteu`, `custom`, `ss`). Every line must resolve to the same code, otherwise SYNC-VAL-002 names the two codes. OSS rules are valid for normal invoices (`RE`) only and need the destination country as `addressCountry` [documented]. Rule 17 is not available on advance, partial and final invoices [documented]; the connector only makes `RE`. The position `taxRate` is the percentage of the line (0 for the rules that have none). `taxText` defaults per rule (`Umsatzsteuer 19%` for rule 1, a plain German sentence for the others, all mappable and to be confirmed by the merchant's accountant, [inferred]).
 5. Prices are net with `showNet` true. When the payload prices include tax (`prices_include_tax`), each unit price is converted to net with whole-number arithmetic (rate in ten-thousandths of a percent, rounding half away from zero, four decimals); a line with more than one tax is refused. The discount is inside the line prices (line total after coupon divided by the quantity).
-6. `saveInvoice` (draft). Read back `GET /Invoice/{id}` (`sumNet`, `sumTax`, `sumGross`, `currency`, `status`, `invoiceNumber`) and compare `sumGross` with `total - excluded_total` in minor units, tolerance one unit. A larger difference: option `total_mismatch` `fail` (default) deletes the draft (`DELETE /Invoice/{id}`, documented in the PHP client; only a draft that this pass created and that is not enshrined) and fails with SYNC-VAL-002 naming both totals; `warn` goes on. `currency` must read back as `EUR`.
+6. `saveInvoice` (draft). Read back `GET /Invoice/{id}` (`sumNet`, `sumTax`, `sumGross`, `currency`, `status`, `invoiceNumber`) and compare `sumGross` with `total - excluded_total` in minor units. WooCommerce rounds the tax of each line and sevDesk the tax of each rate group, so the default tolerance is one minor unit per document row (lines, shipping, fees), at most 10 (ten lines of 0.99 EUR at 19 % differ by 2 cents); the option `total_tolerance` (0 to 50; empty means the default) replaces it. A larger difference: option `total_mismatch` `fail` (default) deletes the draft (`DELETE /Invoice/{id}`, documented in the PHP client; only a draft that this pass created and that is not enshrined) and fails with SYNC-VAL-002 naming both totals; `warn` goes on. `currency` must read back as `EUR`.
 7. `invoice_state = open`: `PUT /Invoice/{id}/sendBy` with `sendType` `VPR` and `sendDraft` false marks the invoice as sent and raises the status to 200; the status is read back. The connector never calls `enshrine`: it is irreversible (GoBD) and a decision for the accountant.
-8. Payment (option `payment_account` = the sevDesk bank account id, and the order is paid, and the invoice is open): read the invoice first; when `paidAmount` already covers the total nothing is booked; else `PUT /Invoice/{id}/bookAmount` with `amount`, `date`, `type` `FULL_PAYMENT`, `checkAccount` `{id, objectName: "CheckAccount"}` [third-party]. The `date` format is not documented (section 16); the connector sends `dd.mm.yyyy`.
+8. Payment (option `payment_account` = the sevDesk bank account id, and the order is paid, and the invoice is open): read the invoice first; when `paidAmount` already covers the total nothing is booked; else `PUT /Invoice/{id}/bookAmount` with `amount`, `date`, `type` `FULL_PAYMENT`, `checkAccount` `{id, objectName: "CheckAccount"}` [third-party]. `date` is an integer [documented as an integer with the example 20230418]: the connector sends the order's payment day as `yyyymmdd` (for example `20261103`); the option `payment_date_format` = `unix` sends the Unix timestamp of local midnight instead, because third-party tool wrappers describe the same field as a Unix timestamp (section 16). A payment date that cannot be read books nothing and adds the warning `payment_date_unreadable`. The invoice is read again right before the booking, so a booking that went through but whose answer was lost, or a payment a person entered meanwhile, is seen (`paidAmount`, status) and nothing is booked twice.
 
-Date: `invoiceDate` is the order date (Berlin). Whether sevDesk keeps it when the invoice is sent is checked on read-back and warned about.
+Date: `invoiceDate` is the order date (Berlin). The read-back date is compared with the day sent, after creation and again after `sendBy` (its UTC offset is honoured); if it is another day the result carries the warning `date_differs`. The date is never written back.
 
 ## 8. Customers
 
 sevDesk documents no search by email: the `GET /Contact` filters are `depth` and `customerNumber` [third-party]; emails live in `CommunicationWay` records. So `lookupCustomer( email )` returns the contact whose customer number is the deterministic number of that email (`WC-` + 12 hex of the lowercase email's hash). That finds contacts this connector made, not contacts the merchant typed by hand: the same person may then exist twice in sevDesk, once as the merchant's own contact and once as `WC-…`.
 
-Policies (option `customer_policy`): `match_or_create` (default), `collective` (every order goes on one existing contact whose id is `collective_contact_id`, the usual "Webshop-Kunde" pattern), `always_create`. The collective contact avoids a contact per buyer; the buyer's name and address are on the invoice text.
+Policies (option `customer_policy`): `match_or_create` (default), `collective` (every order goes on one existing contact whose id is `collective_contact_id`, the usual "Webshop-Kunde" pattern), `always_create` (one contact per order, numbered from the email and the order reference, so a retry finds the same contact). The collective contact avoids a contact per buyer; the buyer's name and address are on the invoice text.
 
 ## 9. Refunds
 
@@ -154,6 +154,8 @@ Opt-in as in step 8 of section 7. Refunds record no payment.
 | `contact_category_id` | number | 3 |
 | `unknown_sku` | `refuse`, `custom` | `refuse` |
 | `total_mismatch` | `fail`, `warn` | `fail` |
+| `total_tolerance` | 0 to 50 minor units, or empty | empty: one per document row, at most 10 |
+| `payment_date_format` | `ymd`, `unix` | `ymd` |
 | `unity_id` | number | 1 |
 | `time_to_pay` | days | 14 |
 | `payment_account` | bank account id | empty (no payment) |
@@ -162,7 +164,7 @@ Opt-in as in step 8 of section 7. Refunds record no payment.
 
 ## 13. Rate limits and pacing
 
-sevDesk publishes no numeric limit [third-party]; it answers 429 under load and may block excessive interface use without warning [documented, AGB section 4]. The connector paces to two requests a second (`rateLimitHints()` 2.0, concurrency 1), pages with `limit` 100, and treats 429 as SYNC-RATE-001 with the `Retry-After` value when sent, else the base default of 30 seconds. Reconciliation and stock reads run in the background after orders.
+sevDesk publishes no numeric limit [third-party]; it answers 429 under load and may block excessive interface use without warning [documented, AGB section 4]. The connector paces to two requests a second (`rateLimitHints()` 2.0, concurrency 1), pages with `limit` 100, and treats 429 as SYNC-RATE-001 with the `Retry-After` value when sent, else the base default of 30 seconds. `ping()` is one call, `GET /Tools/bookkeepingSystemVersion`. Reconciliation and stock reads run in the background after orders.
 
 ## 14. Error mapping
 
@@ -175,8 +177,8 @@ sevDesk answers errors as `{"message": "..."}` or `{"error": {"message": "..."}}
 | 401 | SYNC-AUTH-001 | token wrong or revoked |
 | 403 | SYNC-AUTH-004 | |
 | 400, 404 with a message | SYNC-VAL-002 | short sanitised reason; `Invalid 'limit' parameter` is a bug and says so |
-| 500 with a JSON `message` other than `Server Error` | SYNC-VAL-002 | for example "debitor/creditor number already exists" [third-party]; needs a person |
-| 500 with no message or the message `Server Error`, 502 to 504 | SYNC-NET-002 | retry |
+| 500 with a JSON `message` that complains about the request (it says something exists already, is missing, required, invalid, too long, not allowed and so on) | SYNC-VAL-002 | for example "debitor/creditor number already exists" [third-party]; needs a person. The words that count are listed in `SevdeskErrorMapper::PROBLEM` |
+| any other 500 (no message, `Server Error`, "Internal error", "Something went wrong"), 502 to 504 | SYNC-NET-002 | retry with the queue's delays; a transient fault must not need a person |
 | 429 | SYNC-RATE-001 | |
 | Unknown product (SKU) | SYNC-MAP-001 | before anything is sent for the order |
 | Tax rule not in the mapping | SYNC-MAP-002 | |
@@ -210,7 +212,8 @@ Capability record: `order_document` `invoice`, `refund_document` `credit_note`, 
 - Category id 3, unit id 1, the `CommunicationWay` key ids, the `ContactAddress` and `CommunicationWay` field names.
 - Filters: `customerNumber` on `GET /Contact`, `partNumber` on `GET /Part`, `contact[id]`, `startDate`, `endDate` on `GET /Invoice` and `GET /CreditNote` (timestamps or dates), `depth`.
 - Whether `price` on a position is net when `showNet` is true, and the number of decimals allowed.
-- The date format of `bookAmount` (`date` is documented as an integer with the example 20230418).
+- The date format of `bookAmount`: `date` is an integer with the example 20230418 in the reference file, while the third-party tool pages (glama `mcp-sevdesk`, aident) call it a Unix timestamp. The connector sends `yyyymmdd`; if sevDesk rejects it or books the wrong day, set `payment_date_format` to `unix`. A wrong day would not be noticed by the connector.
+- The list of messages sevDesk sends with a 500 for a bad request: only one is known ("debitor/creditor number already exists"); the others are matched by the words of `SevdeskErrorMapper::PROBLEM`, and a bad request worded otherwise is retried by the queue until its attempts run out.
 - `sendBy` body (`sendType`, `sendDraft`) and that it raises the status to 200 and numbers the invoice; whether drafts already carry an invoice number.
 - Foreign-currency documents (EUR only is supported here).
 - The meaning of `CreditNote` `bookingCategory` for ordinary refunds (UNDERACHIEVEMENT is documented for OSS credit notes).

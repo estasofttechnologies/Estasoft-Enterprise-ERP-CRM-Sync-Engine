@@ -305,7 +305,7 @@ final class MyobConnector extends AbstractApiConnector implements OAuthConnector
 	 */
 	public function ping( Connection $connection ): bool {
 		try {
-			$this->servicesFor( $connection, false )->company->files();
+			$this->servicesFor( $connection, false )->company->probe();
 			return true;
 		} catch ( \Throwable $throwable ) {
 			unset( $throwable );

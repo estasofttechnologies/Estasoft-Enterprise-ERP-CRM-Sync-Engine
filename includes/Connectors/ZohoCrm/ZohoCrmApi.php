@@ -210,6 +210,69 @@ final class ZohoCrmApi {
 	}
 
 	/**
+	 * The layouts of a module (their ids are needed to read the pipelines).
+	 *
+	 * @param string $module Module API name.
+	 * @return array<int,array<string,mixed>>
+	 * @throws ApiException When Zoho refuses the call (scope ZohoCRM.settings.layouts.READ).
+	 */
+	public function layouts( string $module ): array {
+		$response = $this->api->get( '/crm/v8/settings/layouts', array( 'module' => $module ), null, array( 'action' => __( 'read the layouts', 'estasoft-erp-crm-sync-engine' ) ) );
+		$this->note( $response );
+		return $this->rowsOf( $response->json()['layouts'] ?? array() );
+	}
+
+	/**
+	 * The pipelines of a layout; layout_id is mandatory (REQUIRED_PARAM_MISSING without it).
+	 *
+	 * @param string $layoutId Layout id.
+	 * @return array<int,array<string,mixed>>
+	 * @throws ApiException When Zoho refuses the call (scope ZohoCRM.settings.pipeline.READ).
+	 */
+	public function pipelines( string $layoutId ): array {
+		$response = $this->api->get( '/crm/v8/settings/pipeline', array( 'layout_id' => $layoutId ), null, array( 'action' => __( 'read the pipelines', 'estasoft-erp-crm-sync-engine' ) ) );
+		$this->note( $response );
+		return $this->rowsOf( $response->json()['pipeline'] ?? array() );
+	}
+
+	/**
+	 * The fields of a module with their API names.
+	 *
+	 * @param string $module Module API name.
+	 * @return array<int,array<string,mixed>>
+	 * @throws ApiException When Zoho refuses the call (scope ZohoCRM.settings.fields.READ).
+	 */
+	public function fields( string $module ): array {
+		$response = $this->api->get( '/crm/v8/settings/fields', array( 'module' => $module ), null, array( 'action' => __( 'read the fields', 'estasoft-erp-crm-sync-engine' ) ) );
+		$this->note( $response );
+		return $this->rowsOf( $response->json()['fields'] ?? array() );
+	}
+
+	/**
+	 * Create one custom field in a module.
+	 *
+	 * @param string              $module Module API name.
+	 * @param array<string,mixed> $field  field_label, data_type, length.
+	 * @throws ApiException When Zoho refuses the field (scope ZohoCRM.settings.fields.CREATE, the edition's field cap, a name in use).
+	 */
+	public function createField( string $module, array $field ): void {
+		$response = $this->api->post(
+			'/crm/v8/settings/fields',
+			array( 'module' => $module ),
+			array( 'fields' => array( $field ) ),
+			array(
+				'allow'  => array( 400 ),
+				'action' => __( 'create fields', 'estasoft-erp-crm-sync-engine' ),
+			)
+		);
+		$this->note( $response );
+		$row = (array) ( $response->json()['fields'][0] ?? array() );
+		if ( ! $response->isSuccess() || 'SUCCESS' !== strtoupper( (string) ( $row['code'] ?? '' ) ) ) {
+			throw new ApiException( ZohoCrmErrorMapper::record( $row, $response->status() ), $response ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
+		}
+	}
+
+	/**
 	 * Run a COQL query and return its rows and whether more follow.
 	 *
 	 * @param string $query COQL select.
@@ -250,6 +313,16 @@ final class ZohoCrmApi {
 			}
 			throw $exception;
 		}
+	}
+
+	/**
+	 * The array rows of a decoded list.
+	 *
+	 * @param mixed $decoded Decoded list.
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function rowsOf( mixed $decoded ): array {
+		return is_array( $decoded ) ? array_values( array_filter( $decoded, 'is_array' ) ) : array();
 	}
 
 	/**

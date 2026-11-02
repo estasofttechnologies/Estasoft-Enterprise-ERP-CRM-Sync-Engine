@@ -112,6 +112,33 @@ final class DaftraOrderFlowTest extends DaftraTestCase {
 		$this->assertNotSame( 50, $this->server->all( 'invoices' )[0]['client_id'] );
 	}
 
+	public function test_a_client_is_looked_for_with_the_email_filter_first_and_one_request_is_enough_when_it_is_found(): void {
+		$this->server->tables['clients'][60] = array( 'id' => 60, 'business_name' => 'Noor', 'email' => 'noor@example.com' );
+		$this->connector()->send( $this->connection(), $this->item(), $this->payload() );
+		$lists = $this->requests( 'GET', '#/api2/clients\.json\?#' );
+		$this->assertCount( 1, $lists );
+		$this->assertStringContainsString( 'filter%5Bemail%5D=noor%40example.com', $lists[0]['url'] );
+		$this->assertStringNotContainsString( 'keywords', $lists[0]['url'] );
+		$this->assertSame( 60, $this->server->all( 'invoices' )[0]['client_id'] );
+	}
+
+	public function test_a_client_stored_with_capitals_is_found_by_the_keyword_search_after_the_filter_misses(): void {
+		$this->server->tables['clients'][60] = array( 'id' => 60, 'business_name' => 'Noor', 'email' => 'Noor@Example.com' );
+		$this->connector()->send( $this->connection(), $this->item(), $this->payload() );
+		$this->assertCount( 2, $this->requests( 'GET', '#/api2/clients\.json\?#' ) );
+		$this->assertCount( 1, $this->server->all( 'clients' ), 'No second client.' );
+		$this->assertSame( 60, $this->server->all( 'invoices' )[0]['client_id'] );
+	}
+
+	public function test_a_server_that_ignores_the_filter_still_gives_the_right_client_by_the_local_match(): void {
+		$this->server->ignoreFilters = true;
+		$this->server->tables['clients'][60] = array( 'id' => 60, 'business_name' => 'Other', 'email' => 'other@example.com' );
+		$this->server->tables['clients'][61] = array( 'id' => 61, 'business_name' => 'Noor', 'email' => 'noor@example.com' );
+		$this->connector()->send( $this->connection(), $this->item(), $this->payload() );
+		$this->assertSame( 61, $this->server->all( 'invoices' )[0]['client_id'] );
+		$this->assertCount( 2, $this->server->all( 'clients' ) );
+	}
+
 	public function test_a_missing_email_is_map_003_and_nothing_is_sent(): void {
 		$payload                      = $this->payload();
 		$payload['customer']['email'] = '';

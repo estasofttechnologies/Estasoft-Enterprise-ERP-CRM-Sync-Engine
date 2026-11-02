@@ -320,7 +320,9 @@ final class ErpnextConnector extends AbstractApiConnector {
 	public function findExisting( Connection $connection, Item $item ): ExternalRef|ConnectorError|null {
 		$services = $this->services( $connection );
 		if ( EntityType::Order === $item->entityType ) {
-			return $services['orders']->finished( $item, true );
+			// A payment is expected only for the item that records one: the 'paid' event. An order that was never paid has none, and a created item
+			// must not stay unfinished forever because of it; the 'paid' event is what records the Payment Entry.
+			return $services['orders']->finished( $item, 'paid' === $item->event );
 		}
 		if ( EntityType::Refund === $item->entityType ) {
 			return $services['refunds']->finished( $item );

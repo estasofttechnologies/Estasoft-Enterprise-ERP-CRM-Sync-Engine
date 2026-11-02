@@ -73,6 +73,7 @@ final class PennylaneConnector extends AbstractApiConnector {
 			'default' => 'fail',
 			'allowed' => array( 'fail', 'warn' ),
 		),
+		'total_tolerance'              => array( 'default' => '' ),
 		'payment_days'                 => array(
 			'default' => 30,
 			'min'     => 0,
@@ -174,6 +175,20 @@ final class PennylaneConnector extends AbstractApiConnector {
 	}
 
 	/**
+	 * Is the token accepted: one cheap read, `GET /me` (it needs no scope).
+	 *
+	 * @param Connection $connection Connection.
+	 */
+	public function ping( Connection $connection ): bool {
+		try {
+			return $this->api( $connection )->get( 'me' )->isSuccess();
+		} catch ( \Throwable $throwable ) {
+			unset( $throwable );
+			return false;
+		}
+	}
+
+	/**
 	 * Test connection.
 	 *
 	 * @param Connection $connection Connection.
@@ -200,7 +215,7 @@ final class PennylaneConnector extends AbstractApiConnector {
 		$detected = array( 'scopes' => $scopes );
 		$months   = self::LIFETIMES[ PayloadReader::text( $connection->config( 'token_lifetime' ) ) ] ?? null;
 		if ( null !== $months ) {
-			$detected['credential_expires_at'] = $this->deps->clock->now()->modify( '+' . $months . ' months' )->format( 'Y-m-d H:i:s' );
+			$detected += $this->expiry( $connection, $months );
 		}
 		return new TestResult( true, 'API v2', '' !== $company ? $company : self::LABEL, array(), $permissions, null, $detected );
 	}
@@ -286,7 +301,7 @@ final class PennylaneConnector extends AbstractApiConnector {
 	 */
 	public function lookupCustomer( Connection $connection, string $email ): ExternalRef|ConnectorError|null {
 		$customers = $this->customers();
-		$found     = $customers->find( $this->api( $connection ), $customers->referenceFor( $email ) );
+		$found     = $customers->findByEmail( $this->api( $connection ), $email );
 		if ( null === $found ) {
 			return null;
 		}
@@ -422,6 +437,37 @@ final class PennylaneConnector extends AbstractApiConnector {
 				'name'         => __( 'Exempt from VAT', 'estasoft-erp-crm-sync-engine' ),
 				'rate_percent' => '0',
 			),
+		);
+	}
+
+	/**
+	 * The end date of the token. Pennylane shows none, so it is the day of the first test plus the lifetime the merchant chose. A later test of the
+	 * same token (same fingerprint, same lifetime) keeps that first date, so the date does not slide forward with every test and the warning before
+	 * it still comes. A new token or another lifetime starts again from now. The fingerprint is the first 16 hex characters of the SHA-256 of the token.
+	 *
+	 * @param Connection $connection Connection.
+	 * @param int        $months     Months the token lasts.
+	 * @return array<string,string>
+	 */
+	private function expiry( Connection $connection, int $months ): array {
+		$fingerprint = substr( hash( 'sha256', $connection->secret( 'api_token' ) ), 0, 16 );
+		$until       = $this->deps->clock->now()->modify( '+' . $months . ' months' )->format( 'Y-m-d H:i:s' );
+		$stored      = $connection->config( 'detected' );
+		$stored      = is_array( $stored ) ? $stored : array();
+		$known       = PayloadReader::text( $stored['token_expires_on'] ?? '' );
+		if (
+			PayloadReader::text( $stored['token_fingerprint'] ?? '' ) === $fingerprint
+			&& PayloadReader::text( $stored['token_months'] ?? '' ) === (string) $months
+			&& 1 === preg_match( '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $known )
+			&& $known < $until
+		) {
+			$until = $known;
+		}
+		return array(
+			'credential_expires_at' => $until,
+			'token_expires_on'      => $until,
+			'token_fingerprint'     => $fingerprint,
+			'token_months'          => (string) $months,
 		);
 	}
 

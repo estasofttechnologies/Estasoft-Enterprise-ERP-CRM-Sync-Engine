@@ -14,6 +14,7 @@ defined( 'ABSPATH' ) || exit;
 use Estasoft\SyncEngine\Connectors\EnterpriseCommon\Amounts;
 use Estasoft\SyncEngine\Connectors\EnterpriseCommon\OrderData;
 use Estasoft\SyncEngine\Connectors\EnterpriseCommon\Problem;
+use Estasoft\SyncEngine\Connectors\EnterpriseCommon\ShopTotalMarker;
 use Estasoft\SyncEngine\Connectors\EnterpriseCommon\TotalCheck;
 use Estasoft\SyncEngine\Connectors\EnterpriseCommon\Warnings;
 use Estasoft\SyncEngine\Connectors\Support\ApiException;
@@ -47,12 +48,14 @@ final class SapS4HanaOrders {
 	 * @param SapS4HanaGateway $gateway  Calls.
 	 * @param SapS4HanaOptions $options  Options.
 	 * @param Amounts          $amounts  Conversion helper.
+	 * @param ShopTotalMarker  $marker   Writes and reads the shop's net amount.
 	 * @param string           $system   System name for messages.
 	 */
 	public function __construct(
 		private readonly SapS4HanaGateway $gateway,
 		private readonly SapS4HanaOptions $options,
 		private readonly Amounts $amounts,
+		private readonly ShopTotalMarker $marker,
 		private readonly string $system
 	) {
 	}
@@ -71,7 +74,7 @@ final class SapS4HanaOrders {
 			self::ENTITY,
 			array(
 				'filter'  => 'PurchaseOrderByCustomer eq ' . $this->gateway->literal( $reference ),
-				'select'  => self::FIELDS,
+				'select'  => $this->fields(),
 				'orderby' => 'SalesOrder',
 			),
 			1
@@ -131,6 +134,9 @@ final class SapS4HanaOrders {
 			'TransactionCurrency'     => $data->currency,
 			'to_Item'                 => $items,
 		);
+		if ( '' !== $this->options->totalField() && 'shop' === $this->options->priceSource() ) {
+			$body[ $this->options->totalField() ] = $this->marker->append( '', $this->expectedNet( $data ), $data->currency );
+		}
 		if ( '' !== $data->orderDate ) {
 			$body['SalesOrderDate']            = $this->gateway->jsonDate( $data->orderDate );
 			$body['CustomerPurchaseOrderDate'] = $this->gateway->jsonDate( $data->orderDate );
@@ -172,11 +178,52 @@ final class SapS4HanaOrders {
 			$warnings->add( __( 'S/4HANA priced the order itself, so its amount was not compared with the shop.', 'estasoft-erp-crm-sync-engine' ) );
 			return null;
 		}
+		$expected = $this->expectedNet( $data );
+		return $total->run( $expected, $this->amounts->fromWire( $order['TotalNetAmount'] ?? null, $data->currency ), $data->currency, $warnings, __( 'net amount', 'estasoft-erp-crm-sync-engine' ) );
+	}
+
+	/**
+	 * The net amount S/4HANA should show with the shop's prices: the sum of quantity times unit price of the goods lines.
+	 *
+	 * @param OrderData $data Payload.
+	 */
+	public function expectedNet( OrderData $data ): int {
 		$expected = 0;
 		foreach ( $data->lines as $line ) {
 			$expected += $this->amounts->lineTotal( $line->priceMinor, $line->quantity );
 		}
-		return $total->run( $expected, $this->amounts->fromWire( $order['TotalNetAmount'] ?? null, $data->currency ), $data->currency, $warnings, __( 'net amount', 'estasoft-erp-crm-sync-engine' ) );
+		return $expected;
+	}
+
+	/**
+	 * The check findExisting() can make without a payload: the net amount against the shop's net amount written in the header property named
+	 * by the option `total_field`. Without that option nothing is written, so nothing is compared.
+	 *
+	 * @param array<string,mixed> $order Order from S/4HANA.
+	 * @param TotalCheck          $total Total check.
+	 */
+	public function checkMarked( array $order, TotalCheck $total ): ?ConnectorError {
+		$field = $this->options->totalField();
+		if ( '' === $field ) {
+			return null;
+		}
+		$marked = $this->marker->read( (string) ( $order[ $field ] ?? '' ) );
+		if ( null === $marked ) {
+			return null;
+		}
+		$actual = strtoupper( (string) ( $order['TransactionCurrency'] ?? '' ) );
+		if ( '' !== $actual && $actual !== $marked['currency'] ) {
+			return Problem::validation( $this->system, 'TransactionCurrency', __( 'The order exists in S/4HANA but in another currency than the shop charged. Correct or delete it in S/4HANA.', 'estasoft-erp-crm-sync-engine' ) );
+		}
+		$error = $total->run( $marked['minor'], $this->amounts->fromWire( $order['TotalNetAmount'] ?? null, $marked['currency'] ), $marked['currency'], new Warnings(), __( 'net amount', 'estasoft-erp-crm-sync-engine' ) );
+		return null === $error ? null : Problem::validation( $this->system, 'net amount', (string) $error->context['reason'] . ' ' . __( 'Correct or delete the order in S/4HANA.', 'estasoft-erp-crm-sync-engine' ) );
+	}
+
+	/**
+	 * The properties read from an order.
+	 */
+	private function fields(): string {
+		return '' === $this->options->totalField() ? self::FIELDS : self::FIELDS . ',' . $this->options->totalField();
 	}
 
 	/**

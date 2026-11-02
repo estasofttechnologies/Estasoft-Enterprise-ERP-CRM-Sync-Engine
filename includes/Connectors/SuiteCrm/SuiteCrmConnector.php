@@ -94,7 +94,8 @@ final class SuiteCrmConnector extends AbstractSalesConnector {
 			regions: array(),
 			rateLimit: new RateLimitHints( 2.0, 1 ),
 			hosts: array(),
-			merchantHost: true
+			merchantHost: true,
+			pingPath: 'V8/current-user'
 		);
 	}
 
@@ -182,18 +183,42 @@ final class SuiteCrmConnector extends AbstractSalesConnector {
 		if ( $options->flag( 'match_products', false ) ) {
 			$modules[] = 'AOS_Products';
 		}
+		$field    = '';
+		$warnings = array();
 		try {
 			$user        = $api->currentUser();
 			$permissions = array();
 			foreach ( $modules as $module ) {
 				$permissions[ 'read_' . strtolower( $module ) ] = $api->canRead( $module );
 			}
+			$field = $this->records( $connection, $options )->referenceField();
+			if ( '' !== $field && ! $api->fieldExists( 'Opportunities', $field ) ) {
+				/* translators: %s: field name. */
+				SuiteCrmFailure::refuse( 'reference_field', sprintf( __( 'SuiteCRM has no field %s on Opportunities. Make it in Admin, Studio (a text field; its name ends in _c) or clear the option reference_field.', 'estasoft-erp-crm-sync-engine' ), $field ) );
+			}
 		} catch ( SuiteCrmFailure $failure ) {
 			return new TestResult( false, '', '', array(), array(), $failure->error );
 		}
+		if ( '' === trim( $options->text( 'base_currency' ) ) ) {
+			$warnings[] = __( 'Set the option base_currency to the ISO code of the default currency of SuiteCRM (Admin, Currencies). The default currency is not a row of that list, so until then an order in it is refused.', 'estasoft-erp-crm-sync-engine' );
+		}
+		if ( '' === $field ) {
+			$warnings[] = __( 'Orders are found again by the start of the opportunity name (WC-number). If someone renames an opportunity, the order can be sent a second time. Make a text field on Opportunities in Studio and set the option reference_field to its name (it ends in _c).', 'estasoft-erp-crm-sync-engine' );
+		}
 		$ok   = array() === array_filter( $permissions, static fn( bool $allowed ): bool => ! $allowed );
 		$name = trim( (string) ( $user['full_name'] ?? $user['user_name'] ?? $user['name'] ?? '' ) );
-		return new TestResult( $ok, 'SuiteCRM API v8', $name, array(), $permissions, null, array( 'api_prefix' => SuiteCrmAddress::prefix( $connection ) ) );
+		return new TestResult(
+			$ok,
+			'SuiteCRM API v8',
+			$name,
+			array(),
+			$permissions,
+			null,
+			array(
+				'api_prefix' => SuiteCrmAddress::prefix( $connection ),
+				'warnings'   => $warnings,
+			)
+		);
 	}
 
 	/**
@@ -267,7 +292,7 @@ final class SuiteCrmConnector extends AbstractSalesConnector {
 				'lead_source' => $options->text( 'lead_source', 'Web Site' ),
 				'description' => Summary::order( $order ),
 			);
-			$field      = $options->text( 'reference_field' );
+			$field      = $records->referenceField();
 			if ( '' !== $field ) {
 				$attributes[ $field ] = $order->reference;
 			}

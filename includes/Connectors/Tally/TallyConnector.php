@@ -153,9 +153,9 @@ final class TallyConnector extends LedgerExportConnector {
 	/**
 	 * The first voucher, as plain text.
 	 *
-	 * @param array<int,array{item_id:int,order:string,row:array<string,mixed>}> $first    The first rows.
-	 * @param array{orders:int,lines:int,lost:int}                               $stats    Counts.
-	 * @param array<string,mixed>                                                $settings The file's settings.
+	 * @param array<int,array{item_id:int,order:string,row:array<string,mixed>}>                $first    The first rows.
+	 * @param array{orders:int,lines:int,lost:int,lost_orders:int,lost_lines:array<int,string>} $stats Counts.
+	 * @param array<string,mixed>                                                               $settings The file's settings.
 	 */
 	protected function preview( array $first, array $stats, array $settings ): string {
 		$lines  = array(

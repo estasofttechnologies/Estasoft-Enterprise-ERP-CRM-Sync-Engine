@@ -32,7 +32,7 @@ final class WafeqConnectorContractTest extends ApiConnectorContractTestCase {
 	}
 
 	protected function apiConnector(): AbstractApiConnector {
-		return new WafeqConnector( $this->kit->deps );
+		return new WafeqConnector( $this->kit->deps, new \Estasoft\SyncEngine\Tests\Support\FakeWafeqIndexStore() );
 	}
 
 	protected function workingConnection(): Connection {

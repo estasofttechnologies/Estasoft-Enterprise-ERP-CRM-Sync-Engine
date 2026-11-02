@@ -95,9 +95,9 @@ abstract class LedgerExportConnector extends AbstractExportConnector {
 	/**
 	 * A short plain-text look at the start of the file for the Exports screen.
 	 *
-	 * @param array<int,array{item_id:int,order:string,row:array<string,mixed>}> $first    The first rows.
-	 * @param array{orders:int,lines:int,lost:int}                               $stats    Orders, rows of the file's text, characters the character set cannot hold.
-	 * @param array<string,mixed>                                                $settings The file's settings.
+	 * @param array<int,array{item_id:int,order:string,row:array<string,mixed>}>                $first    The first rows.
+	 * @param array{orders:int,lines:int,lost:int,lost_orders:int,lost_lines:array<int,string>} $stats Orders, rows of the file's text, characters the character set cannot hold, how many orders have such characters, and a line for each of the first few.
+	 * @param array<string,mixed>                                                               $settings The file's settings.
 	 */
 	abstract protected function preview( array $first, array $stats, array $settings ): string;
 
@@ -254,6 +254,8 @@ abstract class LedgerExportConnector extends AbstractExportConnector {
 	public function finish( ExportBatch $batch ): ExportFile {
 		$settings = $this->fileSettings( $batch );
 		if ( null === $settings ) {
+			// Nothing can be written. Every order that is still counted as included is reported, so the service raises SYNC-EXP-002 and marks nothing exported.
+			$this->leaveOutUnwritten( $batch, array(), 0 );
 			return new ExportFile( '', $this->exportFormat() );
 		}
 		$work = $this->deps->exports->workFile();
@@ -277,6 +279,7 @@ abstract class LedgerExportConnector extends AbstractExportConnector {
 			throw ExportException::notWritable();
 		}
 		$summary = $this->summary( $batch, $settings );
+		$this->leaveOutUnwritten( $batch, $settings, $summary['orders'] );
 		$this->warnAboutText( $batch, $summary['cut'] );
 		$masters     = $this->renderMasters( $summary['masters'] );
 		$attachments = '' === $masters ? array() : array(
@@ -287,6 +290,16 @@ abstract class LedgerExportConnector extends AbstractExportConnector {
 				'contents' => $masters,
 			),
 		);
+		$notes       = $this->renderLost( $summary['lost_orders'], $this->charsetFor( $settings ) );
+		if ( '' !== $notes ) {
+			$attachments[] = array(
+				'name'     => __( 'Notes', 'estasoft-erp-crm-sync-engine' ),
+				'filename' => 'notes.txt',
+				'mime'     => 'text/plain; charset=utf-8',
+				'contents' => $notes,
+			);
+			$this->warnAboutCharacters( $batch, $summary['lost'], count( $summary['lost_orders'] ), $this->charsetFor( $settings ) );
+		}
 		return ExportFile::fromPath( $work, $this->fileFormat( $settings ), $attachments );
 	}
 
@@ -318,9 +331,11 @@ abstract class LedgerExportConnector extends AbstractExportConnector {
 		return 0 === $summary['orders'] ? '' : $this->preview(
 			$summary['first'],
 			array(
-				'orders' => $summary['orders'],
-				'lines'  => $summary['lines'],
-				'lost'   => $summary['lost'],
+				'orders'      => $summary['orders'],
+				'lines'       => $summary['lines'],
+				'lost'        => $summary['lost'],
+				'lost_orders' => count( $summary['lost_orders'] ),
+				'lost_lines'  => array_map( fn( array $entry ): string => $this->lostLine( $entry['order'], $entry['chars'] ), array_slice( $summary['lost_orders'], 0, 5 ) ),
 			),
 			$settings
 		);
@@ -409,17 +424,18 @@ abstract class LedgerExportConnector extends AbstractExportConnector {
 	 * @param ExportBatch         $batch    The batch.
 	 * @param array<string,mixed> $settings The file's settings.
 	 * @param int                 $keep     How many of the first rows to keep.
-	 * @return array{orders:int,lines:int,cut:int,lost:int,masters:array<string,array<string,true>>,first:array<int,array{item_id:int,order:string,row:array<string,mixed>}>}
+	 * @return array{orders:int,lines:int,cut:int,lost:int,lost_orders:array<int,array{order:string,chars:array<string,int>}>,masters:array<string,array<string,true>>,first:array<int,array{item_id:int,order:string,row:array<string,mixed>}>}
 	 */
 	private function summary( ExportBatch $batch, array $settings, int $keep = 0 ): array {
 		$charset = $this->charsetFor( $settings );
 		$summary = array(
-			'orders'  => 0,
-			'lines'   => 0,
-			'cut'     => 0,
-			'lost'    => 0,
-			'masters' => array(),
-			'first'   => array(),
+			'orders'      => 0,
+			'lines'       => 0,
+			'cut'         => 0,
+			'lost'        => 0,
+			'lost_orders' => array(),
+			'masters'     => array(),
+			'first'       => array(),
 		);
 		foreach ( $this->rowsOf( $batch ) as $entry ) {
 			if ( ! $this->belongsToFile( $entry, $settings ) ) {
@@ -429,7 +445,14 @@ abstract class LedgerExportConnector extends AbstractExportConnector {
 			++$summary['orders'];
 			$summary['lines'] += 1 + substr_count( $text, "\n" );
 			$summary['cut']   += (int) ( $entry['row']['cut'] ?? 0 );
-			$summary['lost']  += $charset->lossy( $text );
+			$lost              = $charset->lostCharacters( $text );
+			if ( array() !== $lost ) {
+				$summary['lost']         += array_sum( $lost );
+				$summary['lost_orders'][] = array(
+					'order' => $entry['order'],
+					'chars' => $lost,
+				);
+			}
 			foreach ( (array) ( $entry['row']['masters'] ?? array() ) as $kind => $names ) {
 				foreach ( (array) $names as $name ) {
 					if ( is_string( $name ) && '' !== $name ) {
@@ -442,6 +465,117 @@ abstract class LedgerExportConnector extends AbstractExportConnector {
 			}
 		}
 		return $summary;
+	}
+
+	/**
+	 * Report every order the engine still counts as included but that is not in the file. The engine marks the included orders as
+	 * exported and closes their rows, so an order that was skipped silently would be lost from the books with no trace: a row written
+	 * by another version of the plugin, a row file that cannot be read, a marker row. Each one is left out with a reason and shows up
+	 * under SYNC-EXP-002; when nothing at all was written, no order is included and the engine raises SYNC-EXP-002 instead of storing an
+	 * empty file.
+	 *
+	 * @param ExportBatch         $batch    The batch, after the file was written.
+	 * @param array<string,mixed> $settings The file's settings, empty when no row could be written.
+	 * @param int                 $written  How many orders are in the file.
+	 */
+	private function leaveOutUnwritten( ExportBatch $batch, array $settings, int $written ): void {
+		if ( count( $batch->includedIds() ) === $written ) {
+			return;
+		}
+		$inFile = array();
+		foreach ( array() === $settings ? array() : $this->rowsOf( $batch ) as $entry ) {
+			if ( $this->belongsToFile( $entry, $settings ) ) {
+				$inFile[ $entry['item_id'] ] = true;
+			}
+		}
+		$seen = array();
+		foreach ( $batch->iterate() as $entry ) {
+			$seen[ $entry['item_id'] ] = true;
+			if ( isset( $inFile[ $entry['item_id'] ] ) ) {
+				continue;
+			}
+			$batch->leaveOut(
+				$entry['item_id'],
+				$entry['order'],
+				isset( $entry['row']['v'] ) && self::ROW_VERSION !== $entry['row']['v']
+					? __( 'it was saved by another version of the plugin and cannot be written to this file; send it again', 'estasoft-erp-crm-sync-engine' )
+					: __( 'it could not be written to this file; send it again', 'estasoft-erp-crm-sync-engine' )
+			);
+		}
+		foreach ( $batch->includedIds() as $itemId ) {
+			if ( ! isset( $seen[ $itemId ] ) ) {
+				$batch->leaveOut( $itemId, (string) $itemId, __( 'its saved row could not be read; send it again', 'estasoft-erp-crm-sync-engine' ) );
+			}
+		}
+	}
+
+	/**
+	 * One line about the characters of an order that the character set cannot hold.
+	 *
+	 * @param string            $order Order id.
+	 * @param array<string,int> $chars Character to count.
+	 */
+	private function lostLine( string $order, array $chars ): string {
+		$parts = array();
+		foreach ( array_slice( $chars, 0, 20, true ) as $char => $count ) {
+			$parts[] = 1 === $count ? (string) $char : sprintf( '%1$s (%2$d)', (string) $char, $count );
+		}
+		return sprintf(
+			/* translators: 1: order id, 2: the characters, such as "ل, ي (2)" */
+			__( 'Order %1$s: %2$s', 'estasoft-erp-crm-sync-engine' ),
+			$order,
+			implode( ', ', $parts ) . ( count( $chars ) > 20 ? ', ...' : '' )
+		);
+	}
+
+	/**
+	 * The notes file: every order that has characters the file cannot hold, and which ones.
+	 *
+	 * @param array<int,array{order:string,chars:array<string,int>}> $orders  Orders with such characters.
+	 * @param Charset                                                $charset Character set of the file.
+	 */
+	private function renderLost( array $orders, Charset $charset ): string {
+		if ( array() === $orders ) {
+			return '';
+		}
+		$lines   = array();
+		$lines[] = sprintf(
+			/* translators: %s: character set such as windows-1252 */
+			__( 'These characters cannot be written in %s. Each one is written as a question mark in the file.', 'estasoft-erp-crm-sync-engine' ),
+			$charset->label()
+		);
+		$lines[] = __( 'Choose UTF-8 with byte order mark as the file encoding in the connection settings if your system reads it, and make the file again.', 'estasoft-erp-crm-sync-engine' );
+		$lines[] = '';
+		foreach ( $orders as $entry ) {
+			$lines[] = $this->lostLine( $entry['order'], $entry['chars'] );
+		}
+		return implode( "\n", $lines ) . "\n";
+	}
+
+	/**
+	 * Log once per file how many characters were replaced. A log failure never stops an export.
+	 *
+	 * @param ExportBatch $batch   The batch.
+	 * @param int         $count   Number of characters.
+	 * @param int         $orders  Number of orders.
+	 * @param Charset     $charset Character set of the file.
+	 */
+	private function warnAboutCharacters( ExportBatch $batch, int $count, int $orders, Charset $charset ): void {
+		try {
+			$this->deps->logger->warning(
+				sprintf(
+					/* translators: 1: number of characters, 2: number of orders, 3: system name, 4: character set */
+					__( '%1$d characters in %2$d orders cannot be written in %4$s and were written as question marks in the %3$s file. See the notes file of the export.', 'estasoft-erp-crm-sync-engine' ),
+					$count,
+					$orders,
+					$this->label(),
+					$charset->label()
+				),
+				array( 'connection_id' => $batch->connectionId )
+			);
+		} catch ( \Throwable $failure ) {
+			unset( $failure ); // Logging is best effort.
+		}
 	}
 
 	/**

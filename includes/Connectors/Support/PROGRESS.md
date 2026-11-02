@@ -12,4 +12,5 @@
 - Step 8 (BUILDING.md, README.md): done.
 - Late requests (V1, V2, V8): done, see CHANGES.md items 16 and 17 and REQUESTS.md. Lazy `ExportBatch::iterate()`, `ExportFile::fromPath()`, attachments, `hasItem()`, Refund, `oauth_callback`, `refreshOnDemand`, `limitsFor()`, `requiresSignIn()`.
 - Catalog forms and 12 review fixes (2026-11-02): done, CHANGES.md items 18 to 20 (the list of CSV writers V8 must switch is in item 20).
-- Last full run (2026-11-02): unit 4,857 tests green, integration 978 tests green; php -l, red-flags, PHP 8.1 scan, tsc, generators `--check` clean; phpcs clean for Support, ConnectorsModule, Catalog, Jobs/Connections, OAuthController; phpstan reports nothing in V0 files.
+- Review-fix batch from briefs/review-fixes/v0.md (2026-11-02): done, CHANGES.md item 21. `OAuthConfig::$minTokenAgeSeconds` (for V7), same-origin rule for absolute links in `ApiClient`, `ConnectorMeta::$pingPath` and the single-GET `ping()`, `unavailable_reason` in the catalog, wildcard hosts as patterns in the generator.
+- Last full run (2026-11-02): unit 5,161 tests green, integration 982 tests green; php -l, red-flags, PHP 8.1 scan, tsc, generators `--check` and `--strict` clean; phpcs clean for Support, Catalog, Jobs/Connections; phpstan reports nothing new in V0 files.

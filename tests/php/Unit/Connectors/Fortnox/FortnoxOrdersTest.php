@@ -162,6 +162,51 @@ final class FortnoxOrdersTest extends FortnoxTestCase {
 		$this->assertCount( 1, $this->server->invoices, 'The retry did not make a second invoice.' );
 	}
 
+	/**
+	 * An order whose total is 125.40 SEK: 100.32 plus 25 percent VAT, which a company that rounds to whole kronor records as 125.00.
+	 *
+	 * @param string $id Order id.
+	 * @return array{0:\Estasoft\SyncEngine\Domain\Item,1:array<string,mixed>}
+	 */
+	private function roundedOrder( string $id ): array {
+		list( $item, $payload ) = $this->order( $id );
+		$payload['total']      = 12540;
+		$payload['order_line'] = array( array( 'product' => 'CS-TEE-02', 'name' => 'Tee', 'quantity' => 1, 'price_unit' => 10032, 'tax' => '25' ) );
+		return array( $item, $payload );
+	}
+
+	public function test_a_company_that_rounds_its_totals_is_not_a_failed_check_whether_total_holds_the_rounding_or_not(): void {
+		foreach ( array( 'in_total', 'beside_total' ) as $index => $mode ) {
+			$this->server->rounding = $mode;
+			list( $item, $payload ) = $this->roundedOrder( (string) ( 1100 + $index ) );
+			$connection             = $this->connection( array(), array(), 'fx-access-' . ( $index + 1 ) );
+			$result                 = $this->connector->send( $connection, $item, $payload );
+			$this->assertTrue( $result->isSuccess(), $mode . ': ' . (string) $result->error?->message() );
+			if ( 'in_total' === $mode ) {
+				$this->assertStringContainsString( '-0.40', implode( ' ', $result->ref->extra['warnings'] ), 'The rounding is noted.' );
+			} else {
+				$this->assertSame( array(), $result->ref->extra['warnings'], 'Total is the exact amount: nothing to explain.' );
+			}
+			$this->assertNotNull( $this->connector->findExisting( $connection, $item ), $mode . ': the finished invoice is found.' );
+			$again = $this->connector->send( $connection, $item, $payload );
+			$this->assertTrue( $again->alreadyExisted, $mode );
+		}
+		$this->assertCount( 2, $this->server->invoices, 'One invoice for each order.' );
+	}
+
+	public function test_rounding_does_not_hide_a_real_difference_and_a_failed_check_is_never_found_as_finished(): void {
+		$this->server->rounding    = 'in_total';
+		$this->server->totalFactor = 1.1;
+		$connection                = $this->connection();
+		list( $item, $payload )    = $this->roundedOrder( '1102' );
+		$result                    = $this->connector->send( $connection, $item, $payload );
+		$this->assertSame( ErrorCode::Val002, $result->error->code );
+		$this->assertSame( 'total', $result->error->context['field'] );
+		$this->assertNull( $this->connector->findExisting( $connection, $item ), 'The pending invoice is not accepted.' );
+		$this->assertSame( ErrorCode::Val002, $this->connector->send( $connection, $item, $payload )->error->code );
+		$this->assertCount( 1, $this->server->invoices );
+	}
+
 	public function test_a_cancelled_pending_invoice_lets_the_retry_make_a_new_one(): void {
 		$this->server->totalFactor = 1.1;
 		$connection = $this->connection();

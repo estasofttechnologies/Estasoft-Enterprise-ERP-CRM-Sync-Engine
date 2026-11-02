@@ -6,7 +6,7 @@ connection_method: own_app
 available: true
 verified: false
 hosts: [quickbooks.api.intuit.com, sandbox-quickbooks.api.intuit.com, appcenter.intuit.com, oauth.platform.intuit.com]
-terms_url: https://www.intuit.com/legal/terms/en-us/intuit-developer/
+terms_url: https://developer.intuit.com/app/developer/qbo/docs/legal-agreements/intuit-terms-of-service-for-intuit-developer-services
 privacy_url: https://www.intuit.com/privacy/statement/
 developer_url: https://developer.intuit.com/app/developer/dashboard
 variants: []
@@ -97,7 +97,7 @@ Payload paths are the names the Odoo connector uses. QuickBooks has no sales-ord
 | --- | --- |
 | `client_order_ref` (always the item's `WC-{id}`) | `DocNumber` (max 21 characters) [documented, SDK]; `PrivateNote` also starts with it |
 | `date_order` | `TxnDate` (YYYY-MM-DD); `DueDate` = date + `due_days` |
-| `currency` | `CurrencyRef.value` (only when it differs from the home currency) |
+| `currency` | `CurrencyRef.value` on the invoice, credit memo and (new) customer whenever the company uses more than one currency (`MultiCurrencyEnabled`), including in the home currency; with multi-currency off it is sent only when it differs from the home currency, which is refused |
 | `prices_include_tax` | `GlobalTaxCalculation` `TaxInclusive` or `TaxExcluded` (outside the US) |
 | `total`, `excluded_total` | not sent; the expected total for the check |
 | `partner.name`, `company_name` | Customer `DisplayName` (company if given), `GivenName` (25), `FamilyName` (15), `CompanyName` |
@@ -118,21 +118,23 @@ QuickBooks has no draft state: an invoice is posted when it is created. That is 
 
 1. Check the payload before any request.
 2. Find the invoice: `select * from Invoice where DocNumber = 'WC-{id}'` with `STARTPOSITION` and `MAXRESULTS 100`, all pages. A hit whose total is 0 while the order is not 0 is a voided invoice and stops the item with SYNC-VAL-002 (the merchant voided it on purpose).
-3. If none exists: read `GET .../companyinfo/{realm}` (country, name) and `GET .../preferences` (`SalesFormsPrefs.CustomTxnNumbers`, `CurrencyPrefs.MultiCurrencyEnabled`, `HomeCurrency`) once per request. A currency other than the home currency needs multi-currency to be on (else SYNC-VAL-002). In the US, `prices_include_tax` is refused (QuickBooks US adds sales tax on top).
+3. If none exists: read `GET .../companyinfo/{realm}` (country, name) and `GET .../preferences` (`SalesFormsPrefs.CustomTxnNumbers`, `CurrencyPrefs.MultiCurrencyEnabled`, `HomeCurrency`) once per request. A currency other than the home currency needs multi-currency to be on (else SYNC-VAL-002). With multi-currency on, the customer must be in the order's currency (see Customers below). In the US, `prices_include_tax` is refused (QuickBooks US adds sales tax on top).
 4. Resolve items: `select * from Item where Sku in ('A','B')` (20 SKUs a time); a missing one follows `unknown_sku`; an item of type Category is refused. Resolve the customer (below).
 5. Create the invoice with `POST /invoice?minorversion=75&requestid=...` (see section 8). Its `PrivateNote` is `WC-{id} [unchecked]`: the invoice exists in QuickBooks from this moment, and the marker says the connector has not yet read it back.
 6. Read the answer: currency and `TotalAmt`. A different currency, or a total that differs from `total - excluded_total` by more than one minor unit, is SYNC-VAL-002 naming both values; with `total_mismatch = fail` the connector first deletes the invoice (`POST /invoice?operation=delete` with `Id` and `SyncToken`). When all agrees, a sparse update (`sparse: true`, `Id`, `SyncToken`, `PrivateNote` without the marker) marks the invoice as checked. If QuickBooks answers 5010 (stale `SyncToken`, for example when a replayed answer is older than the invoice) the invoice is read again and the update is tried once more.
 7. For `invoice_paid` with a payment date: `POST /payment` with `CustomerRef`, `TotalAmt` = the invoice `Balance` read just before, `PaymentRefNum` `WC-{id}`, `DepositToAccountRef` when set, and a `Line` linked to the invoice (`LinkedTxn` `TxnType Invoice`). If `Balance` is already 0 nothing is created.
 8. Result: external id = invoice `Id`, reference = `DocNumber`, `extra` = total in minor units, currency, balance.
 
-Replays: a create or payment that may have reached QuickBooks (time-out, 5xx) ends the pass; the next pass starts at step 2. An invoice that is found with the marker still in its note is never reported as finished (`findExisting()` returns nothing for it): the next pass reads it back, checks it and removes the marker, so a pass that stopped between create and check cannot leave an unchecked invoice behind as done. `DocNumber` is checked by QuickBooks for duplicates (error 6140 [third-party]); when 6140 comes back the invoice is searched again and, if found, treated as existing.
+Replays: a create or payment that may have reached QuickBooks (time-out, 5xx) ends the pass; the next pass starts at step 2, and a retry of the create sends the same `requestid` (section 8), so QuickBooks replays the first answer instead of making a second invoice. If the replayed answer names an invoice that no longer exists (the connector deleted it, or a person did), the check read-back finds it gone, that invoice's id is added to the `requestid`, and the create is sent once more (three rounds at most, then SYNC-VAL-002). An invoice that is found with the marker still in its note is never reported as finished (`findExisting()` returns nothing for it): the next pass reads it back, checks it and removes the marker, so a pass that stopped between create and check cannot leave an unchecked invoice behind as done. `DocNumber` is checked by QuickBooks for duplicates (error 6140 [third-party]); when 6140 comes back the invoice is searched again and, if found, treated as existing.
 
-Customers: `select * from Customer where PrimaryEmailAddr = 'x'` [inferred filter], else `POST /customer`. QuickBooks needs a `DisplayName` that is unique among customers, vendors and employees and without a colon; error 6240 makes the connector retry once with the email in brackets after the name.
+Customers: `select * from Customer where PrimaryEmailAddr = 'x'` [inferred filter], else `POST /customer`. QuickBooks needs a `DisplayName` that is unique among customers, vendors and employees and without a colon; error 6240 makes the connector retry with the email in brackets after the name, and, in a multi-currency company, a third time with the email and the currency (`Jane Doe (jane@example.com, EUR)`).
+
+Currency of customers: a customer in a multi-currency company has one currency and it cannot be changed afterwards [documented, SDK: `CurrencyRef` on `Customer`; the "cannot be changed" rule is from Intuit's help pages as quoted by third parties]. So with multi-currency on, an existing customer is reused only when its `CurrencyRef` equals the order's currency (a customer without `CurrencyRef` counts as the home currency); otherwise a new customer is created with `CurrencyRef` = the order's currency, and the invoice or credit memo carries the same `CurrencyRef`, also in the home currency. With multi-currency off the customer is matched by email only and no `CurrencyRef` is sent (QuickBooks refuses one).
 
 ## 8. Duplicate protection
 
 - Reference field: `DocNumber` = `WC-{order id}` on invoices, `WC-{refund id}` on credit memos. This only works when the company has Custom transaction numbers on (`SalesFormsPrefs.CustomTxnNumbers` [documented, SDK]); Test connection fails with a clear message when it is off, because the invoice number would then be chosen by QuickBooks and the search could not find it again.
-- `requestid` query parameter: Intuit says resending a request with the same `requestid` replays the earlier one [documented, Intuit blog]. The value is `wc-{first 40 hex of sha1 of connection, reference, step, try number and body}` (50 characters at most [third-party]). The try number (the queue item's `attempt`) is part of the value on purpose: a retry that follows a deleted invoice must not be handed the answer about the invoice that was deleted. Across tries the duplicate protection is the document number, not the request id.
+- `requestid` query parameter: Intuit says resending a request with the same `requestid` replays the earlier one [documented, Intuit blog]. The value is `wc-{first 40 hex of sha1 of connection, reference, step, the ids of this document's deleted predecessors and the body}` (50 characters at most [third-party]). The queue item's `attempt` is not part of it: a retry after a time-out sends the same value with the same body, so the first create is replayed, not repeated (document numbers are only unique when the company has custom numbers on and the search sees the first invoice at once, which is not guaranteed). The value changes only when the body changes or after the connector found that the invoice its earlier create made no longer exists (the id of that invoice is added), so a retry after a deleted invoice is not handed the answer about the deleted one. The payment and credit memo creates follow the same rule. Customer creates use a value of their own from the customer body.
 - Search by `DocNumber` before every create; `findExisting()` returns an invoice only when the steps the settings ask for are done.
 
 ## 9. Taxes
@@ -157,6 +159,8 @@ A refund finds the order's invoice (`WC-{order id}`; missing: SYNC-VAL-002 first
 - Tracking, prices and webhooks: not built (QuickBooks webhooks must be CloudEvents and need a public endpoint).
 
 ## 13. Rate limits and pacing
+
+The circuit breaker's health probe (`ping()`) is one `GET companyinfo/{realm}`, made fresh every time (not answered from what an earlier read cached); it is false on any failure.
 
 500 requests a minute per realm including batch, 10 concurrent requests [documented, Intuit blog]; 429 `ThrottleExceeded` code 003001 [third-party]. The connector runs one call at a time at most 4 a second and 450 a minute, and waits as told on a 429 (30 seconds when there is no `Retry-After`). There is no documented daily cap, so none is applied. One order costs about 7 calls (invoice search, company info, preferences, items, customer search, create).
 
@@ -200,11 +204,14 @@ QuickBooks error body: `{"Fault":{"Error":[{"Message","Detail","code","element"}
 - That a query sees an invoice the moment it was created; the unchecked marker and error 6140 cover a delay.
 - `PrimaryEmailAddr` as a query filter (the SDK marks only names as filterable); if QuickBooks answers a fault for that query the connector falls back to `DisplayName`.
 - Whether `DocNumber` is kept when Custom transaction numbers is off (assumed not; Test connection requires it on).
-- The exchange rate used when a foreign-currency invoice has no `ExchangeRate`.
+- The exchange rate used when a foreign-currency invoice has no `ExchangeRate`: the connector sends none, and QuickBooks is assumed to use the rate it holds for the day.
+- Whether QuickBooks requires the currency of an invoice to equal the currency of its customer (assumed, and enforced by the connector and by `FakeQuickBooksServer`; Intuit's pages on this could not be opened), and the exact wording of the rule that a customer's currency cannot be changed.
+- That a company with multi-currency on accepts `CurrencyRef` equal to the home currency on a document and on a customer (assumed: it is what the sales form does); with multi-currency off a customer `CurrencyRef` is assumed to be refused, so none is sent.
+- Whether a replayed `requestid` after a time-out returns the first answer for a create that did finish (the blog post says so; retention is not stated).
 - The `x_refresh_token_expires_in` handling is left to the engine's `refreshTokenLifetimeDays = 100`.
 - Escaping in the query language (`\'` for a quote) follows common practice.
 - Linking a credit memo to an invoice through a payment (not built).
-- Privacy and terms URLs and the developer dashboard URL are the usual Intuit addresses; the fetch tool could not open them.
+- Terms URL: the page is listed by a web search as "Intuit Developer Terms of Service" but its content is rendered by script and could not be read. Privacy URL `https://www.intuit.com/privacy/statement/` is listed by a web search ("Intuit Global Privacy Statement" at that address) and was not opened. The developer dashboard URL is the usual Intuit address and was not opened.
 - The 25-redirect-URI limit and the CorePlus metering come from the research file.
 - No live company was available. Behaviour above the wire is tested against `FakeQuickBooksServer` and fixtures written from the SDK schema.
 

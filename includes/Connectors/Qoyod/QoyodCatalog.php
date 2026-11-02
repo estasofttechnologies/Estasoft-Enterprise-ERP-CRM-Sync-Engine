@@ -131,7 +131,7 @@ final class QoyodCatalog {
 		if ( '' === $sku ) {
 			return null;
 		}
-		foreach ( $this->pager->all( $api, 'products', array( 'q' => array( 'sku_cont' => $sku ) ), 'products' ) as $product ) {
+		foreach ( $this->pager->all( $api, 'products', array( 'q' => array( 'sku_cont' => $sku ) ), 'products', static fn( array $row ): bool => str_contains( strtolower( QoyodPayloadReader::text( $row['sku'] ?? '' ) ), strtolower( $sku ) ) ) as $product ) {
 			if ( 0 === strcasecmp( QoyodPayloadReader::text( $product['sku'] ?? '' ), $sku ) ) {
 				return $product;
 			}

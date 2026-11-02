@@ -33,7 +33,7 @@ final class HoldedConnectorContractTest extends ApiConnectorContractTestCase {
 	}
 
 	protected function apiConnector(): AbstractApiConnector {
-		return new HoldedConnector( $this->kit->deps );
+		return new HoldedConnector( $this->kit->deps, new \Estasoft\SyncEngine\Tests\Support\FakeHoldedIndexStore() );
 	}
 
 	protected function workingConnection(): Connection {

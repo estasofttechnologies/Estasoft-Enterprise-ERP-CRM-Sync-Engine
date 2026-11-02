@@ -11,6 +11,7 @@ namespace Estasoft\SyncEngine\Connectors\BusinessCentral;
 
 defined( 'ABSPATH' ) || exit;
 
+use Estasoft\SyncEngine\Connectors\Microsoft\Dates;
 use Estasoft\SyncEngine\Connectors\Microsoft\Failures;
 use Estasoft\SyncEngine\Contract\ConnectorError;
 
@@ -82,7 +83,7 @@ final class BcRefundData {
 		}
 		return new self(
 			$orderRef,
-			self::date( $payload['date'] ?? '' ),
+			Dates::calendarDate( $payload['date'] ?? '' ),
 			is_string( $payload['reason'] ?? null ) ? trim( $payload['reason'] ) : '',
 			$amount,
 			$lines,
@@ -104,22 +105,5 @@ final class BcRefundData {
 			return (int) $value;
 		}
 		return is_string( $value ) && 1 === preg_match( '/^-?\d{1,15}$/', trim( $value ) ) ? (int) trim( $value ) : null;
-	}
-
-	/**
-	 * The UTC date of a date or date-time text.
-	 *
-	 * @param mixed $value Text.
-	 */
-	private static function date( mixed $value ): string {
-		if ( ! is_string( $value ) || '' === trim( $value ) ) {
-			return '';
-		}
-		try {
-			return ( new \DateTimeImmutable( trim( $value ), new \DateTimeZone( 'UTC' ) ) )->setTimezone( new \DateTimeZone( 'UTC' ) )->format( 'Y-m-d' );
-		} catch ( \Exception $exception ) {
-			unset( $exception );
-			return '';
-		}
 	}
 }

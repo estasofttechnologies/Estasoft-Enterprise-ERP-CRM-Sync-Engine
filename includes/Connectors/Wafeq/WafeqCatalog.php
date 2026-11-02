@@ -18,8 +18,9 @@ use Estasoft\SyncEngine\Core\Support\Clock;
 use Estasoft\SyncEngine\Domain\ErrorCode;
 
 /**
- * Wafeq has no SKU filter on items and no code filter on accounts [documented], so these lists are read in full (all pages) and searched
- * here. They are kept in memory for ten minutes per connection so one worker run reads them once.
+ * Wafeq has no SKU filter on items and no code filter on accounts [documented]. The account and tax-rate lists are small and are read in full,
+ * kept in memory for ten minutes per connection. A SKU is found through the item index (`WafeqItemIndex`), which is kept between requests and
+ * stops reading as soon as the SKU is found; a name or SKU search for the mapping screen still reads the whole list.
  */
 final class WafeqCatalog {
 
@@ -38,11 +39,12 @@ final class WafeqCatalog {
 	/**
 	 * Set up with what it depends on.
 	 *
-	 * @param WafeqPager   $pager   Reads every page of a list.
-	 * @param Clock        $clock   Time source.
-	 * @param WafeqAmounts $amounts Conversion helper.
+	 * @param WafeqPager     $pager   Reads every page of a list.
+	 * @param Clock          $clock   Time source.
+	 * @param WafeqAmounts   $amounts Conversion helper.
+	 * @param WafeqItemIndex $index  SKU index of the items.
 	 */
-	public function __construct( private readonly WafeqPager $pager, private readonly Clock $clock, private readonly WafeqAmounts $amounts ) {
+	public function __construct( private readonly WafeqPager $pager, private readonly Clock $clock, private readonly WafeqAmounts $amounts, private readonly WafeqItemIndex $index ) {
 	}
 
 	/**
@@ -193,12 +195,34 @@ final class WafeqCatalog {
 		if ( '' === $sku ) {
 			return null;
 		}
-		foreach ( $this->rows( $api, $connectionId, 'items/' ) as $item ) {
-			if ( 0 === strcasecmp( WafeqPayloadReader::text( $item['sku'] ?? '' ), $sku ) ) {
-				return $item;
-			}
+		$found = $this->index->find( $api, $connectionId, $sku );
+		return null === $found ? null : array(
+			'id'   => $found['id'],
+			'sku'  => $found['sku'],
+			'name' => '',
+		);
+	}
+
+	/**
+	 * Drop the kept SKU index when Wafeq refused an item of a document, because the index may hold an id that no longer exists.
+	 *
+	 * @param ApiException $exception The refusal of a create.
+	 * @param int          $connectionId Connection id.
+	 */
+	public function itemRefused( ApiException $exception, int $connectionId ): void {
+		$error = $exception->error();
+		if ( ErrorCode::Val002 === $error->code && 1 === preg_match( '/(^|\.)item$/', (string) ( $error->context['field'] ?? '' ) ) ) {
+			$this->index->forget( $connectionId );
 		}
-		return null;
+	}
+
+	/**
+	 * Drop the kept SKU index of a connection (Wafeq refused an item id, or the catalogue changed).
+	 *
+	 * @param int $connectionId Connection id.
+	 */
+	public function forgetItems( int $connectionId ): void {
+		$this->index->forget( $connectionId );
 	}
 
 	/**

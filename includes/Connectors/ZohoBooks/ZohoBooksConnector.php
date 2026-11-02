@@ -55,6 +55,17 @@ final class ZohoBooksConnector extends AbstractSalesConnector implements OAuthCo
 	private const NAME_LIMIT = 200;
 
 	/**
+	 * Calls a day the connector allows itself, by Zoho Books plan: 90 percent of the documented allowance (1,000 Free, 2,000 Standard,
+	 * 5,000 Professional, 10,000 Premium, Elite and Ultimate), because other integrations of the organisation draw on the same allowance.
+	 */
+	private const DAILY_CALLS = array(
+		'free'         => 900,
+		'standard'     => 1800,
+		'professional' => 4500,
+		'premium'      => 9000,
+	);
+
+	/**
 	 * Connector facts.
 	 */
 	protected function meta(): ConnectorMeta {
@@ -66,9 +77,21 @@ final class ZohoBooksConnector extends AbstractSalesConnector implements OAuthCo
 			entities: array( EntityType::Order, EntityType::Refund, EntityType::Customer ),
 			auth: AuthStyle::OAuthAuthorizationCode,
 			regions: array(),
-			rateLimit: new RateLimitHints( requestsPerSecond: 1.0, concurrency: 1, requestsPerMinute: 60 ),
+			rateLimit: new RateLimitHints( requestsPerSecond: 1.0, concurrency: 1, requestsPerMinute: 60, requestsPerDay: self::DAILY_CALLS['free'] ),
 			hosts: ZohoDataCentre::allHosts()
 		);
+	}
+
+	/**
+	 * The limits of this connection: the daily allowance follows the plan the merchant chose (Free when none), so a small plan is never
+	 * run into the ground by a busy shop.
+	 *
+	 * @param Connection $connection Connection.
+	 */
+	protected function limitsFor( Connection $connection ): RateLimitHints {
+		$base = $this->connectorMeta()->limits();
+		$plan = $this->options( $connection )->choice( 'plan', array_keys( self::DAILY_CALLS ), 'free' );
+		return new RateLimitHints( $base->requestsPerSecond, $base->concurrency, $base->requestsPerMinute, self::DAILY_CALLS[ $plan ] );
 	}
 
 	/**
@@ -77,7 +100,7 @@ final class ZohoBooksConnector extends AbstractSalesConnector implements OAuthCo
 	 * @return array<int,string>
 	 */
 	protected function optionKeys(): array {
-		return array( 'organization_id', 'organization_currency', 'unknown_sku', 'invoice_state', 'refund_state', 'record_payment', 'payment_account', 'payment_mode', 'refund_tax_id', 'total_mismatch' );
+		return array( 'organization_id', 'organization_currency', 'plan', 'unknown_sku', 'invoice_state', 'refund_state', 'record_payment', 'payment_account', 'payment_mode', 'refund_tax_id', 'total_mismatch' );
 	}
 
 	/**
@@ -91,6 +114,22 @@ final class ZohoBooksConnector extends AbstractSalesConnector implements OAuthCo
 			CredentialFields::clientId(),
 			CredentialFields::clientSecret(),
 			new CredentialField( 'organization_id', __( 'Organisation id', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Filled in when you sign in and choose the organisation.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
+			new CredentialField(
+				'plan',
+				__( 'Zoho Books plan', 'estasoft-erp-crm-sync-engine' ),
+				false,
+				false,
+				__( 'Sets the daily call allowance. The sync stops at 90 percent of it and waits for the next day.', 'estasoft-erp-crm-sync-engine' ),
+				'free',
+				'select',
+				array(
+					'free'         => __( 'Free (1,000 calls a day)', 'estasoft-erp-crm-sync-engine' ),
+					'standard'     => __( 'Standard (2,000 calls a day)', 'estasoft-erp-crm-sync-engine' ),
+					'professional' => __( 'Professional (5,000 calls a day)', 'estasoft-erp-crm-sync-engine' ),
+					'premium'      => __( 'Premium, Elite or Ultimate (10,000 calls a day)', 'estasoft-erp-crm-sync-engine' ),
+				),
+				'advanced'
+			),
 			new CredentialField( 'refund_tax_id', __( 'Tax code for refunds', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Optional. The refund amount is treated as including this tax.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
 			new CredentialField( 'payment_account', __( 'Account that receives payments', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Only needed to record payments.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
 		);
@@ -265,8 +304,23 @@ final class ZohoBooksConnector extends AbstractSalesConnector implements OAuthCo
 			'currency'    => strtoupper( (string) ( $org['currency_code'] ?? '' ) ),
 			'taxes'       => is_array( $taxes ) ? count( $taxes ) : null,
 			'data_centre' => ZohoDataCentre::forConnection( $connection )->id(),
+			'daily_calls' => $this->limitsFor( $connection )->requestsPerDay,
 		);
 		return new TestResult( null === $error, 'Zoho Books API v3', (string) ( $org['name'] ?? 'Zoho Books' ), array(), $permissions, $error, $detected );
+	}
+
+	/**
+	 * Cheap health probe: one call that needs no organisation and proves the sign-in works.
+	 *
+	 * @param Connection $connection Connection.
+	 */
+	public function ping( Connection $connection ): bool {
+		try {
+			return array() !== $this->books( $connection, true )->organizations();
+		} catch ( \Throwable $throwable ) {
+			unset( $throwable );
+			return false;
+		}
 	}
 
 	/**
@@ -316,8 +370,14 @@ final class ZohoBooksConnector extends AbstractSalesConnector implements OAuthCo
 	 */
 	public function searchProducts( Connection $connection, string $query ): array|ConnectorError {
 		try {
+			$books = $this->books( $connection );
+			$rows  = $books->all( 'items', 'items', array( 'search_text' => $query ) );
+			if ( array() === $rows && '' !== $query ) {
+				// Zoho searches names and descriptions; a SKU that is in neither is found by reading the item list.
+				$rows = array_values( array_filter( $books->all( 'items', 'items' ), static fn( array $row ): bool => str_contains( Text::lower( (string) ( $row['sku'] ?? '' ) ), Text::lower( $query ) ) ) );
+			}
 			$refs = array();
-			foreach ( $this->books( $connection )->all( 'items', 'items', array( 'search_text' => $query ) ) as $item ) {
+			foreach ( array_slice( $rows, 0, 50 ) as $item ) {
 				$refs[] = new ExternalRef( (string) ( $item['item_id'] ?? '' ), (string) ( $item['sku'] ?? '' ), null, array( 'name' => (string) ( $item['name'] ?? '' ) ) );
 			}
 			return $refs;
@@ -655,14 +715,23 @@ final class ZohoBooksConnector extends AbstractSalesConnector implements OAuthCo
 	}
 
 	/**
-	 * The item whose SKU equals the value, ignoring case.
+	 * The item whose SKU equals the value, ignoring case. Zoho Books documents no SKU filter on the item list: `search_text` looks at names
+	 * and descriptions. So the text search is tried first (cheap, and right when the SKU is part of the name), and when it holds no exact
+	 * SKU match the item list is read page by page and compared here. The list is kept in $catalogue so an order with several lines reads
+	 * it once.
 	 *
-	 * @param ZohoBooksApi $books API.
-	 * @param string       $sku   SKU.
+	 * @param ZohoBooksApi                        $books     API.
+	 * @param string                              $sku       SKU.
+	 * @param array<int,array<string,mixed>>|null $catalogue Item list read earlier in this pass; filled when it is read.
 	 * @return array<string,mixed>|null
 	 */
-	private function findItem( ZohoBooksApi $books, string $sku ): ?array {
-		return $this->oldestWhere( $books->all( 'items', 'items', array( 'search_text' => $sku ) ), 'sku', $sku );
+	private function findItem( ZohoBooksApi $books, string $sku, ?array &$catalogue = null ): ?array {
+		$hit = $this->oldestWhere( $books->all( 'items', 'items', array( 'search_text' => $sku ) ), 'sku', $sku );
+		if ( null !== $hit ) {
+			return $hit;
+		}
+		$catalogue ??= $books->all( 'items', 'items' );
+		return $this->oldestWhere( $catalogue, 'sku', $sku );
 	}
 
 	/**
@@ -732,15 +801,49 @@ final class ZohoBooksConnector extends AbstractSalesConnector implements OAuthCo
 	}
 
 	/**
-	 * Create a contact for the buyer.
+	 * Create a contact for the buyer. Zoho Books refuses a name that another contact already has (code 1001, "The customer ... already
+	 * exists. Please specify a different name."), and two different buyers can share a name, so a refused name is tried once more with the
+	 * buyer's email after it. The search by email has already said this buyer has no contact of their own.
 	 *
 	 * @param ZohoBooksApi         $books      API.
 	 * @param array<string,string> $contact    Buyer.
 	 * @param string               $currencyId Currency id, may be empty.
 	 * @param string               $suffix     Text added to the name, for a second contact of the same buyer.
 	 * @return array<string,mixed>
+	 * @throws ApiException When Zoho refuses the contact for another reason, or refuses the name with the email too.
 	 */
 	private function createContact( ZohoBooksApi $books, array $contact, string $currencyId, string $suffix = '' ): array {
+		try {
+			return $this->postContact( $books, $contact, $currencyId, $suffix );
+		} catch ( ApiException $exception ) {
+			if ( '' === $contact['email'] || ! $this->nameTaken( $exception ) ) {
+				throw $exception;
+			}
+			list( $email ) = Text::limit( $contact['email'], 120 );
+			return $this->postContact( $books, $contact, $currencyId, $suffix . ' (' . $email . ')' );
+		}
+	}
+
+	/**
+	 * Whether Zoho refused a contact because its name is taken (code 1001, or the wording of that answer).
+	 *
+	 * @param ApiException $exception The refusal.
+	 */
+	private function nameTaken( ApiException $exception ): bool {
+		$error = $exception->error();
+		return ErrorCode::Val002 === $error->code && ( 'zoho code 1001' === $error->detail || 1 === preg_match( '/already exists/i', (string) ( $error->context['reason'] ?? '' ) ) );
+	}
+
+	/**
+	 * One create call for a contact.
+	 *
+	 * @param ZohoBooksApi         $books      API.
+	 * @param array<string,string> $contact    Buyer.
+	 * @param string               $currencyId Currency id, may be empty.
+	 * @param string               $suffix     Text added to the name.
+	 * @return array<string,mixed>
+	 */
+	private function postContact( ZohoBooksApi $books, array $contact, string $currencyId, string $suffix ): array {
 		$person       = trim( $contact['first_name'] . ' ' . $contact['last_name'] );
 		$name         = '' !== $person ? $person : ( '' !== $contact['company'] ? $contact['company'] : $contact['email'] );
 		list( $name ) = Text::limit( $name, self::NAME_LIMIT - Text::length( $suffix ) );
@@ -791,9 +894,10 @@ final class ZohoBooksConnector extends AbstractSalesConnector implements OAuthCo
 	 * @return array<int,array<string,mixed>|null>|ConnectorError
 	 */
 	private function resolveItems( ZohoBooksApi $books, CrmOptions $options, OrderData $order ): array|ConnectorError {
-		$items = array();
+		$items     = array();
+		$catalogue = null;
 		foreach ( $order->lines as $index => $line ) {
-			$item = '' !== $line->sku ? $this->findItem( $books, $line->sku ) : null;
+			$item = '' !== $line->sku ? $this->findItem( $books, $line->sku, $catalogue ) : null;
 			if ( null === $item && 'free_text' !== $options->choice( 'unknown_sku', array( 'refuse', 'free_text' ), 'refuse' ) ) {
 				return $this->unknownSku( '' !== $line->sku ? $line->sku : $line->name );
 			}
@@ -906,7 +1010,9 @@ final class ZohoBooksConnector extends AbstractSalesConnector implements OAuthCo
 	}
 
 	/**
-	 * Record the payment of a paid order once: look first, create only when none exists and the invoice still has a balance.
+	 * Record the payment of a paid order once: look first, create only when none exists and the invoice still has a balance. The amount
+	 * is the invoice's balance as Zoho reports it now, not the order total: an invoice that is part paid or has a credit applied owes less,
+	 * and Zoho refuses a payment above the balance. The date is the day the order was paid.
 	 *
 	 * @param ZohoBooksApi        $books   API.
 	 * @param CrmOptions          $options Options.
@@ -917,11 +1023,13 @@ final class ZohoBooksConnector extends AbstractSalesConnector implements OAuthCo
 	private function recordPayment( ZohoBooksApi $books, CrmOptions $options, OrderData $order, array $invoice ): array {
 		$id      = (string) $invoice['invoice_id'];
 		$current = (array) ( $books->call( 'GET', 'invoices/' . rawurlencode( $id ) )['invoice'] ?? $invoice );
-		if ( 'paid' === ( $current['status'] ?? '' ) || (float) ( $current['balance'] ?? 0 ) <= 0 ) {
+		$balance = Amounts::minor( $current['balance'] ?? null, $this->documentCurrency( $current, $order ) );
+		if ( 'paid' === ( $current['status'] ?? '' ) || null === $balance || $balance <= 0 ) {
 			return $current;
 		}
 		$existing = $this->oldestWhere( $books->all( 'customerpayments', 'customerpayments', array( 'reference_number' => $order->reference ) ), 'reference_number', $order->reference );
 		if ( null === $existing ) {
+			$amount = Amounts::number( $balance, $this->documentCurrency( $current, $order ) );
 			$books->call(
 				'POST',
 				'customerpayments',
@@ -929,20 +1037,31 @@ final class ZohoBooksConnector extends AbstractSalesConnector implements OAuthCo
 				array(
 					'customer_id'      => (string) ( $current['customer_id'] ?? '' ),
 					'payment_mode'     => $options->text( 'payment_mode', 'Others' ),
-					'amount'           => Amounts::number( $order->totalMinor, $order->currency ),
-					'date'             => $order->date,
+					'amount'           => $amount,
+					'date'             => '' !== $order->paidDate ? $order->paidDate : $order->date,
 					'reference_number' => $order->reference,
 					'account_id'       => $options->text( 'payment_account' ),
 					'invoices'         => array(
 						array(
 							'invoice_id'     => $id,
-							'amount_applied' => Amounts::number( $order->totalMinor, $order->currency ),
+							'amount_applied' => $amount,
 						),
 					),
 				)
 			);
 		}
 		return (array) ( $books->call( 'GET', 'invoices/' . rawurlencode( $id ) )['invoice'] ?? $current );
+	}
+
+	/**
+	 * Currency of a document as Zoho reports it, else the order's.
+	 *
+	 * @param array<string,mixed> $document Invoice row.
+	 * @param OrderData           $order    Order.
+	 */
+	private function documentCurrency( array $document, OrderData $order ): string {
+		$code = strtoupper( (string) ( $document['currency_code'] ?? '' ) );
+		return 1 === preg_match( '/^[A-Z]{3}$/', $code ) ? $code : $order->currency;
 	}
 
 	/**

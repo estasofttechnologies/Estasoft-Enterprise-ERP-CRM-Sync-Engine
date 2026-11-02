@@ -26,6 +26,13 @@ final class SageInvoices {
 	public const OWN_VOID_REASON = 'Created with the wrong total by the WooCommerce sync';
 
 	/**
+	 * Ids of documents voided with the connector's own reason, by path and reference.
+	 *
+	 * @var array<string,array<int,string>>
+	 */
+	private array $dead = array();
+
+	/**
 	 * Set up with what it depends on.
 	 *
 	 * @param SageApi $api Client.
@@ -101,15 +108,53 @@ final class SageInvoices {
 	}
 
 	/**
-	 * Delete a draft invoice, or void a credit note, that the connector made and found wrong.
+	 * Ask Sage to void a document the connector made and found wrong, and say whether it is gone. The guide documents voiding an invoice with DELETE and a body
+	 * with a void_reason, from the status UNPAID; whether a draft can be voided, and whether a credit note can, is not documented. So the call is made, its refusal is not
+	 * an error, and the document is read again: only a document that is no longer there or is VOID counts as removed.
+	 *
+	 * @param string $path sales_invoices or sales_credit_notes.
+	 * @param string $id   Id.
+	 * @return bool True only when Sage no longer has the document or shows it as VOID.
+	 */
+	public function remove( string $path, string $id ): bool {
+		try {
+			$this->api->delete( $path . '/' . rawurlencode( $id ), array( 'void_reason' => self::OWN_VOID_REASON ) );
+			$document = $this->get( $path, $id );
+		} catch ( ApiException $exception ) {
+			unset( $exception );
+			try {
+				$document = $this->get( $path, $id );
+			} catch ( ApiException $again ) {
+				unset( $again );
+				return false;
+			}
+		}
+		return null === $document || 'VOID' === self::status( $document );
+	}
+
+	/**
+	 * Whether Sage no longer has a document or shows it as VOID.
 	 *
 	 * @param string $path sales_invoices or sales_credit_notes.
 	 * @param string $id   Id.
 	 *
-	 * @throws ApiException On a failed call.
+	 * @throws ApiException On a failed call other than 404.
 	 */
-	public function remove( string $path, string $id ): void {
-		$this->api->delete( $path . '/' . rawurlencode( $id ), 'sales_invoices' === $path ? array() : array( 'void_reason' => self::OWN_VOID_REASON ) );
+	public function isGone( string $path, string $id ): bool {
+		$document = $this->get( $path, $id );
+		return null === $document || 'VOID' === self::status( $document );
+	}
+
+	/**
+	 * Ids of documents with a reference that the connector voided itself, as the last search for that reference saw them. They go into the idempotency id of the next
+	 * create, so a create that follows the connector's own void is not answered with the voided document.
+	 *
+	 * @param string $path      sales_invoices or sales_credit_notes.
+	 * @param string $reference Reference.
+	 * @return array<int,string>
+	 */
+	public function deadIds( string $path, string $reference ): array {
+		return $this->dead[ $path . '|' . $reference ] ?? array();
 	}
 
 	/**
@@ -156,6 +201,7 @@ final class SageInvoices {
 	 */
 	private function find( string $path, string $reference ): ?array {
 		$voided = false;
+		$dead   = array();
 		foreach ( $this->api->select( $path, array( 'search' => $reference ) ) as $row ) {
 			if ( 0 !== strcasecmp( SagePayloadReader::text( $row['reference'] ?? '' ), $reference ) ) {
 				continue;
@@ -165,11 +211,19 @@ final class SageInvoices {
 				continue;
 			}
 			if ( 'VOID' === self::status( $document ) ) {
-				$voided = $voided || self::OWN_VOID_REASON !== SagePayloadReader::text( $document['void_reason'] ?? '' );
+				if ( self::OWN_VOID_REASON === SagePayloadReader::text( $document['void_reason'] ?? '' ) ) {
+					$dead[] = SagePayloadReader::text( $document['id'] ?? '' );
+				} else {
+					$voided = true;
+				}
 				continue;
 			}
+			sort( $dead );
+			$this->dead[ $path . '|' . $reference ] = $dead;
 			return $document;
 		}
+		sort( $dead );
+		$this->dead[ $path . '|' . $reference ] = $dead;
 		return $voided ? array( 'voided' => true ) : null;
 	}
 }

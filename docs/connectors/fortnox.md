@@ -7,7 +7,7 @@ available: true
 verified: false
 hosts: [api.fortnox.se, apps.fortnox.se]
 terms_url: https://www.fortnox.se/developer/guides-and-good-to-know/legal-and-change-policies
-privacy_url: https://apps.fortnox.se/api/eula/document-v1/user
+privacy_url: https://www.fortnox.se/om-fortnox/integritet-och-sakerhet
 developer_url: https://www.fortnox.se/developer/developer-portal
 variants: []
 ---
@@ -38,7 +38,7 @@ All fetched 2 Nov 2026. The Redoc reference at `apps.fortnox.se/apidocs` is a sc
 | Entities: `Invoice` (`ExternalInvoiceReference1/2`, `YourOrderNumber`, `VATIncluded`, `Currency`, `CurrencyRate`, `InvoiceDate`, `DueDate`, `DeliveryDate`, `Remarks`, `Comments`, `InvoiceRows`, read-only `Total`, `Balance`, `Booked`, `Cancelled`, `Credit`, `CreditInvoiceReference`), `InvoiceRow` (`ArticleNumber`, `Description`, `DeliveredQuantity`, `Price`, `VAT`, `VATCode`, `Discount`, `DiscountType`, `AccountNumber`), `Order` and `OrderRow`, `Customer` (`ExternalReference`, `Email`, `Type` PRIVATE or COMPANY, `VATNumber`, `CountryCode`), `Article` (`QuantityInStock`, `ReservedQuantity`, `DisposableQuantity`, `StockGoods`, `Type` STOCK or SERVICE), `InvoicePayment` (`InvoiceNumber`, `Amount`, `PaymentDate`, `ModeOfPayment`) | [third-party] mirror of [documented] | `Invoice.cs`, `InvoiceRow.cs`, `Order.cs`, `OrderRow.cs`, `Customer.cs`, `Article.cs`, `InvoicePayment.cs` |
 | Action endpoints (`bookkeep`, `cancel`, `credit` …): "Credit an invoice" is listed in the reference sidebar; the SDK calls it `PUT /3/invoices/{DocumentNumber}/credit` | [documented] (name) / [third-party] (path) | https://api.fortnox.se/apidocs ; `InvoiceConnector.cs` |
 | Warehouse (Lager) stock: `GET /api/warehouse/status-v1/stockbalance?itemIds=&stockPointCodes=` returning `itemId`, `stockPointCode`, `inStock`, `availableStock`; Lager is activated by a system administrator and cannot be activated through the API; outbound documents affect stock when saved | [third-party] (path, fields) / [documented] (Lager rules) | `StockBalanceConnector.cs`, `Endpoints.cs`, `StockBalance.cs`; https://fortnox.se/developer/guides-and-good-to-know/best-practices/warehouse-information |
-| Terms: developer agreement and change policies; privacy notice of Fortnox Group | [documented] | https://www.fortnox.se/developer/guides-and-good-to-know/legal-and-change-policies ; https://apps.fortnox.se/api/eula/document-v1/user |
+| Terms: developer agreement and change policies (page read: "Legal & Change Policies"); privacy and security page of Fortnox (page read; it links the privacy notice, integritetsmeddelande) | [documented] | https://www.fortnox.se/developer/guides-and-good-to-know/legal-and-change-policies ; https://www.fortnox.se/om-fortnox/integritet-och-sakerhet |
 
 ## 2. How the merchant connects
 
@@ -125,7 +125,7 @@ Customers: `GET /3/customers?email=<email>`, all pages, exact case-insensitive c
 
 The tax mapping code is the VAT percentage as Fortnox row `VAT` ("25", "12", "6", "0"). `listTaxCodes()` returns those four Swedish statutory rates [inferred; Fortnox's list of valid percentages is account data and no endpoint for it was documented in the pages read]. A rate that is not mapped stops the order with SYNC-MAP-002; Fortnox itself rejects a percentage it does not know ("The percentage needs to be of an existing VAT percentage"), which comes back as SYNC-VAL-002.
 
-Prices: `VATIncluded` follows `prices_include_tax`, so no conversion is needed; the price goes to Fortnox exactly as the shop shows it. After the create the connector reads `Total` and `Currency` and compares `Total` with the shop's total less the excluded products (one minor unit tolerance); a larger difference fails (`total_mismatch = fail`) or warns. [Not verified: whether `Total` is in the invoice currency or in SEK for a foreign-currency invoice; for a foreign currency the check compares in the invoice currency and fails loudly if Fortnox reports SEK.]
+Prices: `VATIncluded` follows `prices_include_tax`, so no conversion is needed; the price goes to Fortnox exactly as the shop shows it. After the create the connector reads `Total` and `Currency` and compares `Total` with the shop's total less the excluded products (one minor unit tolerance); a larger difference fails (`total_mismatch = fail`) or warns. A company that rounds its invoices to whole kronor (öresavrundning) makes `Total` differ from the shop's total by the rounding, which the invoice record names in `RoundOff` (a read-only field; a list row does not carry it, so the record is read once when the totals disagree). When `RoundOff` is not zero, is at most half a unit of the currency and explains the difference (whether `Total` includes it or not), the invoice is accepted and the result carries the note "Fortnox rounded the total by … (the company rounds its totals)". Any other difference still fails, whatever `RoundOff` says. [Not verified: whether `Total` is in the invoice currency or in SEK for a foreign-currency invoice; for a foreign currency the check compares in the invoice currency and fails loudly if Fortnox reports SEK.]
 
 ## 9. Payments
 
@@ -133,11 +133,12 @@ Off by default. `record_payment = yes` (with `bookkeep = yes`, because a payment
 
 ## 10. Refunds
 
-A refund creates a second invoice with the refunded rows as negative quantities (`DeliveredQuantity` below zero), `ExternalInvoiceReference1 = WC-{refund id}`, `ExternalInvoiceReference2 = WC-{order id}` and `Remarks` naming the original, for the customer of the original document (found by `WC-{order id}`; none: the item fails before anything is created). After the create the total is read and must equal the negative refund amount (one minor unit). Not used: `PUT /3/invoices/{n}/credit`, which credits a whole invoice, cannot take a reference in the same call and so cannot be made safe against a lost answer; the SDK shows no way to set `CreditInvoiceReference`, which is read-only. [Not verified: whether Fortnox flags an invoice with negative rows as a credit invoice (`Credit`); the total check is what protects the books.]
+A refund creates a second invoice with the refunded rows as negative quantities (`DeliveredQuantity` below zero), `ExternalInvoiceReference1 = WC-{refund id}`, `ExternalInvoiceReference2 = WC-{order id}` and `Remarks` naming the original, for the customer of the original document (found by `WC-{order id}`; none: the item fails before anything is created). After the create the total is read and must equal the negative refund amount (one minor unit). Not used: `PUT /3/invoices/{n}/credit`, which credits a whole invoice, cannot take a reference in the same call and so cannot be made safe against a lost answer; the SDK shows no way to set `CreditInvoiceReference`, which is read-only. The refund is therefore an ordinary invoice with negative rows: Fortnox does not set its `Credit` flag (a read-only field that only the credit action sets), and it shows in the customer ledger as a negative invoice. The links to the order are `ExternalInvoiceReference1/2` and `Remarks`, and the nightly check recognises refunds by them. The total check (the negative refund amount, with the rounding rule of section 8) is what protects the books. A document that fails the check stays marked `sync-pending`, so `findExisting()` never reports it as finished and a retry does not make a second one.
 
 ## 11. Stock, invoice and reconcile reads
 
 - `fetchStock()`: `stock_source = article`: `GET /3/articles?articlenumber=<sku>` per SKU (exact comparison in code), `QuantityInStock` and `ReservedQuantity` (held); articles that are services are left out. `stock_source = warehouse`: `GET /api/warehouse/status-v1/stockbalance?itemIds=…&stockPointCodes=…`, quantity = sum of `inStock`, held = `inStock - availableStock`, over the chosen stock points (all when none). Needs the Lager licence and scope `warehouse`.
+- `ping()` (the circuit breaker's probe): one `GET /3/companyinformation`, not the whole test connection.
 - `fetchInvoice()`: `GET /3/invoices/{DocumentNumber}`: number, state (`cancelled`, `paid` when booked and balance 0, `booked`, `open`), no tax authority step (`authority_status` empty), no PDF link.
 - `listForReconcile( $from )`: `GET /3/invoices?fromdate=<date>&limit=500`, every page, rows whose `ExternalInvoiceReference1` starts with `WC-` and that are not credit refunds of those orders; `total_minor` from `Total`; refunds are the credit rows whose `ExternalInvoiceReference2` is the order.
 - Tracking: not offered (no shipment records in the Fortnox API pages read).
@@ -185,7 +186,7 @@ A refund creates a second invoice with the refunded rows as negative quantities 
 - The Redoc reference could not be read as text; endpoint paths other than the OAuth ones, the rate limit and the error codes come from the SDK mirror and a third-party guide.
 - Whether the `email` filter of customers and the `externalinvoicereference1` filter of invoices match exactly or as "contains" (the connector compares exactly in code and pages through all pages).
 - Maximum lengths of `ExternalInvoiceReference1`, row `Description` and `Remarks`.
-- Whether a negative-quantity invoice is booked as a credit invoice by Fortnox, and whether `Total` of a foreign-currency invoice is in the invoice currency; whether `CurrencyRate` may be left empty.
+- Whether Fortnox accepts and books an invoice with negative rows the way an accountant expects (it is not flagged `Credit`; see section 10), whether `RoundOff` is part of `Total`, and whether `Total` of a foreign-currency invoice is in the invoice currency; whether `CurrencyRate` may be left empty.
 - The shape of the Lager `stockbalance` answer (the connector accepts a list or an object holding a list, in either letter case).
 - Whether an invoice must be booked before a payment is accepted (assumed; a refusal comes back as SYNC-VAL-002).
 - Whether the VAT percentages in `listTaxCodes()` (25, 12, 6, 0) are all present in a given Fortnox company.

@@ -60,6 +60,16 @@ final class FakePennylaneServer {
 	public bool $expired = false;
 
 	/**
+	 * When true the lists ignore the `filter` parameter and answer every row (a server that does not honour a filter).
+	 */
+	public bool $ignoreFilters = false;
+
+	/**
+	 * When set, every invoice is stored with this date (Y-m-d), as a vendor that overwrites the date would.
+	 */
+	public ?string $overrideDate = null;
+
+	/**
 	 * Whether the finalise route exists.
 	 */
 	public bool $canFinalize = true;
@@ -178,7 +188,7 @@ final class FakePennylaneServer {
 		}
 		$rows = array();
 		foreach ( $store as $row ) {
-			if ( $this->matches( $row, $filters ) ) {
+			if ( $this->ignoreFilters || $this->matches( $row, $filters ) ) {
 				$rows[] = $row;
 			}
 		}
@@ -271,7 +281,7 @@ final class FakePennylaneServer {
 			'credit_note'                => false,
 			'external_reference'         => (string) ( $body['external_reference'] ?? '' ),
 			'customer'                   => array( 'id' => (int) $body['customer_id'] ),
-			'date'                       => (string) $body['date'],
+			'date'                       => $this->overrideDate ?? (string) $body['date'],
 			'deadline'                   => (string) $body['deadline'],
 			'currency'                   => 'EUR',
 			'currency_amount_before_tax' => number_format( $net / 100, 2, '.', '' ),

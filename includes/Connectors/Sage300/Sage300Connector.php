@@ -69,7 +69,6 @@ final class Sage300Connector extends AbstractApiConnector {
 			capabilities: array(
 				Capability::Orders,
 				Capability::Refunds,
-				Capability::Reconciliation,
 				Capability::ShadowLookup,
 			),
 			entities: array( EntityType::Order, EntityType::Refund ),
@@ -165,7 +164,8 @@ final class Sage300Connector extends AbstractApiConnector {
 			$advanced( 'discount_charge_code', __( 'Miscellaneous charge code for discounts', 'estasoft-erp-crm-sync-engine' ) ),
 			$advanced( 'refund_charge_code', __( 'Miscellaneous charge code for refunds without lines', 'estasoft-erp-crm-sync-engine' ) ),
 			$advanced( 'reference_property', __( 'Order property for the shop order number', 'estasoft-erp-crm-sync-engine' ), __( 'Empty: PONumber, else Reference.', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'total_property', __( 'Order property that holds the total', 'estasoft-erp-crm-sync-engine' ), __( 'Empty: the first of OrderTotal, TotalOrderAmount that the answer has.', 'estasoft-erp-crm-sync-engine' ) ),
+			$advanced( 'total_property', __( 'Order property that holds the total', 'estasoft-erp-crm-sync-engine' ), __( 'Empty: the first of OrderTotal, TotalOrderAmount, OrderTotalAmount that the answer has.', 'estasoft-erp-crm-sync-engine' ) ),
+			$advanced( 'refund_total_property', __( 'Credit note property that holds the total', 'estasoft-erp-crm-sync-engine' ), __( 'Needed to send refunds, so a credit note can be compared with the refund; or choose to continue with a warning below.', 'estasoft-erp-crm-sync-engine' ) ),
 			$advanced(
 				'total_mismatch',
 				__( 'When Sage 300 totals differ from the shop', 'estasoft-erp-crm-sync-engine' ),
@@ -448,20 +448,6 @@ final class Sage300Connector extends AbstractApiConnector {
 			}
 		}
 		return $found;
-	}
-
-	/**
-	 * Orders for the nightly check.
-	 *
-	 * @param Connection         $connection Connection.
-	 * @param \DateTimeImmutable $from       UTC window start.
-	 * @return array<string,ExternalRef>|ConnectorError
-	 *
-	 * @throws ApiException On failure.
-	 */
-	public function listForReconcile( Connection $connection, \DateTimeImmutable $from ): array|ConnectorError {
-		$client = $this->client( $connection );
-		return ( new Sage300Reader( $client, new Sage300Lookups( $client ), $this->orders( $connection ) ) )->reconcile( $from );
 	}
 
 	/**

@@ -62,6 +62,16 @@ final class FakeSapB1Server {
 	public ?string $forceCurrency = null;
 
 	/**
+	 * Percent the system adds to the total of every credit note (a tax rule or rounding the connector cannot see).
+	 */
+	public float $creditNoteSurcharge = 0.0;
+
+	/**
+	 * Whether the Cancel action is refused.
+	 */
+	public bool $refuseCancel = false;
+
+	/**
 	 * Rate of the one tax code (percent) added to the net lines that carry it.
 	 *
 	 * @var array<string,float>
@@ -247,6 +257,9 @@ final class FakeSapB1Server {
 		if ( 'GET' !== $request['method'] && array() !== $this->failures ) {
 			return array_shift( $this->failures );
 		}
+		if ( 'POST' === $request['method'] && 1 === preg_match( '#^(\w+)\((\d+)\)/Cancel$#', $path, $m ) ) {
+			return $this->cancel( $m[1], $m[2] );
+		}
 		if ( 1 === preg_match( '#^(\w+)\((.+)\)$#', $path, $m ) ) {
 			return 'GET' === $request['method'] ? $this->one( $m[1], rawurldecode( $m[2] ), $query ) : $this->error( 400, -1, 'Unsupported.' );
 		}
@@ -417,6 +430,9 @@ final class FakeSapB1Server {
 			$lines[] = $line + array( 'LineNum' => $index );
 		}
 		$total = $net + $tax;
+		if ( 'CreditNotes' === $entity ) {
+			$total += (int) round( $total * $this->creditNoteSurcharge / 100 );
+		}
 		$entry = $this->sequence( $entity );
 		$doc   = array(
 			'DocEntry'       => $entry,
@@ -440,6 +456,23 @@ final class FakeSapB1Server {
 		}
 		$this->data[ $entity ][ (string) $entry ] = $doc;
 		return FakeHttpClient::json( $doc, 201 );
+	}
+
+	/**
+	 * The Cancel action of a document.
+	 *
+	 * @param string $entity Entity.
+	 * @param string $key    DocEntry.
+	 */
+	private function cancel( string $entity, string $key ): HttpResponse {
+		if ( ! isset( $this->data[ $entity ][ $key ] ) ) {
+			return $this->error( 404, -2028, 'No matching records found.' );
+		}
+		if ( $this->refuseCancel ) {
+			return $this->error( 400, -5002, 'The document cannot be cancelled.' );
+		}
+		$this->data[ $entity ][ $key ]['Cancelled'] = 'tYES';
+		return new HttpResponse( 204 );
 	}
 
 	/**

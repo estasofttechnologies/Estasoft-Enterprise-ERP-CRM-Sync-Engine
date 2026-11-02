@@ -115,6 +115,14 @@ final class SapBusinessOneOptions {
 	}
 
 	/**
+	 * Whether a credit note may be made for an order that has no A/R invoice. Off by default: the credit would book against a sale that
+	 * was never invoiced.
+	 */
+	public function refundWithoutInvoice(): bool {
+		return $this->options->flag( 'refund_without_invoice', false );
+	}
+
+	/**
 	 * Number series for new business partners; 0 makes the connector send a card code.
 	 */
 	public function partnerSeries(): int {

@@ -108,7 +108,7 @@ final class OrderData {
 		$payment = is_array( $payload['payment'] ?? null ) ? $payload['payment'] : array();
 		return new self(
 			$currency,
-			self::date( $payload['order_date'] ?? '' ),
+			Dates::calendarDate( $payload['order_date'] ?? '' ),
 			self::text( $payload['note'] ?? '' ),
 			is_int( $amounts['total'] ) ? $amounts['total'] : null,
 			is_int( $amounts['excluded_total'] ) ? $amounts['excluded_total'] : 0,
@@ -277,23 +277,5 @@ final class OrderData {
 	 */
 	private static function bool( mixed $value ): bool {
 		return true === $value || 1 === $value || ( is_string( $value ) && in_array( strtolower( trim( $value ) ), array( '1', 'true', 'yes' ), true ) );
-	}
-
-	/**
-	 * The UTC date of a date or date-time text, or an empty string.
-	 *
-	 * @param mixed $value Date text.
-	 */
-	private static function date( mixed $value ): string {
-		$text = self::text( $value );
-		if ( '' === $text ) {
-			return '';
-		}
-		try {
-			return ( new \DateTimeImmutable( $text, new \DateTimeZone( 'UTC' ) ) )->setTimezone( new \DateTimeZone( 'UTC' ) )->format( 'Y-m-d' );
-		} catch ( \Exception $exception ) {
-			unset( $exception );
-			return '';
-		}
 	}
 }

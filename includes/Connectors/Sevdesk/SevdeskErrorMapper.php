@@ -17,10 +17,17 @@ use Estasoft\SyncEngine\Domain\ErrorCode;
 
 /**
  * The sevDesk API answers errors as `{"message": "..."}` or `{"error": {"message": "..."}}`, and a problem of the request (a number that already exists, a
- * missing field) can arrive as HTTP 500 [third-party]. A 500 whose body carries a message other than the generic "Server Error" is therefore a
- * rejected request that needs a person, not a server fault to retry. There is no documented plan-gate answer, so SYNC-AUTH-006 is never produced.
+ * missing field) can arrive as HTTP 500 [third-party]. A 500 whose message reads like a complaint about the request (it says something exists
+ * already, is missing, invalid, required, too long and so on, see PROBLEM) is a rejected request that needs a person. Any other 500, whatever its
+ * text ("Server Error", "Internal error", "Something went wrong"), is a server fault and is retried with the queue's delays. There is no
+ * documented plan-gate answer, so SYNC-AUTH-006 is never produced.
  */
 final class SevdeskErrorMapper {
+
+	/**
+	 * Words that mark a message as a complaint about the request. Only a message that matches is treated as a rejection.
+	 */
+	private const PROBLEM = '/already exist|not exist|does not exist|not found|required|missing|must be|must not|mandatory|invalid|not valid|too long|too short|too many|cannot be|can\'t be|not allowed|not permitted|unknown|duplicate|empty|unique|out of range|wrong format|unsupported/i';
 
 	/**
 	 * Map an answer, or return null to let the base map it.
@@ -32,7 +39,7 @@ final class SevdeskErrorMapper {
 			return null;
 		}
 		$message = $this->message( $response );
-		if ( '' === $message || 0 === strcasecmp( $message, 'Server Error' ) ) {
+		if ( '' === $message || 1 !== preg_match( self::PROBLEM, $message ) ) {
 			return null;
 		}
 		return new ConnectorError(

@@ -72,7 +72,7 @@ abstract class Sage50TestCase extends TestCase {
 	 * @param array<string,mixed> $options Settings that replace the defaults.
 	 */
 	protected function uk( array $options = array() ): Connection {
-		return FakeExportKit::connection( 'sage50-export', $options + array( 'edition' => 'uk', 'currency' => 'GBP' ) );
+		return FakeExportKit::connection( 'sage50-export', $options + array( 'edition' => 'uk', 'currency' => 'GBP', 'header_row' => 'yes' ) );
 	}
 
 	/**
@@ -85,6 +85,7 @@ abstract class Sage50TestCase extends TestCase {
 			'sage50-export',
 			$options + array(
 				'edition'       => 'us',
+				'header_row'    => 'yes',
 				'currency'      => 'USD',
 				'ar_account'    => '11000',
 				'sales_account' => '40000',
@@ -137,7 +138,7 @@ abstract class Sage50TestCase extends TestCase {
 	/**
 	 * Build the file of the open batch.
 	 *
-	 * @return array{bytes:string,mime:string,left_out:array<int,array{item_id:int,order:string,reason:string}>}
+	 * @return array{bytes:string,mime:string,left_out:array<int,array{item_id:int,order:string,reason:string}>,attachments:array<string,string>}
 	 */
 	protected function file(): array {
 		$batch = $this->deps->exports->openBatch( 7 );
@@ -146,6 +147,7 @@ abstract class Sage50TestCase extends TestCase {
 			'bytes'    => FakeExportKit::bytes( $file ),
 			'mime'     => $file->format->mime,
 			'left_out' => $batch->leftOut(),
+			'attachments' => array_column( $file->attachments, 'contents', 'name' ),
 		);
 	}
 

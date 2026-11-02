@@ -14,16 +14,30 @@ defined( 'ABSPATH' ) || exit;
 use Estasoft\SyncEngine\Connectors\Support\ApiException;
 
 /**
- * A customer is found by the email of one of its addresses. MYOB's pages show no email filter, so the filter is tried first
- * (Addresses/any(a: a/Email eq '...')); when MYOB says it cannot run it (400 or 501) the connector reads the customer list page by page, up to
- * twenty pages, and compares the email itself. An invoice never goes to a different customer than the email says.
+ * A customer is found by the email of one of its addresses with the filter MYOB documents on its "Retrieving data" page,
+ * Addresses/any(x: x/Email eq 'name@example.com') (the OData 3 "any" operator). The filter is tried with the email as the shop wrote it and, when
+ * that finds nothing and the email has capitals, with the email in lower case, because the page does not say whether eq ignores case. If MYOB
+ * refuses the filter (400 or 501) the connector remembers that for the rest of the request and reads the customer list instead, three pages of 1,000
+ * at most, and compares the email itself. An invoice never goes to a different customer than the email says.
  */
 final class MyobCustomers {
 
 	/**
-	 * Pages read when the filter is not available (20,000 customers).
+	 * Pages of 1,000 read when the filter is not available (3,000 customers).
 	 */
-	public const SCAN_PAGES = 20;
+	public const SCAN_PAGES = 3;
+
+	/**
+	 * Pages of matches read with the filter (a filter on one email matches a handful of cards; this is a stop for a server that ignores it).
+	 */
+	public const FILTER_PAGES = 3;
+
+	/**
+	 * Whether the email filter is still worth trying.
+	 *
+	 * @var bool
+	 */
+	private bool $filtering = true;
 
 	/**
 	 * Set up with what it depends on.
@@ -46,15 +60,32 @@ final class MyobCustomers {
 		if ( '' === $wanted ) {
 			return null;
 		}
-		try {
-			$rows = $this->api->select( 'Contact/Customer', 'Addresses/any(a: a/Email eq ' . MyobApi::quote( $email ) . ')', 1 );
-		} catch ( ApiException $exception ) {
-			if ( ! in_array( $exception->status(), array( 400, 501 ), true ) ) {
-				throw $exception;
+		if ( $this->filtering ) {
+			try {
+				foreach ( array_unique( array( trim( $email ), $wanted ) ) as $spelling ) {
+					$match = self::pick( $this->api->select( 'Contact/Customer', self::filter( $spelling ), self::FILTER_PAGES ), $wanted );
+					if ( null !== $match ) {
+						return $match;
+					}
+				}
+				return null;
+			} catch ( ApiException $exception ) {
+				if ( ! in_array( $exception->status(), array( 400, 501 ), true ) ) {
+					throw $exception;
+				}
+				$this->filtering = false;
 			}
-			return $this->scan( $wanted );
 		}
-		return self::pick( $rows, $wanted );
+		return $this->scan( $wanted );
+	}
+
+	/**
+	 * The $filter value for an email, in the form MYOB documents.
+	 *
+	 * @param string $email Email.
+	 */
+	public static function filter( string $email ): string {
+		return 'Addresses/any(x: x/Email eq ' . MyobApi::quote( $email ) . ')';
 	}
 
 	/**
@@ -121,7 +152,7 @@ final class MyobCustomers {
 				return null;
 			}
 		}
-		$failure = MyobErrors::exception( MyobErrors::refused( 'Customer', __( 'The company file has too many customers to search by email without a filter. Ask MYOB support to enable it, or link the customer by hand.', 'estasoft-erp-crm-sync-engine' ) ) );
+		$failure = MyobErrors::exception( MyobErrors::refused( 'Customer', __( 'MYOB refused the email filter and the company file has more than 3,000 customers, too many to search without it. Link the customer by hand.', 'estasoft-erp-crm-sync-engine' ) ) );
 		throw $failure;
 	}
 

@@ -512,4 +512,75 @@ final class LexwareOfficeFlowTest extends TestCase {
 			$this->assertStringStartsWith( 'https://api.lexware.io/v1/', $request['url'] );
 		}
 	}
+
+	public function test_an_old_always_create_setting_no_longer_makes_a_contact_per_order_and_a_lost_read_back_never_duplicates(): void {
+		$connection = $this->connection( array( 'customer_policy' => 'always_create' ) );
+		$this->fake->failInvoiceReads = 1;
+		$lost                         = $this->connector()->send( $connection, $this->order(), $this->payload() );
+
+		$this->assertFalse( $lost->isSuccess() );
+		$this->assertSame( ErrorCode::Net001, $lost->error->code );
+		$this->assertCount( 1, $this->fake->invoices, 'The invoice was made; only the answer to the read-back was lost.' );
+		$this->assertCount( 1, $this->fake->contacts );
+
+		$retry = $this->connector()->send( $connection, $this->order(), $this->payload() );
+		$this->assertTrue( $retry->isSuccess(), (string) $retry->error?->message() );
+		$this->assertTrue( $retry->alreadyExisted );
+		$this->assertCount( 1, $this->fake->invoices, 'The retry found the invoice through the same contact.' );
+		$this->assertCount( 1, $this->fake->contacts );
+	}
+
+	public function test_a_406_is_a_tax_mapping_problem_only_when_it_names_the_tax_rate(): void {
+		$rate = array( 'IssueList' => array( array( 'i18nKey' => 'invalid_value', 'source' => 'lineItems[0].unitPrice.taxRatePercentage', 'type' => 'validation_failure' ) ) );
+		$this->fake->server->failNext( 'POST', '/v1/invoices', FakeHttpClient::json( $rate, 406 ) );
+		$this->assertSame( ErrorCode::Map002, $this->connector()->send( $this->connection(), $this->order(), $this->payload() )->error->code );
+
+		$type = array( 'IssueList' => array( array( 'i18nKey' => 'invalid_value', 'source' => 'taxConditions.taxType', 'type' => 'validation_failure' ) ) );
+		$this->fake->server->failNext( 'POST', '/v1/invoices', FakeHttpClient::json( $type, 406 ) );
+		$other = $this->connector()->send( $this->connection(), $this->order( '5002' ), $this->payload() );
+		$this->assertSame( ErrorCode::Val002, $other->error->code, 'A path that merely contains the word tax is not a rate problem.' );
+		$this->assertStringContainsString( 'taxConditions.taxType', $other->error->message() );
+	}
+
+	public function test_the_default_tolerance_is_one_unit_per_row_and_the_option_replaces_it(): void {
+		$lines = array();
+		for ( $i = 0; $i < 10; $i++ ) {
+			$lines[] = array( 'sku' => 'CS-MUG-01', 'name' => 'Mug ' . $i, 'quantity' => 1, 'total' => 99, 'tax_code' => '19' );
+		}
+		// WooCommerce rounds the tax of each line (0.1881 becomes 0.19, ten lines 1.90), Lexware the tax of the rate group (1.88): 2 cents apart.
+		$payload = $this->payload( array( 'lines' => $lines, 'shipping' => array(), 'coupons' => '', 'total' => 1180 ) );
+
+		$default = $this->connector()->send( $this->connection(), $this->order(), $payload );
+		$this->assertTrue( $default->isSuccess(), (string) $default->error?->message() );
+		$this->assertSame( 1178, $default->ref->extra['total_minor'] );
+
+		$strict = $this->connector()->send( $this->connection( array( 'total_tolerance' => '1' ) ), $this->order( '5002' ), $payload );
+		$this->assertSame( ErrorCode::Val002, $strict->error->code );
+		$this->assertStringContainsString( '11.80', $strict->error->message() );
+		$this->assertStringContainsString( '11.78', $strict->error->message() );
+
+		$this->assertTrue( $this->connector()->send( $this->connection( array( 'total_tolerance' => '2' ) ), $this->order( '5003' ), $payload )->isSuccess() );
+		$this->assertSame( ErrorCode::Val002, $this->connector()->send( $this->connection(), $this->order( '5004' ), $this->payload( array( 'total' => 5353 + 3 ) ) )->error->code, 'Two rows allow two units, not three.' );
+	}
+
+	public function test_a_date_the_vendor_changed_is_noted(): void {
+		$this->fake->overrideDate = '2026-11-09T00:00:00.000+01:00';
+		$result                   = $this->connector()->send( $this->connection(), $this->order(), $this->payload() );
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$this->assertContains( 'date_differs', $result->ref->extra['warnings'] );
+
+		$this->fake->overrideDate = null;
+		$clean                    = $this->connector()->send( $this->connection(), $this->order( '5002' ), $this->payload() );
+		$this->assertArrayNotHasKey( 'warnings', $clean->ref->extra );
+	}
+
+	public function test_ping_is_one_cheap_call_and_a_key_past_its_end_date_answers_without_a_request(): void {
+		$this->assertTrue( $this->connector()->ping( $this->connection() ) );
+		$this->assertCount( 1, $this->kit->http->requests );
+		$this->assertStringEndsWith( '/v1/profile', $this->kit->http->requests[0]['url'] );
+
+		$before = count( $this->kit->http->requests );
+		$this->assertFalse( $this->connector()->ping( $this->connection( array(), array( 'key_expires_on' => '2026-10-01' ) ) ) );
+		$this->assertSame( $before, count( $this->kit->http->requests ) );
+	}
 }

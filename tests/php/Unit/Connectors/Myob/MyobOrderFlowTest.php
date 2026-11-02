@@ -297,7 +297,30 @@ final class MyobOrderFlowTest extends MyobTestCase {
 		$this->assertTrue( $result->isSuccess() );
 		$this->assertCount( 1, $this->myob->store['Customer'] );
 		$this->assertSame( $existing['UID'], $this->creates()[0]->json()['Customer']['UID'] );
-		$this->assertSame( "Addresses/any(a: a/Email eq 'layla@example.test')", $this->myob->calls( 'GET', '/Contact/Customer' )[0]->query['$filter'] );
+		$this->assertSame( "Addresses/any(x: x/Email eq 'layla@example.test')", $this->myob->calls( 'GET', '/Contact/Customer' )[0]->query['$filter'], 'The form MYOB shows on its Retrieving data page.' );
+		$this->assertCount( 1, $this->myob->calls( 'GET', '/Contact/Customer' ) );
+	}
+
+	public function test_when_the_filter_compares_case_the_lower_case_email_is_tried_after_the_one_the_shop_wrote(): void {
+		$this->myob->emailCaseSensitive = true;
+		$existing                       = $this->myob->addCustomer( 'Haddad', 'layla@example.test' );
+
+		$result = $this->send( '1090', array( 'partner' => array( 'email' => 'Layla@Example.test' ) ) );
+
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$this->assertCount( 1, $this->myob->store['Customer'], 'No second card for the same person.' );
+		$this->assertSame( $existing['UID'], $this->creates()[0]->json()['Customer']['UID'] );
+		$filters = array_map( static fn( $r ): string => (string) $r->query['$filter'], $this->myob->calls( 'GET', '/Contact/Customer' ) );
+		$this->assertSame( array( "Addresses/any(x: x/Email eq 'Layla@Example.test')", "Addresses/any(x: x/Email eq 'layla@example.test')" ), $filters );
+	}
+
+	public function test_an_email_with_a_quote_is_quoted_by_doubling_it(): void {
+		$this->myob->addCustomer( "O'Neil", "o'neil@example.test" );
+
+		$this->send( '1091', array( 'partner' => array( 'email' => "o'neil@example.test" ) ) );
+
+		$this->assertCount( 1, $this->myob->store['Customer'] );
+		$this->assertSame( "Addresses/any(x: x/Email eq 'o''neil@example.test')", $this->myob->calls( 'GET', '/Contact/Customer' )[0]->query['$filter'] );
 	}
 
 	public function test_when_the_email_filter_does_not_work_the_list_is_read_and_compared(): void {
@@ -312,9 +335,9 @@ final class MyobOrderFlowTest extends MyobTestCase {
 		$this->assertSame( $existing['UID'], $this->creates()[0]->json()['Customer']['UID'] );
 	}
 
-	public function test_a_list_too_long_to_scan_stops_the_order_instead_of_guessing(): void {
+	public function test_a_refused_filter_is_not_tried_again_in_the_same_request_and_the_scan_stops_at_three_thousand_customers(): void {
 		$this->myob->emailFilter = false;
-		for ( $i = 0; $i < 20 * 1000 + 1; $i++ ) {
+		for ( $i = 0; $i < 3 * 1000 + 1; $i++ ) {
 			$uid                                  = sprintf( '00000000-0000-4000-9000-%012d', $i );
 			$this->myob->store['Customer'][ $uid ] = array( 'UID' => $uid, 'LastName' => 'C' . $i, 'Addresses' => array( array( 'Email' => 'c' . $i . '@example.test' ) ) );
 		}
@@ -322,8 +345,15 @@ final class MyobOrderFlowTest extends MyobTestCase {
 		$result = $this->send( '1068' );
 
 		$this->assertFalse( $result->isSuccess() );
-		$this->assertStringContainsString( 'too many customers', $result->error->message() );
+		$this->assertStringContainsString( 'more than 3,000 customers', $result->error->message() );
 		$this->assertSame( array(), $this->myob->writes() );
+		$reads = $this->myob->calls( 'GET', '/Contact/Customer' );
+		$this->assertCount( 4, $reads, 'One refused filter, then three pages of 1,000; not twenty.' );
+		$this->assertArrayHasKey( '$filter', $reads[0]->query );
+		$this->assertArrayNotHasKey( '$filter', $reads[1]->query );
+
+		$this->send( '1092' );
+		$this->assertCount( 7, $this->myob->calls( 'GET', '/Contact/Customer' ), 'The next order goes straight to the list.' );
 	}
 
 	public function test_a_new_person_is_an_individual_with_a_billing_address_and_a_different_delivery_address(): void {
@@ -374,7 +404,9 @@ final class MyobOrderFlowTest extends MyobTestCase {
 		$this->assertSame( 'Closed', $result->ref->extra['status'] );
 		$payments = array_values( $this->myob->store['Payment'] );
 		$this->assertCount( 1, $payments );
-		$this->assertSame( 92.4, $payments[0]['AmountPaid'] );
+		$this->assertSame( 92.4, $payments[0]['AmountReceived'] );
+		$this->assertArrayNotHasKey( 'AmountPaid', $payments[0] );
+		$this->assertSame( 92.4, $payments[0]['Invoices'][0]['AmountApplied'] );
 		$this->assertSame( 'Account', $payments[0]['DepositTo'] );
 		$this->assertSame( '1-1110', $this->myob->store['Account'][ $payments[0]['Account']['UID'] ]['DisplayID'] );
 		$this->assertSame( 'WC-1073 ch_3Pq0', $payments[0]['Memo'] );
@@ -391,6 +423,48 @@ final class MyobOrderFlowTest extends MyobTestCase {
 
 		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
 		$this->assertSame( 'UndepositedFunds', array_values( $this->myob->store['Payment'] )[0]['DepositTo'] );
+	}
+
+	public function test_the_payment_body_has_only_the_fields_of_the_customer_payment_page(): void {
+		$this->send( '1093', array( 'payment' => array( 'reference' => 'ch_1', 'date' => '2026-11-01' ) ), array( 'documents' => 'invoice_paid', 'payment_account' => '1-1110' ) );
+
+		$body = $this->myob->calls( 'POST', '/Sale/CustomerPayment' )[0]->json();
+		$this->assertEqualsCanonicalizing( array( 'Account', 'AmountReceived', 'Customer', 'Date', 'DepositTo', 'Invoices', 'Memo' ), array_keys( $body ) );
+		$this->assertEqualsCanonicalizing( array( 'AmountApplied', 'Type', 'UID' ), array_keys( $body['Invoices'][0] ) );
+		$this->assertSame( 'Invoice', $body['Invoices'][0]['Type'] );
+	}
+
+	public function test_a_payment_that_leaves_a_balance_fails_the_pass_and_the_next_one_pays_only_what_is_due(): void {
+		$options = array( 'documents' => 'invoice_paid' );
+		$pay     = array( 'payment' => array( 'date' => '2026-11-01' ) );
+		$this->myob->paymentShortfall = 500;
+
+		$result = $this->send( '1094', $pay, $options );
+
+		$this->assertFalse( $result->isSuccess() );
+		$this->assertSame( ErrorCode::Val002, $result->error->code );
+		$this->assertStringContainsString( 'still shows a balance of 5.00', $result->error->message() );
+		$this->assertCount( 1, $this->myob->store['Payment'] );
+		$this->assertNull( $this->connector->findExisting( $this->connect( $options ), $this->item( '1094' ) ), 'An invoice with a balance is not finished.' );
+
+		$this->myob->paymentShortfall = 0;
+		$again                        = $this->send( '1094', $pay, $options );
+
+		$this->assertTrue( $again->isSuccess(), (string) $again->error?->message() );
+		$this->assertSame( 0, $again->ref->extra['balance_minor'] );
+		$payments = array_values( $this->myob->store['Payment'] );
+		$this->assertCount( 2, $payments );
+		$this->assertSame( 5.0, $payments[1]['AmountReceived'], 'Only what was still due, never the whole total again.' );
+		$this->assertCount( 1, $this->myob->store['Invoice'], 'No second invoice.' );
+	}
+
+	public function test_a_payment_whose_invoice_cannot_be_read_back_is_not_called_a_success(): void {
+		$this->myob->invoiceGoneAfterPayment = true;
+
+		$result = $this->send( '1095', array( 'payment' => array( 'date' => '2026-11-01' ) ), array( 'documents' => 'invoice_paid' ) );
+
+		$this->assertFalse( $result->isSuccess() );
+		$this->assertStringContainsString( 'cannot be read back', $result->error->message() );
 	}
 
 	public function test_a_payment_account_the_file_does_not_have_is_named_and_the_invoice_stays(): void {

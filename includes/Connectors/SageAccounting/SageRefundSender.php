@@ -25,6 +25,11 @@ use Estasoft\SyncEngine\Domain\Item;
 final class SageRefundSender {
 
 	/**
+	 * Most creates in one pass when the answer keeps naming a credit note that no longer exists.
+	 */
+	private const ROUNDS = 3;
+
+	/**
 	 * Set up with what it depends on.
 	 *
 	 * @param SageInvoices $invoices     Invoices and credit notes.
@@ -85,9 +90,6 @@ final class SageRefundSender {
 		if ( $parsed instanceof ConnectorError ) {
 			return SendResult::failure( $parsed );
 		}
-		if ( $parsed->pricesIncludeTax ) {
-			return SendResult::failure( SageErrors::refused( 'prices_include_tax', __( 'Sage takes amounts without tax and works the tax out from the tax rate. Send amounts without tax.', 'estasoft-erp-crm-sync-engine' ) ) );
-		}
 		if ( '' === $this->options->text( 'sales_ledger_account' ) ) {
 			return SendResult::failure( SageErrors::refused( 'sales_ledger_account', __( 'Set the nominal code of an income account in the connection option "sales_ledger_account": Sage needs a ledger account on every line.', 'estasoft-erp-crm-sync-engine' ) ) );
 		}
@@ -111,12 +113,31 @@ final class SageRefundSender {
 		}
 		$createdNow = false;
 		if ( null === $note ) {
-			$note = $this->create( $parsed, $invoice, $warnings );
-			if ( $note instanceof ConnectorError ) {
-				return SendResult::failure( $note );
+			$body = $this->prepare( $parsed, $invoice, $warnings );
+			if ( $body instanceof ConnectorError ) {
+				return SendResult::failure( $body );
 			}
-			$createdNow = true;
+			$dead = $this->invoices->deadIds( 'sales_credit_notes', $parsed->clientRef );
+			$done = null;
+			for ( $round = 0; $round < self::ROUNDS && null === $done; ++$round ) {
+				$body['idempotency_id'] = md5( $this->connectionId . '|' . $parsed->clientRef . '|credit_note|' . implode( ',', $dead ) . '|' . (string) wp_json_encode( array_diff_key( $body, array( 'idempotency_id' => true ) ) ) );
+				$note                   = $this->invoices->create( 'sales_credit_notes', 'sales_credit_note', $body );
+				$createdNow             = true;
+				$done                   = $this->checked( $note, $parsed, true, $warnings );
+				if ( null === $done ) {
+					$dead[] = SagePayloadReader::text( $note['id'] ?? '' );
+				}
+			}
+		} else {
+			$done = $this->checked( $note, $parsed, false, $warnings );
 		}
+		if ( null === $done ) {
+			return SendResult::failure( SageErrors::refused( 'sales_credit_note', __( 'Sage keeps answering with a credit note that no longer exists. Try again later.', 'estasoft-erp-crm-sync-engine' ) ) );
+		}
+		if ( $done instanceof ConnectorError ) {
+			return SendResult::failure( $done );
+		}
+		$note = $done;
 		if ( $this->options->allocates() && $this->openAmount( $note ) > 0 ) {
 			$note = $this->allocate( $note, $invoice, $parsed );
 		}
@@ -125,7 +146,7 @@ final class SageRefundSender {
 	}
 
 	/**
-	 * Create the credit note and check it.
+	 * Resolve the tax rates, the ledger account and the products, and build the body of the credit note.
 	 *
 	 * @param SageRefundPayload   $parsed   Checked payload.
 	 * @param array<string,mixed> $invoice  The refunded order's invoice.
@@ -134,7 +155,7 @@ final class SageRefundSender {
 	 *
 	 * @throws ApiException On a failed call.
 	 */
-	private function create( SageRefundPayload $parsed, array $invoice, array &$warnings ): array|ConnectorError {
+	private function prepare( SageRefundPayload $parsed, array $invoice, array &$warnings ): array|ConnectorError {
 		$currency = $this->business->currency();
 		$codes    = array();
 		$none     = false;
@@ -173,13 +194,24 @@ final class SageRefundSender {
 				)
 			);
 		}
-		$body = $this->builder->creditNote( $parsed, $invoice, $currency, $this->products->byCodes( $skus ), $rates, array( 'sales' => $ledger ), $warnings );
-		if ( $body instanceof ConnectorError ) {
-			return $body;
-		}
-		$body['idempotency_id'] = md5( $this->connectionId . '|' . $parsed->clientRef . '|credit_note|' . $parsed->attempt . '|' . (string) wp_json_encode( $body ) );
-		$note                   = $this->invoices->create( 'sales_credit_notes', 'sales_credit_note', $body );
-		$problem                = $this->totals->check( $note, $currency, $parsed->amountMinor );
+		return $this->builder->creditNote( $parsed, $invoice, $currency, $this->products->byCodes( $skus ), $rates, array( 'sales' => $ledger ), $warnings );
+	}
+
+	/**
+	 * Check the total of a credit note. Sage has no draft credit note and the guide documents no way to void one, so a wrong credit note cannot be taken back with
+	 * certainty: the connector asks Sage to void it, reads it again, and says plainly whether it is still there. The check is made again on every pass that finds
+	 * the credit note, so a wrong one that stays is not accepted by a retry.
+	 *
+	 * @param array<string,mixed> $note       The credit note as Sage last returned it.
+	 * @param SageRefundPayload   $parsed     Checked payload.
+	 * @param bool                $createdNow True when this pass made it.
+	 * @param array<int,string>   $warnings   Receives notes.
+	 * @return array<string,mixed>|ConnectorError|null The credit note, the failure, or null when Sage no longer has it (a replayed answer).
+	 *
+	 * @throws ApiException On a failed call.
+	 */
+	private function checked( array $note, SageRefundPayload $parsed, bool $createdNow, array &$warnings ): array|ConnectorError|null {
+		$problem = $this->totals->check( $note, $this->business->currency(), $parsed->amountMinor, $this->tolerance( $parsed ) );
 		if ( null === $problem ) {
 			return $note;
 		}
@@ -187,8 +219,30 @@ final class SageRefundSender {
 			$warnings[] = (string) ( $problem->context['reason'] ?? '' );
 			return $note;
 		}
-		$this->discard( SagePayloadReader::text( $note['id'] ?? '' ) );
-		return $problem;
+		$id = SagePayloadReader::text( $note['id'] ?? '' );
+		if ( $createdNow && '' !== $id && $this->invoices->isGone( 'sales_credit_notes', $id ) ) {
+			return null;
+		}
+		if ( $createdNow && '' !== $id && $this->invoices->remove( 'sales_credit_notes', $id ) ) {
+			return $problem;
+		}
+		return SageErrors::withNote(
+			$problem,
+			sprintf(
+				/* translators: %s: the shop's reference of the refund, such as WC-77. */
+				__( 'The credit note %s is still in Sage and could not be removed by the connector. Void it in Sage, then retry.', 'estasoft-erp-crm-sync-engine' ),
+				SagePayloadReader::text( $note['reference'] ?? '' )
+			)
+		);
+	}
+
+	/**
+	 * Most the totals may differ. Amounts that include tax are converted line by line, and each line can be off by one minor unit.
+	 *
+	 * @param SageRefundPayload $parsed Checked payload.
+	 */
+	private function tolerance( SageRefundPayload $parsed ): int {
+		return $parsed->pricesIncludeTax ? max( 1, count( $parsed->lines ) ) : 1;
 	}
 
 	/**
@@ -225,25 +279,9 @@ final class SageRefundSender {
 				),
 			),
 		);
-		$allocation['idempotency_id'] = md5( $this->connectionId . '|' . $parsed->clientRef . '|allocation|' . $parsed->attempt . '|' . (string) wp_json_encode( $allocation ) );
+		$allocation['idempotency_id'] = md5( $this->connectionId . '|' . $parsed->clientRef . '|allocation|' . (string) wp_json_encode( $allocation ) );
 		$this->invoices->allocate( $allocation );
 		return $this->invoices->get( 'sales_credit_notes', SagePayloadReader::text( $note['id'] ?? '' ) ) ?? $note;
-	}
-
-	/**
-	 * Void a credit note this pass found wrong; a failure to do so is not worse than leaving it.
-	 *
-	 * @param string $id Credit note id.
-	 */
-	private function discard( string $id ): void {
-		if ( '' === $id ) {
-			return;
-		}
-		try {
-			$this->invoices->remove( 'sales_credit_notes', $id );
-		} catch ( ApiException $exception ) {
-			unset( $exception );
-		}
 	}
 
 	/**

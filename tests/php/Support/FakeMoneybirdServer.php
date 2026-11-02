@@ -74,6 +74,21 @@ final class FakeMoneybirdServer {
 	public ?string $forcedCurrency = null;
 
 	/**
+	 * When true `find_by_reference` ignores drafts (nothing documents that it finds them), so only the list endpoint shows them.
+	 */
+	public bool $hideDraftsFromReference = false;
+
+	/**
+	 * When true the next update of a reference fails with a 500 (the second call of a credit invoice), then the switch turns itself off.
+	 */
+	public bool $failReferenceUpdate = false;
+
+	/**
+	 * When set, every invoice is stored with this date (Y-m-d), as a vendor that overwrites the date would.
+	 */
+	public ?string $overrideDate = null;
+
+	/**
 	 * Counter for ids and numbers.
 	 */
 	private int $counter = 4000;
@@ -138,6 +153,7 @@ final class FakeMoneybirdServer {
 		$s->route( 'POST', $base . '/contacts.json', $auth( fn( ApiFakeRequest $r ) => $this->createContact( $r ) ) );
 		$s->route( 'GET', $base . '/products/identifier/{identifier}.json', $auth( fn( ApiFakeRequest $r ) => $this->products[ rawurldecode( $r->params['identifier'] ) ] ?? $this->notFound( 'Product' ) ) );
 		$s->route( 'GET', $base . '/products.json', $auth( fn( ApiFakeRequest $r ) => $this->listProducts( $r ) ) );
+		$s->route( 'GET', $base . '/sales_invoices.json', $auth( fn( ApiFakeRequest $r ) => $this->listInvoices( $r ) ) );
 		$s->route( 'POST', $base . '/sales_invoices.json', $auth( fn( ApiFakeRequest $r ) => $this->createInvoice( $r ) ) );
 		$s->route( 'GET', $base . '/sales_invoices/find_by_reference/{reference}.json', $auth( fn( ApiFakeRequest $r ) => $this->byReference( rawurldecode( $r->params['reference'] ) ) ) );
 		$s->route( 'GET', $base . '/sales_invoices/{id}.json', $auth( fn( ApiFakeRequest $r ) => $this->invoices[ (int) $r->params['id'] ] ?? $this->notFound( 'Sales invoice' ) ) );
@@ -255,7 +271,7 @@ final class FakeMoneybirdServer {
 			'reference'                => (string) ( $body['reference'] ?? '' ),
 			'invoice_id'               => null,
 			'state'                    => 'draft',
-			'invoice_date'             => (string) ( $body['invoice_date'] ?? '' ),
+			'invoice_date'             => $this->overrideDate ?? (string) ( $body['invoice_date'] ?? '' ),
 			'currency'                 => $currency,
 			'prices_are_incl_tax'      => $incl,
 			'total_price_excl_tax'     => $this->format( $net, $exponent ),
@@ -271,6 +287,31 @@ final class FakeMoneybirdServer {
 	}
 
 	/**
+	 * The invoice list with `filter=key:value,key:value` (reference and state are honoured) and page / per_page.
+	 *
+	 * @param ApiFakeRequest $request Request.
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function listInvoices( ApiFakeRequest $request ): array {
+		$terms = array();
+		foreach ( explode( ',', (string) ( $request->query['filter'] ?? '' ) ) as $term ) {
+			$parts = explode( ':', $term, 2 );
+			if ( 2 === count( $parts ) ) {
+				$terms[ $parts[0] ] = $parts[1];
+			}
+		}
+		$rows = array();
+		foreach ( $this->invoices as $invoice ) {
+			if ( ( isset( $terms['reference'] ) && $invoice['reference'] !== $terms['reference'] ) || ( isset( $terms['state'] ) && $invoice['state'] !== $terms['state'] ) ) {
+				continue;
+			}
+			$rows[] = $invoice;
+		}
+		$per = max( 1, min( 100, (int) ( $request->query['per_page'] ?? 50 ) ) );
+		return array_slice( $rows, ( max( 1, (int) ( $request->query['page'] ?? 1 ) ) - 1 ) * $per, $per );
+	}
+
+	/**
 	 * `find_by_reference`: the first invoice with the reference, else 404.
 	 *
 	 * @param string $reference Reference.
@@ -278,7 +319,7 @@ final class FakeMoneybirdServer {
 	 */
 	private function byReference( string $reference ): array|HttpResponse {
 		foreach ( $this->invoices as $invoice ) {
-			if ( $invoice['reference'] === $reference ) {
+			if ( $invoice['reference'] === $reference && ! ( $this->hideDraftsFromReference && 'draft' === $invoice['state'] ) ) {
 				return $invoice;
 			}
 		}
@@ -295,6 +336,10 @@ final class FakeMoneybirdServer {
 		$id = (int) $request->params['id'];
 		if ( ! isset( $this->invoices[ $id ] ) ) {
 			return $this->notFound( 'Sales invoice' );
+		}
+		if ( $this->failReferenceUpdate ) {
+			$this->failReferenceUpdate = false;
+			return FakeHttpClient::json( array( 'error' => 'Internal server error' ), 500 );
 		}
 		$changes = (array) ( $request->json()['sales_invoice'] ?? array() );
 		if ( isset( $changes['reference'] ) ) {

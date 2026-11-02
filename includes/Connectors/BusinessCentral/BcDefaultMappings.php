@@ -42,7 +42,20 @@ final class BcDefaultMappings {
 	private function refunds(): array {
 		return array(
 			MappingRules::rule( 'refund-order-ref', 'order_ref', 'refund.order_id', array( MappingRules::transform( 'prefix', array( 'value' => 'WC-' ) ) ), true, 'SYNC-VAL-002' ),
-			MappingRules::rule( 'refund-date', 'date', 'refund.created_at', array( MappingRules::transform( 'date_utc', array( 'format' => 'date' ) ) ) ),
+			MappingRules::rule(
+				'refund-date',
+				'date',
+				'refund.created_at',
+				array(
+					MappingRules::transform(
+						'date_utc',
+						array(
+							'format'          => 'date',
+							'output_timezone' => 'store',
+						)
+					),
+				)
+			),
 			MappingRules::rule( 'refund-reason', 'reason', 'refund.reason', array( MappingRules::transform( 'trim' ) ) ),
 			MappingRules::rule( 'refund-amount', 'amount', 'refund.amount' ),
 			MappingRules::rule( 'refund-line-product', 'refund_line[].product', 'refund.lines[].sku', array( MappingRules::transform( 'trim' ) ) ),

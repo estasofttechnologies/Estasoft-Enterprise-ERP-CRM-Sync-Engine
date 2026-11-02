@@ -87,6 +87,16 @@ final class FakeDynamicsFinanceServer {
 	public array $denied = array();
 
 	/**
+	 * When set, F&O stores every new line with this price instead of the one sent (its own price agreements).
+	 */
+	public ?float $storedPrice = null;
+
+	/**
+	 * Whether the sales order number sequence is manual: a header made without SalesOrderNumber is refused.
+	 */
+	public bool $manualNumbering = false;
+
+	/**
 	 * Failure for the next write: timeout, server_error, unknown_fault, certificate, rate_limit.
 	 */
 	public string $failNextWrite = '';
@@ -371,9 +381,22 @@ final class FakeDynamicsFinanceServer {
 			return FakeHttpClient::json( $this->error( '', $bad ), 400 );
 		}
 		if ( 'SalesOrderHeadersV2' === $entity ) {
-			$body += array( 'SalesOrderNumber' => '00' . str_pad( (string) ( 1000 + ++$this->sequence ), 6, '0', STR_PAD_LEFT ) );
+			if ( '' === (string) ( $body['SalesOrderNumber'] ?? '' ) ) {
+				if ( $this->manualNumbering ) {
+					return FakeHttpClient::json( $this->error( '', 'The field SalesOrderNumber must be filled in: the number sequence is manual.' ), 400 );
+				}
+				$body['SalesOrderNumber'] = '00' . str_pad( (string) ( 1000 + ++$this->sequence ), 6, '0', STR_PAD_LEFT );
+			}
+			foreach ( $this->data['SalesOrderHeadersV2'] as $row ) {
+				if ( $row['SalesOrderNumber'] === $body['SalesOrderNumber'] && $row['dataAreaId'] === $body['dataAreaId'] ) {
+					return FakeHttpClient::json( $this->error( '', 'The sales order ' . $body['SalesOrderNumber'] . ' already exists.' ), 400 );
+				}
+			}
 		}
 		if ( 'SalesOrderLines' === $entity ) {
+			if ( null !== $this->storedPrice ) {
+				$body['SalesPrice'] = $this->storedPrice;
+			}
 			$body += array(
 				'LineCreationSequenceNumber' => 1 + count( array_filter( $this->data['SalesOrderLines'], static fn( array $l ): bool => $l['SalesOrderNumber'] === ( $body['SalesOrderNumber'] ?? '' ) ) ),
 				'InventoryLotId'             => 'LOT-' . ++$this->sequence,
@@ -400,6 +423,9 @@ final class FakeDynamicsFinanceServer {
 			if ( '' === (string) ( $body['RequestedShippingDate'] ?? '' ) ) {
 				return 'Field \'Requested ship date\' must be filled in.';
 			}
+			if ( null !== ( $bad = $this->badDate( $body ) ) ) {
+				return $bad;
+			}
 			if ( ! in_array( strtoupper( (string) ( $body['CurrencyCode'] ?? '' ) ), $this->currencies, true ) ) {
 				return 'Currency code ' . ( $body['CurrencyCode'] ?? '' ) . ' does not exist.';
 			}
@@ -417,6 +443,9 @@ final class FakeDynamicsFinanceServer {
 			if ( '' === (string) ( $body['RequestedShippingDate'] ?? '' ) ) {
 				return 'Field \'Requested ship date\' must be filled in.';
 			}
+			if ( null !== ( $bad = $this->badDate( $body ) ) ) {
+				return $bad;
+			}
 			$found = false;
 			foreach ( $this->data['ReleasedProductsV2'] as $item ) {
 				$found = $found || ( strcasecmp( (string) $item['ItemNumber'], (string) ( $body['ItemNumber'] ?? '' ) ) === 0 && $item['dataAreaId'] === $body['dataAreaId'] );
@@ -427,6 +456,20 @@ final class FakeDynamicsFinanceServer {
 		}
 		if ( 'CustomersV3' === $entity && '' === (string) ( $body['CustomerGroupId'] ?? '' ) ) {
 			return 'Field \'Customer group\' must be filled in.';
+		}
+		return null;
+	}
+
+	/**
+	 * The refusal for a date field that is not an Edm.DateTimeOffset literal, as the service parses the date fields.
+	 *
+	 * @param array<string,mixed> $body Body.
+	 */
+	private function badDate( array $body ): ?string {
+		foreach ( array( 'RequestedShippingDate', 'RequestedReceiptDate' ) as $field ) {
+			if ( isset( $body[ $field ] ) && 1 !== preg_match( '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(Z|[+-]\d{2}:\d{2})$/', (string) $body[ $field ] ) ) {
+				return "Cannot convert the literal '" . $body[ $field ] . "' to the expected type 'Edm.DateTimeOffset'.";
+			}
 		}
 		return null;
 	}

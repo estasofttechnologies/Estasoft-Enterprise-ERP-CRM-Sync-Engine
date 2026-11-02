@@ -52,7 +52,7 @@ Notes for the readme: one app per country (the Region box must match the country
 
 ## 3. Authentication
 
-OAuth 2 authorization code, handled by the shared `OAuthTokenManager` (no PKCE: none documented; client secret in the form body; refresh under a lock; the new refresh token replaces the old one in the same save; if the save fails the connection needs a new sign-in, SYNC-AUTH-002).
+OAuth 2 authorization code, handled by the shared `OAuthTokenManager` (no PKCE: none documented; client secret in the form body; refresh under a lock; the new refresh token replaces the old one in the same save; if the save fails the connection needs a new sign-in, SYNC-AUTH-002). Exact refuses to refresh a token younger than 9 minutes 30 seconds, so the provider sets `OAuthConfig::minTokenAgeSeconds = 570`: the shared manager keeps using a 600 second token until it is 570 seconds old (the usual 5 minute margin does not apply before then), and a 401 before that age is not answered with a refresh, it ends as SYNC-AUTH-002 without touching the refresh token or holding the connection.
 
 | What | Where |
 | --- | --- |
@@ -135,11 +135,12 @@ Not sent. Exact's REST API has no payment matching endpoint ([third-party]); rec
 
 ## 10. Refunds
 
-A refund creates `POST salesinvoice/SalesInvoices` with `Type = 8021` (sales credit note), the credit journal, the customer of the original document (read from the invoice or order with `YourRef = WC-{order id}`; if there is none the item fails before anything is created) and `YourRef = WC-{refund id}`. Lines come from the refund payload with positive quantities and prices, as in the only public example of a credit invoice posted through the REST API. After creating, the connector reads `Type`, `Currency` and `AmountFC`: the type must be 8021 and the absolute total must equal the refund amount (one minor unit); otherwise the open document is deleted again when Exact allows it and the item fails with SYNC-VAL-002. The link to the original is in `Description` ("Refund of WC-123") because the REST entity has no field for it.
+A refund creates `POST salesinvoice/SalesInvoices` with `Type = 8021` (sales credit note), the credit journal, the customer of the original document (read from the invoice or order with `YourRef = WC-{order id}`; if there is none the item fails before anything is created) and `YourRef = WC-{refund id}`. Lines come from the refund payload with positive quantities and prices, as in the only public example of a credit invoice posted through the REST API. After creating, the connector reads `Type`, `Currency` and `AmountFC`: the type must be 8021, the amount must be zero or negative (a credit note that Exact books as a positive amount would raise the receivable) and its absolute value must equal the refund amount (one minor unit); otherwise the open document is deleted again when Exact allows it and the item fails with SYNC-VAL-002. The sign check is never turned into a warning by the option `total_mismatch`, and `findExisting()` does not accept a credit note with a positive amount as finished. The link to the original is in `Description` ("Refund of WC-123") because the REST entity has no field for it.
 
 ## 11. Stock, invoice and reconcile reads
 
 - `fetchStock( $skus, $warehouses )`: `inventory/ItemWarehouses?$filter=ItemCode eq '<sku>'` (one request per SKU, paged), `$select=ItemCode,WarehouseCode,CurrentStock,PlannedStockOut,ItemIsStockItem`; quantity = sum of `CurrentStock` over the chosen warehouse codes (all when none), held = sum of `PlannedStockOut`. Items that are not stock items are left out. Needs the stock features of the licence; without them Exact answers 403, which becomes SYNC-AUTH-004 naming the stock read.
+- `ping()` (the circuit breaker's probe): one `GET current/Me`, not the whole test connection.
 - `fetchInvoice( $ref )`: the document by GUID: `InvoiceNumber`, `StatusDescription` (status 10 draft, 20 open, 50 processed), `InvoiceDate`; `authority_status` is empty (Exact has no tax-authority step in this API), `pdf_url` and `qr` empty.
 - `listForReconcile( $from )`: `SalesInvoices` (or orders) with `startswith(YourRef,'WC-') eq true` and `InvoiceDate ge datetime'…'`, paged, keyed by `YourRef`, with `total_minor` from `AmountFC` and `refunded_minor` from the credit notes found in the same window by their `Description`.
 - Tracking: not offered. Exact's `salesorder/GoodsDeliveries` has a `TrackingNumber`, but linking a delivery back to the order needs sales order mode and an extra lookup per delivery; it was not built.
@@ -164,7 +165,7 @@ A refund creates `POST salesinvoice/SalesInvoices` with `Type = 8021` (sales cre
 | Unknown SKU | SYNC-MAP-001 | needs a person |
 | Unknown VAT code | SYNC-MAP-002 | needs a person |
 | Missing customer email | SYNC-MAP-003 | needs a person |
-| Total or currency differs, credit note not a credit note | SYNC-VAL-002 | needs a person |
+| Total or currency differs, credit note not a credit note, credit note with a positive amount | SYNC-VAL-002 | needs a person |
 
 SYNC-AUTH-006 (plan gate) is not used: no Exact answer was found that names a missing licence in a way that can be told from a missing right.
 
@@ -187,7 +188,7 @@ SYNC-AUTH-006 (plan gate) is not used: no Exact answer was found that names a mi
 
 - Exact's official REST reference could not be read; every field name and enumeration comes from a mirror of it (section 1). A field that Exact renamed or a limit that Exact changed would show up only against a real administration.
 - Whether a sales invoice line may omit `Item` (the connector always sends an item), and the exact length limits of `YourRef`, `Description` and `Remarks`.
-- Whether `Type = 8021` on POST with positive quantities creates a credit note whose `AmountFC` is negative or positive; the check compares absolute values and the type. Whether the credit note can carry a reference to the original beyond the `Description`.
+- Whether `Type = 8021` on POST with positive quantities creates a credit note whose `AmountFC` is negative. The connector requires it to be zero or negative and removes the document (or reports that a person must) when it is not; if Exact keeps the amount positive, every refund fails visibly until the lines are sent with negative quantities instead (one place in `createCreditNote()`). Whether the credit note can carry a reference to the original beyond the `Description`.
 - Whether `DELETE salesinvoice/SalesInvoices(guid'…')` works for an open invoice with this app's rights (listed in a third-party description of the API).
 - Filter functions `startswith(...)` and string equality on `Email` and `YourRef` (case sensitivity, trimming); `Account.Code` has leading spaces and is never used.
 - `Percentage` of a VAT code as a fraction (0.21 for 21 percent).

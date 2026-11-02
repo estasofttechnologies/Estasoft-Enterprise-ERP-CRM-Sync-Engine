@@ -57,6 +57,21 @@ final class QuickBooksRefundFlowTest extends QuickBooksTestCase {
 		$this->assertNotNull( $this->connector->findExisting( $this->connection, $this->item( '2102', EntityType::Refund ) ) );
 	}
 
+	public function test_a_retry_of_a_refund_after_a_time_out_sends_the_same_request_id_and_gets_the_first_credit_memo(): void {
+		$this->order( '2020' );
+		$this->qbo->loseNextAnswer = true;
+		$this->assertFalse( $this->send( '2120', '2020' )->isSuccess() );
+		$this->qbo->hideCreditMemos = 1;
+
+		$retry = $this->send( '2120', '2020', array(), null, 4 );
+
+		$this->assertTrue( $retry->isSuccess(), (string) $retry->error?->message() );
+		$this->assertCount( 1, $this->qbo->store['CreditMemo'] );
+		$ids = array_map( static fn( $r ): string => (string) $r->query['requestid'], array_values( array_filter( $this->qbo->writes(), static fn( $r ): bool => isset( $r->query['requestid'] ) && '/v3/company/' . FakeQuickBooksServer::REALM . '/creditmemo' === $r->path ) ) );
+		$this->assertCount( 2, $ids );
+		$this->assertSame( $ids[0], $ids[1] );
+	}
+
 	public function test_a_refund_for_an_order_quickbooks_does_not_have_fails_before_anything_is_made(): void {
 		$result = $this->send( '2103', '2999' );
 
@@ -122,13 +137,17 @@ final class QuickBooksRefundFlowTest extends QuickBooksTestCase {
 		$this->assertSame( array(), $this->qbo->server->received );
 	}
 
-	public function test_a_try_after_a_deleted_credit_memo_gets_a_new_request_id(): void {
+	public function test_after_a_wrong_credit_memo_was_deleted_the_replayed_answer_is_seen_to_be_dead_and_a_new_request_id_is_used(): void {
 		$this->order( '2010' );
 		$this->send( '2110', '2010', array( 'amount' => 9999 ) );
+		$this->assertCount( 0, $this->qbo->store['CreditMemo'] );
 
-		$retry = $this->send( '2110', '2010', array(), null, 1 );
+		$retry = $this->send( '2110', '2010' );
 
 		$this->assertTrue( $retry->isSuccess(), (string) $retry->error?->message() );
 		$this->assertCount( 1, $this->qbo->store['CreditMemo'] );
+		$ids = array_map( static fn( $r ): string => (string) $r->query['requestid'], array_values( array_filter( $this->qbo->writes(), static fn( $r ): bool => isset( $r->query['requestid'] ) && '/v3/company/' . FakeQuickBooksServer::REALM . '/creditmemo' === $r->path ) ) );
+		$this->assertCount( 3, $ids );
+		$this->assertNotSame( $ids[1], $ids[2] );
 	}
 }

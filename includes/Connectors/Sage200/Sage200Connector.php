@@ -73,7 +73,6 @@ final class Sage200Connector extends AbstractApiConnector implements OAuthConnec
 				Capability::Orders,
 				Capability::Customers,
 				Capability::Refunds,
-				Capability::Reconciliation,
 				Capability::ShadowLookup,
 			),
 			entities: array( EntityType::Order, EntityType::Refund, EntityType::Customer ),
@@ -104,7 +103,8 @@ final class Sage200Connector extends AbstractApiConnector implements OAuthConnec
 	}
 
 	/**
-	 * The subscription key and the site and company that pin every call.
+	 * The site and company that pin every call, and the subscription key when the merchant has one (the authentication guide lists only the
+	 * bearer token, the site and the company; the key comes from third-party clients).
 	 *
 	 * @param Connection $connection Connection.
 	 * @return array<string,string>
@@ -203,7 +203,7 @@ final class Sage200Connector extends AbstractApiConnector implements OAuthConnec
 		return array(
 			CredentialFields::clientId( 'client_id', __( 'The Client ID Sage sent for your application.', 'estasoft-erp-crm-sync-engine' ) ),
 			CredentialFields::clientSecret( 'client_secret', __( 'The Client Secret Sage sent. Saved encrypted.', 'estasoft-erp-crm-sync-engine' ) ),
-			new CredentialField( 'subscription_key', __( 'Subscription key', 'estasoft-erp-crm-sync-engine' ), true, true, __( 'The subscription key Sage sent with the credentials. Saved encrypted.', 'estasoft-erp-crm-sync-engine' ), '', 'password', array(), 'app' ),
+			new CredentialField( 'subscription_key', __( 'Subscription key (if Sage sent one)', 'estasoft-erp-crm-sync-engine' ), true, false, __( 'Leave empty unless Sage sent a subscription key with your credentials. Saved encrypted.', 'estasoft-erp-crm-sync-engine' ), '', 'password', array(), 'app' ),
 			CredentialFields::choice(
 				'edition',
 				__( 'Edition', 'estasoft-erp-crm-sync-engine' ),
@@ -488,19 +488,6 @@ final class Sage200Connector extends AbstractApiConnector implements OAuthConnec
 			}
 		}
 		return array_slice( array_values( $found ), 0, 20 );
-	}
-
-	/**
-	 * Orders for the nightly check.
-	 *
-	 * @param Connection         $connection Connection.
-	 * @param \DateTimeImmutable $from       UTC window start.
-	 * @return array<string,ExternalRef>|ConnectorError
-	 *
-	 * @throws ApiException On failure.
-	 */
-	public function listForReconcile( Connection $connection, \DateTimeImmutable $from ): array|ConnectorError {
-		return ( new Sage200Reader( $this->client( $connection ), $this->orders( $connection ) ) )->reconcile( $from );
 	}
 
 	/**

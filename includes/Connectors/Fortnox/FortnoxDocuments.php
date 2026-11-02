@@ -16,6 +16,7 @@ use Estasoft\SyncEngine\Connectors\CrmCommon\CrmOptions;
 use Estasoft\SyncEngine\Connectors\CrmCommon\Text;
 use Estasoft\SyncEngine\Contract\ExternalRef;
 use Estasoft\SyncEngine\Contract\SendResult;
+use Estasoft\SyncEngine\Core\Support\Money;
 
 /**
  * The create-and-verify flow. `ExternalInvoiceReference1` carries `WC-{id}` and is searched before every create; the list answer of Fortnox
@@ -138,7 +139,7 @@ final class FortnoxDocuments {
 			$row     = $this->create( $order, $orders );
 			$created = true;
 		}
-		$this->verify( $row, $order->currency, $order->totalMinor, $created );
+		$this->verify( $row, $order->currency, $order->totalMinor, $created, $orders );
 		$row = $this->finalise( $row, $orders, 'WooCommerce' );
 		if ( ! $orders ) {
 			$row = $this->steps( $row, $order );
@@ -171,7 +172,7 @@ final class FortnoxDocuments {
 		} elseif ( '' === $currency ) {
 			$currency = '' !== (string) ( $row['Currency'] ?? '' ) ? (string) $row['Currency'] : 'SEK';
 		}
-		$this->verify( $row, $currency, -$refund->amountMinor, $created );
+		$this->verify( $row, $currency, -$refund->amountMinor, $created, false );
 		$row = $this->finalise( $row, false, $refund->orderRef );
 		if ( $this->wantsBookkeeping() && true !== ( $row['Booked'] ?? false ) ) {
 			$row = $this->bookkeep( $row );
@@ -386,15 +387,18 @@ final class FortnoxDocuments {
 
 	/**
 	 * Compare a document with the order or refund. A document that is wrong stays marked as pending, so the retry finds it, checks it again
-	 * and fails the same way instead of making another one; a person cancels it in Fortnox.
+	 * and fails the same way instead of making another one; a person cancels it in Fortnox. A company that rounds its totals to whole
+	 * kronor (öresavrundning) makes `Total` differ from the shop's total by the rounding, `RoundOff` on the record, at most half a unit: that
+	 * difference is accepted and noted in the result.
 	 *
 	 * @param array<string,mixed> $row         Document.
 	 * @param string              $currency    Expected currency.
 	 * @param int|null            $totalMinor  Expected signed total including VAT, or null to skip.
 	 * @param bool                $justCreated Whether this pass made it.
+	 * @param bool                $orders      Whether the document is a Fortnox order.
 	 * @throws FortnoxFailure When it differs and the options say fail.
 	 */
-	private function verify( array $row, string $currency, ?int $totalMinor, bool $justCreated ): void {
+	private function verify( array $row, string $currency, ?int $totalMinor, bool $justCreated, bool $orders ): void {
 		$reason = '';
 		$actual = '' !== (string) ( $row['Currency'] ?? '' ) ? strtoupper( (string) $row['Currency'] ) : 'SEK';
 		if ( $actual !== $currency ) {
@@ -403,8 +407,14 @@ final class FortnoxDocuments {
 		} elseif ( null !== $totalMinor ) {
 			$recorded = Amounts::minor( $row['Total'] ?? null, $currency );
 			if ( null !== $recorded && ! Amounts::agree( $totalMinor, $recorded ) ) {
-				/* translators: 1: total of the order, 2: total in Fortnox, 3: currency */
-				$reason = sprintf( __( 'The total is %1$s but Fortnox recorded %2$s %3$s.', 'estasoft-erp-crm-sync-engine' ), Amounts::decimal( $totalMinor, $currency ), Amounts::decimal( $recorded, $currency ), $currency );
+				$rounding = $this->roundingOf( $row, $currency, $orders );
+				if ( 0 !== $rounding && abs( $rounding ) <= intdiv( 10 ** Money::exponent( $currency ), 2 ) && abs( $totalMinor - $recorded ) <= abs( $rounding ) + Amounts::TOLERANCE ) {
+					/* translators: 1: rounding amount, 2: currency */
+					$this->warnings[] = sprintf( __( 'Fortnox rounded the total by %1$s %2$s (the company rounds its totals).', 'estasoft-erp-crm-sync-engine' ), Amounts::decimal( $rounding, $currency ), $currency );
+				} else {
+					/* translators: 1: total of the order, 2: total in Fortnox, 3: currency */
+					$reason = sprintf( __( 'The total is %1$s but Fortnox recorded %2$s %3$s.', 'estasoft-erp-crm-sync-engine' ), Amounts::decimal( $totalMinor, $currency ), Amounts::decimal( $recorded, $currency ), $currency );
+				}
 			}
 		}
 		if ( '' === $reason ) {
@@ -418,6 +428,21 @@ final class FortnoxDocuments {
 			$reason .= ' ' . __( 'The document stays in Fortnox marked as pending; cancel it there, correct the settings and try again.', 'estasoft-erp-crm-sync-engine' );
 		}
 		FortnoxFailure::refuse( 'total', $reason );
+	}
+
+	/**
+	 * The rounding Fortnox applied to a document, in minor units (0 when none or unknown). A list row does not carry `RoundOff`, so the
+	 * record is read once.
+	 *
+	 * @param array<string,mixed> $row      Row or record.
+	 * @param string              $currency Currency.
+	 * @param bool                $orders   Whether the document is a Fortnox order.
+	 */
+	private function roundingOf( array $row, string $currency, bool $orders ): int {
+		if ( ! array_key_exists( 'RoundOff', $row ) && '' !== (string) ( $row['DocumentNumber'] ?? '' ) ) {
+			$row = $this->api->one( $orders ? 'orders' : 'invoices', (string) $row['DocumentNumber'], $orders ? 'Order' : 'Invoice' ) ?? $row;
+		}
+		return Amounts::minor( $row['RoundOff'] ?? null, $currency ) ?? 0;
 	}
 
 	/**

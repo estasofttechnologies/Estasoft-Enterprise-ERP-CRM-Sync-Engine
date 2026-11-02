@@ -23,8 +23,9 @@ final class ShopTotalMarker {
 	 * Set up with what it depends on.
 	 *
 	 * @param Amounts $amounts Conversion helper.
+	 * @param string  $label   The words before the amount ("Shop total"; a system that cannot show the gross total uses "Shop net").
 	 */
-	public function __construct( private readonly Amounts $amounts ) {
+	public function __construct( private readonly Amounts $amounts, private readonly string $label = 'Shop total' ) {
 	}
 
 	/**
@@ -38,7 +39,7 @@ final class ShopTotalMarker {
 		if ( null === $totalMinor ) {
 			return $note;
 		}
-		$marker = sprintf( 'Shop total %s %s', $this->amounts->toDecimal( $totalMinor, $currency ), strtoupper( $currency ) );
+		$marker = sprintf( '%s %s %s', $this->label, $this->amounts->toDecimal( $totalMinor, $currency ), strtoupper( $currency ) );
 		return '' === $note ? $marker : $note . "\n" . $marker;
 	}
 
@@ -49,7 +50,7 @@ final class ShopTotalMarker {
 	 * @return array{minor:int,currency:string}|null Null when the note has no marker.
 	 */
 	public function read( string $note ): ?array {
-		if ( 1 !== preg_match( '/Shop total (-?\d+(?:\.\d+)?) ([A-Z]{3})\s*$/', $note, $match ) ) {
+		if ( 1 !== preg_match( '/' . preg_quote( $this->label, '/' ) . ' (-?\d+(?:\.\d+)?) ([A-Z]{3})\s*$/', $note, $match ) ) {
 			return null;
 		}
 		$minor = $this->amounts->fromWire( $match[1], $match[2] );

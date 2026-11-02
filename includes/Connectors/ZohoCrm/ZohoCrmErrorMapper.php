@@ -64,6 +64,10 @@ final class ZohoCrmErrorMapper {
 		$details = (array) ( $row['details'] ?? array() );
 		$field   = (string) ( $details['api_name'] ?? $details['field'] ?? '' );
 		$text    = trim( (string) ( $row['code'] ?? '' ) . ' ' . (string) ( $row['message'] ?? '' ) );
+		if ( 'Pipeline' === $field && 'MANDATORY_NOT_FOUND' === strtoupper( (string) ( $row['code'] ?? '' ) ) ) {
+			// The Deals module has pipelines on, which makes the Pipeline field mandatory (insert records page).
+			$text = __( 'Zoho CRM needs a pipeline on every deal. Enter the pipeline name in the connection settings and test the connection.', 'estasoft-erp-crm-sync-engine' );
+		}
 		if ( '' === $text ) {
 			/* translators: 1: HTTP status */
 			$text = sprintf( __( 'The system answered with status %d.', 'estasoft-erp-crm-sync-engine' ), $status );

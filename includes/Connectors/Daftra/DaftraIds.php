@@ -34,6 +34,16 @@ final class DaftraIds {
 	}
 
 	/**
+	 * The client reference of the order a refund belongs to, read from the partition key `order:{id}`.
+	 *
+	 * @param Item $item Queue item of the refund.
+	 * @return string WC-{order id}, or an empty string when the partition key names no order.
+	 */
+	public function orderReference( Item $item ): string {
+		return 1 === preg_match( '/^order:(\d+)$/', $item->partitionKey, $parts ) ? 'WC-' . $parts[1] : '';
+	}
+
+	/**
 	 * The transaction id of the payment of an order.
 	 *
 	 * @param Item $item Queue item of the order.

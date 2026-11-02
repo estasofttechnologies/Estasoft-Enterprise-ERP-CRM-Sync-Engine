@@ -16,6 +16,7 @@ use Estasoft\SyncEngine\Domain\EntityType;
 use Estasoft\SyncEngine\Domain\Item;
 use Estasoft\SyncEngine\Domain\ItemState;
 use Estasoft\SyncEngine\Tests\Support\ApiTestKit;
+use Estasoft\SyncEngine\Tests\Support\FakeWafeqIndexStore;
 use Estasoft\SyncEngine\Tests\Support\FakeWafeqServer;
 use PHPUnit\Framework\TestCase;
 
@@ -34,9 +35,15 @@ abstract class WafeqTestCase extends TestCase {
 	 */
 	protected FakeWafeqServer $server;
 
+	/**
+	 * Where the item index is kept (in memory here, a transient in the engine).
+	 */
+	protected FakeWafeqIndexStore $store;
+
 	protected function setUp(): void {
 		parent::setUp();
 		$this->kit    = ApiTestKit::make();
+		$this->store  = new FakeWafeqIndexStore();
 		$this->server = new FakeWafeqServer();
 		$this->server->install( $this->kit->http );
 	}
@@ -50,7 +57,7 @@ abstract class WafeqTestCase extends TestCase {
 	 * The connector as the registry hands it out.
 	 */
 	protected function connector(): GuardedConnector {
-		return GuardedConnector::wrap( new WafeqConnector( $this->kit->deps ) );
+		return GuardedConnector::wrap( new WafeqConnector( $this->kit->deps, $this->store ) );
 	}
 
 	/**

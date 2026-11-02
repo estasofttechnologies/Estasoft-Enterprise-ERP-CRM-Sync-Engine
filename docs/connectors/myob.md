@@ -7,7 +7,7 @@ available: true
 verified: false
 hosts: [api.myob.com, arl2.api.myob.com, secure.myob.com]
 terms_url: https://developer.myob.com/program/terms-conditions/
-privacy_url: https://www.myob.com/au/about/legal/privacy
+privacy_url: https://www.myob.com/au/legal/privacy-policy
 developer_url: https://my.myob.com.au
 variants: []
 ---
@@ -32,6 +32,8 @@ Tags: `[documented]` official MYOB page (URL, fetched 2026-11-02), `[third-party
 | https://developer.myob.com/api/accountright/v2/sale/invoice/invoice_item/ | invoice fields, lengths, line fields, statuses `Open`/`Closed`/`Credit`, `IsTaxInclusive`, paging 400 default and 1,000 maximum |
 | https://developer.myob.com/api/accountright/v2/sale/order/order_item/ | order number (13 characters, set by the caller or auto-incremented), `CustomerPurchaseOrderNumber` (255) |
 | https://developer.myob.com/api/accountright/v2/contact/customer/ | customer fields and lengths, `Addresses[]` up to five, paging default 400 and maximum 5,000 |
+| https://developer.myob.com/api/accountright/api-overview/retrieving-data/ | `$top` (default 400, maximum 1,000), `$skip` (a multiple of `$top` advised), `$orderby`, `$filter` with OData 3, the `Eq` and `Gt` examples, the `any` operator and the example `Addresses/any(x: x/Email eq 'Davis@yahoo.com.au')`, `datetime'2013-04-01'`, `NextPageLink` |
+| https://developer.myob.com/api/accountright/v2/sale/customerpayment/ | the fields of a customer payment: `DepositTo` (`Account` or `UndepositedFunds`), `Account`, `Customer`, `ReceiptNumber` (13), `Date` (`YYYY-MM-DD HH:MM:SS`), `AmountReceived` (13.2), `PaymentMethod`, `Memo` (255), `Invoices[]` with `UID`, `Number`, `AmountApplied` and `Type` (`Invoice` or `Order`); the page does not describe the POST answer |
 | https://developer.myob.com/api/accountright/v2/inventory/item/ | item `Number` (30), `QuantityOnHand`, `LocationDetails[]` per location |
 | https://developer.myob.com/api/myob-business-api/v2/sale | the sale entities (CustomerPayment, CreditSettlement, CreditRefund, Invoice, Order, Quote) |
 | https://apideck.com/blog/how-to-integrate-with-the-myob-api [third-party] | `businessId` returned in the redirect only with `prompt=consent`, 8 requests a second and 1,000,000 a day, over-limit answered 403, 29-second query timeout, two active keys per developer account, OData examples, no sandbox demo data, no webhooks |
@@ -128,14 +130,14 @@ MYOB posts an invoice when it is created; there is no draft. Checks come first a
 3. If none: read the tax codes once (`GET {file}/GeneralLedger/TaxCode`, all pages, cached for the request), resolve items (`GET {file}/Inventory/Item?$filter=Number eq 'A' or Number eq 'B'`, 20 numbers a call), build and check the body, then resolve the customer (below). Unknown SKU stops with SYNC-MAP-001, an item that is not marked as sold or an unknown tax code with SYNC-VAL-002 naming it, all before anything is created (no customer card either).
 4. `POST {file}/Sale/Invoice/Item`; MYOB answers 201 with the new address in the `Location` header and no body [third-party; the response body is not documented], then the connector reads the invoice with `GET`.
 5. Compare the invoice: no `ForeignCurrency`, `TotalAmount` against `total - excluded_total` (one minor unit allowed), `IsTaxInclusive` as sent. A difference is SYNC-VAL-002 naming both totals; with `fail` the invoice is first deleted (`DELETE`; refused by MYOB once it has a payment, error 10001).
-6. With `invoice_paid` and a payment date: `POST {file}/Sale/CustomerPayment` (customer, deposit account, date, amount = the invoice's balance read just before, the invoice with `AmountApplied`, memo `WC-{id}`). If the balance is already 0 nothing is created.
+6. With `invoice_paid` and a payment date: `POST {file}/Sale/CustomerPayment` (section 10; `AmountReceived` = the invoice's balance read just before, the invoice with `AmountApplied`), then the invoice is read again. The pass succeeds only when `BalanceDueAmount` is 0; any other balance, or an invoice that cannot be read, ends the pass with SYNC-VAL-002 naming the balance. If the balance is already 0 before the payment, nothing is created.
 7. Result: external id = invoice `UID`, reference = `Number`, `extra` = total in minor units, status.
 
 Replays: invoice and payment are created once per pass; a failure that may have reached MYOB ends the pass, and the next pass starts at step 2.
 
 Known gap: MYOB has no draft state and no field the connector could mark and clear without rewriting the whole invoice. If a pass is killed between the create (step 4) and the read-back (step 5), the next pass finds the invoice and accepts it without checking its total. The nightly check compares the total of every `WC-` invoice with the shop's (`listForReconcile` reports `total_minor`).
 
-Customers: `GET {file}/Contact/Customer?$filter=Addresses/any(a: a/Email eq 'x')` [inferred; MYOB's page documents no email filter]. The email is always stored on the card's first address, even when the order has no street, so the card is found again. If MYOB answers that this filter is not supported (400 or 501), the connector reads the customer list page by page (1,000 a page) up to 20 pages and compares the email itself; beyond that it stops with SYNC-VAL-002 (a list that long needs the filter). No match: `POST {file}/Contact/Customer`, then `GET` the card. An invoice never goes to a different customer than the email says.
+Customers: `GET {file}/Contact/Customer?$filter=Addresses/any(x: x/Email eq 'x')&$top=1000&$skip=0`, exactly the form MYOB shows on its Retrieving data page (the OData 3 `any` operator) [documented]. The email is always stored on the card's first address, even when the order has no street, so the card is found again. The page does not say whether `eq` ignores case, so when nothing is found and the email has capitals the lookup is repeated once with the email in lower case; the cards are then compared without regard to case. The answer is read page by page until a page is short (three pages at most, a stop for a server that ignores the filter) and every row is compared with the email. If MYOB answers that the filter is not supported (400 or 501), the connector remembers that for the rest of the request and reads the customer list instead: three pages of 1,000 at most, not twenty, comparing the email itself; beyond that it stops with SYNC-VAL-002 (the message says more than 3,000 customers). No match: `POST {file}/Contact/Customer`, then `GET` the card. An invoice never goes to a different customer than the email says.
 
 ## 8. Duplicate protection
 
@@ -149,7 +151,7 @@ Tax codes are the 3-character MYOB codes (`GST`, `FRE`, `N-T`, ...). `listTaxCod
 
 ## 10. Payments
 
-Off unless `documents = invoice_paid`. The body is `Date`, `Customer.UID`, `Memo`, `AmountPaid`, `DepositTo` (`Account` with `Account.UID`, or `UndepositedFunds` when `payment_account` is empty) and `Invoices[]` with `UID`, `Type` `Invoice` and `AmountApplied`. These field names are written from memory of third-party samples (an earlier draft of this page had `Amount` and `PayFrom`); MYOB's own page was not fetched, so treat this step as unverified until the smoke test. An account number that MYOB does not know stops the pass with SYNC-VAL-002 naming `payment_account`; the invoice is kept.
+Off unless `documents = invoice_paid`. The body follows MYOB's CustomerPayment page [documented, fetched 2026-11-02]: `Date` (`YYYY-MM-DD 00:00:00`), `Customer.UID`, `Memo` (`WC-{id}` and the payment reference, 255), `AmountReceived` (the balance, in the file's currency), `DepositTo` (`Account` with `Account.UID`, or `UndepositedFunds` when `payment_account` is empty) and `Invoices[]` with `UID`, `Type` `Invoice` and `AmountApplied` (the same amount). Nothing else is sent. (Earlier drafts had `AmountPaid`, `Amount` and `PayFrom`; they are not fields of the page.) MYOB can answer 201 and still leave a balance (a payment that is applied in part), so the invoice is read again and the pass fails unless the balance is 0; the message names the balance and the next try pays only what is still due, never the whole total again. An account number that MYOB does not know stops the pass with SYNC-VAL-002 naming `payment_account`; the invoice is kept.
 
 ## 11. Refunds
 
@@ -164,6 +166,8 @@ MYOB has no credit note endpoint of its own on the sale pages. Its error list na
 - Tracking: MYOB has no tracking field (closest: `ShippingMethod`, 20 characters); not built. Prices and webhooks: not built; MYOB has no webhooks.
 
 ## 13. Rate limits and pacing
+
+The circuit breaker's health probe (`ping()`) is one `GET https://{host}/accountright/` (the list of company files; it needs no company file and no file login), made fresh every time; it is false on any failure.
 
 8 requests a second and 1,000,000 a day per key [third-party]. Over the limit MYOB answers 403 with `Name` `RateLimitError` and `AdditionalDetails` `Header: x-myobapi-key` [documented], not 429. The connector reads that as SYNC-RATE-001 (a "per-second" text waits 5 seconds; a "daily" text waits until the next UTC day, at most 24 hours). Pacing: one call at a time, at most 4 a second. A query longer than about 29 seconds is cut by MYOB [third-party]; the connector asks for 1,000 rows at most.
 
@@ -201,15 +205,16 @@ MYOB has no credit note endpoint of its own on the sale pages. Its error list na
 
 ## 16. Not verified
 
-- OData filter syntax for `CustomerPurchaseOrderNumber`, `Number`, `startswith`, dates, and the `Addresses/any(...)` email filter; the pages fetched show no filter examples.
+- The Retrieving data page lists only `Eq` and `Gt` and the `any`/`all` operators and refers to the OData 3 specification. The email filter is the page's own example. The filters on `CustomerPurchaseOrderNumber`, `Number`, `startswith`, `substringof` and `ge datetime'...'` use OData 3 syntax that the page does not show; the file's behaviour for them is untested. Whether `eq` ignores case is not stated (the lookup tries both spellings). Whether the filter on a child collection is fast on a large file is unknown.
+- The answer to `POST CustomerPayment` (the `Location` header, as for the other creates) and whether MYOB applies a payment to the invoice in full on the first call; the read-back guards the second.
 - The `Location` header on POST and an empty body (third-party), and `NextPageLink` / `Count` in lists.
 - Whether `api.myob.com` or `arl2.api.myob.com` serves the new keys; the first is the one documented.
-- The fields of `CustomerPayment`, the credit-invoice representation, and the discount-line shape.
+- The credit-invoice representation, and the discount-line shape. (The `CustomerPayment` fields are from the page; whether `PaymentMethod` is required by a company file is not stated, so none is sent.)
 - Whether `GeneralLedger/TaxCode`, `Inventory/Location` and `Contact/Customer` are inside the scopes requested.
 - Refresh token lifetime; whether a refresh token rotates every time (the sample shows a new one).
 - Whether a file that needs a file password also needs it for administrator sign-ins.
 - Foreign-currency invoices (not built: the order currency must equal the file's).
-- Privacy URL not fetched. Terms URL is linked from the getting-started page but was not opened.
+- Terms URL (`MYOB Developer Program Terms`) and privacy URL (`MYOB Privacy Policy (Australia)`) were opened on 2026-11-02 and are the right pages. The privacy policy is the Australian one; New Zealand files have their own.
 - No live file was available. Behaviour above the wire is tested against `FakeMyobServer` and fixtures written from the field lists above.
 
 ## 17. Manual smoke test

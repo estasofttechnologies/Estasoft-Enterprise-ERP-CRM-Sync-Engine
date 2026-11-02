@@ -14,34 +14,35 @@ defined( 'ABSPATH' ) || exit;
 use Estasoft\SyncEngine\Connectors\Support\ApiClient;
 use Estasoft\SyncEngine\Connectors\Support\ApiException;
 use Estasoft\SyncEngine\Contract\ConnectorError;
-use Estasoft\SyncEngine\Core\Support\Clock;
 use Estasoft\SyncEngine\Domain\ErrorCode;
 
 /**
- * No email filter is documented for contacts, so the contact list is read page by page, kept for ten minutes in memory and matched on the
- * email, case-insensitively. A contact created here is added to the kept list, so the next order of the same customer does not create it twice.
+ * No email filter is documented for contacts, so a contact is found through the contact index (`HoldedIndex`): the contact list read page by
+ * page, kept between requests, and matched on the email, case-insensitively. A finished index is trusted for a missing email for the hour it
+ * lives, because the connector adds every contact it creates and a new customer is the usual case; a contact made in Holded by hand in that hour
+ * may therefore be made a second time. If the answer to a create is lost, the index is dropped so the retry reads the list again and finds the
+ * contact.
  */
 final class HoldedContacts {
 
 	/**
-	 * Seconds a contact list is kept.
+	 * Name of the contact index.
 	 */
-	public const TTL = 600;
+	public const INDEX = 'contacts';
 
 	/**
-	 * Contacts by connection: [expires at, contacts by lower-case email].
-	 *
-	 * @var array<int,array{0:int,1:array<string,array<string,mixed>>}>
+	 * Path of the contact list.
 	 */
-	private array $contacts = array();
+	private const PATH = 'invoicing/v1/contacts';
 
 	/**
 	 * Set up with what it depends on.
 	 *
-	 * @param HoldedPager $pager Reads every page of a list.
-	 * @param Clock       $clock Time source.
+	 * @param HoldedPager $pager Checks answers.
+	 * @param HoldedIndex $index Persistent indexes.
+	 * @param HoldedQuota $quota Call quota.
 	 */
-	public function __construct( private readonly HoldedPager $pager, private readonly Clock $clock ) {
+	public function __construct( private readonly HoldedPager $pager, private readonly HoldedIndex $index, private readonly HoldedQuota $quota ) {
 	}
 
 	/**
@@ -50,13 +51,40 @@ final class HoldedContacts {
 	 * @param ApiClient $api          Client.
 	 * @param int       $connectionId Connection id.
 	 * @param string    $email        Email address.
-	 * @return array<string,mixed>|null The contact, or null.
+	 * @return array{id:string,name:string,email:string}|null The contact, or null.
 	 *
 	 * @throws ApiException On failure.
 	 */
 	public function find( ApiClient $api, int $connectionId, string $email ): ?array {
 		$email = strtolower( trim( $email ) );
-		return '' === $email ? null : ( $this->all( $api, $connectionId )[ $email ] ?? null );
+		if ( '' === $email ) {
+			return null;
+		}
+		$value = $this->index->find(
+			$api,
+			$connectionId,
+			self::INDEX,
+			self::PATH,
+			static function ( array $row ): ?array {
+				$mail = strtolower( HoldedPayloadReader::text( $row['email'] ?? '' ) );
+				$id   = HoldedPayloadReader::text( $row['id'] ?? '' );
+				if ( '' === $mail || '' === $id ) {
+					return null;
+				}
+				return array( $mail, $id . "\n" . HoldedPayloadReader::shorten( str_replace( array( "\r", "\n" ), ' ', HoldedPayloadReader::text( $row['name'] ?? '' ) ), 80 ) );
+			},
+			$email,
+			HoldedIndex::TTL
+		);
+		if ( null === $value ) {
+			return null;
+		}
+		$parts = explode( "\n", $value, 2 );
+		return array(
+			'id'    => $parts[0],
+			'name'  => $parts[1] ?? '',
+			'email' => $email,
+		);
 	}
 
 	/**
@@ -114,12 +142,14 @@ final class HoldedContacts {
 			$contact['billAddress'] = $address;
 		}
 		try {
-			$json = $api->post( 'invoicing/v1/contacts', array(), $contact )->json();
+			$response = $api->post( self::PATH, array(), $contact );
 		} catch ( ApiException $exception ) {
-			// The answer may have been lost after Holded made the contact: forget the kept list so the retry reads it again and finds the contact.
-			unset( $this->contacts[ $connectionId ] );
+			// The answer may have been lost after Holded made the contact: forget the kept index so the retry reads the list again and finds it.
+			$this->index->forget( $connectionId, self::INDEX );
 			throw $exception;
 		}
+		$this->quota->note( $api, $response );
+		$json = $response->json();
 		$this->pager->guard( $json );
 		$id = HoldedPayloadReader::text( $json['id'] ?? '' );
 		if ( '' === $id ) {
@@ -136,38 +166,7 @@ final class HoldedContacts {
 				'contact without id'
 			);
 		}
-		if ( isset( $this->contacts[ $connectionId ] ) ) {
-			$this->contacts[ $connectionId ][1][ strtolower( $customer['email'] ) ] = array(
-				'id'    => $id,
-				'name'  => $name,
-				'email' => $customer['email'],
-			);
-		}
+		$this->index->add( $connectionId, self::INDEX, strtolower( $customer['email'] ), $id . "\n" . HoldedPayloadReader::shorten( str_replace( array( "\r", "\n" ), ' ', $name ), 80 ) );
 		return $id;
-	}
-
-	/**
-	 * The contact list by lower-case email.
-	 *
-	 * @param ApiClient $api          Client.
-	 * @param int       $connectionId Connection id.
-	 * @return array<string,array<string,mixed>>
-	 *
-	 * @throws ApiException On failure.
-	 */
-	private function all( ApiClient $api, int $connectionId ): array {
-		$now = $this->clock->now()->getTimestamp();
-		if ( isset( $this->contacts[ $connectionId ] ) && $this->contacts[ $connectionId ][0] > $now ) {
-			return $this->contacts[ $connectionId ][1];
-		}
-		$index = array();
-		foreach ( $this->pager->all( $api, 'invoicing/v1/contacts' ) as $row ) {
-			$email = strtolower( HoldedPayloadReader::text( $row['email'] ?? '' ) );
-			if ( '' !== $email && ! isset( $index[ $email ] ) ) {
-				$index[ $email ] = $row;
-			}
-		}
-		$this->contacts[ $connectionId ] = array( $now + self::TTL, $index );
-		return $index;
 	}
 }

@@ -6,8 +6,8 @@ connection_method: key
 available: true
 verified: false
 hosts: []
-terms_url: https://github.com/salesagility/SuiteCRM-Core/blob/hotfix/LICENSE.txt
-privacy_url: https://github.com/salesagility/SuiteCRM-Core/blob/hotfix/LICENSE.txt
+terms_url: ""
+privacy_url: https://suitecrm.com/privacy
 developer_url: https://docs.suitecrm.com/developer/integration-api/v8/authentication/
 variants: []
 ---
@@ -71,7 +71,7 @@ Host: only the SuiteCRM address the merchant entered.
 | Action | Data | When |
 | --- | --- | --- |
 | Token | Client ID, client secret (and sync user, password for that grant) | Connect and about every hour of work |
-| Test connection | Reads the sync user, module list and field list of five modules | On request |
+| Test connection | Reads the sync user and one row of Accounts, Contacts, Opportunities, Notes and Currencies (and of AOS_Products when SKUs are matched); with `reference_field` set, one filtered read of Opportunities | On request |
 | Send order | Buyer name, email, phone, billing address, company; WooCommerce order number, date, status, total, currency and the product lines (as text in the description) | When an order is queued |
 | Send refund | Refund number, reason, amount, refunded lines as a note | When a refund is queued |
 | Lookups, reconcile | Email addresses, SKUs, order references | On request and on the nightly check |
@@ -88,8 +88,10 @@ Host: only the SuiteCRM address the merchant entered.
 | `match_products` | `yes`, `no`: every SKU must exist in `AOS_Products.part_number` | `no` |
 | `unknown_sku` | `fail` (SYNC-MAP-001), `free_text` – only with `match_products = yes` | `fail` |
 | `customer_policy` | `match_or_create`, `match_only` | `match_or_create` |
-| `reference_field` | name of a custom text field of Opportunities that also holds `WC-{id}` | empty |
+| `reference_field` | name of a custom text field of Opportunities (made in Admin, Studio; its name ends in `_c`) that also holds `WC-{id}` and is searched first; the safer key, because a deal name can be edited by anyone | empty |
 | `total_mismatch` | `fail`, `warn` | `fail` |
+
+Test connection also returns `detected.warnings`, a list of short texts, and still passes: (1) `base_currency` is empty (the default currency of SuiteCRM, id `-99`, is not a row of the Currencies list, so an order in it is refused until the option names its ISO code); (2) `reference_field` is empty (orders are then found again by the start of the editable deal name). A `reference_field` that SuiteCRM does not know fails the test with SYNC-VAL-002.
 
 ## 6. Objects and field mapping
 
@@ -115,7 +117,7 @@ SuiteCRM has no tax objects here: the amount is the order total including tax (l
 
 ## 7. Duplicate protection
 
-The opportunity name begins with `WC-{order id}` followed by a space (or is exactly that). Before every create: `GET /V8/module/Opportunities?filter[operator]=or&filter[name][eq]=WC-123&filter[name][like]=WC-123 %&sort=date_entered&page[size]=50&page[number]=n`, every page; the oldest hit wins. With `reference_field` set, that custom field is searched too. A refund note's name begins with `Refund WC-{refund id}` and is searched the same way.
+The opportunity name begins with `WC-{order id}` followed by a space (or is exactly that). Before every create: `GET /V8/module/Opportunities?filter[operator]=or&filter[name][eq]=WC-123&filter[name][like]=WC-123 %&sort=date_entered&page[size]=50&page[number]=n`, every page; the oldest hit wins. With `reference_field` set, the custom field is searched first (`filter[<field>][eq]=WC-123`, exact comparison in code), so an opportunity that someone renamed is still found; the name search remains the fallback for orders sent before the option was set. A value that is not a plain field name, or a field the module lacks, stops the order with SYNC-VAL-002 (`reference_field`) before anything is created. Without the option the key is the editable deal name: Test connection says so. A refund note's name begins with `Refund WC-{refund id}` and is searched the same way.
 
 `findExisting()` returns an order only when it is complete: the opportunity exists and is linked to its contact. Its reference carries `total_minor` and `currency` read from the record. Otherwise it returns nothing and `send()` finishes the links; nothing is created twice. Contacts: `filter[email1][eq]=<email>` with `sort=date_entered`, every page; the oldest wins. Accounts: exact `name`.
 
@@ -133,6 +135,7 @@ A refund creates a note on the opportunity of the original order (found by `WC-{
 
 ## 11. Reads
 
+- `ping()` (the circuit breaker's probe): one `GET /V8/current-user`, not the whole test connection.
 - `lookupCustomer( $email )`: the contact by `email1`.
 - `lookupProduct( $sku )`, `searchProducts( $query )`: `AOS_Products` by `part_number` (exact) and by `name` or `part_number` with `like`; with the module missing the answer is an empty list.
 - `listForReconcile( $from )`: opportunities with `name like 'WC-%'` created from the date (`filter[date_entered][gte]`), every page, keyed by `WC-{id}`, `total_minor` from `amount`; `refunded_minor` is the sum of the refund notes (`name like 'Refund WC-%'`, parent an opportunity) read from the same date, each refund counted once; a note whose name does not read `Refund WC-{n} <amount> <currency>` is left out.
@@ -178,6 +181,7 @@ SYNC-AUTH-006 (plan gate) is not used: SuiteCRM has no plans.
 
 ## 15. Not verified
 
+- SuiteCRM publishes no terms page for the software (it is open source under AGPL, hosted by the merchant); `terms_url` is empty on purpose and `privacy_url` is the privacy policy of the vendor's own websites, which the self-hosted software does not send data to.
 - No live SuiteCRM was available. Everything is built from the source files named in section 1 and tested against `FakeSuiteCrmServer`, an in-memory imitation of the v8 module API (filters, paging, links, errors) written from that source.
 - The exact JSON of success answers (201 versus 200 on create, the shape of `meta` and `links` for paging; paging is driven by the page size and a short last page, not by `meta`).
 - Whether `email1` is returned among the attributes of a contact without a `fields[...]` parameter (the filter itself is server side and trusted).
@@ -195,7 +199,7 @@ Use a throw-away SuiteCRM 8 (the official Docker image or a demo VPS).
 1. Check `https://<host>/legacy/Api/V8/meta/swagger.json` answers 401 (not a 404 page): rewriting works.
 2. Admin, OAuth2 Clients and Tokens: make a Client Credentials client; copy the ID and secret.
 3. If the site is not public, allow the private address with a must-use plugin of your own: `add_filter( 'estasoft_sync_allow_private_hosts', '__return_true' );` (never commit it).
-4. Add a SuiteCRM connection with the address, version SuiteCRM 8, grant client credentials, the ID and the secret. Press Test connection. Expected: the sync user's name and a tick for Accounts, Contacts, Opportunities, Notes.
+4. Add a SuiteCRM connection with the address, version SuiteCRM 8, grant client credentials, the ID and the secret. Press Test connection. Expected: the sync user's name and a tick for Accounts, Contacts, Opportunities, Notes, plus the two warnings of section 5 until `base_currency` and `reference_field` are set.
 5. Place an order with a company name. Expected: one contact (email as the order), one account, one opportunity named `WC-{id} …` with the order total, linked to both. Run the sync again: no second opportunity.
 6. Refund the order: expected one note `Refund WC-{refund id} …` on the opportunity.
 7. Wrong secret: SYNC-AUTH-001. Rewriting off: SYNC-VAL-002 about the address.

@@ -117,6 +117,39 @@ final class SapS4HanaRefundsTest extends SapS4HanaTestCase {
 		$this->assertSame( '210.00', $body['to_Item'][1]['to_PricingElement'][0]['ConditionRateValue'] );
 	}
 
+	public function test_a_request_whose_net_amount_differs_from_the_refund_is_deleted_and_never_reported_as_synced(): void {
+		$this->connector->send( $this->connection(), $this->item( '2004' ), $this->payload() );
+		$refund = $this->item( '510', EntityType::Refund );
+		$result = $this->connector->send( $this->connection( array( 'price_condition' => 'ZZ99' ) ), $refund, $this->refundPayload() );
+		$this->assertFalse( $result->isSuccess() );
+		$this->assertSame( ErrorCode::Val002, $result->error->code );
+		$context = json_encode( $result->error->context );
+		$this->assertStringContainsString( '80.00', $context, 'What S/4HANA priced: two mugs at the list price of 40.00.' );
+		$this->assertStringContainsString( '42.00', $context, 'What the shop refunded.' );
+		$this->assertStringContainsString( 'was deleted', $context );
+		$this->assertSame( array(), $this->server->all( 'A_CreditMemoRequest' ) );
+	}
+
+	public function test_a_request_that_cannot_be_deleted_stays_and_the_message_says_so(): void {
+		$this->connector->send( $this->connection(), $this->item( '2004' ), $this->payload() );
+		$this->server->refuseDelete = true;
+		$result                     = $this->connector->send( $this->connection( array( 'price_condition' => 'ZZ99' ) ), $this->item( '511', EntityType::Refund ), $this->refundPayload() );
+		$this->assertStringContainsString( 'could not be deleted', json_encode( $result->error->context ) );
+		$this->assertCount( 1, $this->server->all( 'A_CreditMemoRequest' ) );
+	}
+
+	public function test_a_request_that_was_only_found_is_checked_but_not_deleted(): void {
+		$this->connector->send( $this->connection(), $this->item( '2004' ), $this->payload() );
+		$this->server->refuseDelete = true;
+		$refund                     = $this->item( '512', EntityType::Refund );
+		$this->connector->send( $this->connection( array( 'price_condition' => 'ZZ99' ) ), $refund, $this->refundPayload() );
+		$this->server->refuseDelete = false;
+		$again                      = $this->connector->send( $this->connection(), $refund, $this->refundPayload() );
+		$this->assertFalse( $again->isSuccess() );
+		$this->assertStringContainsString( 'not made by this pass', json_encode( $again->error->context ) );
+		$this->assertCount( 1, $this->server->all( 'A_CreditMemoRequest' ) );
+	}
+
 	public function test_a_service_that_has_no_arrangement_is_auth_004_on_the_refund(): void {
 		$this->connector->send( $this->connection(), $this->item( '2004' ), $this->payload() );
 		$this->server->blocked[] = 'API_CREDIT_MEMO_REQUEST_SRV';

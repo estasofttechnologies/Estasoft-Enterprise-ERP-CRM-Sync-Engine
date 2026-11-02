@@ -290,7 +290,7 @@ final class SevdeskFlowTest extends TestCase {
 		$this->assertCount( 1, $this->fake->payments );
 		$this->assertSame( 53.53, $this->fake->payments[0][1]['amount'] );
 		$this->assertSame( 'FULL_PAYMENT', $this->fake->payments[0][1]['type'] );
-		$this->assertSame( '03.11.2026', $this->fake->payments[0][1]['date'] );
+		$this->assertSame( 20261103, $this->fake->payments[0][1]['date'], 'The booking date is an integer, yyyymmdd.' );
 		$this->assertSame( 1000, $sent->ref->extra['status'] );
 
 		$this->connector()->send( $open, $this->order(), $payload );
@@ -386,6 +386,9 @@ final class SevdeskFlowTest extends TestCase {
 		return array(
 			'rejected as 500'       => array( 500, '{"error":{"message":"debitor/creditor number already exists"}}', ErrorCode::Val002 ),
 			'plain server error'    => array( 500, '{"message":"Server Error"}', ErrorCode::Net002 ),
+			'other generic text'    => array( 500, '{"message":"Internal error, please try again later"}', ErrorCode::Net002 ),
+			'nested generic text'   => array( 500, '{"error":{"message":"Something went wrong"}}', ErrorCode::Net002 ),
+			'missing field as 500'  => array( 500, '{"message":"Field contact is required"}', ErrorCode::Val002 ),
 			'empty 500'             => array( 500, '', ErrorCode::Net002 ),
 			'bad gateway'           => array( 502, '', ErrorCode::Net002 ),
 			'bad request'           => array( 400, '{"message":"Bad request"}', ErrorCode::Val002 ),
@@ -455,5 +458,82 @@ final class SevdeskFlowTest extends TestCase {
 		$found  = $this->connector()->findExisting( $this->connection(), $linked );
 		$this->assertInstanceOf( ExternalRef::class, $found );
 		$this->assertSame( $sent->ref->id, $found->id );
+	}
+
+	public function test_the_booking_date_can_be_a_unix_timestamp_and_an_unreadable_date_books_nothing(): void {
+		$payload            = $this->payload();
+		$payload['payment'] = array( 'date' => '2026-11-03 08:00:00', 'reference' => 'ch_1' );
+		$unix               = $this->connection( array( 'invoice_state' => 'open', 'payment_account' => '55', 'payment_date_format' => 'unix' ) );
+		$this->assertTrue( $this->connector()->send( $unix, $this->order(), $payload )->isSuccess() );
+		$midnight = ( new \DateTimeImmutable( '2026-11-03 00:00:00', new \DateTimeZone( 'Europe/Berlin' ) ) )->getTimestamp();
+		$this->assertSame( $midnight, $this->fake->payments[0][1]['date'] );
+
+		$payload['payment']['date'] = 'soon';
+		$odd                        = $this->connector()->send( $this->connection( array( 'invoice_state' => 'open', 'payment_account' => '55' ) ), $this->order( '5002' ), $payload );
+		$this->assertTrue( $odd->isSuccess() );
+		$this->assertContains( 'payment_date_unreadable', $odd->ref->extra['warnings'] );
+		$this->assertCount( 1, $this->fake->payments, 'Nothing was booked for the second order.' );
+	}
+
+	public function test_a_payment_that_is_already_there_is_not_booked_again_after_a_lost_answer(): void {
+		$payload            = $this->payload();
+		$payload['payment'] = array( 'date' => '2026-11-03 08:00:00', 'reference' => 'ch_1' );
+		$open               = $this->connection( array( 'invoice_state' => 'open' ) );
+		$sent               = $this->connector()->send( $open, $this->order(), $payload );
+		$id                 = (int) $sent->ref->id;
+		$this->assertSame( 0, count( $this->fake->payments ) );
+
+		// The booking went through at sevDesk but the answer never came back: the next pass finds the invoice paid.
+		$this->fake->invoices[ $id ]['paidAmount'] = '53.53';
+		$this->fake->invoices[ $id ]['status']     = '1000';
+		$again = $this->connector()->send( $this->connection( array( 'invoice_state' => 'open', 'payment_account' => '55' ) ), $this->order(), $payload );
+
+		$this->assertTrue( $again->alreadyExisted );
+		$this->assertSame( array(), $this->fake->server->requests( 'PUT', '#/bookAmount$#' ), 'Nothing is booked twice.' );
+	}
+
+	public function test_the_default_tolerance_is_one_unit_per_row_and_the_option_replaces_it(): void {
+		$lines = array();
+		for ( $i = 0; $i < 10; $i++ ) {
+			$lines[] = array( 'sku' => 'CS-MUG-01', 'name' => 'Mug ' . $i, 'quantity' => 1, 'total' => 99, 'tax_code' => '1', 'tax_rate' => '19' );
+		}
+		// WooCommerce rounds the tax of each line (0.19 x 10 = 1.90), sevDesk rounds the tax of the rate group (1.88): 2 cents apart.
+		$payload = $this->payload( array( 'lines' => $lines, 'shipping' => array(), 'total' => 1180 ) );
+
+		$default = $this->connector()->send( $this->connection(), $this->order(), $payload );
+		$this->assertTrue( $default->isSuccess(), (string) $default->error?->message() );
+		$this->assertSame( 1178, $default->ref->extra['total_minor'] );
+
+		$strict = $this->connector()->send( $this->connection( array( 'total_tolerance' => '1' ) ), $this->order( '5002' ), $payload );
+		$this->assertSame( ErrorCode::Val002, $strict->error->code );
+		$this->assertStringContainsString( '11.80', $strict->error->message() );
+		$this->assertStringContainsString( '11.78', $strict->error->message() );
+
+		$exact = $this->connector()->send( $this->connection( array( 'total_tolerance' => '2' ) ), $this->order( '5003' ), $payload );
+		$this->assertTrue( $exact->isSuccess() );
+
+		$short = $this->payload( array( 'total' => 5353 + 3 ) );
+		$this->assertSame( ErrorCode::Val002, $this->connector()->send( $this->connection(), $this->order( '5004' ), $short )->error->code, 'Two rows allow two units, not three.' );
+	}
+
+	public function test_a_date_the_vendor_changed_is_noted_and_the_connector_never_writes_it_back(): void {
+		$this->fake->overrideDate = '2026-11-09T00:00:00+01:00';
+		$result                   = $this->connector()->send( $this->connection(), $this->order(), $this->payload() );
+
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$this->assertContains( 'date_differs', $result->ref->extra['warnings'] );
+
+		$this->fake->overrideDate = null;
+		$clean                    = $this->connector()->send( $this->connection(), $this->order( '5002' ), $this->payload() );
+		$this->assertArrayNotHasKey( 'warnings', $clean->ref->extra );
+	}
+
+	public function test_ping_is_one_cheap_call(): void {
+		$this->assertTrue( $this->connector()->ping( $this->connection() ) );
+		$this->assertCount( 1, $this->kit->http->requests );
+		$this->assertStringEndsWith( '/Tools/bookkeepingSystemVersion', $this->kit->http->requests[0]['url'] );
+
+		$bad = $this->kit->connection( 'sevdesk', array(), array( 'api_token' => 'wrong-token-0000' ), 9 );
+		$this->assertFalse( $this->connector()->ping( $bad ) );
 	}
 }

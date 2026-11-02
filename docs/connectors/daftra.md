@@ -6,8 +6,8 @@ connection_method: key
 available: true
 verified: false
 hosts: ["*.daftara.com", "*.daftra.com"]
-terms_url: https://www.daftra.com/en/terms-and-conditions    # not verified by fetch (page not reachable from the build session)
-privacy_url: https://www.daftra.com/en/privacy-policy        # not verified by fetch (page not reachable from the build session)
+terms_url: https://www.daftra.com/en/terms-conditions/    # fetched 2026-11-02: "Daftra's Terms and Conditions"
+privacy_url: https://www.daftra.com/en/privacy-policy/    # linked from the footer of the terms page; the page itself could not be fetched
 developer_url: https://docs.daftara.dev/933385m0
 variants: []
 ---
@@ -59,8 +59,8 @@ Host: `<name>.daftara.com` or `<name>.daftra.com`, the address the merchant type
 | Action | Request | Data sent |
 | --- | --- | --- |
 | Test connection | `GET /api2/site_info.json`, `GET /api2/taxes.json`, `GET /api2/stores.json` | The key |
-| Order synced | `GET /api2/invoices.json?po_number=`, `GET /api2/taxes.json`, `GET /api2/clients.json?keywords=`, `POST /api2/clients.json`, `GET /api2/products.json?product_code=`, `POST /api2/invoices.json`, `GET /api2/invoices/{id}.json`, `GET /api2/invoices/update_draft/{id}/0.json`, `DELETE /api2/invoices/{id}.json` (a draft that failed its check), `POST /api2/invoice_payments.json` (if switched on) | Customer name, email, phone, address, tax number; order number as purchase-order reference; date, currency; product id, name, quantity, unit price, tax; payment amount, method, date and transaction id |
-| Refund synced | `GET /api2/credit_notes.json?created_from=`, `GET /api2/invoices.json?po_number=`, `GET /api2/invoices/{id}.json`, `GET /api2/taxes.json`, `GET /api2/products.json?product_code=`, `POST /api2/credit_notes.json`, `GET /api2/credit_notes/{id}.json`, `DELETE /api2/credit_notes/{id}.json` (a credit note that failed its check) | Refund lines, amounts, the order reference, the reason |
+| Order synced | `GET /api2/invoices.json?po_number=`, `GET /api2/taxes.json`, `GET /api2/clients.json?filter[email]=` and, when that finds nothing, `?keywords=`, `POST /api2/clients.json`, `GET /api2/products.json?product_code=`, `POST /api2/invoices.json`, `GET /api2/invoices/{id}.json`, `GET /api2/invoices/update_draft/{id}/0.json`, `DELETE /api2/invoices/{id}.json` (a draft that failed its check), `POST /api2/invoice_payments.json` (if switched on) | Customer name, email, phone, address, tax number; order number as purchase-order reference; date, currency; product id, name, quantity, unit price, tax; payment amount, method, date and transaction id |
+| Refund synced | `GET /api2/invoices.json?po_number=`, `GET /api2/credit_notes.json?client_id=`, `GET /api2/invoices/{id}.json`, `GET /api2/taxes.json`, `GET /api2/products.json?product_code=`, `POST /api2/credit_notes.json`, `GET /api2/credit_notes/{id}.json`, `DELETE /api2/credit_notes/{id}.json` (a credit note that failed its check) | Refund lines, amounts, the order reference, the reason |
 | Stock read | `GET /api2/products.json?product_code=` | SKUs |
 
 No card data is sent.
@@ -107,7 +107,7 @@ Payment (`POST /api2/invoice_payments.json`, body `{"InvoicePayment": {...}}`) [
 
 1. Parse and check the mapped payload (email, name, lines). Missing email is SYNC-MAP-003.
 2. `findExisting`: `GET /api2/invoices.json?po_number=WC-{id}` over all pages; match `Invoice.po_number` exactly.
-3. Client: `GET /api2/clients.json?keywords={email}` over all pages with an exact case-insensitive match on `Client.email`; else `POST /api2/clients.json`. (`keywords` is the only documented search; it is not documented as covering the email, so the match is checked locally and a miss creates a client; a second client with the same email is the worst case, see Not verified.)
+3. Client: first `GET /api2/clients.json?filter[email]={email}` (the filtering page documents `filter[field]=value` on list endpoints [documented]; the page says nothing about case, so a stored `Noor@Example.com` may not match), over all pages with an exact case-insensitive match on `Client.email`; if that finds no exact match, `GET /api2/clients.json?keywords={email}` the same way; else `POST /api2/clients.json`. A new customer therefore costs two searches. A second client with the same email is the worst case, see Not verified.
 4. Products: `GET /api2/products.json?product_code={sku}` over all pages with an exact match on `Product.product_code`. The Daftra product id goes in `product_id`. An unknown SKU is SYNC-MAP-001, or with `unknown_sku = free_text` a line with only `item`, `description`, `unit_price`, `quantity` and the mapped tax.
 5. Prices: `lines[].total` (after discounts, tax-exclusive) divided by the quantity, with the line split in two when it does not divide; when the mapped tax has `included = 1` in Daftra (prices include tax) the gross price is sent instead: per line, one percentage tax, whole-number arithmetic, otherwise SYNC-VAL-002 naming the tax. Shipping and fees become lines with `item` text and no product.
 6. `POST /api2/invoices.json` with `draft = 1`. A lost answer is handled by step 2 on the next pass.
@@ -122,8 +122,8 @@ E-invoicing (ZATCA/ETA): Daftra has an `einvoice_status` filter on the invoice l
 
 ## 7. Refund flow
 
-1. The order's invoice must exist (found by `po_number` as in order step 2) and must not be a draft; otherwise SYNC-VAL-002 "The order of this refund is not in Daftra yet" or "still a draft" (retried later).
-2. Credit note search: `GET /api2/credit_notes.json?created_from={7 days ago}` over all pages; match `po_number` = `WC-R-{refund id}` locally, because the credit note list has no reference filter [documented filters]. A retry of a lost answer happens within a day; a credit note older than 7 days is not found, which is the stated limit of this search.
+1. The order's invoice must exist (found by `po_number` as in order step 2); otherwise SYNC-VAL-002 "The order of this refund is not in Daftra". The credit note search comes next (step 2), so a credit note that exists is returned even if the invoice was later changed; a draft invoice is refused after that with "still a draft" (retried later).
+2. Credit note search: `GET /api2/credit_notes.json?client_id={the invoice's client}` over all pages; match `po_number` = `WC-R-{refund id}` locally, because the credit note list page documents `client_id`, `no`, `source_id` and date filters and no reference filter [documented]. There is no date limit, so a retry made months later still finds the credit note. `findExisting` has no payload: it follows the id the engine stored (`GET /api2/credit_notes/{id}.json`), otherwise finds the invoice from the refund's partition key (`order:{id}`) and searches the same way.
 3. Rows: refunded product lines (net amount, quantity, product id by SKU when Daftra has the product), shipping and other refunded amounts as lines without tax, or one row for a refund without lines. The tax of a product line is resolved from the ratio of its tax amount to its net amount against the active Daftra tax values (within one minor unit), SYNC-MAP-002 when nothing matches.
 4. `POST /api2/credit_notes.json` in one step (the documented draft call is for invoices): `client_id` of the invoice, `po_number = WC-R-{refund id}`, `date`, `currency_code` (the invoice's), `notes` naming the order and the reason, `subscription_id` = the invoice id when `link_credit_notes = yes`.
 5. Read back and check currency and total against `refund.amount - refund.excluded_amount`. A mismatch deletes the credit note (`DELETE /api2/credit_notes/{id}.json`) and returns SYNC-VAL-002 with both totals; a refused delete is said in the error.
@@ -137,9 +137,9 @@ E-invoicing (ZATCA/ETA): Daftra has an `einvoice_status` filter on the invoice l
 
 ## 9. Duplicate protection
 
-- Field: `Invoice.po_number` = `WC-{order id}`, searched with the documented `po_number` filter before every create (the filter may match by containment, so the match is checked exactly). Credit notes: `po_number` = `WC-R-{refund id}` found by the 7-day list in section 7. Payments: `transaction_id` = `WC-{order id}-PAY`.
+- Field: `Invoice.po_number` = `WC-{order id}`, searched with the documented `po_number` filter before every create (the filter may match by containment, so the match is checked exactly). Credit notes: `po_number` = `WC-R-{refund id}` found in the credit notes of the invoice's client (section 7). Payments: `transaction_id` = `WC-{order id}-PAY`.
 - No idempotency key exists.
-- A failed draft or credit note is deleted, so no unfinished record is left behind to be found by mistake. `findExisting` returns the invoice only when it is issued (`draft = 0`), or when `invoice_state = draft` and it is a draft, and the payment is present when payments are wanted. A draft waiting to be issued, or an issued invoice missing its payment, returns null and `send()` finishes it (`SendResult::existing`). A refund's credit note is returned when found in the 7-day list.
+- A failed draft or credit note is deleted, so no unfinished record is left behind to be found by mistake. `findExisting` returns the invoice only when it is issued (`draft = 0`), or when `invoice_state = draft` and it is a draft, and the payment is present when payments are wanted. A draft waiting to be issued, or an issued invoice missing its payment, returns null and `send()` finishes it (`SendResult::existing`). A refund's credit note is returned when found in the credit notes of the client.
 
 ## 10. Stock, tracking, invoice read-back, reconciliation
 
@@ -149,7 +149,7 @@ E-invoicing (ZATCA/ETA): Daftra has an `einvoice_status` filter on the invoice l
 
 ## 11. Rate limits and pacing
 
-The authorization page says limits exist but gives no numbers [documented]. The connector paces at one request per second, one at a time, and obeys 429 and `Retry-After` (default wait 30 s). The tax list is kept in memory for 10 minutes; products are looked up one SKU at a time (up to 10 SKUs, with an exact check because the `product_code` filter may match by containment), and the whole product list is read once when more SKUs are asked for.
+The authorization page says limits exist but gives no numbers [documented]. The connector paces at one request per second, one at a time, and obeys 429 and `Retry-After` (default wait 30 s). The tax list is kept in memory for 10 minutes; products are looked up one SKU at a time (up to 10 SKUs, with an exact check because the `product_code` filter may match by containment), and the whole product list is read once when more SKUs are asked for. The health probe (`ping`) is one call, `GET /api2/site_info.json`.
 
 ## 12. Options (advanced fields)
 
@@ -203,7 +203,8 @@ Entities: order, refund, customer. Regions: SA, AE, EG and the Gulf. Rate limit 
 - Whether `Invoice.draft = 1` is accepted on create (the field is listed on the add page) and whether the draft's `summary_total` is already calculated.
 - That `po_number` accepts text such as `WC-1001` (the list example shows a number).
 - Error body format; rate limits; webhooks.
-- That `created_from` filters credit notes by creation date as assumed (the fake server in the tests follows the same assumption).
+- That the `client_id` filter of the credit note list narrows the list as the parameter list suggests (the page names the parameters in an example URL and does not describe them); the connector reads every page of whatever comes back and matches the reference itself, so a filter that is ignored costs calls, not correctness.
+- That `filter[email]` is case-sensitive or not (the keyword search is the fallback), and that it works on clients at all.
 - That a credit note can be deleted through the API (a refused delete is reported, not hidden).
 - Terms and privacy URLs were not fetched.
 

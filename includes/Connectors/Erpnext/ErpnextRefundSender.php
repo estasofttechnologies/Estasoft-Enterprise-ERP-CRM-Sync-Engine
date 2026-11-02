@@ -87,7 +87,16 @@ final class ErpnextRefundSender {
 		$note     = $this->find( $payload->clientRef );
 		$existing = null !== $note;
 		if ( null === $note ) {
-			$created = $this->create( $payload );
+			try {
+				$created = $this->create( $payload );
+			} catch ( ApiException $exception ) {
+				// The site says the credit note already exists: it is the same refund, so it is linked, not an error.
+				$created = ErpnextOrderSender::isDuplicate( $exception ) ? $this->find( $payload->clientRef ) : null;
+				if ( null === $created ) {
+					throw $exception;
+				}
+				$existing = true;
+			}
 			if ( $created instanceof ConnectorError ) {
 				return SendResult::failure( $created );
 			}

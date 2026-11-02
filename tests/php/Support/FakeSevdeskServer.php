@@ -75,6 +75,11 @@ final class FakeSevdeskServer {
 	public array $payments = array();
 
 	/**
+	 * When set, every document is stored with this date (ISO text), as a vendor that overwrites the date would.
+	 */
+	public ?string $overrideDate = null;
+
+	/**
 	 * Addresses and communication ways made.
 	 *
 	 * @var array<int,array<string,mixed>>
@@ -291,6 +296,12 @@ final class FakeSevdeskServer {
 		$doc['status']     = '100';
 		$doc['_positions'] = $pos;
 		$doc['_date']      = $this->timestamp( (string) ( $doc['invoiceDate'] ?? $doc['creditNoteDate'] ?? '' ) );
+		$dateKey           = 'Invoice' === $kind ? 'invoiceDate' : 'creditNoteDate';
+		if ( null !== $this->overrideDate ) {
+			$doc[ $dateKey ] = $this->overrideDate;
+		} elseif ( $doc['_date'] > 0 ) {
+			$doc[ $dateKey ] = ( new \DateTimeImmutable( '@' . ( $doc['_date'] - 3600 ) ) )->setTimezone( new \DateTimeZone( 'Europe/Berlin' ) )->format( 'Y-m-d\TH:i:sP' );
+		}
 		if ( 'Invoice' === $kind ) {
 			$this->invoices[ $id ] = $doc;
 		} else {
@@ -376,6 +387,9 @@ final class FakeSevdeskServer {
 		}
 		if ( empty( $body['checkAccount']['id'] ) || ! isset( $body['amount'], $body['date'], $body['type'] ) ) {
 			return FakeHttpClient::json( array( 'message' => 'Bad request' ), 400 );
+		}
+		if ( ! is_int( $body['date'] ) ) {
+			return FakeHttpClient::json( array( 'message' => "Invalid 'date' parameter. Please provide an integer value." ), 400 );
 		}
 		$this->payments[]                   = array( $id, $body );
 		$this->invoices[ $id ]['paidAmount'] = number_format( (float) $body['amount'], 2, '.', '' );

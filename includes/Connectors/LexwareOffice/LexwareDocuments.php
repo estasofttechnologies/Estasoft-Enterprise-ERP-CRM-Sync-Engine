@@ -17,6 +17,7 @@ use Estasoft\SyncEngine\Connectors\EuAccountingCommon\OrderPayload;
 use Estasoft\SyncEngine\Connectors\EuAccountingCommon\Options;
 use Estasoft\SyncEngine\Connectors\EuAccountingCommon\PayloadReader;
 use Estasoft\SyncEngine\Connectors\EuAccountingCommon\Refusal;
+use Estasoft\SyncEngine\Connectors\EuAccountingCommon\Tolerance;
 use Estasoft\SyncEngine\Connectors\Support\ApiClient;
 use Estasoft\SyncEngine\Connectors\Support\ApiException;
 use Estasoft\SyncEngine\Contract\ConnectorError;
@@ -74,7 +75,7 @@ final class LexwareDocuments {
 		$existing = $this->search->find( $api, 'invoice', $contact['id'], $marker, $order->date, $timezone );
 		$warnings = $contact['address_differs'] ? array( 'address_differs' ) : array();
 		if ( null !== $existing ) {
-			return $this->resume( $existing, $order->totalMinor, $options, $warnings );
+			return $this->resume( $existing, $order, $options, $warnings );
 		}
 		$built = $this->lines->build( $api, $order, $options );
 		if ( $built instanceof ConnectorError ) {
@@ -109,7 +110,7 @@ final class LexwareDocuments {
 		}
 		$document = $api->get( 'invoices/' . rawurlencode( $id ) )->json();
 		$document = array() === $document ? array( 'id' => $id ) : $document + array( 'id' => $id );
-		$problem  = $this->checkTotal( $document, $order->totalMinor, $options, $warnings );
+		$problem  = $this->checkTotal( $document, $order->totalMinor, $options, $warnings, $order->rows(), $order->date );
 		if ( null !== $problem ) {
 			return SendResult::failure( $problem );
 		}
@@ -121,15 +122,15 @@ final class LexwareDocuments {
 	 * (Lexware has no call that finalises a draft) and the result says so.
 	 *
 	 * @param array<string,mixed> $document   Document from the API.
-	 * @param int|null            $expected   Expected total in minor units.
+	 * @param OrderPayload        $order      Order.
 	 * @param Options             $options    Settings.
 	 * @param array<int,string>   $warnings   Warnings so far.
 	 */
-	private function resume( array $document, ?int $expected, Options $options, array $warnings ): SendResult {
+	private function resume( array $document, OrderPayload $order, Options $options, array $warnings ): SendResult {
 		if ( $options->is( 'invoice_state', 'open' ) && 'draft' === (string) ( $document['voucherStatus'] ?? '' ) ) {
 			$warnings[] = 'stays_draft';
 		}
-		$problem = $this->checkTotal( $document, $expected, $options, $warnings );
+		$problem = $this->checkTotal( $document, $order->totalMinor, $options, $warnings, $order->rows(), $order->date );
 		if ( null !== $problem ) {
 			return SendResult::failure( $problem );
 		}
@@ -137,14 +138,19 @@ final class LexwareDocuments {
 	}
 
 	/**
-	 * Compare the document's gross total with the shop's.
+	 * Compare the document's gross total with the shop's, and its date with the day the connector sent.
 	 *
 	 * @param array<string,mixed> $document Document from the API.
 	 * @param int|null            $expected Expected total in minor units, or null for no check.
 	 * @param Options             $options  Settings.
-	 * @param array<int,string>   $warnings Warnings, extended when the totals differ and the setting is warn.
+	 * @param array<int,string>   $warnings Warnings, extended when the totals differ and the setting is warn, or when the date differs.
+	 * @param int                 $rows     Rows of the document, for the default tolerance.
+	 * @param string              $utcDate  The date (UTC text) the connector converted into `voucherDate`, or empty for no date check.
 	 */
-	public function checkTotal( array $document, ?int $expected, Options $options, array &$warnings ): ?ConnectorError {
+	public function checkTotal( array $document, ?int $expected, Options $options, array &$warnings, int $rows = 1, string $utcDate = '' ): ?ConnectorError {
+		if ( '' !== $utcDate && LocalDate::differs( $document['voucherDate'] ?? null, $utcDate, $options->text( 'timezone' ) ) ) {
+			$warnings[] = 'date_differs';
+		}
 		if ( null === $expected ) {
 			return null;
 		}
@@ -152,7 +158,7 @@ final class LexwareDocuments {
 		if ( null === $actual ) {
 			return Refusal::value( LexwareOfficeConnector::LABEL, 'totalPrice', __( 'Lexware Office returned no total for the document.', 'estasoft-erp-crm-sync-engine' ), 'no total' );
 		}
-		if ( abs( $actual - $expected ) <= 1 ) {
+		if ( Tolerance::accepts( $actual, $expected, $options, $rows ) ) {
 			return null;
 		}
 		if ( $options->is( 'total_mismatch', 'warn' ) ) {

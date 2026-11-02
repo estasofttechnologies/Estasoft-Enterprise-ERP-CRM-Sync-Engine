@@ -7,7 +7,7 @@ available: true
 verified: false
 hosts: []
 terms_url: https://www.acumatica.com/terms-of-use/
-privacy_url: https://www.acumatica.com/privacy-policy/
+privacy_url: https://www.acumatica.com/website-privacy-statement
 developer_url: https://github.com/Acumatica/Help-and-Training-Examples
 variants: []
 ---
@@ -36,7 +36,7 @@ Fetched or read on 2026-11-02. Acumatica's own help site (help.acumatica.com) wa
 | .../IntegrationDev_RESTExample_Shipment_ReadTrackingNumber.html, `_WriteTrackingNumber.html` `[documented, MYOB edition]` | `Packages/TrackingNbr` on `Shipment` |
 | https://www.apideck.com/blog/how-to-integrate-with-the-acumatica-api `[third-party]` | Base URL `https://<instance>/entity/<endpoint>/<version>/`; token endpoint `/identity/connect/token`, form encoded, secret in the body; access token 3,600 s; refresh token may rotate; `PX-CbApiBranch` header; licence limits (Essentials 50, Select 100, Prime 150, Enterprise 300 requests a minute; 429 only when more than 20 requests are queued or one waited more than 10 minutes); sessions held for 10 minutes; endpoint 26.200.001 syntax change; `LastModified` versus `LastModifiedDateTime`; legacy `/entity/auth/login` to be discontinued |
 | docs/research/integration-research-vendors.md section 4.13 | Earlier research, same facts |
-| Acumatica terms and privacy pages | **Not fetched** (refused by the tool); the two addresses in the front matter are Acumatica's usual addresses and are listed under "Not verified" |
+| Acumatica privacy and terms pages | Privacy: https://www.acumatica.com/website-privacy-statement was fetched on 2026-11-02 ("Acumatica Website Privacy Statement"). Terms: https://www.acumatica.com/terms-of-use/ is listed by web search with the title "terms of use" but the fetch tool refused it, so it was not read |
 
 ## 2. How the merchant connects
 
@@ -135,6 +135,8 @@ The original order must exist (`CustomerOrder = WC-{order id}`), otherwise SYNC-
 - Reconcile: Sales Orders with `startswith(CustomerOrder,'WC-')` and `Date` from the window (one day earlier than asked, because dates carry no zone), with `OrderTotal`, currency and status; a Cancelled order is listed with `state = cancelled`. `refunded_minor` is the sum of `Amount` of the credit memos of the window whose description names the order and that are not on hold, voided or rejected. Paged with `$top=100` and `$skip`. Acumatica gives no buyer email on the order, so `email` is empty.
 - `lookupCustomer`, `lookupProduct`, `searchProducts`, `listTaxCodes`: read-only helpers.
 
+Whole-period reads (shipments, the nightly list and its credit memos) collect every page up to 20,000 records, the cap of the reconciliation service; a period with more is refused with SYNC-VAL-002 (field `window`) instead of being cut short. An action's `Location` is followed only when it has the same scheme, host and port as the site address (a bare path is read as being on the site); any other address is refused with SYNC-VAL-002 (field `location`) and no request is sent to it, so the access token never leaves the site.
+
 ## 12. Rate limits and pacing
 
 Per the licence edition: 50, 100, 150 or 300 requests a minute and 1, 2, 3 or 8 parallel requests; requests are slowed after half the budget and answered with 429 only when more than 20 are queued or one waited more than 10 minutes `[third-party]`. Other connected apps share the budget. The connector sends one request at a time, at most 50 a minute (the Essentials edition), and obeys `Retry-After` when sent. Timeout 30 s. A request that waits longer than 30 s is a time-out (SYNC-NET-001), retried later.
@@ -187,7 +189,7 @@ No Acumatica site was available; behaviour was written from the documentation an
 - Whether a Commerce connector licence is needed for a WooCommerce connection.
 - Endpoint 26.200.001 is refused, not supported.
 - Whether the lowest edition limit of 50 requests a minute applies to the merchant's licence (other editions allow more; the connector does not go faster).
-- The terms and privacy addresses in the front matter were not fetched; `developer_url` is the official examples repository, because the page where the connected application is registered (SM303010 help) was not reachable.
+- The terms address in the front matter was found by web search and not read (the privacy address was fetched); `developer_url` is the official examples repository, because the page where the connected application is registered (SM303010 help) was not reachable.
 - Tax registration numbers (`partner.vat`) are not sent.
 - Payments are not implemented (section 9).
 

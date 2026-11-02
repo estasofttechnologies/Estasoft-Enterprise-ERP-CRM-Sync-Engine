@@ -26,6 +26,7 @@ final class DynamicsSalesContractTest extends ApiConnectorContractTestCase {
 		parent::setUp();
 		$this->server = new FakeDynamicsSalesServer( $this->kit->http );
 		$this->server->addProduct( 'CS-MUG-01', array( 'name' => 'Mug' ) );
+		$this->server->setPricingPrecision( 3 );
 	}
 
 	protected function apiConnector(): AbstractApiConnector {

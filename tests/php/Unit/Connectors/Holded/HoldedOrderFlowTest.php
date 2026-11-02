@@ -252,14 +252,39 @@ final class HoldedOrderFlowTest extends HoldedTestCase {
 		$this->assertArrayNotHasKey( 'sku', $this->bodyOf( $this->requests( 'POST', '#/documents/invoice$#' )[0] )['items'][0] );
 	}
 
-	public function test_the_product_list_is_read_once_per_run_and_again_after_ten_minutes(): void {
+	public function test_the_product_list_is_read_once_and_kept_for_an_hour(): void {
 		$connector = $this->connector();
 		$connector->send( $this->connection(), $this->item( EntityType::Order, '1' ), $this->payload() );
 		$connector->send( $this->connection(), $this->item( EntityType::Order, '2' ), $this->payload() );
 		$this->assertCount( 1, $this->requests( 'GET', '#/products\?page=1#' ) );
-		$this->kit->clock->advance( 601 );
+		$this->kit->clock->advance( 3601 );
 		$connector->send( $this->connection(), $this->item( EntityType::Order, '3' ), $this->payload() );
 		$this->assertCount( 2, $this->requests( 'GET', '#/products\?page=1#' ) );
+	}
+
+	public function test_a_product_added_in_holded_is_found_within_five_minutes_without_waiting_for_the_hour(): void {
+		$connector = $this->connector();
+		$connector->send( $this->connection(), $this->item( EntityType::Order, '1' ), $this->payload() );
+		$this->server->tables['products']['p9'] = array( 'id' => 'p9', 'name' => 'New', 'sku' => 'NEW-9', 'price' => 1 );
+		$payload                                = $this->payload();
+		$payload['lines'][0]['sku']             = 'NEW-9';
+		$this->assertSame( ErrorCode::Map001, $connector->send( $this->connection(), $this->item( EntityType::Order, '2' ), $payload )->error->code, 'Trusted for five minutes.' );
+		$this->kit->clock->advance( 301 );
+		$this->assertTrue( $connector->send( $this->connection(), $this->item( EntityType::Order, '2' ), $payload )->isSuccess() );
+	}
+
+	public function test_a_big_catalogue_is_read_page_by_page_and_the_read_stops_when_the_sku_is_found(): void {
+		$this->server->pageSize = 2;
+		for ( $i = 1; $i <= 10; ++$i ) {
+			$this->server->tables['products'][ 'q' . $i ] = array( 'id' => 'q' . $i, 'name' => 'Bulk ' . $i, 'sku' => 'BULK-' . $i, 'price' => 1 );
+		}
+		$connector = $this->connector();
+		$connector->lookupProduct( $this->connection(), 'CS-MUG-01' );
+		$this->assertCount( 1, $this->requests( 'GET', '#/products\?#' ) );
+		$this->assertSame( 'q3', $connector->lookupProduct( $this->connection(), 'bulk-3' )->id );
+		$this->assertCount( 4, $this->requests( 'GET', '#/products\?#' ), 'Pages 2 to 4 only; page 1 was not read again.' );
+		$this->assertSame( 'q1', $connector->lookupProduct( $this->connection(), 'BULK-1' )->id );
+		$this->assertCount( 4, $this->requests( 'GET', '#/products\?#' ), 'A SKU on a page already read costs nothing.' );
 	}
 
 	public function test_a_line_without_a_tax_code_is_sent_with_an_explicit_zero_tax(): void {
@@ -361,13 +386,22 @@ final class HoldedOrderFlowTest extends HoldedTestCase {
 		$this->assertSame( 21, $items[2]['tax'] );
 	}
 
-	public function test_a_fresh_order_costs_seven_calls_on_an_empty_account_and_a_second_one_four(): void {
+	public function test_a_fresh_order_costs_six_calls_on_a_cold_index_and_a_second_one_four(): void {
 		$connector = $this->connector();
 		$connector->send( $this->connection(), $this->item(), $this->payload() );
 		$first = count( $this->kit->http->requests );
-		$this->assertSame( 7, $first, 'Window, products and the empty page after them, contacts, create contact, create invoice, read it back.' );
+		$this->assertSame( 6, $first, 'Window, the product (found on the first page), the contacts, create contact, create invoice, read it back.' );
 		$connector->send( $this->connection(), $this->item( EntityType::Order, '2' ), $this->payload( array( 'number' => '2' ) ) );
-		$this->assertSame( 4, count( $this->kit->http->requests ) - $first, 'The products and contacts are kept: window page and its empty page, create, read back.' );
+		$this->assertSame( 4, count( $this->kit->http->requests ) - $first, 'The indexes are kept: window page and its empty page, create, read back.' );
+	}
+
+	public function test_a_new_run_with_the_indexes_in_the_store_reads_no_contact_and_no_product(): void {
+		$this->connector()->send( $this->connection(), $this->item( EntityType::Order, '1' ), $this->payload() );
+		$before = count( $this->kit->http->requests );
+		$this->connector()->send( $this->connection(), $this->item( EntityType::Order, '2' ), $this->payload( array( 'number' => '2' ) ) );
+		$this->assertSame( 4, count( $this->kit->http->requests ) - $before );
+		$this->assertCount( 0, array_filter( array_slice( $this->kit->http->requests, $before ), static fn( array $request ): bool => str_contains( $request['url'], '/contacts' ) || str_contains( $request['url'], '/products' ) ) );
+		$this->assertCount( 1, $this->server->all( 'contacts' ) );
 	}
 
 	public function test_a_lost_answer_does_not_create_a_second_invoice_on_the_retry(): void {

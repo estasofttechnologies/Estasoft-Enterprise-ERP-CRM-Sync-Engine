@@ -255,7 +255,7 @@ final class XeroConnector extends AbstractApiConnector implements OAuthConnector
 	 */
 	public function ping( Connection $connection ): bool {
 		try {
-			$this->servicesFor( $connection )->organisation->facts();
+			$this->servicesFor( $connection )->organisation->probe();
 			return true;
 		} catch ( \Throwable $throwable ) {
 			unset( $throwable );

@@ -94,7 +94,7 @@ final class AcumaticaReader {
 	 * @throws ApiException On failure.
 	 */
 	public function tracking( \DateTimeImmutable $since ): array {
-		$orders     = $this->client->query(
+		$orders     = $this->client->queryAll(
 			'SalesOrder',
 			array(
 				'$filter' => "startswith(CustomerOrder,'WC-') and LastModified gt " . AcumaticaValue::dateLiteral( $since ),
@@ -118,7 +118,7 @@ final class AcumaticaReader {
 		$out = array();
 		foreach ( array_chunk( array_keys( $byShipment ), self::CHUNK ) as $chunk ) {
 			$filter = implode( ' or ', array_map( static fn( string $number ): string => 'ShipmentNbr eq ' . AcumaticaValue::literal( $number ), $chunk ) );
-			$rows   = $this->client->query(
+			$rows   = $this->client->queryAll(
 				'Shipment',
 				array(
 					'$filter' => $filter,
@@ -205,7 +205,7 @@ final class AcumaticaReader {
 		$day      = $from->setTimezone( new \DateTimeZone( 'UTC' ) )->modify( '-1 day' );
 		$literal  = AcumaticaValue::dateLiteral( $day );
 		$refunded = array();
-		$memos    = $this->client->query(
+		$memos    = $this->client->queryAll(
 			'SalesInvoice',
 			array(
 				'$filter' => "Type eq 'Credit Memo' and startswith(Description,'WC-') and Date ge " . $literal,
@@ -223,7 +223,7 @@ final class AcumaticaReader {
 			}
 		}
 		$out  = array();
-		$rows = $this->client->query(
+		$rows = $this->client->queryAll(
 			'SalesOrder',
 			array(
 				'$filter' => "startswith(CustomerOrder,'WC-') and Date ge " . $literal,

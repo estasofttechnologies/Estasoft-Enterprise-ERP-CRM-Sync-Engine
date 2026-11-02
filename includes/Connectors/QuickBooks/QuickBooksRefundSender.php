@@ -25,6 +25,11 @@ use Estasoft\SyncEngine\Domain\Item;
 final class QuickBooksRefundSender {
 
 	/**
+	 * Most creates in one pass when the answer keeps naming a credit memo that was deleted.
+	 */
+	private const ROUNDS = 3;
+
+	/**
 	 * Set up with what it depends on.
 	 *
 	 * @param QuickBooksDocuments       $documents    Documents.
@@ -98,45 +103,109 @@ final class QuickBooksRefundSender {
 				)
 			);
 		}
-		$home       = $this->company->homeCurrency();
-		$currency   = strtoupper( QuickBooksPayloadReader::text( $invoice['CurrencyRef']['value'] ?? '' ) );
-		$currency   = '' !== $currency ? $currency : $home;
-		$createdNow = false;
+		$home     = $this->company->homeCurrency();
+		$multi    = $this->company->multiCurrency();
+		$currency = strtoupper( QuickBooksPayloadReader::text( $invoice['CurrencyRef']['value'] ?? '' ) );
+		$currency = '' !== $currency ? $currency : $home;
+		$created  = false;
 		if ( null === $memo ) {
-			$skus = array();
-			foreach ( $parsed->lines as $line ) {
-				if ( '' !== $line['sku'] ) {
-					$skus[] = (string) $line['sku'];
-				}
-			}
-			$found = $this->items->bySkus( $skus );
-			$kinds = array( 'generic' );
-			foreach ( $parsed->lines as $line ) {
-				if ( 'shipping' === ( $line['kind'] ?? '' ) ) {
-					$kinds[] = 'shipping';
-				}
-			}
-			$named = $this->items->forKinds( $kinds, $this->options );
-			$body  = $this->builder->creditMemo( $parsed, $invoice, $currency, $home, $this->company->isUs(), $found, $named, $warnings );
+			$body = $this->prepare( $parsed, $invoice, $currency, $home, $multi, $warnings );
 			if ( $body instanceof ConnectorError ) {
 				return SendResult::failure( $body );
 			}
-			$memo       = $this->documents->create( 'creditmemo', $body, 'wc-' . substr( sha1( $this->connectionId . '|' . $parsed->clientRef . '|creditmemo|' . $parsed->attempt . '|' . (string) wp_json_encode( $body ) ), 0, 40 ) );
-			$createdNow = true;
-		}
-		if ( QuickBooksDocuments::isUnchecked( $memo ) ) {
-			$problem = $this->totals->check( $memo, $currency, $home, $parsed->amountMinor );
-			if ( null !== $problem ) {
-				if ( 'warn' !== $this->options->choice( 'total_mismatch', array( 'fail', 'warn' ), 'fail' ) ) {
-					$this->discard( $memo );
-					return SendResult::failure( $problem );
+			$dead = array();
+			$done = null;
+			for ( $round = 0; $round < self::ROUNDS && null === $done; ++$round ) {
+				$memo    = $this->documents->create( 'creditmemo', $body, $this->requestId( $parsed->clientRef, $dead, $body ) );
+				$created = true;
+				$done    = $this->finish( $memo, $parsed, $currency, $home, $warnings );
+				if ( null === $done ) {
+					$dead[] = QuickBooksPayloadReader::text( $memo['Id'] ?? '' );
 				}
-				$warnings[] = (string) ( $problem->context['reason'] ?? '' );
 			}
-			$memo = $this->documents->markChecked( 'creditmemo', $memo );
+		} else {
+			$done = $this->finish( $memo, $parsed, $currency, $home, $warnings );
 		}
-		$ref = $this->reference( $memo, $warnings );
-		return $createdNow ? SendResult::created( $ref ) : SendResult::existing( $ref );
+		if ( null === $done ) {
+			return SendResult::failure( QuickBooksErrors::refused( 'CreditMemo', __( 'QuickBooks keeps answering with a credit memo that no longer exists. Try again later.', 'estasoft-erp-crm-sync-engine' ) ) );
+		}
+		if ( $done instanceof ConnectorError ) {
+			return SendResult::failure( $done );
+		}
+		$ref = $this->reference( $done, $warnings );
+		return $created ? SendResult::created( $ref ) : SendResult::existing( $ref );
+	}
+
+	/**
+	 * Resolve the items and build the body of the credit memo.
+	 *
+	 * @param QuickBooksRefundPayload $parsed   Checked payload.
+	 * @param array<string,mixed>     $invoice  The refunded order's invoice.
+	 * @param string                  $currency Currency of the invoice.
+	 * @param string                  $home     Home currency of the company.
+	 * @param bool                    $multi    Whether the company uses more than one currency.
+	 * @param array<int,string>       $warnings Receives notes.
+	 * @return array<string,mixed>|ConnectorError
+	 *
+	 * @throws ApiException On a failed call.
+	 */
+	private function prepare( QuickBooksRefundPayload $parsed, array $invoice, string $currency, string $home, bool $multi, array &$warnings ): array|ConnectorError {
+		$skus = array();
+		foreach ( $parsed->lines as $line ) {
+			if ( '' !== $line['sku'] ) {
+				$skus[] = (string) $line['sku'];
+			}
+		}
+		$found = $this->items->bySkus( $skus );
+		$kinds = array( 'generic' );
+		foreach ( $parsed->lines as $line ) {
+			if ( 'shipping' === ( $line['kind'] ?? '' ) ) {
+				$kinds[] = 'shipping';
+			}
+		}
+		$named = $this->items->forKinds( $kinds, $this->options );
+		return $this->builder->creditMemo( $parsed, $invoice, $currency, $home, $multi, $this->company->isUs(), $found, $named, $warnings );
+	}
+
+	/**
+	 * Check a credit memo that still has the marker, then clean it.
+	 *
+	 * @param array<string,mixed>     $memo     The credit memo as QuickBooks last returned it.
+	 * @param QuickBooksRefundPayload $parsed   Checked payload.
+	 * @param string                  $currency Currency of the invoice.
+	 * @param string                  $home     Home currency of the company.
+	 * @param array<int,string>       $warnings Receives notes.
+	 * @return array<string,mixed>|ConnectorError|null The finished credit memo, the failure, or null when QuickBooks no longer has it (a replayed answer).
+	 *
+	 * @throws ApiException On a failed call.
+	 */
+	private function finish( array $memo, QuickBooksRefundPayload $parsed, string $currency, string $home, array &$warnings ): array|ConnectorError|null {
+		if ( ! QuickBooksDocuments::isUnchecked( $memo ) ) {
+			return $memo;
+		}
+		$problem = $this->totals->check( $memo, $currency, $home, $parsed->amountMinor );
+		if ( null !== $problem ) {
+			if ( 'warn' !== $this->options->choice( 'total_mismatch', array( 'fail', 'warn' ), 'fail' ) ) {
+				if ( null === $this->documents->fetch( 'creditmemo', QuickBooksPayloadReader::text( $memo['Id'] ?? '' ) ) ) {
+					return null;
+				}
+				$this->discard( $memo );
+				return $problem;
+			}
+			$warnings[] = (string) ( $problem->context['reason'] ?? '' );
+		}
+		return $this->documents->markChecked( 'creditmemo', $memo );
+	}
+
+	/**
+	 * A requestid from the reference, the step and the body (see QuickBooksOrderSender); the ids of credit memos found deleted are part of it. At most 50 characters.
+	 *
+	 * @param string              $reference Client reference.
+	 * @param array<int,string>   $dead      Ids of credit memos that were found deleted.
+	 * @param array<string,mixed> $body      Request body.
+	 */
+	private function requestId( string $reference, array $dead, array $body ): string {
+		return 'wc-' . substr( sha1( $this->connectionId . '|' . $reference . '|creditmemo|' . implode( ',', $dead ) . '|' . (string) wp_json_encode( $body ) ), 0, 40 );
 	}
 
 	/**

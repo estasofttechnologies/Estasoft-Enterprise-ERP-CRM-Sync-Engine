@@ -23,16 +23,11 @@ use Estasoft\SyncEngine\Domain\Item;
 
 /**
  * The credit note is made in one step (the documented draft call is for invoices), so the guard is a check afterwards: its currency and total must
- * match the refund, and a credit note that does not is deleted and reported. The credit note list has no reference filter, so a credit note is
- * found by reading the ones created in the last seven days and matching the purchase-order reference locally; a retry of a lost answer happens
- * within a day.
+ * match the refund, and a credit note that does not is deleted and reported. The credit note list has a `client_id` filter and no reference
+ * filter, so a credit note is found by reading the credit notes of the invoice's client and matching the purchase-order reference locally. That
+ * finds it however late the retry comes.
  */
 final class DaftraRefundSender {
-
-	/**
-	 * Days back a credit note is looked for.
-	 */
-	public const LOOK_BACK_DAYS = 7;
 
 	/**
 	 * Set up with what it depends on.
@@ -66,7 +61,22 @@ final class DaftraRefundSender {
 	 * @throws ApiException On failure.
 	 */
 	public function find( ApiClient $api, Item $item ): ?ExternalRef {
-		$found = $this->docs->findCreditNotes( $api, $this->ids->reference( $item ), $this->since() );
+		if ( null !== $item->externalId && '' !== $item->externalId ) {
+			$linked = $this->docs->creditNoteIfExists( $api, $item->externalId );
+			if ( null !== $linked ) {
+				return $this->reference( $linked, array() );
+			}
+		}
+		$orderRef = $this->ids->orderReference( $item );
+		if ( '' === $orderRef ) {
+			return null;
+		}
+		$invoices = $this->docs->findInvoices( $api, $orderRef );
+		if ( array() === $invoices ) {
+			return null;
+		}
+		$clientId = $this->docs->invoice( $api, $invoices[0]->id() )->clientId();
+		$found    = '' === $clientId ? array() : $this->docs->findCreditNotes( $api, $this->ids->reference( $item ), $clientId );
 		if ( array() === $found ) {
 			return null;
 		}
@@ -90,15 +100,15 @@ final class DaftraRefundSender {
 			return SendResult::failure( $parsed );
 		}
 		$reference = $this->ids->reference( $item );
-		$existing  = $this->docs->findCreditNotes( $api, $reference, $this->since() );
-		if ( array() !== $existing ) {
-			return SendResult::existing( $this->reference( $this->docs->creditNote( $api, $existing[0]->id() ), array() ) );
-		}
-		$invoices = $this->docs->findInvoices( $api, $parsed->orderRef );
+		$invoices  = $this->docs->findInvoices( $api, $parsed->orderRef );
 		if ( array() === $invoices ) {
 			return SendResult::failure( $this->refused( 'order', __( 'The order of this refund is not in Daftra.', 'estasoft-erp-crm-sync-engine' ) ) );
 		}
-		$invoice = $this->docs->invoice( $api, $invoices[0]->id() );
+		$invoice  = $this->docs->invoice( $api, $invoices[0]->id() );
+		$existing = '' === $invoice->clientId() ? array() : $this->docs->findCreditNotes( $api, $reference, $invoice->clientId() );
+		if ( array() !== $existing ) {
+			return SendResult::existing( $this->reference( $this->docs->creditNote( $api, $existing[0]->id() ), array() ) );
+		}
 		if ( $invoice->isDraft() ) {
 			return SendResult::failure( $this->refused( 'order', __( 'The invoice of this order is still a draft in Daftra. Issue it first.', 'estasoft-erp-crm-sync-engine' ) ) );
 		}
@@ -222,13 +232,6 @@ final class DaftraRefundSender {
 				$parsed->orderRef
 			);
 		return DaftraPayloadReader::shorten( $text, 1000 );
-	}
-
-	/**
-	 * The first day a credit note is looked for.
-	 */
-	private function since(): string {
-		return $this->clock->now()->modify( '-' . self::LOOK_BACK_DAYS . ' days' )->format( 'Y-m-d' );
 	}
 
 	/**

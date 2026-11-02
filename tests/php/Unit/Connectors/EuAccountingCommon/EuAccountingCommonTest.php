@@ -11,7 +11,9 @@ namespace Estasoft\SyncEngine\Tests\Unit\Connectors\EuAccountingCommon;
 
 use Estasoft\SyncEngine\Connectors\EuAccountingCommon\Amounts;
 use Estasoft\SyncEngine\Connectors\EuAccountingCommon\LocalDate;
+use Estasoft\SyncEngine\Connectors\EuAccountingCommon\Options;
 use Estasoft\SyncEngine\Connectors\EuAccountingCommon\PayloadReader;
+use Estasoft\SyncEngine\Connectors\EuAccountingCommon\Tolerance;
 use PHPUnit\Framework\TestCase;
 
 final class EuAccountingCommonTest extends TestCase {
@@ -126,5 +128,44 @@ final class EuAccountingCommonTest extends TestCase {
 		$this->assertFalse( PayloadReader::hasMarker( 'Bestellung WC-123', 'WC-12' ), 'WC-12 is not a part of WC-123.' );
 		$this->assertFalse( PayloadReader::hasMarker( 'AWC-12', 'WC-12' ) );
 		$this->assertFalse( PayloadReader::hasMarker( '', 'WC-12' ) );
+	}
+
+	public function test_the_booking_date_forms(): void {
+		$this->assertSame( 20261103, LocalDate::ymdNumber( '2026-11-02 23:30:00', 'Europe/Berlin' ) );
+		$this->assertNull( LocalDate::ymdNumber( 'soon', 'Europe/Berlin' ) );
+		$midnight = ( new \DateTimeImmutable( '2026-11-03 00:00:00', new \DateTimeZone( 'Europe/Berlin' ) ) )->getTimestamp();
+		$this->assertSame( $midnight, LocalDate::midnightTimestamp( '2026-11-02 23:30:00', 'Europe/Berlin' ) );
+		$this->assertNull( LocalDate::midnightTimestamp( '', 'Europe/Berlin' ) );
+	}
+
+	public function test_a_vendor_date_differs_only_when_it_can_be_read_and_is_another_local_day(): void {
+		$utc = '2026-11-02 23:30:00'; // The third of November in Berlin.
+		$this->assertFalse( LocalDate::differs( '2026-11-03', $utc, 'Europe/Berlin' ) );
+		$this->assertFalse( LocalDate::differs( '2026-11-03T00:00:00.000+01:00', $utc, 'Europe/Berlin' ) );
+		$this->assertFalse( LocalDate::differs( '2026-11-02T23:00:00.000Z', $utc, 'Europe/Berlin' ), 'The same moment written in UTC is the same local day.' );
+		$this->assertFalse( LocalDate::differs( '2026-11-03T00:00:00', $utc, 'Europe/Berlin' ), 'No offset: the date as written.' );
+		$this->assertTrue( LocalDate::differs( '2026-11-09', $utc, 'Europe/Berlin' ) );
+		$this->assertTrue( LocalDate::differs( '2026-11-02T00:00:00+01:00', $utc, 'Europe/Berlin' ) );
+		$this->assertFalse( LocalDate::differs( '03.11.2026', $utc, 'Europe/Berlin' ), 'A form that cannot be read says nothing.' );
+		$this->assertFalse( LocalDate::differs( null, $utc, 'Europe/Berlin' ) );
+		$this->assertFalse( LocalDate::differs( '2026-11-09', 'not a date', 'Europe/Berlin' ) );
+	}
+
+	public function test_the_total_tolerance_is_one_unit_per_row_capped_and_replaceable(): void {
+		$schema = array( Tolerance::OPTION => array( 'default' => '' ) );
+		$auto   = new Options( array(), $schema );
+		$this->assertSame( 1, Tolerance::minor( $auto, 1 ) );
+		$this->assertSame( 1, Tolerance::minor( $auto, 0 ), 'At least one unit.' );
+		$this->assertSame( 7, Tolerance::minor( $auto, 7 ) );
+		$this->assertSame( Tolerance::CAP, Tolerance::minor( $auto, 500 ), 'Capped.' );
+
+		$this->assertSame( 0, Tolerance::minor( new Options( array( Tolerance::OPTION => '0' ), $schema ), 9 ) );
+		$this->assertSame( 25, Tolerance::minor( new Options( array( Tolerance::OPTION => '25' ), $schema ), 1 ) );
+		$this->assertSame( 2, Tolerance::minor( new Options( array( Tolerance::OPTION => '51' ), $schema ), 2 ), 'Above the most a merchant may set: the default.' );
+		$this->assertSame( 2, Tolerance::minor( new Options( array( Tolerance::OPTION => 'abc' ), $schema ), 2 ) );
+
+		$this->assertTrue( Tolerance::accepts( 1178, 1180, $auto, 10 ) );
+		$this->assertFalse( Tolerance::accepts( 1178, 1180, $auto, 1 ) );
+		$this->assertTrue( Tolerance::accepts( 1182, 1180, $auto, 2 ), 'Either direction.' );
 	}
 }

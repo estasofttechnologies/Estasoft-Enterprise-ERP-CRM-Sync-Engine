@@ -41,7 +41,7 @@ final class QoyodConnectorMetaTest extends QoyodTestCase {
 	public function test_the_connect_form_has_one_secret_and_the_advanced_settings(): void {
 		$fields  = $this->connector()->credentialFields();
 		$names   = array_map( static fn( $field ): string => $field->name, $fields );
-		$this->assertSame( array( 'api_key', 'endpoint', 'inventory_id', 'currency', 'approval', 'record_payment', 'payment_account_id', 'line_tax_field', 'shipping_product_sku', 'fee_product_sku', 'total_mismatch' ), $names );
+		$this->assertSame( array( 'api_key', 'inventory_id', 'currency', 'approval', 'untaxed_rows', 'record_payment', 'payment_account_id', 'line_tax_field', 'shipping_product_sku', 'fee_product_sku', 'total_mismatch' ), $names );
 		$secrets = array_filter( $fields, static fn( $field ): bool => $field->secret );
 		$this->assertCount( 1, $secrets );
 		foreach ( $fields as $field ) {
@@ -51,17 +51,24 @@ final class QoyodConnectorMetaTest extends QoyodTestCase {
 		}
 	}
 
-	public function test_only_the_two_documented_hosts_may_be_contacted(): void {
-		$policy = new HostPolicy( array( 'api.qoyod.com', 'www.qoyod.com' ) );
+	public function test_only_the_documented_host_may_be_contacted(): void {
+		$policy = new HostPolicy( array( 'api.qoyod.com' ) );
 		$this->assertNull( $policy->violation( 'https://api.qoyod.com/2.0/invoices' ) );
-		$this->assertNull( $policy->violation( 'https://www.qoyod.com/2.0/invoices' ) );
+		$this->assertNotNull( $policy->violation( 'https://www.qoyod.com/2.0/invoices' ) );
 		$this->assertNotNull( $policy->violation( 'https://evil.example.test/2.0/invoices' ) );
 		$this->assertNotNull( $policy->violation( 'http://api.qoyod.com/2.0/invoices' ) );
 	}
 
-	public function test_an_address_outside_the_list_in_the_settings_falls_back_to_the_default(): void {
-		$this->server->hosts = array( 'api.qoyod.com' );
-		$result              = $this->connector()->test( $this->connection( array( 'endpoint' => 'evil.example.test' ) ) );
+	public function test_ping_is_one_cheap_call_and_says_no_for_a_wrong_key(): void {
+		$connector = $this->connector();
+		$this->assertTrue( $connector->ping( $this->connection() ) );
+		$this->assertCount( 1, $this->kit->http->requests );
+		$this->assertStringContainsString( '/2.0/inventories', $this->kit->http->requests[0]['url'] );
+		$this->assertFalse( $connector->ping( $this->connection( array(), 'qyd-wrong-key-0123456789', 2 ) ) );
+	}
+
+	public function test_an_address_in_the_settings_is_ignored(): void {
+		$result = $this->connector()->test( $this->connection( array( 'endpoint' => 'evil.example.test' ) ) );
 		$this->assertTrue( $result->ok );
 		$this->assertStringStartsWith( 'https://api.qoyod.com/', $this->kit->http->requests[0]['url'] );
 	}

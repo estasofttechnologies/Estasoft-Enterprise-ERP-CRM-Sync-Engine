@@ -14,6 +14,8 @@ defined( 'ABSPATH' ) || exit;
 use Estasoft\SyncEngine\Connectors\EnterpriseCommon\Amounts;
 use Estasoft\SyncEngine\Connectors\EnterpriseCommon\Problem;
 use Estasoft\SyncEngine\Connectors\EnterpriseCommon\RefundData;
+use Estasoft\SyncEngine\Connectors\EnterpriseCommon\TotalCheck;
+use Estasoft\SyncEngine\Connectors\EnterpriseCommon\Warnings;
 use Estasoft\SyncEngine\Connectors\Support\ApiException;
 use Estasoft\SyncEngine\Contract\ExternalRef;
 
@@ -60,7 +62,7 @@ final class SapS4HanaRefunds {
 			self::ENTITY,
 			array(
 				'filter'  => 'PurchaseOrderByCustomer eq ' . $this->gateway->literal( $reference ),
-				'select'  => 'CreditMemoRequest,PurchaseOrderByCustomer,TransactionCurrency',
+				'select'  => 'CreditMemoRequest,PurchaseOrderByCustomer,TransactionCurrency,TotalNetAmount',
 				'orderby' => 'CreditMemoRequest',
 			),
 			1
@@ -120,7 +122,58 @@ final class SapS4HanaRefunds {
 		if ( null === $created ) {
 			$this->refuse( 'CreditMemoRequest', __( 'S/4HANA accepted the credit memo request but it cannot be read back.', 'estasoft-erp-crm-sync-engine' ) );
 		}
-		return $created;
+		return $created + array( 'OrderCurrency' => $currency );
+	}
+
+	/**
+	 * What the request's net amount should be: the sum of the refund lines (without tax).
+	 *
+	 * @param RefundData $refund Payload.
+	 */
+	public function expectedNet( RefundData $refund ): int {
+		$sum = 0;
+		foreach ( $refund->lines as $line ) {
+			$sum += $line->amountMinor;
+		}
+		return $sum;
+	}
+
+	/**
+	 * Compare the request with the refund: currency, and net amount within one minor unit. The price condition is the only thing that sets
+	 * the amount, and whether the pricing procedure accepts a manual value is not verified, so a request is never reported as synced unchecked.
+	 *
+	 * @param array<string,mixed> $request  Request from S/4HANA.
+	 * @param RefundData          $refund   Payload.
+	 * @param string              $currency Currency of the order.
+	 * @param TotalCheck          $total    Total check.
+	 * @param Warnings            $warnings Receives accepted differences.
+	 */
+	public function check( array $request, RefundData $refund, string $currency, TotalCheck $total, Warnings $warnings ): ?\Estasoft\SyncEngine\Contract\ConnectorError {
+		$actual = strtoupper( (string) ( $request['TransactionCurrency'] ?? '' ) );
+		if ( '' !== $actual && $actual !== $currency ) {
+			return Problem::validation(
+				$this->system,
+				'TransactionCurrency',
+				sprintf(
+					/* translators: 1: currency in S/4HANA, 2: currency of the order. */
+					__( 'S/4HANA holds the credit memo request in %1$s but the order is in %2$s.', 'estasoft-erp-crm-sync-engine' ),
+					$actual,
+					$currency
+				)
+			);
+		}
+		$figure = $this->amounts->fromWire( $request['TotalNetAmount'] ?? null, $currency );
+		return $total->run( $this->expectedNet( $refund ), null === $figure ? null : abs( $figure ), $currency, $warnings, __( 'net amount', 'estasoft-erp-crm-sync-engine' ) );
+	}
+
+	/**
+	 * Delete a request that failed the check.
+	 *
+	 * @param array<string,mixed> $request Request from S/4HANA.
+	 * @return bool False when S/4HANA refused.
+	 */
+	public function remove( array $request ): bool {
+		return $this->gateway->delete( self::SERVICE, self::ENTITY, (string) ( $request['CreditMemoRequest'] ?? '' ), 'CreditMemoRequest' );
 	}
 
 	/**

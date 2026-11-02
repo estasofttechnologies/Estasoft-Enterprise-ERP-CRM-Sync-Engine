@@ -147,10 +147,12 @@ final class BcRefundSender {
 		$work  = $work || $written['written'] > 0;
 		$fresh = $docs->header( BcDocType::CreditMemo, $id ) ?? $memo;
 		$posts = 'post' === $this->options->refundState();
-		$check = BcTotals::compare( $fresh, $data->amountMinor, $currency, false, $posts && 'fail' === $this->options->totalMismatch(), $this->system );
+		$check = BcTotals::compare( $fresh, $data->amountMinor, $currency, false, 'fail' === $this->options->totalMismatch(), $this->system );
 		if ( $check['error'] instanceof ConnectorError ) {
+			// No marker: a memo that failed its check is not finished, is not linked on the next try and is never posted.
 			return SendResult::failure( $check['error'] );
 		}
+		$work = $docs->ensureMarker( BcDocType::CreditMemo, $id, $ref, count( $plan ), $currency ) || $work;
 		if ( ! $posts ) {
 			$result = BcRefs::document( BcDocType::CreditMemo, $fresh, $currency, $check['warning'] );
 			return $work ? SendResult::created( $result ) : SendResult::existing( $result );

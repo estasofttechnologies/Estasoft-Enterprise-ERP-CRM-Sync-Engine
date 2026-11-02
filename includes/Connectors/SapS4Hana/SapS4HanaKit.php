@@ -12,6 +12,7 @@ namespace Estasoft\SyncEngine\Connectors\SapS4Hana;
 defined( 'ABSPATH' ) || exit;
 
 use Estasoft\SyncEngine\Connectors\EnterpriseCommon\Amounts;
+use Estasoft\SyncEngine\Connectors\EnterpriseCommon\ShopTotalMarker;
 use Estasoft\SyncEngine\Connectors\EnterpriseCommon\TotalCheck;
 use Estasoft\SyncEngine\Connectors\Support\ApiClient;
 
@@ -80,7 +81,7 @@ final class SapS4HanaKit {
 		$this->options = $options;
 		$this->amounts = new Amounts();
 		$this->gateway = new SapS4HanaGateway( $api );
-		$this->orders  = new SapS4HanaOrders( $this->gateway, $options, $this->amounts, $system );
+		$this->orders  = new SapS4HanaOrders( $this->gateway, $options, $this->amounts, new ShopTotalMarker( $this->amounts, 'Shop net' ), $system );
 		$this->refunds = new SapS4HanaRefunds( $this->gateway, $this->orders, $options, $this->amounts, $system );
 		$this->reader  = new SapS4HanaReader( $this->gateway );
 		$this->total   = new TotalCheck( $this->amounts, $system, $options->totalMismatch() );

@@ -86,6 +86,14 @@ final class OracleFusionOptions {
 	}
 
 	/**
+	 * `positive` (default): credit memo lines carry positive quantities and prices. `negative`: the quantity is negative, for a pod whose
+	 * credit memo lines must be negative to credit the customer. The draft check tells which one the pod needs.
+	 */
+	public function creditLineSign(): string {
+		return $this->options->choice( 'credit_line_sign', array( 'positive', 'negative' ), 'positive' );
+	}
+
+	/**
 	 * A memo line name put on every invoice line, or empty.
 	 */
 	public function memoLine(): string {

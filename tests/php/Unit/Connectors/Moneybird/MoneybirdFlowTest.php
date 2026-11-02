@@ -384,7 +384,7 @@ final class MoneybirdFlowTest extends TestCase {
 	public function test_the_pacer_is_told_about_the_documented_limit(): void {
 		$hints = $this->connector()->rateLimitHints();
 
-		$this->assertSame( 0.5, $hints['requests_per_second'] );
+		$this->assertSame( 0.4, $hints['requests_per_second'], 'Under the 150 per 5 minutes per IP address, with room for other applications on the same address.' );
 		$this->assertSame( 1, $hints['concurrency'] );
 	}
 
@@ -410,5 +410,86 @@ final class MoneybirdFlowTest extends TestCase {
 		$this->assertSame( 'CS-MUG-01', $this->connector()->lookupProduct( $connection, 'CS-MUG-01' )->ref );
 		$this->assertNull( $this->connector()->lookupProduct( $connection, 'NOPE' ) );
 		$this->assertCount( 1, $this->connector()->searchProducts( $connection, 'mug' ) );
+	}
+
+	public function test_a_credit_invoice_whose_second_call_failed_is_adopted_by_the_retry_and_not_made_twice(): void {
+		$connection = $this->connection( array( 'invoice_state' => 'sent' ) );
+		$orderSent  = $this->connector()->send( $connection, $this->order(), $this->payload() );
+
+		$this->fake->failReferenceUpdate = true;
+		$failed                          = $this->connector()->send( $connection, $this->refundItem(), $this->refundPayload() );
+		$this->assertFalse( $failed->isSuccess() );
+		$this->assertSame( ErrorCode::Net002, $failed->error->code, 'A server fault is retried.' );
+		$this->assertCount( 2, $this->fake->invoices, 'The copy exists and still carries the original reference.' );
+		$this->assertSame( array( 'WC-5001', 'WC-5001' ), array_column( $this->fake->invoices, 'reference' ) );
+
+		$this->assertSame( $orderSent->ref->id, $this->connector()->findExisting( $connection, $this->order() )?->id, 'The order is not mistaken for its copy.' );
+		$resent = $this->connector()->send( $connection, $this->order(), $this->payload() );
+		$this->assertTrue( $resent->alreadyExisted );
+		$this->assertSame( $orderSent->ref->id, $resent->ref->id );
+
+		$retry = $this->connector()->send( $connection, $this->refundItem(), $this->refundPayload() );
+		$this->assertTrue( $retry->isSuccess(), (string) $retry->error?->message() );
+		$this->assertCount( 2, $this->fake->invoices, 'No second credit invoice.' );
+		$this->assertCount( 1, $this->fake->server->requests( 'PATCH', '#/duplicate_creditinvoice\.json$#' ), 'The copy was made once.' );
+		$this->assertSame( 'WC-7001', end( $this->fake->invoices )['reference'] );
+		$this->assertSame( 'open', $retry->ref->extra['state'] );
+	}
+
+	public function test_a_draft_the_reference_search_does_not_show_is_found_through_the_list(): void {
+		$this->fake->hideDraftsFromReference = true;
+		$first = $this->connector()->send( $this->connection(), $this->order(), $this->payload() );
+		$again = $this->connector()->send( $this->connection(), $this->order(), $this->payload() );
+
+		$this->assertTrue( $again->alreadyExisted );
+		$this->assertSame( $first->ref->id, $again->ref->id );
+		$this->assertCount( 1, $this->fake->invoices, 'No second invoice although find_by_reference answered 404 for the draft.' );
+		$lists = $this->fake->server->requests( 'GET', '#/sales_invoices\.json$#' );
+		$this->assertNotEmpty( $lists );
+		$this->assertSame( 'reference:WC-5001', end( $lists )->query['filter'] );
+		$this->assertInstanceOf( ExternalRef::class, $this->connector()->findExisting( $this->connection(), $this->order() ) );
+	}
+
+	public function test_the_default_tolerance_is_one_unit_per_row_and_the_option_replaces_it(): void {
+		$lines = array();
+		for ( $i = 0; $i < 10; $i++ ) {
+			$lines[] = array( 'sku' => 'CS-MUG-01', 'name' => 'Mug ' . $i, 'quantity' => 1, 'total' => 99, 'tax_code' => '501' );
+		}
+		// WooCommerce rounds the tax of each line (0.21 x 10 = 2.10), Moneybird the tax of the rate group (2.08): 2 cents apart.
+		$payload = $this->payload( array( 'lines' => $lines, 'shipping' => array(), 'total' => 1200 ) );
+
+		$default = $this->connector()->send( $this->connection(), $this->order(), $payload );
+		$this->assertTrue( $default->isSuccess(), (string) $default->error?->message() );
+		$this->assertSame( 1198, $default->ref->extra['total_minor'] );
+
+		$strict = $this->connector()->send( $this->connection( array( 'total_tolerance' => '1' ) ), $this->order( '5002' ), $payload );
+		$this->assertSame( ErrorCode::Val002, $strict->error->code );
+		$this->assertStringContainsString( '12.00', $strict->error->message() );
+		$this->assertStringContainsString( '11.98', $strict->error->message() );
+		$this->assertCount( 1, $this->fake->invoices, 'The rejected draft was deleted again.' );
+
+		$this->assertTrue( $this->connector()->send( $this->connection( array( 'total_tolerance' => '2' ) ), $this->order( '5003' ), $payload )->isSuccess() );
+		$wrong = $this->payload( array( 'total' => 5443 + 3 ) );
+		$this->assertSame( ErrorCode::Val002, $this->connector()->send( $this->connection(), $this->order( '5004' ), $wrong )->error->code, 'Two rows allow two units, not three.' );
+	}
+
+	public function test_a_date_the_vendor_changed_is_noted(): void {
+		$this->fake->overrideDate = '2026-11-09';
+		$result                   = $this->connector()->send( $this->connection(), $this->order(), $this->payload() );
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$this->assertContains( 'date_differs', $result->ref->extra['warnings'] );
+
+		$this->fake->overrideDate = null;
+		$clean                    = $this->connector()->send( $this->connection(), $this->order( '5002' ), $this->payload() );
+		$this->assertArrayNotHasKey( 'warnings', $clean->ref->extra );
+	}
+
+	public function test_ping_is_one_cheap_call_inside_the_administration(): void {
+		$this->assertTrue( $this->connector()->ping( $this->connection() ) );
+		$this->assertCount( 1, $this->kit->http->requests );
+		$this->assertStringEndsWith( '/' . FakeMoneybirdServer::ADMINISTRATION . '/workflows.json', $this->kit->http->requests[0]['url'] );
+
+		$foreign = $this->kit->connection( 'moneybird', array( 'administration_id' => '999' ), array( 'api_token' => FakeMoneybirdServer::TOKEN ), 9 );
+		$this->assertFalse( $this->connector()->ping( $foreign ) );
 	}
 }

@@ -53,7 +53,8 @@ final class OracleFusionRefundsTest extends OracleFusionTestCase {
 		$this->assertSame( 'AED', $body['InvoiceCurrencyCode'], 'The currency of the order.' );
 		$this->assertSame( 'WC-501', $body['PurchaseOrder'] );
 		$this->assertSame( '2026-11-03', $body['TransactionDate'] );
-		$this->assertSame( 'Refund WC-501 of order WC-2004: Damaged', $body['Comments'] );
+		$this->assertSame( "Refund WC-501 of order WC-2004: Damaged\nShop total 39.98 AED", $body['Comments'], 'The refund total is the last line, so findExisting() can check it.' );
+		$this->assertSame( 'Incomplete', $body['InvoiceStatus'], 'A credit memo is made as a draft first.' );
 		$line = $body['receivablesCreditMemoLines'][0];
 		$this->assertSame( '[CS-MUG-01] Refund', $line['Description'] );
 		$this->assertSame( 2, $line['Quantity'] );
@@ -114,6 +115,92 @@ final class OracleFusionRefundsTest extends OracleFusionTestCase {
 		$result = $this->connector->send( $this->connection( array( 'credit_memo_type' => 'Web Credit' ) ), $this->item( '507', EntityType::Refund ), $this->refundPayload() );
 		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
 		$this->assertSame( 'Web Credit', array_values( $this->server->all( 'receivablesCreditMemos' ) )[0]['TransactionType'] );
+	}
+
+	public function test_the_draft_is_completed_only_after_its_sign_and_currency_were_read_back(): void {
+		$this->connector->send( $this->connection(), $this->item( '2004' ), $this->payload() );
+		$result = $this->connector->send( $this->connection(), $this->item( '520', EntityType::Refund ), $this->refundPayload() );
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$order = array_map( static fn( array $request ): string => $request['method'], array_values( array_filter( $this->kit->http->requests, static fn( array $request ): bool => str_contains( $request['url'], '/receivablesCreditMemos' ) && 'GET' !== $request['method'] ) ) );
+		$this->assertSame( array( 'POST', 'PATCH' ), $order );
+		$patch = array_values( array_filter( $this->kit->http->requests, static fn( array $request ): bool => 'PATCH' === $request['method'] ) )[0];
+		$this->assertSame( array( 'InvoiceStatus' => 'Complete' ), json_decode( (string) $patch['body'], true ) );
+		$memo = array_values( $this->server->all( 'receivablesCreditMemos' ) )[0];
+		$this->assertSame( 'Complete', $memo['InvoiceStatus'] );
+		$this->assertLessThan( 0, $memo['TotalAmount'], 'The credit memo credits the customer.' );
+	}
+
+	public function test_a_pod_that_would_book_the_memo_as_a_debit_gets_the_draft_deleted_and_a_clear_message_and_nothing_is_completed(): void {
+		$this->connector->send( $this->connection(), $this->item( '2004' ), $this->payload() );
+		$this->server->creditLinesNegative = true;
+		$result                            = $this->connector->send( $this->connection(), $this->item( '521', EntityType::Refund ), $this->refundPayload() );
+		$this->assertFalse( $result->isSuccess() );
+		$this->assertSame( ErrorCode::Val002, $result->error->code );
+		$context = json_encode( $result->error->context );
+		$this->assertStringContainsString( 'debit', $context );
+		$this->assertStringContainsString( 'credit_line_sign', $context );
+		$this->assertStringContainsString( 'was deleted', $context );
+		$this->assertSame( array(), $this->server->all( 'receivablesCreditMemos' ) );
+		$this->assertSame( array(), array_filter( $this->kit->http->requests, static fn( array $request ): bool => 'PATCH' === $request['method'] ), 'Nothing was completed.' );
+	}
+
+	public function test_with_credit_line_sign_negative_the_same_pod_gets_a_credit(): void {
+		$this->connector->send( $this->connection(), $this->item( '2004' ), $this->payload() );
+		$this->server->creditLinesNegative = true;
+		$result                            = $this->connector->send( $this->connection( array( 'credit_line_sign' => 'negative' ) ), $this->item( '522', EntityType::Refund ), $this->refundPayload() );
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$body = json_decode( (string) $this->calls( 'POST', '/receivablesCreditMemos' )[0]['body'], true );
+		$this->assertSame( -2, $body['receivablesCreditMemoLines'][0]['Quantity'] );
+		$this->assertEquals( 19.99, $body['receivablesCreditMemoLines'][0]['UnitSellingPrice'] );
+		$this->assertLessThan( 0, array_values( $this->server->all( 'receivablesCreditMemos' ) )[0]['TotalAmount'] );
+	}
+
+	public function test_a_draft_without_a_total_cannot_be_checked_so_it_is_deleted(): void {
+		$this->connector->send( $this->connection(), $this->item( '2004' ), $this->payload() );
+		$this->server->showsTotal = false;
+		$result                   = $this->connector->send( $this->connection(), $this->item( '523', EntityType::Refund ), $this->refundPayload() );
+		$this->assertSame( ErrorCode::Val002, $result->error->code );
+		$this->assertStringContainsString( 'shows no total', json_encode( $result->error->context ) );
+		$this->assertSame( array(), $this->server->all( 'receivablesCreditMemos' ) );
+	}
+
+	public function test_a_completion_fusion_refuses_deletes_the_draft_and_says_why(): void {
+		$this->connector->send( $this->connection(), $this->item( '2004' ), $this->payload() );
+		$this->server->refuseCompletion = true;
+		$result                         = $this->connector->send( $this->connection(), $this->item( '524', EntityType::Refund ), $this->refundPayload() );
+		$this->assertSame( ErrorCode::Val002, $result->error->code );
+		$context = json_encode( $result->error->context );
+		$this->assertStringContainsString( 'cannot be completed', $context );
+		$this->assertStringContainsString( 'was deleted', $context );
+		$this->assertSame( array(), $this->server->all( 'receivablesCreditMemos' ) );
+	}
+
+	public function test_a_draft_that_cannot_be_deleted_stays_incomplete_and_findexisting_reports_it_for_a_person(): void {
+		$this->connector->send( $this->connection(), $this->item( '2004' ), $this->payload() );
+		$this->server->refuseCompletion = true;
+		$this->server->refuseMemoDelete = true;
+		$refund                         = $this->item( '525', EntityType::Refund );
+		$result                         = $this->connector->send( $this->connection(), $refund, $this->refundPayload() );
+		$this->assertStringContainsString( 'stays in Oracle Fusion as Incomplete', json_encode( $result->error->context ) );
+		$found = $this->connector->findExisting( $this->connection(), $refund );
+		$this->assertInstanceOf( \Estasoft\SyncEngine\Contract\ConnectorError::class, $found );
+		$this->assertStringContainsString( 'Incomplete', json_encode( $found->context ) );
+	}
+
+	public function test_tax_added_at_completion_is_accepted_when_the_refund_amount_includes_it_and_caught_when_it_does_not(): void {
+		$this->connector->send( $this->connection(), $this->item( '2004' ), $this->payload() );
+		$this->server->taxRate = 5.0;
+		$right                 = $this->connector->send( $this->connection(), $this->item( '526', EntityType::Refund ), $this->refundPayload( array( 'amount' => 4198 ) ) );
+		$this->assertTrue( $right->isSuccess(), (string) $right->error?->message() );
+		$wrongItem = $this->item( '527', EntityType::Refund );
+		$wrong     = $this->connector->send( $this->connection(), $wrongItem, $this->refundPayload() );
+		$this->assertFalse( $wrong->isSuccess() );
+		$context = json_encode( $wrong->error->context );
+		$this->assertStringContainsString( '41.98', $context, 'What Fusion shows after the tax.' );
+		$this->assertStringContainsString( '39.98', $context, 'What the shop refunded.' );
+		$this->assertCount( 2, $this->server->all( 'receivablesCreditMemos' ), 'A completed credit memo is not deleted by the connector.' );
+		$this->assertInstanceOf( \Estasoft\SyncEngine\Contract\ConnectorError::class, $this->connector->findExisting( $this->connection(), $wrongItem ), 'The engine would link a reference; it must get the error.' );
+		$this->assertInstanceOf( ExternalRef::class, $this->connector->findExisting( $this->connection(), $this->item( '526', EntityType::Refund ) ) );
 	}
 
 	public function test_a_missing_role_for_credit_memos_is_auth_004(): void {

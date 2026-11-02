@@ -41,7 +41,7 @@ final class WafeqOptions {
 		$values  = array();
 		$nested  = $connection->config( 'options' );
 		$nested  = is_array( $nested ) ? $nested : array();
-		$allowed = array( 'sales_account', 'payment_account', 'record_payment', 'invoice_state', 'unknown_sku', 'invoice_number_prefix', 'place_of_supply', 'language', 'total_mismatch' );
+		$allowed = array( 'sales_account', 'payment_account', 'record_payment', 'invoice_state', 'unknown_sku', 'invoice_number_prefix', 'place_of_supply', 'language', 'total_mismatch', 'tax_authority_report' );
 		foreach ( $allowed as $key ) {
 			$value = $connection->config( $key );
 			if ( null === $value && array_key_exists( $key, $nested ) ) {
@@ -80,6 +80,14 @@ final class WafeqOptions {
 	 */
 	public function finalize(): bool {
 		return 'finalized' === $this->choice( 'invoice_state', array( 'finalized', 'draft' ), 'finalized' );
+	}
+
+	/**
+	 * Whether the connector asks Wafeq to report a finalized invoice to the tax authority (`POST invoices/{id}/tax-authority/report/`). Off: it
+	 * does not, and the report is left to Wafeq's own automatic reporting or to a person.
+	 */
+	public function reportsToAuthority(): bool {
+		return 'yes' === $this->choice( 'tax_authority_report', array( 'no', 'yes' ), 'no' );
 	}
 
 	/**

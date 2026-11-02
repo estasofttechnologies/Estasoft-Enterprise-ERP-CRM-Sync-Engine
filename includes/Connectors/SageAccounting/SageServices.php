@@ -92,11 +92,11 @@ final class SageServices {
 	public function __construct( ApiClient $client, Connection $connection ) {
 		$this->options        = SageOptions::fromConnection( $connection );
 		$this->api            = new SageApi( $client );
+		$country              = SageBusiness::countryOf( $connection );
 		$amounts              = new SageAmounts();
 		$totals               = new SageTotals( $amounts );
-		$builder              = new SageBuilder( $this->options, $amounts );
+		$builder              = new SageBuilder( $this->options, $amounts, $country );
 		$invoices             = new SageInvoices( $this->api );
-		$country              = SageBusiness::countryOf( $connection );
 		$this->business       = new SageBusiness( $this->api, SageBusiness::businessOf( $connection ) );
 		$this->contacts       = new SageContacts( $this->api );
 		$this->products       = new SageProducts( $this->api );

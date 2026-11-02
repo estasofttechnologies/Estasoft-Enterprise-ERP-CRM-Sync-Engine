@@ -103,14 +103,25 @@ final class FakeDynamicsSalesServer {
 			$this->data[ $set ] = array();
 		}
 		$this->data['organizations'][] = array(
-			'organizationid' => $this->guid(),
-			'name'           => 'Contoso Trading',
+			'organizationid'          => $this->guid(),
+			'name'                    => 'Contoso Trading',
+			'pricingdecimalprecision' => 2,
 		);
 		foreach ( array( 'AED' => 2, 'KWD' => 3, 'USD' => 2 ) as $code => $precision ) {
 			$this->addCurrency( $code, $precision );
 		}
 		$this->data['uoms'][] = array( 'uomid' => self::UOM_ID, 'name' => 'Unit' );
 		$this->http->fallback( fn( array $request ): HttpResponse => $this->handle( $request ) );
+	}
+
+	/**
+	 * Set the Pricing Decimal Precision of the organization (2 on a default organization). The price of a product (`priceperunit`) is stored
+	 * with these decimals whatever the currency keeps.
+	 *
+	 * @param int $places Decimal places (0 to 4).
+	 */
+	public function setPricingPrecision( int $places ): void {
+		$this->data['organizations'][0]['pricingdecimalprecision'] = $places;
 	}
 
 	/**
@@ -381,7 +392,8 @@ final class FakeDynamicsSalesServer {
 		foreach ( array( 'estimatedvalue', 'discountamount', 'priceperunit', 'tax' ) as $money ) {
 			if ( isset( $row[ $money ] ) ) {
 				$currency = (string) ( $row['_transactioncurrencyid_value'] ?? $this->opportunityCurrency( (string) ( $row['_opportunityid_value'] ?? '' ) ) );
-				$row[ $money ] = round( (float) $row[ $money ], $this->precisionOf( $currency ) );
+				$places        = 'priceperunit' === $money ? (int) $this->data['organizations'][0]['pricingdecimalprecision'] : $this->precisionOf( $currency );
+				$row[ $money ] = round( (float) $row[ $money ], $places );
 			}
 		}
 		if ( 'opportunityproducts' === $set ) {

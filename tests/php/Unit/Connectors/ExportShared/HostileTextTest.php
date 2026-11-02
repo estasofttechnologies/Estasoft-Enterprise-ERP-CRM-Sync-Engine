@@ -339,6 +339,7 @@ final class HostileTextTest extends TestCase {
 				'sales_account'  => '40000',
 				'tax_gl_account' => '23000',
 				'customer_id'    => 'WEB',
+				'header_row'     => 'yes',
 				'encoding'       => 'utf-8-bom',
 			)
 		);

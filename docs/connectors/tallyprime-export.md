@@ -6,7 +6,7 @@ connection_method: export_file
 available: true
 verified: false
 hosts: []
-terms_url: ""
+terms_url: https://tallysolutions.com/terms-of-use/
 privacy_url: https://tallysolutions.com/privacy-policy/
 developer_url: https://help.tallysolutions.com/?p=149474
 variants: []
@@ -33,6 +33,7 @@ All fetched on 2026-11-02 unless marked.
 | Import data from XML | https://help.tallysolutions.com/how-to-import-data-from-xml-into-tallyprime-tallyhelp/ | Alt+O, Masters or Transactions, file path, backup question, XML in all releases, Excel from 4.0, JSON from 7.0 |
 | Import vouchers (FAQ) | https://help.tallysolutions.com/?p=145423 and https://help.tallysolutions.com/docs/faqs/faq/faq-import-and-export.htm | "Overwrite voucher when a voucher with same GUID exists", duplicates, `REMOTEID` and GUID, F11 features, `Tally.imp`, import masters first |
 | Privacy policy | https://tallysolutions.com/privacy-policy/ | Front matter `privacy_url` |
+| Terms of Use | https://tallysolutions.com/terms-of-use/ | Front matter `terms_url`. The page itself is not on the fetch allow-list; the address is the "Terms of Use" link in the footer of the fetched pages https://tallysolutions.com/contact-us/ and https://tallysolutions.com/privacy-policy/ |
 
 Facts, one per line:
 

@@ -133,6 +133,13 @@ final class OrderPayload {
 	}
 
 	/**
+	 * Rows the document will have: product lines, shipping and fees (at least one).
+	 */
+	public function rows(): int {
+		return max( 1, count( $this->lines ) + count( $this->extras ) );
+	}
+
+	/**
 	 * Whether the order has been paid.
 	 */
 	public function isPaid(): bool {

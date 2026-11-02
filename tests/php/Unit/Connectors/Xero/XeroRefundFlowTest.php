@@ -70,6 +70,21 @@ final class XeroRefundFlowTest extends XeroTestCase {
 		$this->assertNotNull( $this->connector->findExisting( $this->connection, $this->item( '2102', EntityType::Refund ) ) );
 	}
 
+	public function test_a_retry_of_a_refund_after_a_time_out_sends_the_same_key_and_gets_the_first_credit_note(): void {
+		$this->order( '2020' );
+		$this->xero->loseNextAnswer = true;
+		$this->assertFalse( $this->send( '2120', '2020' )->isSuccess() );
+		$this->xero->hideDocuments = 1;
+
+		$retry = $this->send( '2120', '2020' );
+
+		$this->assertTrue( $retry->isSuccess(), (string) $retry->error?->message() );
+		$this->assertCount( 1, $this->xero->creditNotes );
+		$keys = array_map( static fn( $r ): string => (string) $r->header( 'Idempotency-Key' ), $this->xero->calls( 'PUT', '/CreditNotes' ) );
+		$this->assertCount( 2, $keys );
+		$this->assertSame( $keys[0], $keys[1] );
+	}
+
 	public function test_a_refund_for_an_order_xero_does_not_have_fails_before_anything_is_made(): void {
 		$result = $this->send( '2103', '2999' );
 
