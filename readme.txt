@@ -19,23 +19,22 @@ The plugin is free, with every feature included: no paid tier, licence key, tria
 
 = Supported systems =
 
-* **ERP:** Odoo, ERPNext, Microsoft Dynamics 365 Business Central, Dynamics 365 Finance and Supply Chain, NetSuite, SAP Business One, SAP S/4HANA, Oracle Fusion Cloud ERP, Sage 200, Sage 300, Sage X3, Acumatica, Holded.
-* **Accounting:** QuickBooks Online, Xero, Zoho Books, MYOB, Sage Business Cloud Accounting, Qoyod, Wafeq, Daftra, Lexware Office, sevDesk, Exact Online, Moneybird, Fortnox.
-* **CRM:** HubSpot, Zoho CRM, Salesforce, Dynamics 365 Sales, Pipedrive, SuiteCRM.
-* **Files you import yourself** (nothing is sent anywhere): DATEV, Sage 50, TallyPrime.
+* ERP: Odoo, ERPNext, Microsoft Dynamics 365 Business Central, Dynamics 365 Finance and Supply Chain, NetSuite, SAP Business One, SAP S/4HANA, Oracle Fusion Cloud ERP, Sage 200, Sage 300, Sage X3, Acumatica, Holded.
+* Accounting: QuickBooks Online, Xero, Zoho Books, MYOB, Sage Business Cloud Accounting, Qoyod, Wafeq, Daftra, Lexware Office, sevDesk, Exact Online, Moneybird, Fortnox.
+* CRM: HubSpot, Zoho CRM, Salesforce, Dynamics 365 Sales, Pipedrive, SuiteCRM.
+* Files you import yourself (nothing is sent anywhere): DATEV, Sage 50, TallyPrime.
 
 Pennylane and SMACC are listed but cannot be selected yet.
 
-**Before you go live:** Every connector was built from the vendor's public documentation and tested against a simulated copy of its API; none has been tried with a live account yet. Start with Shadow mode, a dry run that changes nothing in either system, and compare the results first.
+Before you go live: every connector was built from the vendor's public documentation and tested against a simulated copy of its API; none has been tried with a live account yet. Start with Shadow mode, a dry run that changes nothing in either system, and compare the results first.
 
 = Features =
 
-* **Durable queue.** Failed deliveries retry with growing delays; a system that keeps failing pauses its connection and orders wait.
-* **No duplicates.** Every order has a reference (WC-{order number}) checked before anything is created.
-* **Preview and shadow mode.** See what your system will receive, or run everything without changing a thing.
-* **Mapping you can read**, with tax mapping, SKU matching and rollback. Failed orders are grouped by cause, with a plain explanation and a fix.
-* **Stock, tracking and invoice status back**, a nightly reconciliation, a dashboard and email alerts.
-* **Encrypted credentials**, with the key in wp-config.php; HPOS and the block checkout are supported.
+* Durable queue with retries, a circuit breaker and no duplicate orders: each order has a reference (WC-{order number}) checked before anything is created.
+* Preview what your system will receive, and a Shadow mode that changes nothing.
+* Readable mapping rules with tax mapping, SKU matching and rollback; failed orders grouped by cause, with a fix.
+* Stock, tracking and invoice status back, a nightly reconciliation, a dashboard and email alerts.
+* Encrypted credentials, with the key in wp-config.php. HPOS and the block checkout are supported.
 
 = Trademarks =
 

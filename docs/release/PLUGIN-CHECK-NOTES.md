@@ -18,7 +18,7 @@ approximations on the build machine could not:
 | --- | --- |
 | 33 errors, `wp_function_not_compatible_with_requires_wp`: `array_is_list()` is read as a WordPress 6.5 function, and the plugin supports 6.4 (it runs on PHP 8.1, where the function exists natively). | Every call now goes through `Core\Support\Lists::isList()`, which gives the same answer (a unit test compares the two). `bin/red-flags.php` fails on a new call to `array_is_list()`. |
 | Warning: `load_plugin_textdomain()` is discouraged for plugins hosted on WordPress.org. | Removed. WordPress.org loads the translations of a hosted plugin by itself. |
-| Warning: the readme Description is longer than 2,500 characters and is cut. | Shortened to 2,456; `bin/check-readme.php` now fails above 2,500. |
+| Warning: the readme Description is longer than 2,500 characters and is cut. The parser counts it after the Markdown became HTML, so 2,456 characters of text were still too long. | Shortened to 2,286 characters (about 2,410 as HTML); `bin/check-readme.php` now fails above 2,300. |
 | 8 warnings, `PluginCheck.Security.DirectDB.UnescapedDBParameter`, in `Core\Repositories\Repository` and `Connectors\Support\OAuth\WpdbRefreshLock`: a statement built by `$wpdb->prepare()` is passed to `$wpdb`. | Marked with `phpcs:ignore` and the reason (the statement is prepared; the table names come from `$wpdb`). |
 
 The first attempt of the job failed before it checked anything: the workflow added Plugin Check and WooCommerce to the

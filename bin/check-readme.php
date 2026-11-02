@@ -367,10 +367,11 @@ if ( isset( $sections['External services'] ) ) {
 // Every system of the connector documents is named in the readme, and the numbers it quotes match the documents and the catalog.
 if ( isset( $sections['Description'] ) ) {
 	$description = implode( "\n", $sections['Description'] );
-	// The WordPress.org parser cuts the Description at 2,500 characters (Plugin Check: readme_parser_warnings_trimmed_section_description).
+	// The WordPress.org parser cuts the Description at 2,500 characters and counts them after the Markdown became HTML (Plugin Check:
+	// readme_parser_warnings_trimmed_section_description). The tags add about 5 to 10 percent, so the text itself stays under 2,300.
 	$description_length = mb_strlen( trim( $description ) );
-	if ( $description_length > 2500 ) {
-		$errors[] = "The Description section is {$description_length} characters; WordPress.org shows at most 2,500.";
+	if ( $description_length > 2300 ) {
+		$errors[] = "The Description section is {$description_length} characters; keep it under 2,300 (WordPress.org cuts it at 2,500 after the Markdown is turned into HTML).";
 	}
 	foreach ( ESTASOFT_README_DOCS as $doc ) {
 		if ( false === strpos( $description, $doc['name'] ) ) {
