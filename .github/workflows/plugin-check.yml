@@ -1,0 +1,78 @@
+name: Plugin Check
+
+# Runs the official WordPress.org Plugin Check against the release zip (not against the working tree), so it
+# sees exactly the files a reviewer will receive. WooCommerce is installed on the test site because this
+# plugin declares "Requires Plugins: woocommerce", and WordPress 6.5+ will not activate it without it.
+#
+# Read the job summary, not only the pass or fail mark: warnings do not fail the job. To make them fail,
+# add `strict: true` to the action below once the report is clean.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: plugin-check-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plugin-check:
+    name: Plugin Check on the release zip
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: ./.github/actions/setup-php-composer
+        with:
+          php-version: "8.3"
+          install: "false"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Build and verify the release zip
+        run: bash bin/build-zip.sh --out "$RUNNER_TEMP/zip"
+
+      - name: Unpack the zip into plugin-build/
+        run: |
+          mkdir -p plugin-build
+          unzip -q "$RUNNER_TEMP"/zip/*.zip -d plugin-build
+          ls -la plugin-build
+
+      # The action starts a wp-env site and reads .wp-env.override.json after its own settings. The list below
+      # is complete on purpose (WooCommerce first, then Plugin Check, then this plugin), so it is correct
+      # whether the action replaces or merges the plugin list. Not testable outside GitHub: watch the first run
+      # (docs/release/CHECKLIST.md).
+      - name: Put WooCommerce on the test site
+        run: |
+          cat > .wp-env.override.json <<'JSON'
+          {
+            "plugins": [
+              "https://downloads.wordpress.org/plugin/woocommerce.latest-stable.zip",
+              "https://downloads.wordpress.org/plugin/plugin-check.latest-stable.zip",
+              "./plugin-build/estasoft-erp-crm-sync-engine"
+            ]
+          }
+          JSON
+
+      - name: Run Plugin Check
+        uses: WordPress/plugin-check-action@v1
+        with:
+          build-dir: ./plugin-build/estasoft-erp-crm-sync-engine
+          slug: estasoft-erp-crm-sync-engine
+          wp-version: latest
+          include-experimental: false

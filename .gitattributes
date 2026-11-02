@@ -1,4 +1,36 @@
+# Normalise line endings and mark binary files.
 * text=auto eol=lf
+*.sh text eol=lf
+*.php text eol=lf
 *.png binary
 *.jpg binary
+*.jpeg binary
+*.gif binary
 *.zip binary
+
+# Files left out of `git archive` (and of GitHub's "Source code" downloads). Keep in step with .distignore;
+# the release zip itself is built by bin/build-zip.sh, which reads .distignore.
+/.* export-ignore
+.gitkeep export-ignore
+/*.config.js export-ignore
+/*.config.cjs export-ignore
+/*.config.mjs export-ignore
+/*.config.ts export-ignore
+/tsconfig*.json export-ignore
+/bin export-ignore
+/docs export-ignore
+/src export-ignore
+/tests export-ignore
+/composer.json export-ignore
+/composer.lock export-ignore
+/package.json export-ignore
+/package-lock.json export-ignore
+/phpcs.xml.dist export-ignore
+/phpstan.neon.dist export-ignore
+/phpunit.xml.dist export-ignore
+/phpunit-integration.xml.dist export-ignore
+/CHANGELOG.md export-ignore
+/CODE_OF_CONDUCT.md export-ignore
+/CONTRIBUTING.md export-ignore
+/README.md export-ignore
+/SECURITY.md export-ignore

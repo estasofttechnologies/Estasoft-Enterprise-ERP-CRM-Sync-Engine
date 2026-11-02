@@ -6,14 +6,18 @@
 # Build output (committed only inside release zips)
 /build/
 /dist/
+/plugin-build/
 /coverage/
 *.zip
+*.sha256
 
 # Tooling caches
 .phpunit.result.cache
+.phpunit.cache/
 .phpcs-cache
 .phpstan-cache/
 .eslintcache
+.wp-env.override.json
 .DS_Store
 Thumbs.db
 *.log

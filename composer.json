@@ -34,9 +34,25 @@
   "scripts": {
     "lint": "phpcs",
     "lint:fix": "phpcbf",
+    "lint:syntax": "bash bin/lint-php.sh",
     "analyse": "phpstan analyse --memory-limit=1G",
     "test": "phpunit",
     "test:integration": "phpunit -c phpunit-integration.xml.dist",
-    "check": ["@lint", "@analyse", "@test"]
+    "check": ["@lint", "@analyse", "@test"],
+    "check:all": "bash bin/check-all.sh",
+    "build:zip": "bash bin/build-zip.sh",
+    "i18n:pot": "bash bin/make-pot.sh"
+  },
+  "scripts-descriptions": {
+    "lint": "Run PHPCS with the WordPress Coding Standards.",
+    "lint:fix": "Fix what PHPCBF can fix automatically.",
+    "lint:syntax": "php -l on every file and a scan for code WordPress.org rejects.",
+    "analyse": "Run PHPStan.",
+    "test": "Run the PHPUnit unit tests (no WordPress, no database).",
+    "test:integration": "Run the integration tests (real WordPress and database; see tests/README.md).",
+    "check": "PHPCS, PHPStan and the unit tests.",
+    "check:all": "Everything that can run locally, with a list of what was skipped.",
+    "build:zip": "Build the production zip (bin/build-zip.sh; add --dry-run to only check the file list).",
+    "i18n:pot": "Write languages/estasoft-erp-crm-sync-engine.pot with WP-CLI."
   }
 }
