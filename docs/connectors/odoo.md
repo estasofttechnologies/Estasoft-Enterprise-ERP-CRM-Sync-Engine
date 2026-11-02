@@ -31,6 +31,15 @@ Supported Odoo: 17.0, 18.0, 19.0 and later (Community, Enterprise and Odoo Onlin
 
 The plugin contacts only the address you enter. It refuses private network addresses unless the filter `estasoft_sync_allow_private_hosts` allows them.
 
+## Data sent and when
+
+The plugin contacts only the Odoo address the merchant typed (Odoo Online, Odoo.sh or their own server); `hosts` is empty because the address is the merchant's. Nothing is sent before the connection is saved and tested.
+
+- **When an order is placed, paid, changed or refunded:** the order's customer (name, email, phone, billing and shipping address), lines (SKU, name, quantity, price, tax), shipping, fees, discounts, totals, currency, payment method title and the reference `WC-{order id}`, as a sale order (and, when the merchant chose it, an invoice and payment) or a credit note. No card data and no payment tokens are sent.
+- **On a schedule (every few minutes to hourly, only for the features the merchant switched on):** reads of stock quantities, delivery records with tracking numbers, invoice status and the list of recent orders for the nightly check. Nothing is written to Odoo by these reads.
+- **When the merchant presses Test connection or Preview:** a read of the Odoo version, company, warehouses and the permissions the connector needs; a preview builds the order payload and sends nothing.
+- **Credentials:** the address, database, user and API key go only to the merchant's Odoo, over https. The key is stored encrypted on this site and is never shown again.
+
 ## 1. Transports
 
 | Odoo | Transport class | Wire format |

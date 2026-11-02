@@ -7,9 +7,11 @@
  *   php bin/generate-catalog-from-docs.php --strict  also exit 1 when a document breaks a rule (step count or length)
  *
  * Every docs/connectors/{id}.md starts with a front matter block (see docs/connectors/BUILDING.md). A document belongs to the catalog row whose
- * name equals its `catalog_row`. These catalog fields come from the documents: connector, connection_method, available, verified, variants, hosts,
- * terms_url, privacy_url, developer_url and steps (the numbered list under the heading "How the merchant connects": at most 6 steps of at most 140
- * characters). The hand-written fields stay: name, type, regions, needs, wave. A row without a document keeps the values it has.
+ * name equals its `catalog_row`. These catalog fields come from the documents: connector, connection_method, available, unavailable_reason, verified,
+ * variants, hosts, terms_url, privacy_url, developer_url and steps (the numbered list under the heading "How the merchant connects": at most 6 steps of at most
+ * 140 characters). `hosts` may hold patterns: an entry that starts with `*.` (for example `*.oraclecloud.com`) stands for any subdomain and stays in the
+ * list with its `*.` so the screens can tell it from a single host. `unavailable_reason` (front matter) says why a system with `available: false` cannot be
+ * chosen yet; it is written to the row as `unavailable_reason`, next to the hand-written `needs`. The hand-written fields stay: name, type, regions, needs, wave. A row without a document keeps the values it has.
  *
  * @package Estasoft\SyncEngine
  */
@@ -18,6 +20,41 @@ declare(strict_types=1);
 
 const ESTASOFT_MAX_STEPS       = 6;
 const ESTASOFT_MAX_STEP_LENGTH = 140;
+
+/**
+ * A host of the front matter in the form the catalog keeps: trimmed and lower case. A pattern keeps its leading `*.`.
+ *
+ * @param mixed $host Value from the front matter.
+ */
+function estasoft_host_entry( mixed $host ): string {
+	return strtolower( trim( (string) $host ) );
+}
+
+/**
+ * Whether a host entry is a pattern (`*.example.com`: any subdomain).
+ *
+ * @param string $host Entry of the catalog `hosts` list.
+ */
+function estasoft_host_is_pattern( string $host ): bool {
+	return str_starts_with( $host, '*.' );
+}
+
+/**
+ * Why a host entry is not acceptable, or null. Accepted: a host name (`api.example.com`), or a pattern whose `*.` is followed by a domain of at
+ * least two labels (`*.oraclecloud.com`, not `*.com`, not `a.*.com`, not `*`). No scheme, path, port or space.
+ *
+ * @param string $host Entry (already through estasoft_host_entry()).
+ */
+function estasoft_host_problem( string $host ): ?string {
+	$name = estasoft_host_is_pattern( $host ) ? substr( $host, 2 ) : $host;
+	if ( 1 !== preg_match( '/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/', $name ) ) {
+		return "'{$host}' is not a host name or a pattern like *.example.com (no scheme, path, port or other wildcard).";
+	}
+	if ( estasoft_host_is_pattern( $host ) && 1 !== preg_match( '/^[^.]+\.[^.]+/', $name ) ) {
+		return "'{$host}' is too wide: a pattern needs a domain of two labels after *.";
+	}
+	return null;
+}
 
 /**
  * Split a flow collection or a list at top-level commas.
@@ -272,6 +309,15 @@ function estasoft_catalog_from_docs( string $root, array &$problems ): array {
 		if ( ! in_array( $doc['catalog_row'], $known, true ) ) {
 			$problems[] = "{$doc['id']}: catalog_row '{$doc['catalog_row']}' is not a row of the catalog.";
 		}
+		foreach ( (array) ( $doc['hosts'] ?? array() ) as $host ) {
+			$why = estasoft_host_problem( estasoft_host_entry( $host ) );
+			if ( null !== $why ) {
+				$problems[] = "{$doc['id']}: hosts: {$why}";
+			}
+		}
+		if ( array_key_exists( 'available', $doc ) && false === $doc['available'] && '' === trim( (string) ( $doc['unavailable_reason'] ?? '' ) ) ) {
+			$problems[] = "{$doc['id']}: available is false but there is no unavailable_reason (say why the system cannot be chosen yet).";
+		}
 	}
 
 	$out = array();
@@ -293,9 +339,9 @@ function estasoft_catalog_from_docs( string $root, array &$problems ): array {
 /**
  * The systems on the Choose a system screen (static data, never fetched from the network).
  *
- * The hand-written fields are name, type, regions, needs and wave. The connector fields (connector, connection_method, available, selectable, verified, variants,
- * hosts, terms_url, privacy_url, developer_url, steps) are written by bin/generate-catalog-from-docs.php from docs/connectors/*.md: do not edit them
- * here. `connector` is the id of the connector (a row that holds several products names the first one and lists them all in `variants`).
+ * The hand-written fields are name, type, regions, needs and wave. The connector fields (connector, connection_method, available, selectable, unavailable_reason,
+ * verified, variants, hosts, terms_url, privacy_url, developer_url, steps) are written by bin/generate-catalog-from-docs.php from docs/connectors/*.md: do
+ * not edit them here. A host that starts with `*.` is a pattern (any subdomain). `connector` is the id of the connector (a row that holds several products names the first one and lists them all in `variants`).
  * `connection_method` is one of key, own_app, cloud_app, server_login, export_file, none, unknown (docs/spec/connection-methods-spec.md).
  * Filter: estasoft_sync_catalog.
  *
@@ -349,7 +395,7 @@ function estasoft_row( array $row, array $docs ): array {
 				$base[ $key ] = $row[ $key ];
 			}
 		}
-		return $base;
+		return estasoft_with_reason( $base, (string) ( $row['unavailable_reason'] ?? '' ) );
 	}
 	$primary = $docs[0];
 	$labels  = array();
@@ -373,6 +419,7 @@ function estasoft_row( array $row, array $docs ): array {
 	$base['connection_method'] = (string) ( $primary['connection_method'] ?? $base['connection_method'] );
 	$base['available']         = ! array_key_exists( 'available', $primary ) || false !== $primary['available'];
 	$base['selectable']        = $base['available'];
+	$reason                    = trim( (string) ( $primary['unavailable_reason'] ?? '' ) );
 	$base['verified']          = ! empty( $primary['verified'] );
 	$base['terms_url']         = (string) ( $primary['terms_url'] ?? '' );
 	$base['privacy_url']       = (string) ( $primary['privacy_url'] ?? '' );
@@ -381,7 +428,7 @@ function estasoft_row( array $row, array $docs ): array {
 	$hosts                     = array();
 	foreach ( $docs as $doc ) {
 		foreach ( (array) ( $doc['hosts'] ?? array() ) as $host ) {
-			$hosts[] = (string) $host;
+			$hosts[] = estasoft_host_entry( $host );
 		}
 	}
 	$base['hosts'] = array_values( array_unique( $hosts ) );
@@ -392,13 +439,13 @@ function estasoft_row( array $row, array $docs ): array {
 				'id'                => (string) $doc['id'],
 				'label'             => $labels[ (string) $doc['id'] ] ?? (string) ( $doc['name'] ?? $doc['id'] ),
 				'connection_method' => (string) ( $doc['connection_method'] ?? 'unknown' ),
-				'hosts'             => array_values( array_map( 'strval', (array) ( $doc['hosts'] ?? array() ) ) ),
+				'hosts'             => array_values( array_map( 'estasoft_host_entry', (array) ( $doc['hosts'] ?? array() ) ) ),
 				'terms_url'         => (string) ( $doc['terms_url'] ?? '' ),
 				'privacy_url'       => (string) ( $doc['privacy_url'] ?? '' ),
 				'developer_url'     => (string) ( $doc['developer_url'] ?? '' ),
 				'steps'             => $doc['_steps'],
 			);
-			$variants[ (string) $doc['id'] ] = $variant;
+			$variants[ (string) $doc['id'] ] = estasoft_with_reason( $variant, trim( (string) ( $doc['unavailable_reason'] ?? '' ) ) );
 		}
 		// Keep the order in which the primary document lists its variants, then the rest by id.
 		$ordered = array();
@@ -412,7 +459,32 @@ function estasoft_row( array $row, array $docs ): array {
 		$base['variants'] = array_merge( $ordered, array_values( $variants ) );
 		$base['connector'] = (string) $base['variants'][0]['id'];
 	}
-	return $base;
+	return estasoft_with_reason( $base, $reason );
+}
+
+/**
+ * Add `unavailable_reason` right after the keys it belongs with, only when there is one.
+ *
+ * @param array<string,mixed> $row    Row or variant.
+ * @param string              $reason Text, or an empty string.
+ * @return array<string,mixed>
+ */
+function estasoft_with_reason( array $row, string $reason ): array {
+	unset( $row['unavailable_reason'] );
+	if ( '' === $reason ) {
+		return $row;
+	}
+	$out = array();
+	foreach ( $row as $key => $value ) {
+		$out[ $key ] = $value;
+		if ( 'selectable' === $key || ( 'label' === $key && ! array_key_exists( 'selectable', $row ) ) ) {
+			$out['unavailable_reason'] = $reason;
+		}
+	}
+	if ( ! array_key_exists( 'unavailable_reason', $out ) ) {
+		$out['unavailable_reason'] = $reason;
+	}
+	return $out;
 }
 
 /**
@@ -435,9 +507,10 @@ function estasoft_readme( array $docs ): string {
 		'unknown'      => 'See the document',
 	);
 	foreach ( $docs as $doc ) {
-		$hosts = array() === (array) ( $doc['hosts'] ?? array() ) ? 'The address you enter, or none' : implode( ', ', array_map( static fn( $h ): string => '`' . $h . '`', (array) $doc['hosts'] ) );
+		$hosts = array() === (array) ( $doc['hosts'] ?? array() ) ? 'The address you enter, or none' : implode( ', ', array_map( static fn( $h ): string => '`' . estasoft_host_entry( $h ) . '`', (array) $doc['hosts'] ) );
 		$text .= '| [' . $doc['name'] . '](' . $doc['id'] . '.md) | `' . $doc['id'] . '` | ' . ( $methods[ (string) ( $doc['connection_method'] ?? 'unknown' ) ] ?? (string) $doc['connection_method'] ) . ' | ' . $hosts . ' | ' . ( ! empty( $doc['verified'] ) ? 'Yes' : 'No' ) . " |\n";
 	}
+	$text .= "\nA host that starts with `*.` is a pattern: any subdomain of it (a system that gives each customer a host of its own). A system with `available: false` cannot be chosen yet; its document says why in `unavailable_reason`.\n";
 	return $text . "\nNo connector has been tried on a live vendor account yet: each document ends with the manual smoke test to run on a real account.\n";
 }
 

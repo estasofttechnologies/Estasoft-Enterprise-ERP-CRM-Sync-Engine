@@ -61,6 +61,12 @@ The code is in `includes/Rest/`: `RestModule` registers the routes on `rest_api_
 | `POST /connections/{id}/oauth/start` | configure | | `{ url }`; SYNC-CFG-004 for key-style connectors |
 | `GET /connections/{id}/oauth/organisations` | configure | | `{ id, name }[]`; SYNC-CFG-004 for key-style connectors |
 | `GET /connections/{id}/oauth/callback` | one-time state | `state` (required), `code?`, `error?` | 302 to the admin screen with `signin=ok`, `cancelled` or `failed` |
+| `GET /oauth/callback` | one-time state | `state` (required), `code?`, `error?` | The stable address a merchant registers in the vendor's developer portal (no connection id in it); the state finds the connection and the person. 302 to the admin screen with `signin=ok`, `cancelled` or `failed` and `connection=<id>` |
+| `POST /connections/{id}/oauth/organisation` | configure | `id` (required) | `Connection`; stores the chosen organisation, runs the connection test and activates the connection when it passes |
+| `GET /exports` | manage | `connection_id?` | `{ files: ExportFileInfo[], open_batch: { connection_id, orders, since } or null }` |
+| `POST /exports` | configure | `connection_id` (required) | `ExportFileInfo`; SYNC-EXP-001 when the file cannot be written, SYNC-EXP-002 when orders were left out (listed in `left_out`) |
+| `GET /exports/{id}/download` | manage | | The file as an attachment (`Content-Disposition: attachment`, `X-Content-Type-Options: nosniff`); only through this signed-in request, never by a web address |
+| `DELETE /exports/{id}` | configure | | `{ deleted: true }` |
 | `GET /catalog` | manage | | `CatalogEntry[]` |
 | `GET /mappings/{type}` | manage | `connection_id?`; type is orders, customers, products, refunds, stock or tracking | `MappingSet` |
 | `PUT /mappings/{type}` | configure | `rules` (required, up to 500), `note?`, `connection_id?` | `MappingSet` (saves the draft) |

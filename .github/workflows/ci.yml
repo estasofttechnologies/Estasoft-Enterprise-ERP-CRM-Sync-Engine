@@ -8,7 +8,9 @@ name: CI
 #   unit         PHPUnit unit tests on PHP 8.1 to 8.4 (no WordPress, no database)
 #   integration  PHPUnit against a real WordPress and MySQL 8 (bin/install-wp-core.sh + bin/install-test-wp.php)
 #   javascript   the admin app: lint, stylelint, tsc, Jest, production build
+#   generated    the files that are written from other files are up to date (connector index, catalog, External services) and readme.txt follows the rules
 #   release-build  the same zip the release workflow publishes, built and verified
+#   smoke        installs that zip into a fresh WordPress and exercises it (bin/smoke-install.sh); not in ci-ok until it has passed once on GitHub
 #   ci-ok        one required check for branch protection
 
 on:
@@ -217,6 +219,32 @@ jobs:
             exit 1
           fi
 
+  generated:
+    name: Generated files are up to date
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: ./.github/actions/setup-php-composer
+        with:
+          php-version: "8.3"
+          install: "false"
+
+      # Each of these rewrites a file from the connector documents; --check fails when the committed file differs.
+      - name: Connector index, catalog and External services
+        run: |
+          php bin/generate-connector-index.php --check
+          php bin/generate-catalog-from-docs.php --check
+          php bin/generate-external-services.php --check
+
+      - name: readme.txt follows the WordPress.org rules
+        run: php bin/check-readme.php
+
   release-build:
     name: Release zip builds and verifies
     runs-on: ubuntu-latest
@@ -256,10 +284,62 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  smoke:
+    name: Install the release zip (WordPress ${{ matrix.wordpress }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        wordpress: ["6.4", latest]
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      SMOKE_CORE: /tmp/wordpress
+      SMOKE_DB_USER: root
+      SMOKE_DB_PASSWORD: root
+      SMOKE_DB_HOST: 127.0.0.1
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: ./.github/actions/setup-php-composer
+        with:
+          php-version: "8.3"
+          install: "false"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Download WordPress
+        run: bash bin/install-wp-core.sh "${{ matrix.wordpress }}" "$SMOKE_CORE"
+
+      # Builds the zip, unpacks it into a fresh wp-content (the plugin is the unzipped release, WooCommerce is the stand-in
+      # from tests/php/stubs/woocommerce), and runs every phase of bin/smoke-install.php. Not testable outside GitHub:
+      # watch the first run, then add this job to ci-ok.
+      - name: Smoke test of the release zip
+        run: bash bin/smoke-install.sh
+
   ci-ok:
     name: CI passed
     if: ${{ always() }}
-    needs: [php-lint, phpcs, phpstan, unit, integration, javascript, release-build]
+    needs: [php-lint, phpcs, phpstan, unit, integration, javascript, generated, release-build]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
