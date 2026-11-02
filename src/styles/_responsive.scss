@@ -53,6 +53,19 @@
 		min-inline-size: 44px;
 	}
 
+	.estasoft-sync-more > summary {
+		min-block-size: 44px;
+	}
+
+	// The compact button and the select are set after the rules above (more classes), so they need their own line.
+	.estasoft-sync .components-button.estasoft-sync-btn.estasoft-sync-btn--sm {
+		min-block-size: 44px;
+	}
+
+	.estasoft-sync .components-select-control .components-select-control__input.components-select-control__input {
+		min-block-size: 44px;
+	}
+
 	.estasoft-sync .components-button.estasoft-sync-btn.is-link {
 		min-block-size: 44px;
 	}

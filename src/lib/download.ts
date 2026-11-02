@@ -21,3 +21,21 @@ export function downloadText(
 	document.body.removeChild( link );
 	setTimeout( () => URL.revokeObjectURL( url ), 1000 );
 }
+
+/**
+ * Saves a file that came from the server (an export file) in the browser.
+ *
+ * @param filename Name of the file.
+ * @param blob     The bytes, unchanged.
+ */
+export function downloadBlob( filename: string, blob: Blob ): void {
+	const url = URL.createObjectURL( blob );
+	const link = document.createElement( 'a' );
+	link.href = url;
+	link.download = filename;
+	link.rel = 'noopener';
+	document.body.appendChild( link );
+	link.click();
+	document.body.removeChild( link );
+	setTimeout( () => URL.revokeObjectURL( url ), 1000 );
+}

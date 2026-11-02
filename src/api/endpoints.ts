@@ -1,17 +1,21 @@
 /**
  * One typed function per route of `estasoft-sync/v1`, grouped like the endpoint list in types.ts.
  */
-import { request, requestPaged } from './client';
+import { request, requestBlob, requestPaged } from './client';
 import type {
 	BulkActionRequest,
+	ExportFileInfo,
+	ExportList,
 	InvoiceQuery,
 	LogQuery,
 	MappingSaveInput,
 	NotificationTestResult,
+	OAuthOrganisation,
 	ProductSearchHit,
 	ReconSettingsInput,
 	SettingsInput,
 	StockRulesInput,
+	SystemEntry,
 	TaxMapSaveRow,
 	ToolsExportResult,
 	ToolsImportResult,
@@ -19,7 +23,6 @@ import type {
 import type {
 	AttentionGroup,
 	CapacityResult,
-	CatalogEntry,
 	Connection,
 	ConnectionInput,
 	ConnectionSummary,
@@ -137,11 +140,57 @@ export const api = {
 				method: 'POST',
 				...json( input ),
 			} ),
+		/**
+		 * The address of the vendor's sign-in page. The browser goes there; it comes back with `signin=`.
+		 * @param id
+		 */
+		oauthStart: ( id: number ) =>
+			request< { url: string } >( `/connections/${ id }/oauth/start`, {
+				method: 'POST',
+			} ),
+		oauthOrganisations: ( id: number, signal?: AbortSignal ) =>
+			request< OAuthOrganisation[] >(
+				`/connections/${ id }/oauth/organisations`,
+				{ signal }
+			),
+		oauthSelectOrganisation: ( id: number, organisationId: string ) =>
+			request< Connection >( `/connections/${ id }/oauth/organisation`, {
+				method: 'POST',
+				...json( { id: organisationId } ),
+			} ),
 	},
 
 	catalog: {
 		list: ( signal?: AbortSignal ) =>
-			request< CatalogEntry[] >( '/catalog', { signal } ),
+			request< SystemEntry[] >( '/catalog', { signal } ),
+	},
+
+	exports: {
+		list: ( connectionId?: number, signal?: AbortSignal ) =>
+			request< ExportList >( '/exports', {
+				query: { connection_id: connectionId },
+				signal,
+			} ),
+		create: ( connectionId: number ) =>
+			request< ExportFileInfo >( '/exports', {
+				method: 'POST',
+				...json( { connection_id: connectionId } ),
+			} ),
+		/**
+		 * The file, byte for byte.
+		 * @param id   File id.
+		 * @param part The attachment to download (from 1); without it, the file itself.
+		 */
+		download: ( id: string | number, part?: number ) =>
+			requestBlob(
+				`/exports/${ encodeURIComponent( String( id ) ) }/download`,
+				{ query: { part } }
+			),
+		remove: ( id: string | number ) =>
+			request< { deleted: true } >(
+				`/exports/${ encodeURIComponent( String( id ) ) }`,
+				{ method: 'DELETE' }
+			),
 	},
 
 	mappings: {

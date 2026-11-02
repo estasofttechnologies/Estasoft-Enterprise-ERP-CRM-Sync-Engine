@@ -41,7 +41,7 @@ export function GoLiveStep( {
 	onChange,
 }: GoLiveStepProps ) {
 	const system = systemName( connection );
-	const summary = summariseWhat( what, system );
+	const summary = summariseWhat( what, system, connection.type );
 	const open = readiness
 		? readiness.checks.filter( ( check ) => check.status !== 'passed' )
 				.length

@@ -3,9 +3,11 @@ import { Callout } from '../components/Callout';
 import { PageHeader } from '../components/PageHeader';
 import { AddConnection } from '../screens/connections/AddConnection';
 import { ConnectionDetail } from '../screens/connections/ConnectionDetail';
+import { ConnectionProblems } from '../screens/connections/ConnectionProblems';
 import { ConnectionsList } from '../screens/connections/ConnectionsList';
 import { OtherSystems } from '../screens/connections/OtherSystems';
 import { Dashboard } from '../screens/dashboard/Dashboard';
+import { ExportsScreen } from '../screens/exports/ExportsScreen';
 import { Invoices } from '../screens/invoices/Invoices';
 import { LogDetail, Logs } from '../screens/logs/Logs';
 import type { MappingTab } from '../screens/mapping/MappingPage';
@@ -98,7 +100,13 @@ export function Routes( { route }: { route: RouteState } ) {
 			if ( second === 'other' ) {
 				return <OtherSystems />;
 			}
+			if ( second === 'problems' ) {
+				return <ConnectionProblems />;
+			}
 			const id = numeric( second );
+			if ( id !== null && route.segments[ 2 ] === 'exports' ) {
+				return <ExportsScreen id={ id } />;
+			}
 			return id !== null ? (
 				<ConnectionDetail id={ id } />
 			) : (

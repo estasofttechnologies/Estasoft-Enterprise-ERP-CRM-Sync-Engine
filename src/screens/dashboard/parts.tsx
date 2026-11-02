@@ -58,6 +58,19 @@ export function ConnectionCard( {
 				/>
 			),
 		} );
+	} else if ( connection.status === 'needs_reconnect' ) {
+		items.push( {
+			label: __( 'State', 'estasoft-erp-crm-sync-engine' ),
+			value: (
+				<StateChip
+					state="retrying"
+					label={ __(
+						'Needs reconnect',
+						'estasoft-erp-crm-sync-engine'
+					) }
+				/>
+			),
+		} );
 	} else if ( connection.status !== 'active' ) {
 		items.push( {
 			label: __( 'State', 'estasoft-erp-crm-sync-engine' ),
@@ -112,6 +125,19 @@ export function ConnectionCard( {
 							'Test connection',
 							'estasoft-erp-crm-sync-engine'
 						) }
+					</Btn>
+				) : null }
+				{ connection.status === 'needs_reconnect' && canConfigure ? (
+					<Btn
+						small
+						variant="primary"
+						onClick={ () =>
+							navigate(
+								`/connections/${ connection.id }?reconnect=1`
+							)
+						}
+					>
+						{ __( 'Reconnect', 'estasoft-erp-crm-sync-engine' ) }
 					</Btn>
 				) : null }
 				<Btn

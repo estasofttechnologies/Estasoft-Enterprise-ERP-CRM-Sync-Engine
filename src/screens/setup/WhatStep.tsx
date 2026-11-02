@@ -4,125 +4,11 @@ import { Callout } from '../../components/Callout';
 import { Card } from '../../components/Card';
 import { CheckField, SelectField } from '../../components/Fields';
 import { systemName } from '../../lib/text';
+import type { WhatAnswers } from './what';
+import { AccountingWhat, CrmWhat } from './WhatStepKinds';
 
-/** What the person chose on step 3. Stored in `Onboarding.answers.what`. */
-export interface WhatAnswers {
-	send_orders: boolean;
-	send_when: 'paid_or_cod' | 'placed' | 'completed';
-	documents: 'order' | 'order_invoice' | 'order_invoice_payment';
-	customer_match: 'match_create' | 'match_only' | 'always_create';
-	send_refunds: boolean;
-	stock_in: boolean;
-	tracking_in: boolean;
-	prices_in: boolean;
-	winner_status: 'woo_until_shipped' | 'system' | 'woo';
-	winner_address: 'woo' | 'system';
-}
-
-export const DEFAULT_WHAT: WhatAnswers = {
-	send_orders: true,
-	send_when: 'paid_or_cod',
-	documents: 'order_invoice',
-	customer_match: 'match_create',
-	send_refunds: true,
-	stock_in: true,
-	tracking_in: true,
-	prices_in: false,
-	winner_status: 'woo_until_shipped',
-	winner_address: 'woo',
-};
-
-/**
- * Merges stored answers over the defaults, ignoring anything of the wrong type.
- *
- * @param stored Value from the server.
- * @return Complete answers.
- */
-export function readWhat( stored: unknown ): WhatAnswers {
-	const result: WhatAnswers = { ...DEFAULT_WHAT };
-	if ( stored && typeof stored === 'object' ) {
-		for ( const key of Object.keys(
-			DEFAULT_WHAT
-		) as ( keyof WhatAnswers )[] ) {
-			const value = ( stored as Record< string, unknown > )[ key ];
-			if ( typeof value === typeof DEFAULT_WHAT[ key ] ) {
-				( result as unknown as Record< string, unknown > )[ key ] =
-					value;
-			}
-		}
-	}
-	return result;
-}
-
-/**
- * Plain words for a chosen setting, for the final summary.
- *
- * @param what   Answers.
- * @param system System name.
- * @return Lines for the summary.
- */
-export function summariseWhat(
-	what: WhatAnswers,
-	system: string
-): { orders: string; customers: string; stock: string; tracking: string } {
-	const when: Record< WhatAnswers[ 'send_when' ], string > = {
-		paid_or_cod: __(
-			'Sent when paid, or when placed with cash on delivery.',
-			'estasoft-erp-crm-sync-engine'
-		),
-		placed: __( 'Sent when placed.', 'estasoft-erp-crm-sync-engine' ),
-		completed: __( 'Sent when completed.', 'estasoft-erp-crm-sync-engine' ),
-	};
-	const docs: Record< WhatAnswers[ 'documents' ], string > = {
-		order: __( 'Sale order only.', 'estasoft-erp-crm-sync-engine' ),
-		order_invoice: __(
-			'Sale order and invoice.',
-			'estasoft-erp-crm-sync-engine'
-		),
-		order_invoice_payment: __(
-			'Sale order, invoice and payment.',
-			'estasoft-erp-crm-sync-engine'
-		),
-	};
-	const customers: Record< WhatAnswers[ 'customer_match' ], string > = {
-		match_create: __(
-			'Matched by email, created if missing',
-			'estasoft-erp-crm-sync-engine'
-		),
-		match_only: __(
-			'Matched by email, never created',
-			'estasoft-erp-crm-sync-engine'
-		),
-		always_create: __(
-			'A new contact for every order',
-			'estasoft-erp-crm-sync-engine'
-		),
-	};
-	return {
-		orders: what.send_orders
-			? `${ when[ what.send_when ] } ${ docs[ what.documents ] }`
-			: __( 'Not sent', 'estasoft-erp-crm-sync-engine' ),
-		customers: customers[ what.customer_match ],
-		stock: what.stock_in
-			? sprintf(
-					/* translators: %s: system name */ __(
-						'From %s',
-						'estasoft-erp-crm-sync-engine'
-					),
-					system
-				)
-			: __( 'Not synced', 'estasoft-erp-crm-sync-engine' ),
-		tracking: what.tracking_in
-			? sprintf(
-					/* translators: %s: system name */ __(
-						'From %s',
-						'estasoft-erp-crm-sync-engine'
-					),
-					system
-				)
-			: __( 'Not synced', 'estasoft-erp-crm-sync-engine' ),
-	};
-}
+export type { WhatAnswers } from './what';
+export { DEFAULT_WHAT, readWhat, summariseWhat } from './what';
 
 export interface WhatStepProps {
 	connection: Connection;
@@ -131,7 +17,8 @@ export interface WhatStepProps {
 }
 
 /**
- * Step 3, What should sync? Everything shown depends on what the connected system can do; the
+ * Step 3, What should sync? An accounting system, a CRM and an ERP each get their own questions
+ * (boards B04b, B04c, B04). Everything shown depends on what the connected system can do; the
  * rest is listed under "Not offered".
  *
  * @param props            Connection, answers and handler.
@@ -140,7 +27,26 @@ export interface WhatStepProps {
  * @param props.onChange
  * @return The step.
  */
-export function WhatStep( { connection, value, onChange }: WhatStepProps ) {
+export function WhatStep( props: WhatStepProps ) {
+	if ( props.connection.type === 'accounting' ) {
+		return <AccountingWhat { ...props } />;
+	}
+	if ( props.connection.type === 'crm' ) {
+		return <CrmWhat { ...props } />;
+	}
+	return <ErpWhat { ...props } />;
+}
+
+/**
+ * The questions for an ERP or business suite.
+ *
+ * @param props            Connection, answers and handler.
+ * @param props.connection
+ * @param props.value
+ * @param props.onChange
+ * @return The step.
+ */
+function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 	const system = systemName( connection );
 	const caps = connection.capabilities;
 	const set = < K extends keyof WhatAnswers >(

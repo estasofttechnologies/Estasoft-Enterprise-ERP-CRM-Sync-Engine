@@ -25,7 +25,7 @@ All commands run from the repository root.
 | `npm run start:mock` | Same, rebuilt on every change. |
 | `npm run typecheck` | `tsc --noEmit`, strict. |
 | `npm run lint:js` / `npm run lint:css` | ESLint (WordPress rules, text domain and translator comment rules) and Stylelint. |
-| `npm run test:js` | Jest 30 with Testing Library and jest-axe (13 files, 180 tests). |
+| `npm run test:js` | Jest 30 with Testing Library and jest-axe (17 files, about 260 tests). |
 | `npm run check:js` | All of the above, then the production build. |
 
 `wp-scripts test-unit-js` is not used. From `@wordpress/scripts` 37 it runs Vitest, so tests run through `wp-scripts test-unit-jest --config jest.config.js` instead.
@@ -47,10 +47,11 @@ Options in the address:
 | `?scenario=first_run` | Not connected, setup guide not finished. |
 | `?scenario=paused` | Syncing paused. |
 | `?scenario=shadow` | Shadow mode (test run) in progress. |
+| `?scenario=systems` | The normal world plus a signed-out Xero (id 21), a TallyPrime export connection with files (22), Wafeq (23), Business Central (24) and SAP Business One (25), to see every connect, reconnect and export screen without clicking through setup. |
 | `?role=manager` | Can view and operate, cannot configure. |
 | `?dir=rtl` | Right-to-left layout. |
 
-Magic values for the connection form: API key `wrong` gives AUTH-001, `noaccess` gives a missing-permission answer, an address containing `down` gives NET-001, database `nodb` gives CFG-003. Tests use the same server and can inject failures per route (`createMockServer({ failures })`).
+Magic values for the Odoo connection form: API key `wrong` gives AUTH-001, `noaccess` gives a missing-permission answer, an address containing `down` gives NET-001, database `nodb` gives CFG-003. Every other system (`src/api/mock/connect.ts`) takes the same words in any field, secret or not: `wrong` AUTH-001, `expired` AUTH-005, `noplan` AUTH-006, `noapp` AUTH-007, `badcert` NET-003, `nodb` CFG-003, `noaccess` AUTH-004 (partly approved), and a value containing `down` NET-001. For an app that signs in, a client secret of `cancel` comes back from the sign-in page cancelled and `fail` comes back failed (the mock sign-in page address points back at the mock page itself). Tests use the same server and can inject failures per route (`createMockServer({ failures })`).
 
 The mock is only built when `ESTASOFT_MOCK=1`. `webpack.config.js` replaces `process.env.ESTASOFT_MOCK` at build time and `src/index.tsx` imports `./api/mock` behind it, so the production bundle contains none of it. Check after a production build:
 
@@ -82,7 +83,9 @@ src/jsx-runtime.ts       createElement shim (WordPress 6.4)
 src/globals.d.ts         *.scss and *.css module types
 src/api/                 types.ts and errors.ts (contract, do not edit here),
                          client.ts (request, pagination, ApiError), endpoints.ts (typed calls),
-                         boot.ts, local-types.ts, mock/ (development only)
+                         boot.ts, local-types.ts, mock/ (development only: server.ts, data.ts,
+                         catalog.ts, connectors.ts for the 34 rows, connect.ts for the connect
+                         and export routes)
 src/app/                 App, AppBar, Routes, router (hash), sections, providers:
                          NoticeProvider, StatusProvider (polls /status), NowContext,
                          DisplaySettingsContext, ErrorBoundary, AppContext
@@ -91,8 +94,8 @@ src/lib/                 format (money, dates, durations), text (labels, error w
                          attention, catalog, rules (transforms), path, download
 src/components/          design-system parts: Btn, Card, Callout, Dialog, Fields, StateChip,
                          StatusBadge, ResponsiveTable, Pager, SaveBar, Steps, Kpi, ...
-src/screens/<area>/      one folder per screen (dashboard, queue, invoices, connections, setup,
-                         mapping, stock, reconciliation, logs, settings, shadow)
+src/screens/<area>/      one folder per screen (dashboard, queue, invoices, connections, connect,
+                         exports, setup, mapping, stock, reconciliation, logs, settings, shadow)
 src/styles/              SCSS partials: tokens, base, layout, components, screens, responsive
 src/dev/host.html        host page for the mock build
 tests/js/                one test file per area, plus helpers.tsx and setup.ts
@@ -116,6 +119,28 @@ tests/js/                one test file per area, plus helpers.tsx and setup.ts
 - **Accessibility.** Status is always an icon plus a word. Focus ring is 2 px navy. Animations stop under `prefers-reduced-motion`. Every screen has a jest-axe test, and the mock build was also checked with axe in Chrome (colour contrast included) on every route at 1280 and 390 px wide.
 - **Text.** Every string goes through `__`, `_n` or `sprintf` with the literal text domain `estasoft-erp-crm-sync-engine` and a translator comment where a placeholder is used. ESLint enforces it.
 
+## The connect experience
+
+One component set draws the connect screen for all 34 systems from the catalog (`GET /catalog`) and the connector's own form fields. `src/screens/connections/ConnectSystem.tsx` picks the shape from `connection_method`; the parts are in `src/screens/connect/`.
+
+| Shape (`connection_method`) | Screen | What happens |
+| --- | --- | --- |
+| `key` | `DirectConnect` | Numbered steps, plan note, form, **Test connection** (`POST /connections/test`), and a passing test saves (`POST /connections`). |
+| `cloud_app` | `DirectConnect` | The same, with the two-administrator note and "Copy the steps for my administrators". After saving, the company is chosen (`GET /connections/{id}/oauth/organisations`, `POST /connections/{id}/oauth/organisation`). |
+| `server_login` | `DirectConnect` | The same, with the warning that the server must be reachable from this website. |
+| `own_app` | `OwnAppConnect` | Step 1: steps, the redirect address to copy (`<restUrl>oauth/callback`, or the `display` field the connector sends), Client ID and secret. Step 2: **Save and sign in at {vendor}** saves the connection without calling the vendor (`POST /connections`, status `needs_reconnect`), then `POST /connections/{id}/oauth/start` and the browser goes to the vendor's page. |
+| `export_file` | `ExportConnect` | No credentials: the connector's non-secret options, "how it works", and a link to the Exports screen. Nothing is sent anywhere. |
+| `none`, `unknown`, or no form | `MethodExplainer` | Says why it cannot be connected. Nothing pretends to work. |
+
+- **Form from data.** `CredentialForm` draws `CredentialFieldDef` by `type` (`text`, `password`, `select`, `textarea`, `url`, `number`, `display`) and sorts by `group` (`connection`, `app`, `advanced`; advanced sits behind "More settings"). Secrets go to `secrets`, everything else to `config`; an empty secret is never sent. Odoo keeps its own text (`connect/copy.ts`) when the catalog gives no steps or fields.
+- **Choose a system.** Every row shows how you connect, the plan note (`needs`), and for `verified: false` the tag "Not yet tested with a live account" with a help button (the connector was built from the vendor's documentation and tested with recorded examples; Shadow mode checks results before anything is sent). `available: false` and `none` rows cannot be selected. A row with `variants` asks "Which product do you use?" and goes on with the product's connector id (`resolveSystem` in `lib/connect.ts`); the wizard stores it as `answers.variant`.
+- **Test result.** `testChecks` (`lib/connect.ts`) shows the checks of connection-methods spec 2.1 in order (reach, certificate, sign in, plan, app for a cloud app, permissions), stopping at the first failure, from the error code or `missing_permissions`.
+- **What is sent, and where.** Every connect screen lists the `hosts` and links `terms_url` and `privacy_url` (WordPress.org guideline 6).
+- **The way back from a sign-in page.** The server redirects to `#/connections/<id>?signin=ok|cancelled|failed&connection=<id>`. `ConnectionDetail` reads it (`readSignIn`) and shows `SignInReturn`: `cancelled` says nothing was connected (SYNC-AUTH-003) and offers Try again; `failed` says so and points to the log; `ok` goes on to the organisation question, then runs the test, and a partly approved sign-in lists what is missing (SYNC-AUTH-004) with "Sign in again". When setup is not finished it offers "Continue setup". A reconnect of a sign-in that had an organisation is already active when the page loads, so the question is not asked again and the test runs at once. A sign-in that ends on the Connections list (`#/connections?signin=failed`, an unknown or used link) is explained there. A connector that needs no sign-in page (it answers `status: active` to `POST /connections`) goes on without one. The wizard keeps Continue off until the connection is not `needs_reconnect`. The browser leaves the page through `lib/external.ts` (`leaveTo`, which tests replace with `setLeaver`).
+- **Reconnect and expiry.** The Connections list, the dashboard card and the detail page show **Reconnect** for `needs_reconnect` (a dialog, then the sign-in again for an own app; the replace dialog for the other shapes). The expiry warning names what runs out (key, secret, password or sign-in) and offers **Replace the key/secret/password** for every shape; a key or password is tested before it is saved, and the secret of an own app is saved and the sign-in starts again. `#/connections/problems` is the reference of problems AUTH-001 to AUTH-007 (board D04).
+- **Exports** (`src/screens/exports`, route `#/connections/<id>/exports`, board D06). The open batch, **Create export file now** (`POST /exports`), the files with size, orders, date and expiry, Download (`GET /exports/{id}/download`, read as a Blob so the bytes are unchanged, then saved; a file's attachments, such as the masters list, have their own button) and Delete (with a dialog), the orders left out and why (SYNC-EXP-002), the SYNC-EXP-001 error with Create again, the import guide of the format (`guides.ts`, by connector id: Tally, DATEV, Sage 50, or a generic one), and "Delete all export files now" (one `DELETE` per file). The dashboard shows a card with the waiting orders when a connection uses files.
+- **What to sync.** `WhatStep` picks the questions by the connection type: ERP (orders as sale orders and invoices), accounting (what an order becomes, a payment table of typed accounts, customers, refunds, invoice link; board B04b) and CRM (contacts, pipeline, deal per order, consent, stage per order status; board B04c). Stock, tracking and prices appear only for a flagged capability, and "Not offered" cards say why not. The answers are stored in `onboarding.answers.what`.
+
 ## Adding a screen
 
 1. Add the response types to `src/api/types.ts` (contract owner) or `src/api/local-types.ts` (screen-only).
@@ -132,8 +157,13 @@ tests/js/                one test file per area, plus helpers.tsx and setup.ts
 
 ## Known gaps
 
-- Screens or options with no REST route yet: the Exports screen, connect forms for systems other than Odoo (an explanation is shown), product and customer matching options, and the carriers link table. The Stock and Reconciliation screens have no connection picker.
+- **The connect form is not in the catalog answer yet.** The screens read `credential_fields` on each catalog row (and on a variant). `GET /catalog` does not send it today, so until it does a pasted key and an app that signs in get the standard fields (`api_key`; `client_id` and `client_secret`) and every other system is explained instead of guessed at. Odoo keeps its own form.
+- A variant (Sage) carries no `connection_method` in the catalog answer: `lib/connect.ts` knows the two the connection-methods spec names (Sage 50 is a file, Sage 300 a server sign-in) plus Sage Accounting and Sage 200 as own apps.
+- The queue and the dashboard still say Synced, not Exported, for an order that is in an export file. The REST answer does not say which items belong to a file connection.
+- The masters list of an export ("Download the list", board D06) is shown when the file carries `attachments` (`ExportFileInfo.attachments`, downloaded with `?part=`, from 1). `types.ts` does not list `attachments` yet; `local-types.ts` adds it.
+- The payment accounts (accounting) and the deal stage for each order status (CRM) are typed, because no route lists the accounts or the stages of a system. They are saved with the setup answers; nothing on the server reads them yet, like the other answers of step 3. A CRM pipeline is saved through the connector's own option when it has one called `pipeline`.
+- Screens or options with no REST route yet: product and customer matching options and the carriers link table. The Stock and Reconciliation screens have no connection picker.
 - Transform argument names in the rule editor (`value`, `mode`, `default_country`, `map`, `equals`, `then`, `else`, `separator`, `index`) are the ones the editor sends; they must match the PHP transform library.
-- Vendor logos are not shown (letter tiles instead).
+- Vendor logos are not shown (letter tiles instead): they are the vendors' trademarks.
 - The order box printed by PHP still has a "Sync again" button; the server only retries failed or retrying items.
 - `npm audit` reports advisories in development tooling and in `@wordpress/*` packages that WordPress itself supplies at run time; none are inside `build/index.js`.

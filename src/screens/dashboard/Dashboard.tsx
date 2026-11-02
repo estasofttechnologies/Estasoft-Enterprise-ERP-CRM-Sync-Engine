@@ -34,6 +34,7 @@ import {
 	ordersPhrase,
 	systemName,
 } from '../../lib/text';
+import { ExportsCard } from '../exports/ExportsCard';
 import { HourlyChart } from './HourlyChart';
 import { LatestEvents } from './LatestEvents';
 import { Kpi } from '../../components/Kpi';
@@ -611,6 +612,7 @@ function NormalDashboard( { status }: { status: Status } ) {
 						onCheck={ () => void check.run() }
 						checking={ check.busy }
 					/>
+					{ canManage ? <ExportsCard /> : null }
 					<Card
 						title={ __(
 							'Queue right now',
