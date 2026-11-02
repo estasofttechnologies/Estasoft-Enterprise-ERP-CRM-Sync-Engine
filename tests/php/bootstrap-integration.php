@@ -43,3 +43,8 @@ $_SERVER['REQUEST_URI']     = '/';
 
 require_once ABSPATH . 'wp-settings.php';
 require_once __DIR__ . '/Support/IntegrationTestCase.php';
+
+// No test needs DNS: every host name resolves to a public address.
+if ( class_exists( \Estasoft\SyncEngine\Connectors\Support\HostPolicy::class ) ) {
+	\Estasoft\SyncEngine\Connectors\Support\HostPolicy::resolveWith( static fn( string $host ): array => array( '93.184.216.34' ) );
+}

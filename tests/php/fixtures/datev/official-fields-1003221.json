@@ -1,0 +1,20 @@
+{
+  "source": "DATEV document 1003221, ASCII-Import Buchungsstapel, field list read 2026-11-02 (https://www.datev.de/dnlexom/v2/content/documents/1003221/pdf)",
+  "count": 125,
+  "settings": { "separator": ";", "decimal": ",", "thousands": "", "date": "TTMM", "heading_row": true, "quote": "\"", "double_quotes": true, "trailing_delimiter": false },
+  "fields": {
+    "1":   { "name": "Umsatz (ohne Soll/Haben-Kz)", "type": "amount", "max": 13 },
+    "2":   { "name": "Soll/Haben-Kennzeichen", "type": "text", "max": 1 },
+    "7":   { "name": "Konto", "type": "account", "max": 9 },
+    "8":   { "name": "Gegenkonto (ohne BU-Schlüssel)", "type": "account", "max": 9 },
+    "9":   { "name": "BU-Schlüssel", "type": "text", "max": 4 },
+    "10":  { "name": "Belegdatum", "type": "date", "max": 4 },
+    "11":  { "name": "Belegfeld 1", "type": "text", "max": 36 },
+    "14":  { "name": "Buchungstext", "type": "text", "max": 60 },
+    "20":  { "name": "Beleglink", "type": "text", "max": 210 },
+    "37":  { "name": "KOST1 - Kostenstelle", "type": "text", "max": 36 },
+    "95":  { "name": "Auftragsnummer", "type": "text", "max": 30 },
+    "114": { "name": "Festschreibung", "type": "number", "max": 1 },
+    "125": { "name": "Abw. Skontokonto", "type": "account", "max": 8 }
+  }
+}

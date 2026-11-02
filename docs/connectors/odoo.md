@@ -1,3 +1,17 @@
+---
+id: odoo
+name: Odoo
+catalog_row: Odoo
+connection_method: key
+available: true
+verified: false
+hosts: []
+terms_url: ""                  # not verified by fetch (odoo.com is not reachable from the build session)
+privacy_url: ""                # not verified by fetch (odoo.com is not reachable from the build session)
+developer_url: https://www.odoo.com/documentation/19.0/developer/reference/external_api.html
+variants: []
+---
+
 # Odoo connector
 
 Connector id `odoo`, type ERP, contract version 1. Code: `includes/Connectors/Odoo/`. Registration: `includes/Connectors/ConnectorsModule.php`, which adds the connector through the `estasoft_sync_register_connectors` filter (third-party connectors register the same way).
@@ -5,6 +19,17 @@ Connector id `odoo`, type ERP, contract version 1. Code: `includes/Connectors/Od
 The connector sends WooCommerce orders (as sale orders, optionally with invoice and payment), refunds (as credit notes) and customers to Odoo, and reads stock, delivery tracking and invoice status back. Every network call goes through `Contract\HttpClientInterface`; the connector never calls `wp_remote_*`.
 
 Supported Odoo: 17.0, 18.0, 19.0 and later (Community, Enterprise and Odoo Online). Odoo 16 and older are refused with SYNC-VAL-002 ("Use Odoo 17 or later").
+
+
+## How the merchant connects
+
+1. In Odoo, make a user just for syncing, with rights to Sales, Inventory and Invoicing.
+2. Sign in as that user and open Preferences, Account Security, then New API Key. Copy the key once.
+3. In WordPress open Estasoft Sync, Connections, Add a connection, and choose Odoo.
+4. Enter the address you use to sign in to Odoo, the database name, the user's email (Odoo 17 and 18) and the key.
+5. Press Test connection. The plugin shows the Odoo version, the company and the warehouses it found.
+
+The plugin contacts only the address you enter. It refuses private network addresses unless the filter `estasoft_sync_allow_private_hosts` allows them.
 
 ## 1. Transports
 
