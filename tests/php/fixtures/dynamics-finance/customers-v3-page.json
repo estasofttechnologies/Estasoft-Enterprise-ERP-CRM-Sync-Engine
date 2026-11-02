@@ -1,0 +1,17 @@
+{
+	"@odata.context": "https://contoso.operations.dynamics.com/data/$metadata#CustomersV3",
+	"value": [
+		{
+			"@odata.etag": "W/\"JzEsNTYzNzE0NDU3Niw1NjM3MTQ0NTc2LDEsNTYzNzE0NDU3Ng==\"",
+			"dataAreaId": "usmf",
+			"CustomerAccount": "US-901",
+			"PartyType": "Person",
+			"PersonFirstName": "Layla",
+			"PersonLastName": "Haddad",
+			"OrganizationName": "",
+			"CustomerGroupId": "10",
+			"SalesCurrencyCode": "AED",
+			"PrimaryContactEmail": "layla.haddad@example.test"
+		}
+	]
+}
