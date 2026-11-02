@@ -20,6 +20,8 @@ use Estasoft\SyncEngine\Domain\ErrorCode;
 final class ConnectorError {
 
 	/**
+	 * Describe a connector error.
+	 *
 	 * @param ErrorCode           $code        Catalog code.
 	 * @param array<string,mixed> $context     Values for {placeholders}: system, sku, field, reason, status, n.
 	 * @param int|null            $httpStatus  HTTP status when there was one.

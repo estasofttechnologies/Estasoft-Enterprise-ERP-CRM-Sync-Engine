@@ -25,6 +25,8 @@ final class TemporaryTableCapacityStore implements CapacityStore {
 
 	/**
 	 * Table name, set by prepare().
+	 *
+	 * @var string
 	 */
 	private string $table = '';
 
@@ -44,24 +46,26 @@ final class TemporaryTableCapacityStore implements CapacityStore {
 	 * @throws \RuntimeException When the table cannot be created.
 	 */
 	public function prepare( int $items ): void {
-		$this->table = $this->wpdb->prefix . 'estasoft_sync_cap_' . bin2hex( random_bytes( 5 ) );
-		$this->wpdb->suppress_errors( true );
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching
-		$created = $this->wpdb->query( "CREATE TEMPORARY TABLE `{$this->table}` ( id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, state VARCHAR(10) NOT NULL, next_at INT NOT NULL, claim CHAR(16) NULL, hash CHAR(64) NOT NULL, KEY state_next (state, next_at) ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4" );
-		$this->wpdb->suppress_errors( false );
+		$wpdb        = $this->wpdb;
+		$this->table = $wpdb->prefix . 'estasoft_sync_cap_' . bin2hex( random_bytes( 5 ) );
+		$wpdb->suppress_errors( true );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.DirectDatabaseQuery.NoCaching -- a temporary table that only this request can see; there is nothing to cache.
+		$created = $wpdb->query( $wpdb->prepare( 'CREATE TEMPORARY TABLE %i ( id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY, state VARCHAR(10) NOT NULL, next_at INT NOT NULL, claim CHAR(16) NULL, hash CHAR(64) NOT NULL, KEY state_next (state, next_at) ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4', $this->table ) );
+		$wpdb->suppress_errors( false );
 		if ( false === $created ) {
 			$this->table = '';
 			throw new \RuntimeException( 'No temporary table.' );
 		}
 		for ( $start = 1; $start <= $items; $start += self::BATCH ) {
-			$marks = array();
-			$args  = array();
+			$hashes = array();
+			$args   = array();
 			for ( $id = $start; $id < $start + self::BATCH && $id <= $items; ++$id ) {
-				$marks[] = '(%s, %d, %s)';
-				array_push( $args, 'queued', 0, hash( 'sha256', 'capacity-' . $id ) );
+				$hash     = hash( 'sha256', 'capacity-' . $id );
+				$hashes[] = $hash;
+				array_push( $args, 'queued', $hash );
 			}
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching
-			$this->wpdb->query( $this->wpdb->prepare( "INSERT INTO `{$this->table}` (state, next_at, hash) VALUES " . implode( ',', $marks ), $args ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- a temporary table that only this request can see; the row placeholders are built from a count and every value is bound.
+			$wpdb->query( $wpdb->prepare( 'INSERT INTO %i (state, next_at, hash) VALUES ' . implode( ',', array_fill( 0, count( $hashes ), '(%s, 0, %s)' ) ), array_merge( array( $this->table ), $args ) ) );
 		}
 	}
 
@@ -76,11 +80,12 @@ final class TemporaryTableCapacityStore implements CapacityStore {
 		if ( '' === $this->table ) {
 			return array();
 		}
+		$wpdb  = $this->wpdb;
 		$token = bin2hex( random_bytes( 8 ) );
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching
-		$this->wpdb->query( $this->wpdb->prepare( "UPDATE `{$this->table}` SET state = 'syncing', claim = %s WHERE state = 'queued' AND next_at <= %d ORDER BY id LIMIT %d", $token, $dueAt, $limit ) );
-		$ids = $this->wpdb->get_col( $this->wpdb->prepare( "SELECT id FROM `{$this->table}` WHERE claim = %s AND state = 'syncing'", $token ) );
-		// phpcs:enable
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- a temporary table that only this request can see; there is nothing to cache.
+		$wpdb->query( $wpdb->prepare( "UPDATE %i SET state = 'syncing', claim = %s WHERE state = 'queued' AND next_at <= %d ORDER BY id LIMIT %d", $this->table, $token, $dueAt, $limit ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- a temporary table that only this request can see; there is nothing to cache.
+		$ids = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM %i WHERE claim = %s AND state = 'syncing'", $this->table, $token ) );
 		return array_map( 'intval', (array) $ids );
 	}
 
@@ -93,9 +98,9 @@ final class TemporaryTableCapacityStore implements CapacityStore {
 		if ( '' === $this->table || array() === $ids ) {
 			return;
 		}
-		$marks = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching
-		$this->wpdb->query( $this->wpdb->prepare( "UPDATE `{$this->table}` SET state = 'synced', claim = NULL WHERE id IN ($marks)", array_map( 'intval', $ids ) ) );
+		$wpdb = $this->wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- a temporary table that only this request can see; there is nothing to cache.
+		$wpdb->query( $wpdb->prepare( "UPDATE %i SET state = 'synced', claim = NULL WHERE id IN (" . implode( ',', array_fill( 0, count( $ids ), '%d' ) ) . ')', array_merge( array( $this->table ), array_map( 'intval', array_values( $ids ) ) ) ) );
 	}
 
 	/**
@@ -108,8 +113,9 @@ final class TemporaryTableCapacityStore implements CapacityStore {
 		if ( '' === $this->table ) {
 			return;
 		}
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching
-		$this->wpdb->query( $this->wpdb->prepare( "UPDATE `{$this->table}` SET state = 'queued', next_at = %d, claim = NULL WHERE id = %d", $nextAt, $id ) );
+		$wpdb = $this->wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- a temporary table that only this request can see; there is nothing to cache.
+		$wpdb->query( $wpdb->prepare( "UPDATE %i SET state = 'queued', next_at = %d, claim = NULL WHERE id = %d", $this->table, $nextAt, $id ) );
 	}
 
 	/**
@@ -119,8 +125,9 @@ final class TemporaryTableCapacityStore implements CapacityStore {
 		if ( '' === $this->table ) {
 			return 0;
 		}
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching
-		return (int) $this->wpdb->get_var( "SELECT COUNT(*) FROM `{$this->table}` WHERE state <> 'synced'" );
+		$wpdb = $this->wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- a temporary table that only this request can see; there is nothing to cache.
+		return (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM %i WHERE state <> 'synced'", $this->table ) );
 	}
 
 	/**
@@ -130,8 +137,9 @@ final class TemporaryTableCapacityStore implements CapacityStore {
 		if ( '' === $this->table ) {
 			return;
 		}
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching
-		$this->wpdb->query( "DROP TEMPORARY TABLE IF EXISTS `{$this->table}`" );
+		$wpdb = $this->wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.SchemaChange,WordPress.DB.DirectDatabaseQuery.NoCaching -- a temporary table that only this request can see; there is nothing to cache.
+		$wpdb->query( $wpdb->prepare( 'DROP TEMPORARY TABLE IF EXISTS %i', $this->table ) );
 		$this->table = '';
 	}
 

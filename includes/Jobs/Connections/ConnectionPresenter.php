@@ -23,27 +23,27 @@ final class ConnectionPresenter {
 	/**
 	 * The `ConnectionSummary`.
 	 *
-	 * @param array<string,mixed>     $public    A row from ConnectionRepository::findPublic() or all().
+	 * @param array<string,mixed>     $row       A row from ConnectionRepository::findPublic() or all().
 	 * @param ConnectorInterface|null $connector Its connector, for the live capability flags.
 	 * @return array<string,mixed>
 	 */
-	public static function summary( array $public, ?ConnectorInterface $connector ): array {
-		$capabilities = null === $connector ? (array) ( $public['capabilities'] ?? array() ) : $connector->capabilities();
+	public static function summary( array $row, ?ConnectorInterface $connector ): array {
+		$capabilities = null === $connector ? (array) ( $row['capabilities'] ?? array() ) : $connector->capabilities();
 		return array(
-			'id'                    => (int) $public['id'],
-			'connector'             => (string) $public['connector'],
-			'label'                 => (string) $public['label'],
-			'type'                  => (string) $public['type'],
-			'status'                => (string) $public['status'],
-			'version'               => (string) $public['version'],
-			'address'               => (string) $public['address'],
-			'paused_until'          => $public['paused_until'] ?? null,
-			'paused_reason'         => $public['paused_reason'] ?? null,
-			'last_success_at'       => $public['last_success_at'] ?? null,
-			'last_failure_at'       => $public['last_failure_at'] ?? null,
-			'failures_in_a_row'     => (int) ( $public['failures_in_a_row'] ?? 0 ),
-			'typical_response_ms'   => $public['typical_response_ms'] ?? null,
-			'credential_expires_at' => $public['credential_expires_at'] ?? null,
+			'id'                    => (int) $row['id'],
+			'connector'             => (string) $row['connector'],
+			'label'                 => (string) $row['label'],
+			'type'                  => (string) $row['type'],
+			'status'                => (string) $row['status'],
+			'version'               => (string) $row['version'],
+			'address'               => (string) $row['address'],
+			'paused_until'          => $row['paused_until'] ?? null,
+			'paused_reason'         => $row['paused_reason'] ?? null,
+			'last_success_at'       => $row['last_success_at'] ?? null,
+			'last_failure_at'       => $row['last_failure_at'] ?? null,
+			'failures_in_a_row'     => (int) ( $row['failures_in_a_row'] ?? 0 ),
+			'typical_response_ms'   => $row['typical_response_ms'] ?? null,
+			'credential_expires_at' => $row['credential_expires_at'] ?? null,
 			'capabilities'          => array_map( 'boolval', $capabilities ),
 		);
 	}
@@ -51,21 +51,21 @@ final class ConnectionPresenter {
 	/**
 	 * The `Connection`.
 	 *
-	 * @param array<string,mixed>     $public    A row from ConnectionRepository::findPublic().
+	 * @param array<string,mixed>     $row       A row from ConnectionRepository::findPublic().
 	 * @param ConnectorInterface|null $connector Its connector, for the credential fields and capability flags.
 	 * @return array<string,mixed>
 	 */
-	public static function full( array $public, ?ConnectorInterface $connector ): array {
-		$config  = is_array( $public['config'] ?? null ) ? $public['config'] : array();
-		$hints   = is_array( $public['secret_hints'] ?? null ) ? $public['secret_hints'] : array();
+	public static function full( array $row, ?ConnectorInterface $connector ): array {
+		$config  = is_array( $row['config'] ?? null ) ? $row['config'] : array();
+		$hints   = is_array( $row['secret_hints'] ?? null ) ? $row['secret_hints'] : array();
 		$company = trim( (string) ( $config['company'] ?? '' ) );
-		return self::summary( $public, $connector ) + array(
+		return self::summary( $row, $connector ) + array(
 			'company'         => '' !== $company ? $company : (string) ( $config['detected_company'] ?? '' ),
 			'warehouses'      => self::warehouses( $config ),
-			'settings'        => $public['settings'] ?? array(),
+			'settings'        => $row['settings'] ?? array(),
 			'credentials'     => null === $connector ? array() : self::credentials( $connector->credentialFields(), $config, $hints ),
-			'inbound_enabled' => (bool) ( $public['inbound_enabled'] ?? false ),
-			'created_at'      => (string) ( $public['created_at'] ?? '' ),
+			'inbound_enabled' => (bool) ( $row['inbound_enabled'] ?? false ),
+			'created_at'      => (string) ( $row['created_at'] ?? '' ),
 		);
 	}
 

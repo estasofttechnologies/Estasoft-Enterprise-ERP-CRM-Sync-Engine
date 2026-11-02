@@ -33,10 +33,14 @@ use Estasoft\SyncEngine\Domain\ErrorCode;
 final class CircuitBreaker {
 
 	/**
-	 * @param ConnectionRepository         $connections Connections.
-	 * @param \Closure():ConnectorRegistry $registry Returns the ConnectorRegistry (resolved late so add-ons are registered).
-	 * @param Logger                       $logger      Log.
-	 * @param Clock                        $clock       Time source.
+	 * Set up the circuit breaker.
+	 *
+	 * @param ConnectionRepository $connections Connections.
+	 * @param \Closure             $registry    Returns the ConnectorRegistry (resolved late so add-ons are registered).
+	 * @param Logger               $logger      Log.
+	 * @param Clock                $clock       Time source.
+	 *
+	 * @phpstan-param \Closure():ConnectorRegistry $registry
 	 */
 	public function __construct(
 		private readonly ConnectionRepository $connections,

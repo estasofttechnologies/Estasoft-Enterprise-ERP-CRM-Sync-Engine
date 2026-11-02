@@ -17,6 +17,8 @@ defined( 'ABSPATH' ) || exit;
 final class ExternalRef {
 
 	/**
+	 * Describe a record in the other system.
+	 *
 	 * @param string              $id  The system's internal id.
 	 * @param string              $ref Human number such as S00490.
 	 * @param string|null         $url Link to the record, when the system has one.

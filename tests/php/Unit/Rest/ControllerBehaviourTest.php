@@ -153,6 +153,18 @@ final class ControllerBehaviourTest extends RestStubCase {
 		$this->assertSame( array( 'status' => 422, 'class' => 'needs_person', 'context' => array( 'sku' => 'A' ) ), $error->get_error_data() );
 	}
 
+	public function test_a_message_escaped_where_it_is_thrown_reaches_the_person_as_plain_text(): void {
+		$controller = $this->controller( static fn(): array => array() );
+		$error      = $controller->handle(
+			static function (): never {
+				throw ApiException::notFound( esc_html__( "That item doesn't exist & can't be shown.", 'estasoft-erp-crm-sync-engine' ) );
+			},
+			$this->request(),
+			false
+		);
+		$this->assertSame( "That item doesn't exist & can't be shown.", $error->get_error_message() );
+	}
+
 	public function test_an_unexpected_failure_is_generic_and_reported_without_its_message(): void {
 		$controller = $this->controller( static fn(): array => array() );
 		$error      = $controller->handle(

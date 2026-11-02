@@ -55,14 +55,14 @@ final class ConnectorGateway {
 	/**
 	 * Set up with what it depends on.
 	 *
-	 * @param ConnectionRepository         $connections Connections.
-	 * @param \Closure():ConnectorRegistry $registry    Returns the connector registry.
-	 * @param RateLimiter                  $limiter     Shared request limiter.
-	 * @param ErrorClassifier              $classifier  Error classification.
-	 * @param PauseController              $pause       Pauses a connection whose sign-in was refused.
-	 * @param Logger                       $logger      Log.
-	 * @param Clock                        $clock       Time source.
-	 * @param \Closure|null                $sleep       Waits for seconds; usleep by default.
+	 * @param ConnectionRepository $connections Connections.
+	 * @param \Closure             $registry    Returns the connector registry.
+	 * @param RateLimiter          $limiter     Shared request limiter.
+	 * @param ErrorClassifier      $classifier  Error classification.
+	 * @param PauseController      $pause       Pauses a connection whose sign-in was refused.
+	 * @param Logger               $logger      Log.
+	 * @param Clock                $clock       Time source.
+	 * @param \Closure|null        $sleep       Waits for seconds; usleep by default.
 	 */
 	public function __construct(
 		private readonly ConnectionRepository $connections,

@@ -37,6 +37,8 @@ final class QueueService {
 	private const GROUP_MAX_ROUNDS = 2000;
 
 	/**
+	 * Set up the queue service.
+	 *
 	 * @param QueueRepository $queue     Queue.
 	 * @param LogRepository   $logs      Log entries (for the item timeline).
 	 * @param Logger          $logger    Log.

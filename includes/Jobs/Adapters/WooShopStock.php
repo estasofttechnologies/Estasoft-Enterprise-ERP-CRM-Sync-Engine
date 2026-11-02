@@ -206,7 +206,7 @@ final class WooShopStock implements ShopStock {
 					'order'      => 'ASC',
 					'return'     => 'objects',
 					'paginate'   => true,
-					'meta_query' => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+					'meta_query' => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- finds the orders the sync still has to settle, a page at a time.
 						array(
 							'key'     => self::ORDER_STATE,
 							'value'   => array( 'queued', 'syncing', 'retrying', 'failed' ),

@@ -72,12 +72,12 @@ final class GoLiveService {
 	 * @param int    $userId Who does it.
 	 * @return array<string,mixed> The `Onboarding` after the change.
 	 *
-	 * @throws ValidationException When the mode is not shadow or live.
-	 * @throws JobException        With status 409 when there is no connection to go live with.
+	 * @throws ValidationException When the mode is not shadow or live. With no connection to go live with it is refused with a
+	 *                             `JobException` (status 409).
 	 */
 	public function goLive( string $mode, int $userId ): array {
 		if ( ! in_array( $mode, array( 'shadow', 'live' ), true ) ) {
-			throw new ValidationException( array( 'mode' => __( 'Choose shadow or live.', 'estasoft-erp-crm-sync-engine' ) ) );
+			throw new ValidationException( array( 'mode' => esc_html__( 'Choose shadow or live.', 'estasoft-erp-crm-sync-engine' ) ) );
 		}
 		// Before anything else: an order created after this moment is a real order, whatever happens below.
 		$now   = $this->clock->now();
@@ -130,7 +130,9 @@ final class GoLiveService {
 		for ( $pass = 0; $pass < 5 && $skipped < self::MAX_ITEMS; ++$pass ) {
 			$ids = array();
 			foreach ( array( 'queued', 'retrying' ) as $state ) {
-				for ( $page = 1; count( $ids ) + $skipped < self::MAX_ITEMS; ++$page ) {
+				$page      = 1;
+				$collected = count( $ids );
+				while ( $collected + $skipped < self::MAX_ITEMS ) {
 					$result = $this->queue->query( new QueueQuery( $state, null, null, null, null, null, null, $page, 100 ) );
 					foreach ( $result->items as $item ) {
 						$created = strtotime( (string) ( $item['created_at'] ?? '' ) );
@@ -138,9 +140,11 @@ final class GoLiveService {
 							$ids[ (int) $item['id'] ] = true;
 						}
 					}
+					$collected = count( $ids );
 					if ( $page >= $result->totalPages() ) {
 						break;
 					}
+					++$page;
 				}
 			}
 			$progress = 0;
@@ -177,7 +181,7 @@ final class GoLiveService {
 			}
 		}
 		if ( null === $first ) {
-			throw new JobException( __( 'Connect a system before you go live.', 'estasoft-erp-crm-sync-engine' ), 409 );
+			throw new JobException( esc_html__( 'Connect a system before you go live.', 'estasoft-erp-crm-sync-engine' ), 409 );
 		}
 		return $first;
 	}

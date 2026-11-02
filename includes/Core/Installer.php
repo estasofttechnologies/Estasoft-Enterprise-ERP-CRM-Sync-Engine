@@ -174,7 +174,7 @@ final class Installer {
 		if ( $networkWide || wp_doing_ajax() || wp_doing_cron() || ( defined( 'WP_CLI' ) && WP_CLI ) ) {
 			return false;
 		}
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- only checks whether WordPress added its own activate-multi flag to the redirect; nothing is read or changed.
 		if ( isset( $_GET['activate-multi'] ) ) {
 			return false;
 		}

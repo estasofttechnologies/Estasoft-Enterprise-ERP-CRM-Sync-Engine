@@ -60,6 +60,8 @@ abstract class BaseController {
 	private array $registered = array();
 
 	/**
+	 * Create the controller.
+	 *
 	 * @param Container          $container   Services, resolved when a route runs.
 	 * @param ErrorMapper        $errors      Turns exceptions into answers.
 	 * @param IdempotencyCache   $idempotency Replay cache.
@@ -221,10 +223,37 @@ abstract class BaseController {
 	 * A service from the container.
 	 *
 	 * @param string $key Container key.
+	 *
+	 * @throws \LogicException When the container holds something that is not an object.
 	 */
 	protected function service( string $key ): object {
 		$service = $this->container->get( $key );
 		return is_object( $service ) ? $service : throw new \LogicException( 'Service is not an object.' );
+	}
+
+	/**
+	 * A service from the container, for the class the caller uses it as.
+	 *
+	 * The class is not checked: it only tells static analysis what the service offers, and a test may register a stand-in.
+	 *
+	 * @template T of object
+	 * @param string $key  Container key.
+	 * @param string $type Class or interface the caller uses the service as.
+	 * @phpstan-param class-string<T> $type
+	 * @return object The service.
+	 * @phpstan-return T
+	 *
+	 * @throws \LogicException When the container holds something that is not an object.
+	 */
+	protected function serviceAs( string $key, string $type ): object {
+		unset( $type );
+		/**
+		 * The service, as the class the caller asked for.
+		 *
+		 * @var T $service
+		 */
+		$service = $this->service( $key );
+		return $service;
 	}
 
 	/**

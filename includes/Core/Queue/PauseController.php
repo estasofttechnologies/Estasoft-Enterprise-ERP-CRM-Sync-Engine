@@ -32,6 +32,8 @@ use Estasoft\SyncEngine\Domain\ErrorCode;
 final class PauseController {
 
 	/**
+	 * Set up the pause controller.
+	 *
 	 * @param ConnectionRepository $connections Connections.
 	 * @param Logger               $logger      Log.
 	 * @param Clock                $clock       Time source.

@@ -30,6 +30,8 @@ final class Migrator {
 	private const LOCK = 'estasoft_sync_migrating';
 
 	/**
+	 * Set up the migrator.
+	 *
 	 * @param Schema      $schema  Table definitions.
 	 * @param Tables      $tables  Table names.
 	 * @param OptionStore $options Options.
@@ -54,7 +56,8 @@ final class Migrator {
 	 * Whether the stored version is older than the code.
 	 */
 	public function needsUpgrade(): bool {
-		return version_compare( $this->storedVersion() ?: '0', Schema::VERSION, '<' );
+		$stored = $this->storedVersion();
+		return version_compare( '' === $stored ? '0' : $stored, Schema::VERSION, '<' );
 	}
 
 	/**
@@ -110,9 +113,11 @@ final class Migrator {
 	 * Whether every table is present.
 	 */
 	public function allTablesExist(): bool {
+		$wpdb = $this->wpdb;
 		foreach ( $this->tables->all() as $name ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-			$found = $this->wpdb->get_var( $this->wpdb->prepare( 'SHOW TABLES LIKE %s', $this->wpdb->esc_like( $name ) ) );
+			$like = $wpdb->esc_like( $name );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- schema check of the plugin's own tables; the answer must be current.
+			$found = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $like ) );
 			if ( $found !== $name ) {
 				return false;
 			}

@@ -50,8 +50,7 @@ final class InvoicesController extends BaseController {
 	 * @param \WP_REST_Request $request Request.
 	 */
 	public function index( \WP_REST_Request $request ): \WP_REST_Response {
-		/** @var InvoiceService $invoices */
-		$invoices = $this->service( JobServices::INVOICES );
+		$invoices = $this->serviceAs( JobServices::INVOICES, InvoiceService::class );
 		return $this->paged(
 			$invoices->list(
 				array(

@@ -109,8 +109,10 @@ final class WooShopEnvironment implements ShopEnvironment {
 	 * Character set of the plugin's tables, read from the collation of the queue table.
 	 */
 	public function databaseCharset(): string {
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-		$status = $this->wpdb->get_row( $this->wpdb->prepare( 'SHOW TABLE STATUS LIKE %s', $this->wpdb->esc_like( $this->tables->queue() ) ), ARRAY_A );
+		$wpdb = $this->wpdb;
+		$like = $wpdb->esc_like( $this->tables->queue() );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- the table's collation is not available through any WordPress function, and it is read once for the Status screen.
+		$status = $wpdb->get_row( $wpdb->prepare( 'SHOW TABLE STATUS LIKE %s', $like ), ARRAY_A );
 		if ( is_array( $status ) && ! empty( $status['Collation'] ) ) {
 			return (string) strtok( (string) $status['Collation'], '_' );
 		}

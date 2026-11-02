@@ -12,7 +12,8 @@ namespace Estasoft\SyncEngine\Core\Support;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Thrown when input fails validation. Carries one message per field so the screen can show it next to the field.
+ * Thrown when input fails validation. Carries one message per field so the screen can show it next to the field. The code that
+ * throws it escapes each message with `esc_html()`; the REST layer turns the text back with `PlainText::fromEscaped()`.
  */
 final class ValidationException extends \InvalidArgumentException {
 
@@ -24,6 +25,8 @@ final class ValidationException extends \InvalidArgumentException {
 	private array $errors;
 
 	/**
+	 * Create the exception from the field errors.
+	 *
 	 * @param array<string,string> $errors Field name to message.
 	 */
 	public function __construct( array $errors ) {

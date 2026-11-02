@@ -23,15 +23,21 @@ abstract class Repository {
 
 	/**
 	 * Set when a query through this class failed; transactions read it to decide between commit and rollback.
+	 *
+	 * @var bool
 	 */
 	protected bool $queryFailed = false;
 
 	/**
 	 * Text of the last database error that set $queryFailed.
+	 *
+	 * @var string
 	 */
 	protected string $lastError = '';
 
 	/**
+	 * Set up the repository.
+	 *
 	 * @param \wpdb  $wpdb   Database.
 	 * @param Tables $tables Table names.
 	 * @param Clock  $clock  Time source.
@@ -60,7 +66,7 @@ abstract class Repository {
 		if ( array() === $args ) {
 			return $sql;
 		}
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- the one place that binds values: callers pass SQL text made of constants and placeholders, and their values.
 		$prepared = $this->wpdb->prepare( $sql, $args );
 		return is_string( $prepared ) ? $prepared : '';
 	}
@@ -73,7 +79,7 @@ abstract class Repository {
 	 * @return array<int,array<string,mixed>>
 	 */
 	protected function results( string $sql, array $args = array() ): array {
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared -- custom tables of the plugin; the statement is prepared by self::prepare() and the data must not be cached.
 		$rows = $this->wpdb->get_results( $this->prepare( $sql, $args ), ARRAY_A );
 		$this->noteError();
 		return is_array( $rows ) ? $rows : array();
@@ -87,7 +93,7 @@ abstract class Repository {
 	 * @return array<string,mixed>|null
 	 */
 	protected function row( string $sql, array $args = array() ): ?array {
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared -- custom tables of the plugin; the statement is prepared by self::prepare() and the data must not be cached.
 		$row = $this->wpdb->get_row( $this->prepare( $sql, $args ), ARRAY_A );
 		$this->noteError();
 		return is_array( $row ) ? $row : null;
@@ -100,7 +106,7 @@ abstract class Repository {
 	 * @param array<int,mixed> $args Arguments.
 	 */
 	protected function value( string $sql, array $args = array() ): ?string {
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared -- custom tables of the plugin; the statement is prepared by self::prepare() and the data must not be cached.
 		$value = $this->wpdb->get_var( $this->prepare( $sql, $args ) );
 		$this->noteError();
 		return null === $value ? null : (string) $value;
@@ -114,7 +120,7 @@ abstract class Repository {
 	 * @return int Rows affected; 0 on failure.
 	 */
 	protected function run( string $sql, array $args = array() ): int {
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared -- custom tables of the plugin; the statement is prepared by self::prepare() and the data must not be cached.
 		$affected = $this->wpdb->query( $this->prepare( $sql, $args ) );
 		$this->noteError();
 		return is_int( $affected ) ? $affected : 0;
@@ -128,7 +134,7 @@ abstract class Repository {
 	 * @return int The new id, or 0 on failure.
 	 */
 	protected function insert( string $table, array $data ): int {
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- custom tables of the plugin; values are bound by wpdb and the data must not be cached.
 		$ok = $this->wpdb->insert( $table, $data );
 		$this->noteError();
 		return false === $ok ? 0 : (int) $this->wpdb->insert_id;
@@ -143,7 +149,7 @@ abstract class Repository {
 	 * @return bool Whether the statement ran.
 	 */
 	protected function updateById( string $table, array $data, int $id ): bool {
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- custom tables of the plugin; values are bound by wpdb and the data must not be cached.
 		$ok = false !== $this->wpdb->update( $table, $data, array( 'id' => $id ) );
 		$this->noteError();
 		return $ok;
@@ -229,29 +235,30 @@ abstract class Repository {
 	 * @throws \Throwable Whatever the work throws.
 	 */
 	protected function unit( \Closure $work ): mixed {
-		$name     = 'estasoft_unit';
 		$previous = $this->wpdb->suppress_errors( true );
 		try {
 			for ( $attempt = 1; $attempt <= 2; ++$attempt ) {
 				// A savepoint can be rolled back to only inside an open transaction; outside one, MySQL forgets it at once.
-				// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-				$this->wpdb->query( 'SAVEPOINT ' . $name );
-				$inside = false !== $this->wpdb->query( 'ROLLBACK TO SAVEPOINT ' . $name );
+				// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- transaction control has no WordPress API.
+				$this->wpdb->query( 'SAVEPOINT estasoft_unit' );
+				$inside = false !== $this->wpdb->query( 'ROLLBACK TO SAVEPOINT estasoft_unit' );
 				if ( ! $inside ) {
 					$this->wpdb->query( 'START TRANSACTION' );
 				}
 				try {
 					$result = $work();
 				} catch ( \Throwable $e ) {
-					$this->wpdb->query( $inside ? 'ROLLBACK TO SAVEPOINT ' . $name : 'ROLLBACK' );
 					if ( $inside ) {
-						$this->wpdb->query( 'RELEASE SAVEPOINT ' . $name );
+						$this->wpdb->query( 'ROLLBACK TO SAVEPOINT estasoft_unit' );
+						$this->wpdb->query( 'RELEASE SAVEPOINT estasoft_unit' );
+					} else {
+						$this->wpdb->query( 'ROLLBACK' );
 					}
 					throw $e;
 				}
 				if ( false !== $result ) {
 					if ( $inside ) {
-						$this->wpdb->query( 'RELEASE SAVEPOINT ' . $name );
+						$this->wpdb->query( 'RELEASE SAVEPOINT estasoft_unit' );
 						return $result;
 					}
 					if ( false !== $this->wpdb->query( 'COMMIT' ) ) {
@@ -262,8 +269,8 @@ abstract class Repository {
 				}
 				$deadlock = 1 === preg_match( '/deadlock|lock wait timeout/i', (string) $this->wpdb->last_error );
 				if ( $inside ) {
-					$this->wpdb->query( 'ROLLBACK TO SAVEPOINT ' . $name );
-					$this->wpdb->query( 'RELEASE SAVEPOINT ' . $name );
+					$this->wpdb->query( 'ROLLBACK TO SAVEPOINT estasoft_unit' );
+					$this->wpdb->query( 'RELEASE SAVEPOINT estasoft_unit' );
 					return false;
 				}
 				$this->wpdb->query( 'ROLLBACK' );

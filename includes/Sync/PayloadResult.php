@@ -20,6 +20,8 @@ defined( 'ABSPATH' ) || exit;
 final class PayloadResult {
 
 	/**
+	 * Describe a built payload.
+	 *
 	 * @param array<string,mixed> $payload        Mapped payload (empty when there is an error).
 	 * @param ConnectorError|null $error          Pre-send failure.
 	 * @param int|null            $mappingVersion Live mapping version used.

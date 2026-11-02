@@ -24,11 +24,11 @@ final class Autoloader {
 	 */
 	public static function register( string $prefix, string $baseDir ): void {
 		spl_autoload_register(
-			static function ( string $class ) use ( $prefix, $baseDir ): void {
-				if ( 0 !== strncmp( $class, $prefix, strlen( $prefix ) ) ) {
+			static function ( string $className ) use ( $prefix, $baseDir ): void {
+				if ( 0 !== strncmp( $className, $prefix, strlen( $prefix ) ) ) {
 					return;
 				}
-				$relative = substr( $class, strlen( $prefix ) );
+				$relative = substr( $className, strlen( $prefix ) );
 				$file     = $baseDir . str_replace( '\\', '/', $relative ) . '.php';
 				if ( is_readable( $file ) ) {
 					require_once $file;

@@ -89,7 +89,7 @@ final class OnboardingService {
 			}
 		}
 		if ( array() !== $errors ) {
-			throw new ValidationException( $errors );
+			throw new ValidationException( array_map( 'esc_html', $errors ) );
 		}
 		$this->state->save( $changes );
 		return $this->get();

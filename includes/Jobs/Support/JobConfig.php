@@ -69,7 +69,7 @@ final class JobConfig {
 	private function jobs( int $connectionId ): array {
 		$connection = $this->connections->findPublic( $connectionId );
 		if ( null === $connection ) {
-			throw new JobException( __( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ), 404 );
+			throw new JobException( esc_html__( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ), 404 );
 		}
 		$jobs = $connection['config']['jobs'] ?? array();
 		return is_array( $jobs ) ? $jobs : array();

@@ -104,7 +104,7 @@ final class NotificationService {
 	public function sendTest( string $recipient = '' ): array {
 		$recipient = trim( $recipient );
 		if ( '' !== $recipient && false === is_email( $recipient ) ) {
-			throw new ValidationException( array( 'recipient' => __( 'Enter a valid email address.', 'estasoft-erp-crm-sync-engine' ) ) );
+			throw new ValidationException( array( 'recipient' => esc_html__( 'Enter a valid email address.', 'estasoft-erp-crm-sync-engine' ) ) );
 		}
 		$to   = '' === $recipient ? $this->recipients() : array( $recipient );
 		$site = $this->environment->siteName();

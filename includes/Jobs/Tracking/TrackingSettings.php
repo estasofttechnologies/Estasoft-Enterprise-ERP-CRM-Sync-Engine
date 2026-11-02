@@ -131,7 +131,7 @@ final class TrackingSettings {
 	public function save( int $connectionId, array $input ): array {
 		$checked = $this->check( $input );
 		if ( array() !== $checked['errors'] ) {
-			throw new ValidationException( $checked['errors'] );
+			throw new ValidationException( array_map( 'esc_html', $checked['errors'] ) );
 		}
 		$this->config->save( $connectionId, self::AREA, array_replace( $this->get( $connectionId ), $checked['values'] ) );
 		return $this->get( $connectionId );

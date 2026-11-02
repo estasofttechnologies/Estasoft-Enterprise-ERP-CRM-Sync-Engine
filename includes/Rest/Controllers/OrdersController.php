@@ -33,8 +33,7 @@ final class OrdersController extends BaseController {
 	 * @return array<int,array<string,mixed>>
 	 */
 	public function sample(): array {
-		/** @var OnboardingService $onboarding */
-		$onboarding = $this->service( JobServices::ONBOARDING );
+		$onboarding = $this->serviceAs( JobServices::ONBOARDING, OnboardingService::class );
 		return $onboarding->sampleOrders();
 	}
 }

@@ -342,7 +342,7 @@ final class ReadinessService {
 			'worth_fixing',
 			sprintf(
 				/* translators: 1: number of products, 2: list of product names. */
-				_n( 'Your system matches products by SKU, so this product cannot sync until it has one: %2$s.', 'Your system matches products by SKU, so these %1$d cannot sync until they have one: %2$s.', $found['total'], 'estasoft-erp-crm-sync-engine' ),
+				_n( 'Your system matches products by SKU, so %1$d product cannot sync until it has one: %2$s.', 'Your system matches products by SKU, so these %1$d cannot sync until they have one: %2$s.', $found['total'], 'estasoft-erp-crm-sync-engine' ),
 				$found['total'],
 				implode( ', ', $names ) . ( $more > 0 ? sprintf( /* translators: %d: number of products not listed. */ __( ' and %d more', 'estasoft-erp-crm-sync-engine' ), $more ) : '' )
 			),

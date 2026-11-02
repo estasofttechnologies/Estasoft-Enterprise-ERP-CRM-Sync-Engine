@@ -17,6 +17,8 @@ defined( 'ABSPATH' ) || exit;
 final class Item {
 
 	/**
+	 * Describe a queue item.
+	 *
 	 * @param int         $id             Row id.
 	 * @param int         $connectionId   Owning connection.
 	 * @param EntityType  $entityType     What the item is about.

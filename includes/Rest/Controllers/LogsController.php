@@ -70,8 +70,7 @@ final class LogsController extends BaseController {
 	 * @param \WP_REST_Request $request Request.
 	 */
 	public function index( \WP_REST_Request $request ): \WP_REST_Response {
-		/** @var LogRepository $logs */
-		$logs  = $this->service( Services::LOG_REPOSITORY );
+		$logs  = $this->serviceAs( Services::LOG_REPOSITORY, LogRepository::class );
 		$query = LogQuery::fromArray( $this->params( $request ) );
 		if ( $this->wantsCsv( $request ) ) {
 			$response = new \WP_REST_Response( $logs->csv( $query ), 200 );
@@ -92,11 +91,10 @@ final class LogsController extends BaseController {
 	 * @throws ApiException 404 when there is no such entry.
 	 */
 	public function show( \WP_REST_Request $request ): array {
-		/** @var LogRepository $logs */
-		$logs  = $this->service( Services::LOG_REPOSITORY );
+		$logs  = $this->serviceAs( Services::LOG_REPOSITORY, LogRepository::class );
 		$entry = $logs->find( (int) $request['id'] );
 		if ( null === $entry ) {
-			throw ApiException::notFound( __( 'That log entry does not exist. It may have been removed by the retention setting.', 'estasoft-erp-crm-sync-engine' ) );
+			throw ApiException::notFound( esc_html__( 'That log entry does not exist. It may have been removed by the retention setting.', 'estasoft-erp-crm-sync-engine' ) );
 		}
 		return $entry;
 	}
@@ -104,8 +102,8 @@ final class LogsController extends BaseController {
 	/**
 	 * Send a CSV answer as plain text instead of JSON. Filter `rest_pre_serve_request`.
 	 *
-	 * @param bool                    $served Whether something else already sent the answer.
-	 * @param \WP_HTTP_Response|mixed $result The answer.
+	 * @param mixed $served Whether something else already sent the answer.
+	 * @param mixed $result The answer: a WP_HTTP_Response when WordPress is about to serve a REST answer.
 	 * @return bool
 	 */
 	public function serveCsv( mixed $served, mixed $result = null ): bool {

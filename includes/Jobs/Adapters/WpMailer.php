@@ -42,7 +42,7 @@ final class WpMailer implements Mailer {
 		$subject = trim( (string) preg_replace( '/[\r\n]+/', ' ', $subject ) );
 		$alt     = static function ( $mailer ) use ( $text ): void {
 			if ( is_object( $mailer ) && property_exists( $mailer, 'AltBody' ) ) {
-				$mailer->AltBody = $text; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase
+				$mailer->AltBody = $text; // phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- AltBody is the name of the property in PHPMailer.
 			}
 		};
 		add_action( 'phpmailer_init', $alt );

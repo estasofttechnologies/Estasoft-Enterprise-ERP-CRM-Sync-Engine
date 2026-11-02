@@ -44,6 +44,8 @@ final class ErrorClassifier {
 	private const EXTERNAL_LIMIT = 300;
 
 	/**
+	 * Set up the error classifier.
+	 *
 	 * @param Redactor|null $redactor Redaction rules; a default one is used when null.
 	 * @param Settings|null $settings Tells whether personal data is removed too; it is removed when null.
 	 */
@@ -236,11 +238,11 @@ final class ErrorClassifier {
 	/**
 	 * What the queue does for a code and class.
 	 *
-	 * @param ErrorCode  $code  Catalog code.
-	 * @param ErrorClass $class Final class.
+	 * @param ErrorCode  $code       Catalog code.
+	 * @param ErrorClass $errorClass Final class.
 	 */
-	private function action( ErrorCode $code, ErrorClass $class ): FailureAction {
-		if ( ErrorClass::NeedsPerson === $class ) {
+	private function action( ErrorCode $code, ErrorClass $errorClass ): FailureAction {
+		if ( ErrorClass::NeedsPerson === $errorClass ) {
 			if ( ErrorCode::Auth001 === $code ) {
 				return FailureAction::PauseSignIn;
 			}
@@ -249,7 +251,7 @@ final class ErrorClassifier {
 			}
 			return FailureAction::Fail;
 		}
-		if ( ErrorClass::Retry === $class || ( ErrorClass::Handled === $class && $code->retriesAutomatically() ) ) {
+		if ( ErrorClass::Retry === $errorClass || ( ErrorClass::Handled === $errorClass && $code->retriesAutomatically() ) ) {
 			return FailureAction::Retry;
 		}
 		return FailureAction::Fail;
@@ -261,7 +263,8 @@ final class ErrorClassifier {
 	 * @param string $text Transport error text.
 	 */
 	private function shortDetail( string $text ): string {
-		$line = trim( strtok( $text, "\n" ) ?: '' );
+		$first = strtok( $text, "\n" );
+		$line  = trim( false === $first ? '' : $first );
 		return mb_substr( (string) preg_replace( '#https?://\S+#i', '[url]', $line ), 0, 200 );
 	}
 }

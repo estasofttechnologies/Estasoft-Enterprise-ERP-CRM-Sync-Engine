@@ -34,8 +34,7 @@ final class StatusController extends BaseController {
 	 * @return array<string,mixed>
 	 */
 	public function status( \WP_REST_Request $request ): array {
-		/** @var DashboardService $dashboard */
-		$dashboard = $this->service( JobServices::DASHBOARD );
+		$dashboard = $this->serviceAs( JobServices::DASHBOARD, DashboardService::class );
 		$id        = $request->get_param( 'connection_id' );
 		return $dashboard->status( is_numeric( $id ) ? (int) $id : null );
 	}

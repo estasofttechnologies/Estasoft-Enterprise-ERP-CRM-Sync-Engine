@@ -117,7 +117,9 @@ final class ConnectorRegistry {
 	 * @param string $b Version.
 	 */
 	public static function sameMajor( string $a, string $b ): bool {
-		return (int) explode( '.', $b )[0] === (int) explode( '.', $a )[0];
+		$major_a = (int) explode( '.', $a )[0];
+		$major_b = (int) explode( '.', $b )[0];
+		return $major_a === $major_b;
 	}
 
 	/**

@@ -40,6 +40,8 @@ final class RetryPolicy {
 	private \Closure $jitter;
 
 	/**
+	 * Set up the retry policy.
+	 *
 	 * @param Clock         $clock  Time source.
 	 * @param \Closure|null $jitter Returns the jitter in seconds; random by default.
 	 */

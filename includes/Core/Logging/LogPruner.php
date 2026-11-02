@@ -20,6 +20,8 @@ use Estasoft\SyncEngine\Core\Settings;
 final class LogPruner {
 
 	/**
+	 * Set up the log pruner.
+	 *
 	 * @param LogRepository $logs     Storage.
 	 * @param Settings      $settings Settings.
 	 */

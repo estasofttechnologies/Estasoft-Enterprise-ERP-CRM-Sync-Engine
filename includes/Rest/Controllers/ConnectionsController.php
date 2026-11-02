@@ -96,8 +96,7 @@ final class ConnectionsController extends BaseController {
 	 * @return array<int,array<string,mixed>>
 	 */
 	public function index(): array {
-		/** @var ConnectionService $connections */
-		$connections = $this->service( JobServices::CONNECTIONS );
+		$connections = $this->serviceAs( JobServices::CONNECTIONS, ConnectionService::class );
 		return $connections->summaries();
 	}
 
@@ -108,8 +107,7 @@ final class ConnectionsController extends BaseController {
 	 * @return array<string,mixed>
 	 */
 	public function show( \WP_REST_Request $request ): array {
-		/** @var ConnectionService $connections */
-		$connections = $this->service( JobServices::CONNECTIONS );
+		$connections = $this->serviceAs( JobServices::CONNECTIONS, ConnectionService::class );
 		return $connections->get( (int) $request['id'] );
 	}
 
@@ -120,8 +118,7 @@ final class ConnectionsController extends BaseController {
 	 * @return \WP_REST_Response
 	 */
 	public function create( \WP_REST_Request $request ): \WP_REST_Response {
-		/** @var ConnectionService $connections */
-		$connections = $this->service( JobServices::CONNECTIONS );
+		$connections = $this->serviceAs( JobServices::CONNECTIONS, ConnectionService::class );
 		return new \WP_REST_Response( $connections->create( $this->connectionInput( $request ) ), 201 );
 	}
 
@@ -132,8 +129,7 @@ final class ConnectionsController extends BaseController {
 	 * @return array<string,mixed>
 	 */
 	public function update( \WP_REST_Request $request ): array {
-		/** @var ConnectionService $connections */
-		$connections = $this->service( JobServices::CONNECTIONS );
+		$connections = $this->serviceAs( JobServices::CONNECTIONS, ConnectionService::class );
 		return $connections->update( (int) $request['id'], $this->connectionInput( $request ) );
 	}
 
@@ -144,8 +140,7 @@ final class ConnectionsController extends BaseController {
 	 * @return array{disconnected:true}
 	 */
 	public function disconnect( \WP_REST_Request $request ): array {
-		/** @var ConnectionService $connections */
-		$connections = $this->service( JobServices::CONNECTIONS );
+		$connections = $this->serviceAs( JobServices::CONNECTIONS, ConnectionService::class );
 		$connections->disconnect( (int) $request['id'] );
 		return array( 'disconnected' => true );
 	}
@@ -157,8 +152,7 @@ final class ConnectionsController extends BaseController {
 	 * @return array<string,mixed>
 	 */
 	public function test( \WP_REST_Request $request ): array {
-		/** @var ConnectionService $connections */
-		$connections = $this->service( JobServices::CONNECTIONS );
+		$connections = $this->serviceAs( JobServices::CONNECTIONS, ConnectionService::class );
 		return $this->testResult( $connections->test( array(), (int) $request['id'] ) );
 	}
 
@@ -169,8 +163,7 @@ final class ConnectionsController extends BaseController {
 	 * @return array<string,mixed>
 	 */
 	public function testInput( \WP_REST_Request $request ): array {
-		/** @var ConnectionService $connections */
-		$connections = $this->service( JobServices::CONNECTIONS );
+		$connections = $this->serviceAs( JobServices::CONNECTIONS, ConnectionService::class );
 		$existing    = $request->get_param( 'connection_id' );
 		return $this->testResult( $connections->test( $this->connectionInput( $request ), is_numeric( $existing ) ? (int) $existing : null ) );
 	}
@@ -194,8 +187,7 @@ final class ConnectionsController extends BaseController {
 	 * @return array{enabled:bool,secret?:string,url?:string}
 	 */
 	public function inbound( \WP_REST_Request $request ): array {
-		/** @var InboundHandler $inbound */
-		$inbound = $this->service( JobServices::INBOUND );
+		$inbound = $this->serviceAs( JobServices::INBOUND, InboundHandler::class );
 		$id      = (int) $request['id'];
 		if ( ! rest_sanitize_boolean( $request->get_param( 'enabled' ) ) ) {
 			$inbound->disable( $id );
@@ -229,7 +221,8 @@ final class ConnectionsController extends BaseController {
 				continue;
 			}
 			if ( ! is_array( $value ) ) {
-				throw ApiException::invalid( __( 'Some fields need attention.', 'estasoft-erp-crm-sync-engine' ), array( $key => __( 'This must be a list of fields.', 'estasoft-erp-crm-sync-engine' ) ) );
+				$invalid = ApiException::invalid( esc_html__( 'Some fields need attention.', 'estasoft-erp-crm-sync-engine' ), array( $key => esc_html__( 'This must be a list of fields.', 'estasoft-erp-crm-sync-engine' ) ) );
+				throw $invalid;
 			}
 			$input[ $key ] = $value;
 		}

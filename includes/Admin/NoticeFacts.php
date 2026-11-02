@@ -28,6 +28,8 @@ final class NoticeFacts {
 	public const DISMISSED_META = 'estasoft_sync_dismissed_notices';
 
 	/**
+	 * Create the facts the notices depend on.
+	 *
 	 * @param Snapshot        $snapshot   Queue and connection picture.
 	 * @param SecretBox       $box        Encryption key.
 	 * @param Settings        $settings   Settings (queue warning limit).

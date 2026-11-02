@@ -37,9 +37,9 @@ final class ObjectCacheRateStore implements RateStore {
 	 *
 	 * @param string     $key      Counter name.
 	 * @param float|null $expected Value read earlier.
-	 * @param float      $new      New value.
+	 * @param float      $newValue New value.
 	 */
-	public function compareAndSet( string $key, ?float $expected, float $new ): bool {
+	public function compareAndSet( string $key, ?float $expected, float $newValue ): bool {
 		$lock = $key . ':lock';
 		if ( ! wp_cache_add( $lock, 1, self::GROUP, 2 ) ) {
 			return false;
@@ -50,7 +50,7 @@ final class ObjectCacheRateStore implements RateStore {
 			if ( ! $same ) {
 				return false;
 			}
-			return (bool) wp_cache_set( $key, sprintf( '%.6F', $new ), self::GROUP, 3600 );
+			return (bool) wp_cache_set( $key, sprintf( '%.6F', $newValue ), self::GROUP, 3600 );
 		} finally {
 			wp_cache_delete( $lock, self::GROUP );
 		}

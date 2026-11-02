@@ -53,8 +53,7 @@ final class OnboardingController extends BaseController {
 	 * @return array<string,mixed>
 	 */
 	public function show(): array {
-		/** @var OnboardingService $onboarding */
-		$onboarding = $this->service( JobServices::ONBOARDING );
+		$onboarding = $this->serviceAs( JobServices::ONBOARDING, OnboardingService::class );
 		return $onboarding->get();
 	}
 
@@ -65,8 +64,7 @@ final class OnboardingController extends BaseController {
 	 * @return array<string,mixed>
 	 */
 	public function save( \WP_REST_Request $request ): array {
-		/** @var OnboardingService $onboarding */
-		$onboarding = $this->service( JobServices::ONBOARDING );
+		$onboarding = $this->serviceAs( JobServices::ONBOARDING, OnboardingService::class );
 		$state      = array();
 		foreach ( array( 'step', 'connector', 'answers' ) as $field ) {
 			if ( $request->has_param( $field ) ) {

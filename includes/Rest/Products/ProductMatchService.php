@@ -34,6 +34,8 @@ final class ProductMatchService {
 	public const PER_PAGE = 25;
 
 	/**
+	 * Create the service.
+	 *
 	 * @param ProductSource        $products    WooCommerce products.
 	 * @param SkuMatcher           $matcher     Matching by SKU and overrides.
 	 * @param IdMapRepository      $idMap       Links between WooCommerce and the system.
@@ -75,18 +77,19 @@ final class ProductMatchService {
 	 * @param string $query        Text to search for.
 	 * @return array<int,array{id:string,ref:string,name:string}>
 	 *
-	 * @throws ApiException 404 when the connection or its connector is gone; 502 with the catalog code when the system fails.
-	 * @throws \Estasoft\SyncEngine\Core\Crypto\CryptoException When the saved credentials cannot be read.
+	 * @throws ApiException 404 when the connection or its connector is gone; 502 with the catalog code when the system fails. A
+	 *                      CryptoException for credentials that cannot be read is not caught here.
 	 */
 	public function search( int $connectionId, string $query ): array {
 		$connection = $this->connections->find( $connectionId );
 		$connector  = null === $connection ? null : $this->registry->get( $connection->connector );
 		if ( null === $connection || null === $connector ) {
-			throw ApiException::notFound( __( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ) );
+			throw ApiException::notFound( esc_html__( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ) );
 		}
 		$result = $connector->searchProducts( $connection, $query );
 		if ( $result instanceof ConnectorError ) {
-			throw ApiException::fromCatalog( $result->code, $result->context + array( 'system' => $connector->label() ), 502 );
+			$failure = ApiException::fromCatalog( $result->code, $result->context + array( 'system' => $connector->label() ), 502 );
+			throw $failure;
 		}
 		$hits = array();
 		foreach ( $result as $ref ) {
@@ -113,7 +116,7 @@ final class ProductMatchService {
 	public function map( int $connectionId, int $productId, ?string $externalId, ?string $externalRef = null ): array {
 		$product = $this->products->find( $productId );
 		if ( null === $product ) {
-			throw ApiException::notFound( __( 'That product does not exist.', 'estasoft-erp-crm-sync-engine' ) );
+			throw ApiException::notFound( esc_html__( 'That product does not exist.', 'estasoft-erp-crm-sync-engine' ) );
 		}
 		$this->matcher->setOverride( $connectionId, $productId, $externalId, $externalRef, '' === $product['sku'] ? null : $product['sku'] );
 		return $this->shape( $connectionId, $product, $this->blockedBySku() );

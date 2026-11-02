@@ -197,7 +197,7 @@ final class Redactor {
 		// Long opaque tokens: 32 or more letters, digits, dashes and underscores, with at least one letter and one digit.
 		$text = (string) preg_replace_callback(
 			'/(?<![A-Za-z0-9_\-])[A-Za-z0-9_\-]{32,}(?![A-Za-z0-9_\-])/',
-			static fn( array $match ): string => ( 1 === preg_match( '/[A-Za-z]/', $match[0] ) && 1 === preg_match( '/\d/', $match[0] ) ) ? self::SECRET : $match[0],
+			static fn( array $found ): string => ( 1 === preg_match( '/[A-Za-z]/', $found[0] ) && 1 === preg_match( '/\d/', $found[0] ) ) ? self::SECRET : $found[0],
 			$text
 		);
 		return $text;
@@ -253,9 +253,9 @@ final class Redactor {
 		$label    = '(?:order|invoice|inv|ref|reference|sku|total|amount|price|qty|quantity|balance|ticket|transaction|txn|barcode|ean|gtin|upc|tracking|shipment|serial|ids?)';
 		return (string) preg_replace_callback(
 			'/(?<![\w#@$\x{20AC}\x{00A3}\x{00A5}\/:=.,\-+])\(?\d[\d\s().\-]{6,24}\d(?![\w:]|[.,]\d)/u',
-			static function ( array $match ) use ( $text, $currency, $label ): string {
-				$raw    = (string) $match[0][0];
-				$offset = (int) $match[0][1];
+			static function ( array $found ) use ( $text, $currency, $label ): string {
+				$raw    = (string) $found[0][0];
+				$offset = (int) $found[0][1];
 				$digits = strlen( (string) preg_replace( '/\D/', '', $raw ) );
 				if ( $digits < 9 || $digits > 15 ) {
 					return $raw;

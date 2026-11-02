@@ -16,6 +16,7 @@ use Estasoft\SyncEngine\Core\Crypto\SecretBox;
 use Estasoft\SyncEngine\Core\Logging\Logger;
 use Estasoft\SyncEngine\Core\Repositories\ConnectionRepository;
 use Estasoft\SyncEngine\Core\Support\Clock;
+use Estasoft\SyncEngine\Core\Support\PlainText;
 use Estasoft\SyncEngine\Domain\ConnectionStatus;
 use Estasoft\SyncEngine\Domain\ErrorCode;
 use Estasoft\SyncEngine\Jobs\JobException;
@@ -122,7 +123,7 @@ final class InboundHandler {
 			wp_schedule_single_event( time() + 5, 'estasoft_sync_inbound_refresh', array( $connectionId, $entity ) );
 		};
 		$this->remoteAddress = $remoteAddress ?? static function (): string {
-			$address = isset( $_SERVER['REMOTE_ADDR'] ) && is_string( $_SERVER['REMOTE_ADDR'] ) ? $_SERVER['REMOTE_ADDR'] : '';
+			$address = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
 			return false === filter_var( $address, FILTER_VALIDATE_IP ) ? '' : $address;
 		};
 	}
@@ -138,10 +139,11 @@ final class InboundHandler {
 	public function enable( int $connectionId ): string {
 		$connection = $this->connections->findWithoutSecrets( $connectionId );
 		if ( null === $connection || ConnectionStatus::Disconnected === $connection->status ) {
-			throw new JobException( __( 'That connection does not exist or is disconnected.', 'estasoft-erp-crm-sync-engine' ), 404 );
+			throw new JobException( esc_html__( 'That connection does not exist or is disconnected.', 'estasoft-erp-crm-sync-engine' ), 404 );
 		}
 		if ( ! $this->box->keyAvailable() ) {
-			throw new JobException( ErrorCode::Cfg002->template(), 409, ErrorCode::Cfg002, array( 'key_line' => $this->box->generateKeyLine() ) );
+			$refusal = new JobException( esc_html( ErrorCode::Cfg002->template() ), 409, ErrorCode::Cfg002, array( 'key_line' => $this->box->generateKeyLine() ) );
+			throw $refusal;
 		}
 		$secret = bin2hex( random_bytes( 32 ) );
 		try {
@@ -153,7 +155,9 @@ final class InboundHandler {
 				)
 			);
 		} catch ( CryptoException $e ) {
-			throw new JobException( $e->getMessage(), 409, $e->errorCode() );
+			// The message was escaped where it was raised; it is escaped once here, whatever it was.
+			$refusal = new JobException( esc_html( PlainText::fromEscaped( $e->getMessage() ) ), 409, $e->errorCode() );
+			throw $refusal;
 		}
 		return $secret;
 	}
@@ -167,7 +171,7 @@ final class InboundHandler {
 	 */
 	public function disable( int $connectionId ): void {
 		if ( null === $this->connections->findWithoutSecrets( $connectionId ) ) {
-			throw new JobException( __( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ), 404 );
+			throw new JobException( esc_html__( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ), 404 );
 		}
 		try {
 			$this->connections->update(
@@ -196,13 +200,16 @@ final class InboundHandler {
 	public function handle( int $connectionId, string $rawBody, array $headers, ?string $source = null ): array {
 		$connection = $this->connections->findWithoutSecrets( $connectionId );
 		if ( null === $connection || ConnectionStatus::Disconnected === $connection->status || ! $this->enabled( $connectionId ) ) {
-			throw $this->refuse( 0, 404, __( 'Not found.', 'estasoft-erp-crm-sync-engine' ), true );
+			$this->logRefusal( 0, 404, true );
+			throw new InboundRefused( esc_html__( 'Not found.', 'estasoft-erp-crm-sync-engine' ), 404 );
 		}
 		if ( $this->tooMany( $connectionId, $source ?? ( $this->remoteAddress )() ) ) {
-			throw $this->refuse( $connectionId, 429, __( 'Too many requests. Try again in a minute.', 'estasoft-erp-crm-sync-engine' ), true );
+			$this->logRefusal( $connectionId, 429, true );
+			throw new InboundRefused( esc_html__( 'Too many requests. Try again in a minute.', 'estasoft-erp-crm-sync-engine' ), 429 );
 		}
 		if ( strlen( $rawBody ) > self::MAX_BODY ) {
-			throw $this->refuse( $connectionId, 413, __( 'The message is too large.', 'estasoft-erp-crm-sync-engine' ) );
+			$this->logRefusal( $connectionId, 413 );
+			throw new InboundRefused( esc_html__( 'The message is too large.', 'estasoft-erp-crm-sync-engine' ), 413 );
 		}
 		$normal = array();
 		foreach ( $headers as $name => $value ) {
@@ -212,15 +219,18 @@ final class InboundHandler {
 		$header    = trim( $normal['x-estasoft-timestamp'] ?? '' );
 		$stamp     = $this->timestamp( $header );
 		if ( '' === $signature || null === $stamp || abs( $this->clock->now()->getTimestamp() - $stamp ) > self::WINDOW ) {
-			throw $this->refuse( $connectionId, 401, __( 'The signature or the time is wrong.', 'estasoft-erp-crm-sync-engine' ) );
+			$this->logRefusal( $connectionId, 401 );
+			throw new InboundRefused( esc_html__( 'The signature or the time is wrong.', 'estasoft-erp-crm-sync-engine' ), 401 );
 		}
 		$secret = $this->secret( $connectionId );
 		if ( '' === $secret || ! hash_equals( hash_hmac( 'sha256', $header . '.' . $rawBody, $secret ), $signature ) ) {
-			throw $this->refuse( $connectionId, 401, __( 'The signature or the time is wrong.', 'estasoft-erp-crm-sync-engine' ) );
+			$this->logRefusal( $connectionId, 401 );
+			throw new InboundRefused( esc_html__( 'The signature or the time is wrong.', 'estasoft-erp-crm-sync-engine' ), 401 );
 		}
 		$seen = 'estasoft_sync_inb_seen_' . substr( hash( 'sha256', $connectionId . ':' . $signature ), 0, 40 );
 		if ( false !== $this->transients->get( $seen ) ) {
-			throw $this->refuse( $connectionId, 409, __( 'This message was already received.', 'estasoft-erp-crm-sync-engine' ) );
+			$this->logRefusal( $connectionId, 409 );
+			throw new InboundRefused( esc_html__( 'This message was already received.', 'estasoft-erp-crm-sync-engine' ), 409 );
 		}
 		$this->transients->set( $seen, 1, self::REPLAY_TTL );
 		( $this->schedule )( $connectionId, $this->entity( $rawBody ) );
@@ -304,32 +314,27 @@ final class InboundHandler {
 	}
 
 	/**
-	 * Log a refusal (SYNC-INB-001) and make the exception.
+	 * Log a refusal (SYNC-INB-001).
 	 *
-	 * @param int    $connectionId Connection (0 when it does not exist).
-	 * @param int    $status       HTTP status.
-	 * @param string $message      Short sentence for the sender.
-	 * @param bool   $capped       Log it at most once a minute per status and connection (for the refusals anyone can cause at will).
+	 * @param int  $connectionId Connection (0 when it does not exist).
+	 * @param int  $status       HTTP status.
+	 * @param bool $capped       Log it at most once a minute per status and connection (for the refusals anyone can cause at will).
 	 */
-	private function refuse( int $connectionId, int $status, string $message, bool $capped = false ): InboundRefused {
-		$quiet = false;
+	private function logRefusal( int $connectionId, int $status, bool $capped = false ): void {
 		if ( $capped ) {
-			$key   = 'estasoft_sync_inb_log_' . $status . '_' . $connectionId;
-			$quiet = false !== $this->transients->get( $key );
-			if ( ! $quiet ) {
-				$this->transients->set( $key, 1, 60 );
+			$key = 'estasoft_sync_inb_log_' . $status . '_' . $connectionId;
+			if ( false !== $this->transients->get( $key ) ) {
+				return;
 			}
+			$this->transients->set( $key, 1, 60 );
 		}
-		if ( ! $quiet ) {
-			$this->logger->info(
-				ErrorCode::Inb001->template(),
-				array(
-					'connection_id' => $connectionId,
-					'code'          => ErrorCode::Inb001,
-					'http_status'   => $status,
-				)
-			);
-		}
-		return new InboundRefused( $message, $status );
+		$this->logger->info(
+			ErrorCode::Inb001->template(),
+			array(
+				'connection_id' => $connectionId,
+				'code'          => ErrorCode::Inb001,
+				'http_status'   => $status,
+			)
+		);
 	}
 }

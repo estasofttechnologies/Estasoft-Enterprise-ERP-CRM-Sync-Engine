@@ -27,9 +27,14 @@ final class DashboardWidget {
 	public const ID = 'estasoft_sync_widget';
 
 	/**
-	 * @param \Closure():array<string,mixed> $data       Returns the small counts (DashboardService::widget()).
-	 * @param Urls                           $urls       Addresses of the app.
-	 * @param \Closure(string):string        $formatTime Turns an ISO time into the store's time of day.
+	 * Create the dashboard widget.
+	 *
+	 * @param \Closure $data       Returns the small counts (DashboardService::widget()).
+	 * @param Urls     $urls       Addresses of the app.
+	 * @param \Closure $formatTime Turns an ISO time into the store's time of day.
+	 *
+	 * @phpstan-param \Closure():array<string,mixed> $data
+	 * @phpstan-param \Closure(string):string        $formatTime
 	 */
 	public function __construct(
 		private readonly \Closure $data,

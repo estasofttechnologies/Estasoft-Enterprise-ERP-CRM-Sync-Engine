@@ -33,8 +33,7 @@ final class CatalogController extends BaseController {
 	 * @return array<int,array<string,mixed>>
 	 */
 	public function index(): array {
-		/** @var ConnectionService $connections */
-		$connections = $this->service( JobServices::CONNECTIONS );
+		$connections = $this->serviceAs( JobServices::CONNECTIONS, ConnectionService::class );
 		return $connections->catalog();
 	}
 }

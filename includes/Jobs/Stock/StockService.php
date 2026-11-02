@@ -120,7 +120,7 @@ final class StockService {
 	public function rules( int $connectionId ): array {
 		$public = $this->connections->findPublic( $connectionId );
 		if ( null === $public ) {
-			throw new JobException( __( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ), 404 );
+			throw new JobException( esc_html__( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ), 404 );
 		}
 		$stored = $this->config->get( $connectionId, self::AREA, self::DEFAULTS );
 		return array(
@@ -140,13 +140,13 @@ final class StockService {
 	 * @param array<string,mixed> $rules        Rules to change.
 	 * @return array<string,mixed> The rules after saving.
 	 *
-	 * @throws ValidationException With one message per bad field.
-	 * @throws JobException        With status 404 when the connection does not exist.
+	 * @throws ValidationException With one message per bad field. A connection that does not exist is refused with a `JobException`
+	 *                             (status 404).
 	 */
 	public function saveRules( int $connectionId, array $rules ): array {
 		$checked = $this->checkRules( $connectionId, $rules );
 		if ( array() !== $checked['errors'] ) {
-			throw new ValidationException( $checked['errors'] );
+			throw new ValidationException( array_map( 'esc_html', $checked['errors'] ) );
 		}
 		$current = $this->rules( $connectionId );
 		$this->config->save( $connectionId, self::AREA, array_replace( array_intersect_key( $current, self::DEFAULTS ), $checked['values'] ) );
@@ -297,14 +297,14 @@ final class StockService {
 	public function acceptConflict( string $id ): void {
 		$conflict = $this->openConflict( $id );
 		if ( $this->onboarding->isShadowActive( $this->clock->now() ) ) {
-			throw new JobException( __( 'Shadow mode changes nothing in your shop. End it first to accept a quantity.', 'estasoft-erp-crm-sync-engine' ), 409 );
+			throw new JobException( esc_html__( 'Shadow mode changes nothing in your shop. End it first to accept a quantity.', 'estasoft-erp-crm-sync-engine' ), 409 );
 		}
 		$connectionId = (int) $conflict['connection_id'];
 		$productId    = (int) $conflict['product_id'];
 		$product      = $this->shop->product( $productId );
 		if ( null === $product ) {
 			$this->store->decide( (int) $conflict['id'], 'accept', Time::iso( Time::sql( $this->clock->now() ) ) ?? '' );
-			throw new JobException( __( 'That product no longer exists.', 'estasoft-erp-crm-sync-engine' ), 404 );
+			throw new JobException( esc_html__( 'That product no longer exists.', 'estasoft-erp-crm-sync-engine' ), 404 );
 		}
 		$rules  = $this->rules( $connectionId );
 		$system = (int) $conflict['system_quantity'];
@@ -673,7 +673,7 @@ final class StockService {
 	private function openConflict( string $id ): array {
 		$conflict = ctype_digit( $id ) ? $this->store->conflict( (int) $id ) : null;
 		if ( null === $conflict ) {
-			throw new JobException( __( 'That stock conflict does not exist, or it was already decided.', 'estasoft-erp-crm-sync-engine' ), 404 );
+			throw new JobException( esc_html__( 'That stock conflict does not exist, or it was already decided.', 'estasoft-erp-crm-sync-engine' ), 404 );
 		}
 		return $conflict;
 	}
@@ -691,12 +691,12 @@ final class StockService {
 	/**
 	 * The warehouses of a connection with the person's choices.
 	 *
-	 * @param array<string,mixed> $public Connection as the screens see it.
+	 * @param array<string,mixed> $connection Connection as the screens see it.
 	 * @return array<int,array{id:string,name:string,counts_toward_stock:bool,countries:array<int,string>}>
 	 */
-	private function warehouses( array $public ): array {
+	private function warehouses( array $connection ): array {
 		$list = array();
-		foreach ( (array) ( $public['warehouses'] ?? array() ) as $warehouse ) {
+		foreach ( (array) ( $connection['warehouses'] ?? array() ) as $warehouse ) {
 			if ( ! is_array( $warehouse ) || ! isset( $warehouse['id'] ) ) {
 				continue;
 			}

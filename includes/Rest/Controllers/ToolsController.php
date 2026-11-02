@@ -77,8 +77,7 @@ final class ToolsController extends BaseController {
 	 * @return array{filename:string,json:string}
 	 */
 	public function export(): array {
-		/** @var SettingsPorter $porter */
-		$porter = $this->service( JobServices::PORTER );
+		$porter = $this->serviceAs( JobServices::PORTER, SettingsPorter::class );
 		return $porter->export();
 	}
 
@@ -92,8 +91,7 @@ final class ToolsController extends BaseController {
 	 * @return array{preview:array<int,string>}|array{applied:true,drafts:int,skipped:array<int,string>}
 	 */
 	public function import( \WP_REST_Request $request ): array {
-		/** @var SettingsPorter $porter */
-		$porter = $this->service( JobServices::PORTER );
+		$porter = $this->serviceAs( JobServices::PORTER, SettingsPorter::class );
 		$json   = Sanitize::document( $request->get_param( 'json' ) );
 		if ( rest_sanitize_boolean( $request->get_param( 'confirm' ) ) ) {
 			$done = $porter->apply( $json, $this->actorId() );
@@ -114,8 +112,7 @@ final class ToolsController extends BaseController {
 	 * @return array{cleared:int}
 	 */
 	public function clearLogs(): array {
-		/** @var LogRepository $logs */
-		$logs = $this->service( Services::LOG_REPOSITORY );
+		$logs = $this->serviceAs( Services::LOG_REPOSITORY, LogRepository::class );
 		return array( 'cleared' => $logs->clear() );
 	}
 
@@ -131,12 +128,11 @@ final class ToolsController extends BaseController {
 	public function deleteData( \WP_REST_Request $request ): array {
 		if ( self::DELETE_WORD !== (string) $request->get_param( 'word' ) ) {
 			throw ApiException::invalid(
-				__( 'Type the word DELETE to confirm.', 'estasoft-erp-crm-sync-engine' ),
-				array( 'word' => __( 'Type the word DELETE exactly as shown.', 'estasoft-erp-crm-sync-engine' ) )
+				esc_html__( 'Type the word DELETE to confirm.', 'estasoft-erp-crm-sync-engine' ),
+				array( 'word' => esc_html__( 'Type the word DELETE exactly as shown.', 'estasoft-erp-crm-sync-engine' ) )
 			);
 		}
-		/** @var DataEraser $eraser */
-		$eraser = $this->service( Services::DATA_ERASER );
+		$eraser = $this->serviceAs( Services::DATA_ERASER, DataEraser::class );
 		$eraser->erase( false );
 		return array( 'deleted' => true );
 	}

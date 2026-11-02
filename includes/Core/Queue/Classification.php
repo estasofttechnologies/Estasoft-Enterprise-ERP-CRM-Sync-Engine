@@ -20,18 +20,28 @@ use Estasoft\SyncEngine\Domain\ErrorClass;
 final class Classification {
 
 	/**
+	 * Final class after the connector override and the filter.
+	 *
+	 * @var ErrorClass
+	 */
+	public readonly ErrorClass $class;
+
+	/**
+	 * Describe how a connector error is handled.
+	 *
 	 * @param ConnectorError $error           The error, with the system name filled into its context.
-	 * @param ErrorClass     $class           Final class after the connector override and the filter.
+	 * @param ErrorClass     $errorClass      Final class after the connector override and the filter.
 	 * @param FailureAction  $action          What the queue does.
 	 * @param bool           $countsForBreaker Whether it counts toward the circuit breaker (retryable, not rate limiting).
 	 * @param int|null       $retryAfter      Seconds the system asked us to wait.
 	 */
 	public function __construct(
 		public readonly ConnectorError $error,
-		public readonly ErrorClass $class,
+		ErrorClass $errorClass,
 		public readonly FailureAction $action,
 		public readonly bool $countsForBreaker,
 		public readonly ?int $retryAfter
 	) {
+		$this->class = $errorClass;
 	}
 }

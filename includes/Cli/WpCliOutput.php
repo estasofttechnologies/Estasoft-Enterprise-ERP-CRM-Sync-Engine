@@ -48,10 +48,12 @@ final class WpCliOutput implements CliOutput {
 	 *
 	 * @param string $message Text.
 	 * @param int    $code    Exit code.
+	 *
+	 * @throws \RuntimeException Never in practice: WP_CLI::error() ends the process first.
 	 */
 	public function fail( string $message, int $code = 1 ): never {
 		\WP_CLI::error( $message, $code );
-		throw new \RuntimeException( $message ); // WP_CLI::error() exits; this line only satisfies the return type.
+		throw new \RuntimeException( esc_html( $message ) ); // WP_CLI::error() exits; this line only satisfies the return type.
 	}
 
 	/**

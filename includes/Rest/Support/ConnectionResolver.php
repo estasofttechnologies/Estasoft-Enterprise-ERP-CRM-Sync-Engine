@@ -29,7 +29,10 @@ final class ConnectionResolver {
 	private \Closure $connections;
 
 	/**
-	 * @param \Closure():array<int,array<string,mixed>> $connections Lists every connection, oldest first.
+	 * Create the resolver.
+	 *
+	 * @param \Closure $connections Lists every connection, oldest first, shaped for the screens.
+	 * @phpstan-param \Closure():array<int,array<string,mixed>> $connections
 	 */
 	public function __construct( \Closure $connections ) {
 		$this->connections = $connections;
@@ -51,13 +54,13 @@ final class ConnectionResolver {
 					return $requested;
 				}
 			}
-			throw ApiException::notFound( __( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ) );
+			throw ApiException::notFound( esc_html__( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ) );
 		}
 		foreach ( $all as $connection ) {
 			if ( ConnectionStatus::Disconnected->value !== (string) ( $connection['status'] ?? '' ) ) {
 				return (int) $connection['id'];
 			}
 		}
-		throw ApiException::conflict( __( 'Connect a system first. This needs a connection.', 'estasoft-erp-crm-sync-engine' ), 'estasoft_sync_no_connection' );
+		throw ApiException::conflict( esc_html__( 'Connect a system first. This needs a connection.', 'estasoft-erp-crm-sync-engine' ), 'estasoft_sync_no_connection' );
 	}
 }

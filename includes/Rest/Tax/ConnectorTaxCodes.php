@@ -29,6 +29,8 @@ final class ConnectorTaxCodes {
 	private \Closure $report;
 
 	/**
+	 * Create the tax code lister.
+	 *
 	 * @param ConnectionRepository $connections Connections.
 	 * @param ConnectorRegistry    $registry    Installed connectors.
 	 * @param \Closure|null        $report      Receives the class name of an unexpected exception (and nothing else of it); ignores it by default.
@@ -38,8 +40,8 @@ final class ConnectorTaxCodes {
 		private readonly ConnectorRegistry $registry,
 		?\Closure $report = null
 	) {
-		$this->report = $report ?? static function ( string $class ): void {
-			unset( $class );
+		$this->report = $report ?? static function ( string $exceptionClass ): void {
+			unset( $exceptionClass );
 		};
 	}
 

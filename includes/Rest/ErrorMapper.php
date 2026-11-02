@@ -12,6 +12,7 @@ namespace Estasoft\SyncEngine\Rest;
 defined( 'ABSPATH' ) || exit;
 
 use Estasoft\SyncEngine\Core\Crypto\CryptoException;
+use Estasoft\SyncEngine\Core\Support\PlainText;
 use Estasoft\SyncEngine\Core\Support\ValidationException;
 use Estasoft\SyncEngine\Domain\ErrorClass;
 use Estasoft\SyncEngine\Jobs\JobException;
@@ -22,6 +23,10 @@ use Estasoft\SyncEngine\Mapping\RuleValidationException;
  * The only place that decides which exception becomes which answer. Failures that a person can act on keep their message;
  * everything else becomes the generic answer SYNC-REST-001 and is reported once to the log, with the exception class and nothing
  * else (no message, code, file or trace), so a secret that an exception might carry never reaches the answer or the log.
+ *
+ * The messages of the exceptions from the other modules are escaped with `esc_html()` where they are thrown, and an ApiException
+ * keeps its message escaped and turns it into plain text when the body is built. A message is turned back with
+ * PlainText::fromEscaped() and escaped again here, so that it is escaped exactly once whichever way it was thrown.
  */
 final class ErrorMapper {
 
@@ -33,6 +38,8 @@ final class ErrorMapper {
 	private \Closure $report;
 
 	/**
+	 * Create the mapper.
+	 *
 	 * @param \Closure(string):void|null $report Receives a description of each unexpected failure; ignores it by default.
 	 */
 	public function __construct( ?\Closure $report = null ) {
@@ -51,7 +58,7 @@ final class ErrorMapper {
 			return $error;
 		}
 		if ( $error instanceof ValidationException ) {
-			return ApiException::invalid( __( 'Some fields need attention.', 'estasoft-erp-crm-sync-engine' ), $error->errors() );
+			return ApiException::invalid( esc_html__( 'Some fields need attention.', 'estasoft-erp-crm-sync-engine' ), array_map( $this->escaped( ... ), $error->errors() ) );
 		}
 		if ( $error instanceof RuleValidationException ) {
 			return $this->ruleProblems( $error );
@@ -83,11 +90,11 @@ final class ErrorMapper {
 		foreach ( $error->errors as $problem ) {
 			$key = 'rules' . ( '' === $problem->ruleId ? '' : '.' . $problem->ruleId ) . ( '' === $problem->field ? '' : '.' . $problem->field );
 			if ( ! isset( $fields[ $key ] ) ) {
-				$fields[ $key ] = $problem->message;
+				$fields[ $key ] = esc_html( $problem->message );
 			}
 			$list[] = $problem->toArray();
 		}
-		return ApiException::invalid( $error->getMessage(), $fields, array( 'errors' => $list ) );
+		return ApiException::invalid( $this->escaped( $error->getMessage() ), $fields, array( 'errors' => $list ) );
 	}
 
 	/**
@@ -98,6 +105,7 @@ final class ErrorMapper {
 	 */
 	private function job( JobException $error ): ApiException {
 		$status  = max( 400, min( 599, $error->httpStatus() ) );
+		$message = $this->escaped( $error->getMessage() );
 		$code    = $error->errorCode();
 		$context = $error->context();
 		$details = array();
@@ -117,14 +125,14 @@ final class ErrorMapper {
 			}
 		}
 		if ( null !== $code ) {
-			return new ApiException( $code->value, $error->getMessage(), $status, $code->errorClass()->value, $strings, array(), $details );
+			return new ApiException( $code->value, $message, $status, $code->errorClass()->value, $strings, array(), $details );
 		}
 		return match ( true ) {
-			404 === $status                  => new ApiException( ApiException::NOT_FOUND, $error->getMessage(), 404, ErrorClass::NeedsPerson->value, $strings, array(), $details ),
-			409 === $status                  => new ApiException( 'estasoft_sync_conflict', $error->getMessage(), 409, ErrorClass::NeedsPerson->value, $strings, array(), $details ),
-			in_array( $status, array( 400, 422 ), true ) => new ApiException( ApiException::INVALID_PARAM, $error->getMessage(), $status, ErrorClass::NeedsPerson->value, $strings, array(), $details ),
-			$status < 500                    => new ApiException( 'estasoft_sync_refused', $error->getMessage(), $status, ErrorClass::NeedsPerson->value, $strings, array(), $details ),
-			default                          => new ApiException( 'estasoft_sync_failed', $error->getMessage(), $status, ErrorClass::Retry->value, $strings, array(), $details ),
+			404 === $status                  => new ApiException( ApiException::NOT_FOUND, $message, 404, ErrorClass::NeedsPerson->value, $strings, array(), $details ),
+			409 === $status                  => new ApiException( 'estasoft_sync_conflict', $message, 409, ErrorClass::NeedsPerson->value, $strings, array(), $details ),
+			in_array( $status, array( 400, 422 ), true ) => new ApiException( ApiException::INVALID_PARAM, $message, $status, ErrorClass::NeedsPerson->value, $strings, array(), $details ),
+			$status < 500                    => new ApiException( 'estasoft_sync_refused', $message, $status, ErrorClass::NeedsPerson->value, $strings, array(), $details ),
+			default                          => new ApiException( 'estasoft_sync_failed', $message, $status, ErrorClass::Retry->value, $strings, array(), $details ),
 		};
 	}
 
@@ -134,10 +142,21 @@ final class ErrorMapper {
 	 * @param CryptoException $error The failure.
 	 */
 	private function crypto( CryptoException $error ): ApiException {
-		$code = $error->errorCode();
+		$code    = $error->errorCode();
+		$message = $this->escaped( $error->getMessage() );
 		if ( null !== $code ) {
-			return new ApiException( $code->value, $error->getMessage(), 409, $code->errorClass()->value );
+			return new ApiException( $code->value, $message, 409, $code->errorClass()->value );
 		}
-		return new ApiException( 'estasoft_sync_credentials_unreadable', $error->getMessage(), 409, ErrorClass::NeedsPerson->value );
+		return new ApiException( 'estasoft_sync_credentials_unreadable', $message, 409, ErrorClass::NeedsPerson->value );
+	}
+
+	/**
+	 * A message, escaped once: turned back into plain text first, so a message that was escaped where it was thrown is not
+	 * escaped twice.
+	 *
+	 * @param string $message The message of an exception.
+	 */
+	private function escaped( string $message ): string {
+		return esc_html( PlainText::fromEscaped( $message ) );
 	}
 }

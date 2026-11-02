@@ -33,6 +33,8 @@ final class OnboardingState {
 	public const OPTION = 'estasoft_sync_onboarding';
 
 	/**
+	 * Set up the onboarding state.
+	 *
 	 * @param OptionStore $options Options.
 	 */
 	public function __construct( private readonly OptionStore $options ) {
@@ -85,8 +87,9 @@ final class OnboardingState {
 	 * @return array<string,mixed> State after saving.
 	 */
 	public function save( array $changes ): array {
-		$state = $this->get();
-		$began = ! empty( $changes['shadow_started_at'] ) && (string) $changes['shadow_started_at'] !== (string) ( $state['shadow_started_at'] ?? '' );
+		$state    = $this->get();
+		$previous = (string) ( $state['shadow_started_at'] ?? '' );
+		$began    = ! empty( $changes['shadow_started_at'] ) && (string) $changes['shadow_started_at'] !== $previous;
 		foreach ( $changes as $key => $value ) {
 			if ( array_key_exists( $key, $state ) ) {
 				$state[ $key ] = $value;

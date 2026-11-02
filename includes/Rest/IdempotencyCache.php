@@ -35,6 +35,8 @@ final class IdempotencyCache {
 	public const MAX_KEY_LENGTH = 128;
 
 	/**
+	 * Create the cache.
+	 *
 	 * @param KeyValueStore $store  Storage.
 	 * @param string        $secret Secret for hashing the request body (a WordPress salt).
 	 */
@@ -50,7 +52,7 @@ final class IdempotencyCache {
 	 * @param string $header Value of the Idempotency-Key header; empty when absent.
 	 * @return string|null The key, or null when the request has none.
 	 *
-	 * @throws ApiException With status 400 when the key is longer than 128 characters or has characters other than letters, digits and - _ . :
+	 * @throws ApiException With status 400 when the key is longer than 128 characters or has characters other than letters, digits, dashes, underscores, dots and colons.
 	 */
 	public function validKey( string $header ): ?string {
 		$header = trim( $header );
@@ -60,7 +62,7 @@ final class IdempotencyCache {
 		if ( strlen( $header ) > self::MAX_KEY_LENGTH || 1 !== preg_match( '/^[A-Za-z0-9_.:\-]+$/', $header ) ) {
 			throw new ApiException(
 				'estasoft_sync_bad_idempotency_key',
-				__( 'The Idempotency-Key header must be up to 128 letters, digits, dots, colons, dashes or underscores.', 'estasoft-erp-crm-sync-engine' ),
+				esc_html__( 'The Idempotency-Key header must be up to 128 letters, digits, dots, colons, dashes or underscores.', 'estasoft-erp-crm-sync-engine' ),
 				400
 			);
 		}
@@ -89,7 +91,7 @@ final class IdempotencyCache {
 		if ( ! hash_equals( (string) $stored['fingerprint'], $this->fingerprint( $body, $query, $routeParams ) ) ) {
 			throw new ApiException(
 				'estasoft_sync_idempotency_conflict',
-				__( 'This Idempotency-Key was already used for a different request. Use a new key.', 'estasoft-erp-crm-sync-engine' ),
+				esc_html__( 'This Idempotency-Key was already used for a different request. Use a new key.', 'estasoft-erp-crm-sync-engine' ),
 				409
 			);
 		}

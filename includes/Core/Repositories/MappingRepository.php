@@ -289,13 +289,14 @@ final class MappingRepository extends Repository {
 	 * @param callable $work         Work to do; its return value is returned.
 	 * @return mixed
 	 *
-	 * @throws \Throwable Whatever the work throws, after rolling back; a RuntimeException when the database kept failing.
+	 * @throws \Throwable Whatever the work throws, after rolling back.
+	 * @throws \RuntimeException When the database kept failing.
 	 */
 	private function transaction( int $connectionId, string $type, callable $work ): mixed {
 		for ( $attempt = 1; $attempt <= self::TRANSACTION_ATTEMPTS; ++$attempt ) {
 			$this->queryFailed = false;
 			$this->lastError   = '';
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- transaction control has no WordPress API.
 			$this->wpdb->query( 'START TRANSACTION' );
 			try {
 				$this->results(
@@ -304,16 +305,16 @@ final class MappingRepository extends Repository {
 				);
 				$result = $this->queryFailed ? null : $work();
 				if ( ! $this->queryFailed ) {
-					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- transaction control has no WordPress API.
 					$this->wpdb->query( 'COMMIT' );
 					return $result;
 				}
 			} catch ( \Throwable $e ) {
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- transaction control has no WordPress API.
 				$this->wpdb->query( 'ROLLBACK' );
 				throw $e;
 			}
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- transaction control has no WordPress API.
 			$this->wpdb->query( 'ROLLBACK' );
 			if ( 1 !== preg_match( '/deadlock|lock wait timeout/i', $this->lastError ) ) {
 				break;

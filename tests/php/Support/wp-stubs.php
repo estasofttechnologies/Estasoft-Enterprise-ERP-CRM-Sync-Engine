@@ -28,6 +28,11 @@ if ( ! function_exists( 'esc_html__' ) ) {
 		return esc_html( $text );
 	}
 }
+if ( ! function_exists( 'wp_specialchars_decode' ) ) {
+	function wp_specialchars_decode( $text, $quote_style = ENT_NOQUOTES ) { // phpcs:ignore
+		return htmlspecialchars_decode( (string) $text, $quote_style );
+	}
+}
 if ( ! function_exists( 'wp_json_encode' ) ) {
 	function wp_json_encode( $data, $flags = 0, $depth = 512 ) { // phpcs:ignore
 		return json_encode( $data, $flags, $depth );

@@ -19,11 +19,11 @@ interface OptionStore {
 	/**
 	 * Read an option.
 	 *
-	 * @param string $name    Option name.
-	 * @param mixed  $default Value when the option does not exist.
+	 * @param string $name     Option name.
+	 * @param mixed  $fallback Value when the option does not exist.
 	 * @return mixed
 	 */
-	public function get( string $name, mixed $default = null ): mixed;
+	public function get( string $name, mixed $fallback = null ): mixed;
 
 	/**
 	 * Write an option. Plugin options are not autoloaded unless a small, always-needed value asks for it.

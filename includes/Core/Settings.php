@@ -37,6 +37,8 @@ final class Settings {
 	public const EXCERPT_BYTES = array( 0, 2048, 8192 );
 
 	/**
+	 * Set up the settings.
+	 *
 	 * @param OptionStore $options      Options.
 	 * @param string      $defaultEmail Site admin email, the default alert recipient.
 	 */
@@ -121,7 +123,7 @@ final class Settings {
 		$before = $this->get();
 		$result = $this->apply( $before, $changes );
 		if ( array() !== $result['errors'] ) {
-			throw new ValidationException( $result['errors'] );
+			throw new ValidationException( array_map( 'esc_html', $result['errors'] ) );
 		}
 		$after = $result['settings'];
 		$this->options->set( self::OPTION, $after );

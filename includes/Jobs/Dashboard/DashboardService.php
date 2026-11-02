@@ -50,16 +50,16 @@ final class DashboardService {
 	/**
 	 * Set up with what it depends on.
 	 *
-	 * @param QueueRepository              $queue       Queue counts.
-	 * @param ConnectionRepository         $connections Connections.
-	 * @param \Closure():ConnectorRegistry $registry    Returns the connector registry.
-	 * @param LogRepository                $logs        Latest events.
-	 * @param OnboardingState              $onboarding  Setup and shadow state.
-	 * @param SecretBox                    $box         Encryption key.
-	 * @param ShopEnvironment              $environment Time zone, currency, cron mode.
-	 * @param ShadowService                $shadow      Shadow summary.
-	 * @param Transients                   $transients  The failed-count cache.
-	 * @param Clock                        $clock       Time source.
+	 * @param QueueRepository      $queue       Queue counts.
+	 * @param ConnectionRepository $connections Connections.
+	 * @param \Closure             $registry    Returns the connector registry.
+	 * @param LogRepository        $logs        Latest events.
+	 * @param OnboardingState      $onboarding  Setup and shadow state.
+	 * @param SecretBox            $box         Encryption key.
+	 * @param ShopEnvironment      $environment Time zone, currency, cron mode.
+	 * @param ShadowService        $shadow      Shadow summary.
+	 * @param Transients           $transients  The failed-count cache.
+	 * @param Clock                $clock       Time source.
 	 */
 	public function __construct(
 		private readonly QueueRepository $queue,

@@ -13,6 +13,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Return the first unmet requirement as a short sentence, or an empty string when all are met.
  *
+ * @param bool $include_woocommerce Whether WooCommerce has to be active too.
  * @return string
  */
 function estasoft_sync_missing_requirement( $include_woocommerce = true ) {

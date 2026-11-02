@@ -18,16 +18,22 @@ final class Plugin {
 
 	/**
 	 * Single instance.
+	 *
+	 * @var Plugin|null
 	 */
 	private static ?Plugin $instance = null;
 
 	/**
 	 * Service container.
+	 *
+	 * @var Container
 	 */
 	private Container $container;
 
 	/**
 	 * Whether boot() already ran.
+	 *
+	 * @var bool
 	 */
 	private bool $booted = false;
 

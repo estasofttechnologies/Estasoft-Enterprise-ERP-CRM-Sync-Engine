@@ -76,6 +76,8 @@ final class JobsModule implements ModuleInterface {
 
 	/**
 	 * When the hourly reconcile tick began (microtime), or null.
+	 *
+	 * @var float|null
 	 */
 	private ?float $tickStartedAt = null;
 
@@ -643,11 +645,11 @@ final class JobsModule implements ModuleInterface {
 	 *
 	 * @param Container $c       Container.
 	 * @param string    $key     Key from JobServices.
-	 * @param string    $class   Class or interface name used as the alias.
+	 * @param string    $alias   Class or interface name used as the alias.
 	 * @param callable  $factory Receives the container.
 	 */
-	private function add( Container $c, string $key, string $class, callable $factory ): void {
+	private function add( Container $c, string $key, string $alias, callable $factory ): void {
 		$c->set( $key, $factory );
-		$c->set( $class, static fn( Container $c ): mixed => $c->get( $key ) );
+		$c->set( $alias, static fn( Container $c ): mixed => $c->get( $key ) );
 	}
 }
