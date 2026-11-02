@@ -39,12 +39,10 @@ define( 'ESTASOFT_SYNC_TEXT_DOMAIN', 'estasoft-erp-crm-sync-engine' );
  */
 require_once ESTASOFT_SYNC_DIR . 'includes/requirements.php';
 
-$estasoft_sync_early = estasoft_sync_missing_requirement( false );
-if ( '' !== $estasoft_sync_early ) {
-	estasoft_sync_requirement_notice( $estasoft_sync_early );
+if ( '' !== estasoft_sync_unmet_requirement( false ) ) {
+	estasoft_sync_requirement_notice( false );
 	return;
 }
-unset( $estasoft_sync_early );
 
 require_once ESTASOFT_SYNC_DIR . 'includes/Autoloader.php';
 Estasoft\SyncEngine\Autoloader::register( 'Estasoft\\SyncEngine\\', ESTASOFT_SYNC_DIR . 'includes/' );

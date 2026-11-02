@@ -359,7 +359,7 @@ function estasoft_smoke_guard( string $scenario ): int {
 		putenv( 'SMOKE_FAKE_WP=6.9' );
 		$message = estasoft_sync_missing_requirement( true );
 		estasoft_smoke_check( 0 === strpos( $message, 'PHP 99.0 or newer is required.' ), 'a PHP that is too old gives the PHP message, not a fatal error', $message );
-		estasoft_sync_requirement_notice( $message );
+		estasoft_sync_requirement_notice( true );
 		$callbacks = $GLOBALS['estasoft_smoke_actions']['admin_notices'] ?? array();
 		estasoft_smoke_check( 1 === count( $callbacks ), 'the guard adds one admin notice' );
 		ob_start();

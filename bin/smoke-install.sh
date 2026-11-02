@@ -131,7 +131,7 @@ ok "$(basename "${ZIP}"): ${FILE_COUNT} files, $(human_size "${ZIP_BYTES}"), SHA
 info "== 2. A fresh WordPress database and wp-content"
 db -e "DROP DATABASE IF EXISTS \`${DB_NAME}\`; CREATE DATABASE \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci" || die "Cannot create the database."
 CONTENT="${WORK}/wp-content"
-mkdir -p "${CONTENT}/plugins" "${CONTENT}/mu-plugins" "${CONTENT}/uploads" "${CONTENT}/languages"
+mkdir -p "${CONTENT}/plugins" "${CONTENT}/mu-plugins" "${CONTENT}/themes" "${CONTENT}/uploads" "${CONTENT}/languages"
 cp -R "${ROOT_DIR}/tests/php/stubs/woocommerce" "${CONTENT}/plugins/woocommerce"
 unzip -q "${ZIP}" -d "${CONTENT}/plugins/"
 [[ -f "${CONTENT}/plugins/${SLUG}/${SLUG}.php" ]] || die "The zip does not unpack to ${SLUG}/${SLUG}.php."
