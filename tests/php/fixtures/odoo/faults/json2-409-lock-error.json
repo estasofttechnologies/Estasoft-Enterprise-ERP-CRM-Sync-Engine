@@ -1,0 +1,1 @@
+{"name": "odoo.exceptions.LockError", "message": "Could not obtain a lock on the record.", "arguments": ["Could not obtain a lock on the record."], "context": {}, "debug": "Traceback (most recent call last):\n  ...\n"}

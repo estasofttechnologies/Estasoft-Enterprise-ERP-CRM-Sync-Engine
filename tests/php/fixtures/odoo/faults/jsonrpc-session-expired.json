@@ -1,0 +1,1 @@
+{"jsonrpc": "2.0", "id": 7, "error": {"code": 100, "message": "Odoo Session Expired", "data": {"name": "odoo.http.SessionExpiredException", "debug": "Traceback (most recent call last):\n  ...\n", "message": "Session expired", "arguments": ["Session expired"], "context": {}}}}

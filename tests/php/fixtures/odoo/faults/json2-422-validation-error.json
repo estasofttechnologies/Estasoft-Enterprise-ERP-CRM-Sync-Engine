@@ -1,0 +1,1 @@
+{"name": "odoo.exceptions.ValidationError", "message": "The VAT number is not valid.", "arguments": ["The VAT number is not valid."], "context": {}, "debug": "Traceback (most recent call last):\n  ...\n"}
