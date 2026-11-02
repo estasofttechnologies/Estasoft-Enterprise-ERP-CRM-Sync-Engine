@@ -1,0 +1,21 @@
+# Dependencies
+/node_modules/
+/vendor/
+/composer.phar
+
+# Build output (committed only inside release zips)
+/build/
+/dist/
+/coverage/
+*.zip
+
+# Tooling caches
+.phpunit.result.cache
+.phpcs-cache
+.phpstan-cache/
+.eslintcache
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/

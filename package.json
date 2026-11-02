@@ -1,0 +1,38 @@
+{
+  "name": "estasoft-erp-crm-sync-engine",
+  "version": "0.1.0",
+  "description": "Admin app for the Estasoft Enterprise ERP/CRM Sync Engine WordPress plugin.",
+  "license": "GPL-2.0-or-later",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/estasofttechnologies/estasoft-enterprise-erp-crm-sync-engine.git"
+  },
+  "scripts": {
+    "build": "wp-scripts build --webpack-src-dir=src --output-path=build",
+    "start": "wp-scripts start --webpack-src-dir=src --output-path=build",
+    "lint:js": "wp-scripts lint-js src tests/js",
+    "lint:css": "wp-scripts lint-style \"src/**/*.scss\"",
+    "typecheck": "tsc --noEmit",
+    "test:js": "wp-scripts test-unit-js --config jest.config.js",
+    "format": "wp-scripts format src tests/js",
+    "check:js": "npm run typecheck && npm run lint:js && npm run test:js && npm run build"
+  },
+  "dependencies": {
+    "@wordpress/api-fetch": "^7.10.0",
+    "@wordpress/components": "^28.10.0",
+    "@wordpress/element": "^6.10.0",
+    "@wordpress/i18n": "^5.10.0",
+    "@wordpress/icons": "^10.10.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.5.0",
+    "@testing-library/react": "^16.0.1",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "@wordpress/scripts": "^30.3.0",
+    "jest-axe": "^9.0.0",
+    "typescript": "^5.6.2"
+  }
+}

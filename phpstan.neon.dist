@@ -1,0 +1,14 @@
+includes:
+  - vendor/szepeviktor/phpstan-wordpress/extension.neon
+
+parameters:
+  level: 6
+  paths:
+    - includes
+    - estasoft-erp-crm-sync-engine.php
+  scanFiles:
+    - vendor/php-stubs/woocommerce-stubs/woocommerce-stubs.php
+  bootstrapFiles:
+    - tests/phpstan-bootstrap.php
+  treatPhpDocTypesAsCertain: false
+  tmpDir: .phpstan-cache

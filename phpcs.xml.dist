@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<ruleset name="Estasoft Sync Engine" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/squizlabs/PHP_CodeSniffer/master/phpcs.xsd">
+  <description>WordPress Coding Standards for the Estasoft Sync Engine.</description>
+
+  <file>estasoft-erp-crm-sync-engine.php</file>
+  <file>uninstall.php</file>
+  <file>includes</file>
+  <exclude-pattern>*/node_modules/*</exclude-pattern>
+  <exclude-pattern>*/vendor/*</exclude-pattern>
+  <exclude-pattern>*/build/*</exclude-pattern>
+  <exclude-pattern>*/tests/*</exclude-pattern>
+
+  <arg name="extensions" value="php"/>
+  <arg name="colors"/>
+  <arg value="ps"/>
+  <arg name="cache" value=".phpcs-cache"/>
+  <arg name="parallel" value="8"/>
+
+  <config name="testVersion" value="8.1-"/>
+  <config name="minimum_wp_version" value="6.4"/>
+
+  <rule ref="WordPress">
+    <!-- Modern PSR-4 layout: PascalCase files, camelCase methods, short arrays are not used. -->
+    <exclude name="WordPress.Files.FileName"/>
+    <exclude name="WordPress.NamingConventions.ValidFunctionName"/>
+    <exclude name="WordPress.NamingConventions.ValidVariableName"/>
+    <exclude name="Universal.Files.SeparateFunctionsFromOO"/>
+    <exclude name="Squiz.Commenting.FileComment.Missing"/>
+  </rule>
+  <rule ref="PHPCompatibilityWP"/>
+
+  <rule ref="WordPress.WP.I18n">
+    <properties>
+      <property name="text_domain" type="array">
+        <element value="estasoft-erp-crm-sync-engine"/>
+      </property>
+    </properties>
+  </rule>
+  <rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+    <properties>
+      <property name="prefixes" type="array">
+        <element value="estasoft_sync"/>
+        <element value="ESTASOFT_SYNC"/>
+        <element value="Estasoft\SyncEngine"/>
+      </property>
+    </properties>
+  </rule>
+</ruleset>
