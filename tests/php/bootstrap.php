@@ -16,3 +16,6 @@ require_once dirname( __DIR__, 2 ) . '/includes/Autoloader.php';
 
 Estasoft\SyncEngine\Autoloader::register( 'Estasoft\\SyncEngine\\', dirname( __DIR__, 2 ) . '/includes/' );
 Estasoft\SyncEngine\Autoloader::register( 'Estasoft\\SyncEngine\\Tests\\', __DIR__ . '/' );
+
+// No test needs DNS: every host name resolves to a public address. A test of the host policy passes its own resolver.
+Estasoft\SyncEngine\Connectors\Support\HostPolicy::resolveWith( static fn( string $host ): array => array( '93.184.216.34' ) );

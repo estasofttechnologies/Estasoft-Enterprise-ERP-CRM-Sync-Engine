@@ -47,3 +47,31 @@ if ( ! function_exists( 'absint' ) ) {
 		return abs( (int) $value );
 	}
 }
+
+if ( ! function_exists( 'wp_parse_url' ) ) {
+	function wp_parse_url( $url, $component = -1 ) { // phpcs:ignore
+		return parse_url( (string) $url, $component ); // phpcs:ignore
+	}
+}
+if ( ! function_exists( 'rest_url' ) ) {
+	function rest_url( $path = '' ) { // phpcs:ignore
+		return 'https://shop.example.test/wp-json/' . ltrim( (string) $path, '/' );
+	}
+}
+if ( ! function_exists( 'wp_mkdir_p' ) ) {
+	function wp_mkdir_p( $target ) { // phpcs:ignore
+		return is_dir( $target ) || mkdir( $target, 0777, true ); // phpcs:ignore
+	}
+}
+if ( ! function_exists( 'wp_delete_file' ) ) {
+	function wp_delete_file( $file ) { // phpcs:ignore
+		if ( is_file( $file ) ) {
+			unlink( $file ); // phpcs:ignore
+		}
+	}
+}
+if ( ! function_exists( 'trailingslashit' ) ) {
+	function trailingslashit( $value ) { // phpcs:ignore
+		return rtrim( (string) $value, '/\\' ) . '/';
+	}
+}
