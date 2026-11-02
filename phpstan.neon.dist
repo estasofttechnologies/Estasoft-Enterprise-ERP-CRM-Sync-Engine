@@ -11,3 +11,6 @@ parameters:
     - tests/phpstan-bootstrap.php
   treatPhpDocTypesAsCertain: false
   tmpDir: .phpstan-cache
+  # Two worker processes of up to 2 GB each fit on a standard GitHub runner; more can run it out of memory.
+  parallel:
+    maximumNumberOfProcesses: 2

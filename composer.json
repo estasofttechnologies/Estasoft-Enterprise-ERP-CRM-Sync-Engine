@@ -35,7 +35,7 @@
     "lint": "phpcs",
     "lint:fix": "phpcbf",
     "lint:syntax": "bash bin/lint-php.sh",
-    "analyse": "phpstan analyse --memory-limit=1G",
+    "analyse": "phpstan analyse --memory-limit=2G",
     "test": "phpunit",
     "test:integration": "phpunit -c phpunit-integration.xml.dist",
     "check": ["@lint", "@analyse", "@test"],

@@ -163,7 +163,7 @@ step_phpstan() {
 		echo "phpstan is not installed here (composer install); CI runs it"
 		return "${EXIT_SKIPPED}"
 	fi
-	"${bin}" analyse --memory-limit=1G --no-progress
+	"${bin}" analyse --memory-limit=2G --no-progress
 }
 
 step_unit() {
