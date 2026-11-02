@@ -56,6 +56,10 @@ if [[ "${CHECK_FLAGS}" -eq 1 ]]; then
 	if ! php "${ROOT_DIR}/bin/red-flags.php" --root="${ROOT_DIR}"; then
 		status=1
 	fi
+	# The plugin declares PHP 8.1 as its minimum; this finds syntax and functions from newer versions on any PHP.
+	if ! php "${ROOT_DIR}/bin/check-php-version.php" --root="${ROOT_DIR}"; then
+		status=1
+	fi
 fi
 
 exit "${status}"
