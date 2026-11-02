@@ -19,6 +19,8 @@ import { KpiGrid } from '../../components/Kpi';
 import { PageHeader } from '../../components/PageHeader';
 import { ResponsiveTable } from '../../components/ResponsiveTable';
 import { useResource } from '../../hooks/useResource';
+import { toCsv } from '../../lib/csv';
+import { daysPhrase } from '../../lib/text';
 import { downloadText } from '../../lib/download';
 
 interface Cause {
@@ -102,16 +104,16 @@ export function ShadowResults() {
 	}
 	const causes = causesOf( data );
 	const csv = () => {
-		const lines = [
-			'order,result,fields',
-			...data.rows.map(
-				( row ) =>
-					`${ row.order_label },${ row.result },"${ row.fields.join( '; ' ) }"`
-			),
-		];
 		downloadText(
 			'estasoft-sync-shadow-results.csv',
-			lines.join( '\n' ),
+			toCsv( [
+				[ 'order', 'result', 'fields' ],
+				...data.rows.map( ( row ) => [
+					row.order_label,
+					row.result,
+					row.fields.join( '; ' ),
+				] ),
+			] ),
 			'text/csv'
 		);
 	};
@@ -147,11 +149,12 @@ export function ShadowResults() {
 						label: __( 'Compared', 'estasoft-erp-crm-sync-engine' ),
 						value: data.info.items,
 						hint: sprintf(
-							/* translators: %d: days */ __(
-								'orders in %d days',
+							/* translators: %s: number of days such as "3 days" */
+							__(
+								'orders in %s',
 								'estasoft-erp-crm-sync-engine'
 							),
-							data.info.day
+							daysPhrase( data.info.day )
 						),
 					},
 					{
@@ -305,8 +308,11 @@ export function ShadowResults() {
 			>
 				<p>
 					{ sprintf(
-						/* translators: 1: day, 2: total days, 3: number of compared orders */ __(
+						/* translators: 1: day, 2: total days, 3: number of compared orders */
+						_n(
+							'Shadow mode has run for %1$d of %2$d days. You can go live now. Only new orders are sent; the %3$d compared order is not sent again.',
 							'Shadow mode has run for %1$d of %2$d days. You can go live now. Only new orders are sent; the %3$d compared orders are not sent again.',
+							data.info.items,
 							'estasoft-erp-crm-sync-engine'
 						),
 						data.info.day,

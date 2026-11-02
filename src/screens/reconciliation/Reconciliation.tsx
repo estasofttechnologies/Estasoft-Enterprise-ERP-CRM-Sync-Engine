@@ -1,5 +1,5 @@
 import { useEffect, useState } from '@wordpress/element';
-import { __, sprintf } from '@wordpress/i18n';
+import { __, _n, sprintf } from '@wordpress/i18n';
 import { api } from '../../api/endpoints';
 import type { DiffType, ReconDiff, ReconOverview } from '../../api/types';
 import { useApp } from '../../app/AppContext';
@@ -26,7 +26,7 @@ import { StatusBadge } from '../../components/StatusBadge';
 import { useAsyncAction } from '../../hooks/useAsyncAction';
 import { useResource } from '../../hooks/useResource';
 import { formatMoney } from '../../lib/format';
-import { errorText } from '../../lib/text';
+import { daysPhrase, errorText } from '../../lib/text';
 
 function typeLabel( type: DiffType ): string {
 	switch ( type ) {
@@ -84,17 +84,38 @@ export function Reconciliation() {
 		| null
 	>( null );
 	const [ windowDays, setWindowDays ] = useState( '7' );
-	const [ time, setTime ] = useState( '' );
-	const [ autoRepair, setAutoRepair ] = useState( false );
-	const [ days, setDays ] = useState( '7' );
+	const [ time, setTimeValue ] = useState( '' );
+	const [ autoRepair, setAutoRepairValue ] = useState( false );
+	const [ days, setDaysValue ] = useState( '7' );
+	// The form follows the server only while the person has not touched it. A poll brings new data
+	// every few seconds during a run, and it must not wipe what is being typed.
+	const [ dirty, setDirty ] = useState( false );
+	const setTime = ( value: string ) => {
+		setDirty( true );
+		setTimeValue( value );
+	};
+	const setDays = ( value: string ) => {
+		setDirty( true );
+		setDaysValue( value );
+	};
+	const setAutoRepair = ( value: boolean ) => {
+		setDirty( true );
+		setAutoRepairValue( value );
+	};
 	useEffect( () => {
-		if ( data ) {
-			setTime( data.schedule_time );
-			setAutoRepair( data.auto_repair_missing );
-			setDays( String( data.window_days ) );
-			setWindowDays( String( data.window_days ) );
+		if ( data && ! dirty ) {
+			setTimeValue( data.schedule_time );
+			setAutoRepairValue( data.auto_repair_missing );
+			setDaysValue( String( data.window_days ) );
 		}
-	}, [ data ] );
+	}, [ data, dirty ] );
+	// The window of "Run the check now" starts from the saved window and changes only when that does.
+	const savedWindow = data?.window_days;
+	useEffect( () => {
+		if ( savedWindow !== undefined ) {
+			setWindowDays( String( savedWindow ) );
+		}
+	}, [ savedWindow ] );
 	const settingsChanges = data
 		? ( time !== data.schedule_time ? 1 : 0 ) +
 			( autoRepair !== data.auto_repair_missing ? 1 : 0 ) +
@@ -107,6 +128,7 @@ export function Reconciliation() {
 			auto_repair_missing: autoRepair,
 		} );
 		overview.setData( next );
+		setDirty( false );
 		notify( {
 			kind: 'success',
 			text: __( 'Schedule saved.', 'estasoft-erp-crm-sync-engine' ),
@@ -231,8 +253,11 @@ export function Reconciliation() {
 					/>
 					<p className="estasoft-sync-muted">
 						{ sprintf(
-							/* translators: %d: number of orders compared so far */ __(
+							/* translators: %d: number of orders compared so far */
+							_n(
+								'%d order compared so far. The check only reads, and runs in the background.',
 								'%d orders compared so far. The check only reads, and runs in the background.',
+								running.compared,
 								'estasoft-erp-crm-sync-engine'
 							),
 							running.compared
@@ -269,11 +294,12 @@ export function Reconciliation() {
 							),
 							value: run.compared,
 							hint: sprintf(
-								/* translators: %d: days */ __(
-									'orders from the last %d days',
+								/* translators: %s: length of the window such as "7 days" */
+								__(
+									'orders from the last %s',
 									'estasoft-erp-crm-sync-engine'
 								),
-								run.window_days
+								daysPhrase( run.window_days )
 							),
 						},
 						{
@@ -626,9 +652,10 @@ export function Reconciliation() {
 						saving={ saveSettings.busy }
 						onSave={ () => void saveSettings.run() }
 						onDiscard={ () => {
-							setTime( data.schedule_time );
-							setDays( String( data.window_days ) );
-							setAutoRepair( data.auto_repair_missing );
+							setTimeValue( data.schedule_time );
+							setDaysValue( String( data.window_days ) );
+							setAutoRepairValue( data.auto_repair_missing );
+							setDirty( false );
 						} }
 					/>
 				) : null }
@@ -924,7 +951,7 @@ function IgnoreDialog( {
 			/>
 			<p className="estasoft-sync-muted">
 				{ __(
-					'The difference is marked Ignored with your name and the reason. It stays in the log, and you can reopen it.',
+					'The difference is marked Ignored with your name and the reason. It stays in the list of differences.',
 					'estasoft-erp-crm-sync-engine'
 				) }
 			</p>

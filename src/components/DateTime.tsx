@@ -1,3 +1,4 @@
+import { __ } from '@wordpress/i18n';
 import { useFormat } from './FormatContext';
 import {
 	formatDate,
@@ -26,7 +27,16 @@ export function DateTime( { value, kind = 'time' }: DateTimeProps ) {
 	const cfg = useFormat();
 	const now = useNow();
 	if ( ! value ) {
-		return <span aria-label="none">{ '—' }</span>;
+		return (
+			<span
+				aria-label={ __(
+					'Not available',
+					'estasoft-erp-crm-sync-engine'
+				) }
+			>
+				{ '—' }
+			</span>
+		);
 	}
 	let text: string;
 	switch ( kind ) {

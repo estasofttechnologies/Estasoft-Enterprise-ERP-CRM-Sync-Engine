@@ -8,7 +8,7 @@ import {
 } from '../../src/lib/attention';
 import { filterCatalog, methodLabel, suggestFor } from '../../src/lib/catalog';
 import {
-	currencyDigits,
+	currencyExponent,
 	formatDay,
 	formatDuration,
 	formatMoney,
@@ -19,12 +19,17 @@ import {
 	timeLeftTone,
 	toLocaleTag,
 } from '../../src/lib/format';
+import { csvCell, toCsv } from '../../src/lib/csv';
 import { getPath } from '../../src/lib/path';
+import { safeHttpUrl } from '../../src/lib/url';
 import { describeRule, diffRules, nextRuleId } from '../../src/lib/rules';
 import {
 	catalogMessage,
 	eventLabel,
+	daysPhrase,
 	fillPlaceholders,
+	groupsPhrase,
+	notesPhrase,
 	ordersPhrase,
 	whatHappened,
 } from '../../src/lib/text';
@@ -45,7 +50,39 @@ describe( 'format', () => {
 			nbsp( formatMoney( { minor: 5000, currency: 'JPY' }, dubai ) )
 		).toBe( 'JPY 5,000' );
 		expect( formatMoney( null, dubai ) ).toBe( '—' );
-		expect( currencyDigits( 'KWD', 'en_US' ) ).toBe( 3 );
+		expect( currencyExponent( 'KWD' ) ).toBe( 3 );
+	} );
+
+	it.each( [
+		[ 'KWD', 3, 1234567, 'KWD 1,234.567' ],
+		[ 'BHD', 3, 1234567, 'BHD 1,234.567' ],
+		[ 'OMR', 3, 1234567, 'OMR 1,234.567' ],
+		[ 'JOD', 3, 1234567, 'JOD 1,234.567' ],
+		[ 'TND', 3, 1234567, 'TND 1,234.567' ],
+		[ 'IQD', 3, 1234567, 'IQD 1,234.567' ],
+		[ 'JPY', 0, 5000, 'JPY 5,000' ],
+		[ 'KRW', 0, 5000, 'KRW 5,000' ],
+		[ 'AED', 2, 43800, 'AED 438.00' ],
+	] )(
+		'uses the server exponent for %s (%d places), not Intl',
+		( currency, places, minor, text ) => {
+			expect( currencyExponent( currency ) ).toBe( places );
+			expect( nbsp( formatMoney( { minor, currency }, dubai ) ) ).toBe(
+				text
+			);
+		}
+	);
+
+	it( 'takes the exponent of the store currency from the boot data', () => {
+		const store = { ...dubai, currency: 'IQD', currencyDecimals: 3 };
+		expect( currencyExponent( 'IQD', store ) ).toBe( 3 );
+		expect(
+			nbsp( formatMoney( { minor: 1500, currency: 'IQD' }, store ) )
+		).toBe( 'IQD 1.500' );
+		// Another currency on the same page still follows the table.
+		expect( currencyExponent( 'JPY', store ) ).toBe( 0 );
+		// An unknown currency has two places, like the server.
+		expect( currencyExponent( 'xyz' ) ).toBe( 2 );
 	} );
 
 	it( 'shows times in the store time zone and in UTC on request', () => {
@@ -127,6 +164,22 @@ describe( 'text', () => {
 		expect( ordersPhrase( 3 ) ).toBe( '3 orders' );
 	} );
 
+	it( 'counts each noun with its own number', () => {
+		expect( groupsPhrase( 1 ) ).toBe( '1 group' );
+		expect( groupsPhrase( 3 ) ).toBe( '3 groups' );
+		expect( daysPhrase( 1 ) ).toBe( '1 day' );
+		expect( daysPhrase( 7 ) ).toBe( '7 days' );
+		expect( notesPhrase( 1 ) ).toBe( '1 note' );
+		expect( notesPhrase( 2 ) ).toBe( '2 notes' );
+	} );
+
+	it( 'fills placeholders without touching the punctuation of the text around them', () => {
+		// A space before a colon is right in French; only the markers are replaced.
+		expect( fillPlaceholders( 'Erreur : {x} ; fin', { x: 'abc' } ) ).toBe(
+			'Erreur : abc ; fin'
+		);
+	} );
+
 	const base: QueueItem = {
 		id: 1,
 		connection_id: 12,
@@ -158,6 +211,10 @@ describe( 'text', () => {
 		expect( whatHappened( base, 'Odoo', dubai ) ).toBe(
 			'Odoo answered 503. Retry 1 of 4, next try 11:41'
 		);
+		// No next try yet: its own sentence, not the same text with a phrase cut off.
+		expect(
+			whatHappened( { ...base, next_attempt_at: null }, 'Odoo', dubai )
+		).toBe( 'Odoo answered 503. Retry 1 of 4' );
 		expect(
 			whatHappened( { ...base, state: 'queued' }, 'Odoo', dubai )
 		).toBe( 'Waiting to be sent' );
@@ -241,6 +298,15 @@ describe( 'attention groups', () => {
 			'3 orders failed: product CS-BOWL-04 not found in Odoo'
 		);
 		expect( groupRemedy( group, 'Odoo' ) ).toMatch( /map the SKU/ );
+		expect( groupSentence( { ...group, count: 1 }, 'Odoo' ) ).toBe(
+			'1 order failed: product CS-BOWL-04 not found in Odoo'
+		);
+		expect(
+			groupSentence(
+				{ ...group, error_code: 'SYNC-MAP-002', cause: '', count: 2 },
+				'Odoo'
+			)
+		).toBe( '2 orders failed: tax code is not mapped' );
 		expect(
 			groupSentence(
 				{
@@ -365,5 +431,55 @@ describe( 'catalog', () => {
 		expect( methodLabel( 'key' ) ).toBe( 'Paste a key' );
 		expect( methodLabel( 'export_file' ) ).toBe( 'Export file' );
 		expect( methodLabel( 'whatever' ) ).toBe( 'To be confirmed' );
+	} );
+} );
+
+describe( 'csv', () => {
+	it( 'quotes cells and doubles quotes', () => {
+		expect( csvCell( 'plain' ) ).toBe( 'plain' );
+		expect( csvCell( 'a,b' ) ).toBe( '"a,b"' );
+		expect( csvCell( 'say "hi"' ) ).toBe( '"say ""hi"""' );
+		expect( csvCell( 'two\nlines' ) ).toBe( '"two\nlines"' );
+		expect( csvCell( null ) ).toBe( '' );
+		expect( csvCell( 12.5 ) ).toBe( '12.5' );
+		expect( csvCell( true ) ).toBe( 'true' );
+	} );
+
+	it( 'defuses cells a spreadsheet could run as a formula', () => {
+		[ '=1+1', '+1', '-1', '@SUM(A1)', '\tcmd', '\rcmd' ].forEach(
+			( value ) => {
+				expect( csvCell( value ).replace( /^"/, '' ) ).toMatch( /^'/ );
+			}
+		);
+		expect( csvCell( '=HYPERLINK("x")' ) ).toBe( '"\'=HYPERLINK(""x"")"' );
+		// A real number stays a number.
+		expect( csvCell( -5 ) ).toBe( '-5' );
+	} );
+
+	it( 'writes rows with CRLF line ends', () => {
+		expect(
+			toCsv( [
+				[ 'order', 'fields' ],
+				[ '#10490', 'a; b' ],
+				[ '=cmd', 'x,y' ],
+			] )
+		).toBe( 'order,fields\r\n#10490,a; b\r\n\'=cmd,"x,y"' );
+	} );
+} );
+
+describe( 'safeHttpUrl', () => {
+	it( 'allows http and https only', () => {
+		expect( safeHttpUrl( 'https://odoo.example/web#id=5' ) ).toBe(
+			'https://odoo.example/web#id=5'
+		);
+		expect( safeHttpUrl( 'http://odoo.example/x' ) ).toBe(
+			'http://odoo.example/x'
+		);
+		expect( safeHttpUrl( 'javascript:alert(1)' ) ).toBeNull();
+		expect( safeHttpUrl( ' JavaScript:alert(1)' ) ).toBeNull();
+		expect( safeHttpUrl( 'data:text/html,<b>x</b>' ) ).toBeNull();
+		expect( safeHttpUrl( 'vbscript:x' ) ).toBeNull();
+		expect( safeHttpUrl( '' ) ).toBeNull();
+		expect( safeHttpUrl( null ) ).toBeNull();
 	} );
 } );

@@ -230,9 +230,10 @@ describe( 'Queue', () => {
 		expect(
 			screen.getByRole( 'menuitem', { name: 'Open S00490 in Odoo' } )
 		).toHaveAttribute( 'target', '_blank' );
+		// The server only retries failed or retrying items, so a synced row has no "Sync again".
 		expect(
-			screen.getByRole( 'menuitem', { name: 'Sync again' } )
-		).toBeInTheDocument();
+			screen.queryByRole( 'menuitem', { name: 'Sync again' } )
+		).not.toBeInTheDocument();
 		expect(
 			screen.getByRole( 'menuitem', { name: 'View in the log' } )
 		).toBeInTheDocument();
@@ -387,7 +388,11 @@ describe( 'Needs attention', () => {
 			server.requests.find(
 				( request ) => request.route === '/products/map'
 			)?.body
-		).toEqual( { product_id: 501, external_id: 'p1' } );
+		).toEqual( {
+			product_id: 501,
+			external_id: 'p1',
+			external_ref: 'CS-BOWL-04L',
+		} );
 	} );
 
 	it( 'shows the all clear state when nothing failed', async () => {

@@ -1,5 +1,5 @@
 import { useRef, useState } from '@wordpress/element';
-import { __, sprintf } from '@wordpress/i18n';
+import { __, _n, sprintf } from '@wordpress/i18n';
 import { api } from '../../api/endpoints';
 import { ApiError, newIdempotencyKey } from '../../api/client';
 import type {
@@ -14,6 +14,7 @@ import { Callout } from '../../components/Callout';
 import { Card } from '../../components/Card';
 import { CopyButton } from '../../components/CopyButton';
 import { Busy } from '../../components/EmptyState';
+import { ErrorDetails, KeyLineBlock } from '../../components/ErrorDetails';
 import { TextField } from '../../components/Fields';
 import { StatusBadge } from '../../components/StatusBadge';
 import { errorText, catalogMessage } from '../../lib/text';
@@ -122,7 +123,7 @@ export function MethodExplainer( { entry }: { entry: CatalogEntry } ) {
 type Phase = 'form' | 'testing' | 'result';
 
 function OdooConnect( { entry, onConnected, existing }: ConnectSystemProps ) {
-	const { canConfigure } = useApp();
+	const { canConfigure, boot } = useApp();
 	const { status, reload } = useStatus();
 	const name = 'Odoo';
 	const [ values, setValues ] = useState( {
@@ -197,12 +198,18 @@ function OdooConnect( { entry, onConnected, existing }: ConnectSystemProps ) {
 		setPhase( 'form' );
 	};
 
-	const error = result && ! result.ok ? result.error : null;
+	// Saving tests the connection again, and a failed test comes back inside the error
+	// (`data.details.test`); it is shown the same way as a failed test of its own.
+	const shownTest =
+		failure instanceof ApiError && failure.details.test
+			? failure.details.test
+			: result;
+	const error = shownTest && ! shownTest.ok ? shownTest.error : null;
 	const errorCode =
 		error?.code ?? ( failure instanceof ApiError ? failure.code : '' );
 	const refused = errorCode === 'SYNC-AUTH-001';
 	const partial = Boolean(
-		result && result.ok && result.missing_permissions.length > 0
+		shownTest && shownTest.ok && shownTest.missing_permissions.length > 0
 	);
 	const steps = [
 		__(
@@ -236,8 +243,11 @@ function OdooConnect( { entry, onConnected, existing }: ConnectSystemProps ) {
 					</p>
 					<p>
 						{ sprintf(
-							/* translators: 1: number of warehouses, 2: warehouse names */ __(
+							/* translators: 1: number of warehouses, 2: warehouse names */
+							_n(
+								'%1$d warehouse found (%2$s). The key is stored encrypted.',
 								'%1$d warehouses found (%2$s). The key is stored encrypted.',
+								saved.warehouses.length,
 								'estasoft-erp-crm-sync-engine'
 							),
 							saved.warehouses.length,
@@ -261,10 +271,13 @@ function OdooConnect( { entry, onConnected, existing }: ConnectSystemProps ) {
 					</p>
 					<p className="estasoft-sync-muted">
 						{ __(
-							'Saved credentials cannot be stored until you add the line shown under Connections. Existing connections keep working.',
+							'Saved credentials cannot be stored until you add the line below to wp-config.php. Existing connections keep working.',
 							'estasoft-erp-crm-sync-engine'
 						) }
 					</p>
+					{ boot.encryptionKeyLine ? (
+						<KeyLineBlock line={ boot.encryptionKeyLine } />
+					) : null }
 				</Callout>
 			) : null }
 			<div className="estasoft-sync-split estasoft-sync-split--even">
@@ -317,7 +330,7 @@ function OdooConnect( { entry, onConnected, existing }: ConnectSystemProps ) {
 						</li>
 						<li>
 							{ __(
-								'Odoo asks outside programs to make about one call a second, with none at the same time. The plugin keeps to that, so a large backlog empties slowly, and nothing is lost.',
+								'Odoo asks outside programs to make about one call a second, with none at the same time. The plugin keeps to that, so a large backlog empties slowly.',
 								'estasoft-erp-crm-sync-engine'
 							) }
 						</li>
@@ -480,7 +493,7 @@ function OdooConnect( { entry, onConnected, existing }: ConnectSystemProps ) {
 						</Btn>
 					</div>
 				) : null }
-				{ phase === 'result' && partial && result ? (
+				{ phase === 'result' && partial && shownTest ? (
 					<Callout tone="warning" role="status">
 						<p className="estasoft-sync-strong">
 							{ __(
@@ -494,8 +507,8 @@ function OdooConnect( { entry, onConnected, existing }: ConnectSystemProps ) {
 									'%1$s answered, but this user cannot do the following: %2$s. In Odoo, give the user the access right it needs, then test again.',
 									'estasoft-erp-crm-sync-engine'
 								),
-								result.version || name,
-								result.missing_permissions.join( ', ' )
+								shownTest.version || name,
+								shownTest.missing_permissions.join( ', ' )
 							) }{ ' ' }
 							<span className="estasoft-sync-mono">
 								SYNC-AUTH-004
@@ -527,6 +540,7 @@ function OdooConnect( { entry, onConnected, existing }: ConnectSystemProps ) {
 								'estasoft-erp-crm-sync-engine'
 							) }
 						</p>
+						<ErrorDetails error={ failure } />
 					</Callout>
 				) : null }
 				<p className="estasoft-sync-muted">

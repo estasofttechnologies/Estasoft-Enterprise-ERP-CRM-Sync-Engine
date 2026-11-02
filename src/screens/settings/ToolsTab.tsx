@@ -1,5 +1,5 @@
 import { useRef, useState } from '@wordpress/element';
-import { __, sprintf } from '@wordpress/i18n';
+import { __, _n, sprintf } from '@wordpress/i18n';
 import { api } from '../../api/endpoints';
 import { useApp } from '../../app/AppContext';
 import { useNotices } from '../../app/NoticeProvider';
@@ -245,8 +245,11 @@ export function ToolsTab() {
 						notify( {
 							kind: 'success',
 							text: sprintf(
-								/* translators: %d: number of entries */ __(
+								/* translators: %d: number of entries */
+								_n(
+									'Logs cleared: %d entry removed. The queue, orders and settings are kept.',
 									'Logs cleared: %d entries removed. The queue, orders and settings are kept.',
+									result.cleared,
 									'estasoft-erp-crm-sync-engine'
 								),
 								result.cleared
@@ -387,6 +390,12 @@ function DeleteDialog( {
 					'estasoft-erp-crm-sync-engine'
 				) }
 			</p>
+			<Callout tone="warning">
+				{ __(
+					'The plugin also forgets which orders it already sent. If you connect again afterwards, orders that were already sent can be sent a second time.',
+					'estasoft-erp-crm-sync-engine'
+				) }
+			</Callout>
 			<div className="estasoft-sync-typed">
 				<TextField
 					label={ sprintf(

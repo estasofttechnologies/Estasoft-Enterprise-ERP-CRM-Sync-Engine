@@ -164,9 +164,15 @@ function SettingsForm( {
 	const [ errors, setErrors ] = useState< Record< string, string | null > >(
 		{}
 	);
+	// The recipients box keeps what the person typed (a trailing comma, a space), so it is state of
+	// its own. It starts from the saved list and goes back to it on Discard.
+	const [ recipientsText, setRecipientsText ] = useState( '' );
 	if ( resource.data && resource.data !== seeded ) {
 		setSeeded( resource.data );
 		setDraft( resource.data );
+		setRecipientsText(
+			resource.data.notifications.recipients.join( ', ' )
+		);
 	}
 	const save = useAsyncAction( async () => {
 		if ( ! draft ) {
@@ -265,7 +271,13 @@ function SettingsForm( {
 						setNotify={ setNotify }
 						error={ errors.recipients ?? null }
 						canConfigure={ canConfigure }
-						dirty={ changes > 0 }
+						text={ recipientsText }
+						onText={ setRecipientsText }
+						saved={ original.notifications.recipients }
+						recipientsDirty={
+							draft.notifications.recipients.join( ',' ) !==
+							original.notifications.recipients.join( ',' )
+						}
 					/>
 				) : null }
 				{ tab === 'performance' ? (
@@ -284,6 +296,9 @@ function SettingsForm( {
 					onSave={ () => void save.run() }
 					onDiscard={ () => {
 						setDraft( original );
+						setRecipientsText(
+							original.notifications.recipients.join( ', ' )
+						);
 						setErrors( {} );
 					} }
 					message={
@@ -460,7 +475,10 @@ function NotificationsTab( {
 	setNotify,
 	error,
 	canConfigure,
-	dirty,
+	text,
+	onText,
+	saved,
+	recipientsDirty,
 }: {
 	draft: Settings;
 	setNotify: < K extends keyof Settings[ 'notifications' ] >(
@@ -469,10 +487,14 @@ function NotificationsTab( {
 	) => void;
 	error: string | null;
 	canConfigure: boolean;
-	dirty: boolean;
+	/** What the recipients box shows. */
+	text: string;
+	onText: ( value: string ) => void;
+	/** The saved recipients: the test email goes to these. */
+	saved: string[];
+	recipientsDirty: boolean;
 } ) {
 	const n = draft.notifications;
-	const [ text, setText ] = useState( n.recipients.join( ', ' ) );
 	const [ sent, setSent ] = useState< string | null >( null );
 	const test = useAsyncAction( async () => {
 		const result = await api.notificationsTest();
@@ -504,7 +526,7 @@ function NotificationsTab( {
 					) }
 					value={ text }
 					onChange={ ( value ) => {
-						setText( value );
+						onText( value );
 						setNotify(
 							'recipients',
 							value
@@ -619,7 +641,7 @@ function NotificationsTab( {
 				<div className="estasoft-sync-actions">
 					<Btn
 						busy={ test.busy }
-						disabled={ ! canConfigure || dirty }
+						disabled={ ! canConfigure || recipientsDirty }
 						onClick={ () => void test.run() }
 					>
 						{ __(
@@ -628,15 +650,24 @@ function NotificationsTab( {
 						) }
 					</Btn>
 					<span className="estasoft-sync-muted">
-						{ dirty
+						{ recipientsDirty
 							? __(
-									'Save your changes first. The test goes to the saved recipients.',
+									'Save your changes first. The test goes to the saved recipients, not to what is typed above.',
 									'estasoft-erp-crm-sync-engine'
 								)
-							: __(
-									'Sends a short message to the recipients above.',
-									'estasoft-erp-crm-sync-engine'
-								) }
+							: saved.length > 0
+								? sprintf(
+										/* translators: %s: saved email addresses, separated by commas */
+										__(
+											'Sends a short message to the saved recipients: %s.',
+											'estasoft-erp-crm-sync-engine'
+										),
+										saved.join( ', ' )
+									)
+								: __(
+										'Sends a short message to the saved recipients. None are set, so it goes to the site administrator email.',
+										'estasoft-erp-crm-sync-engine'
+									) }
 					</span>
 				</div>
 				{ sent ? (

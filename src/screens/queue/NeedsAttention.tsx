@@ -20,9 +20,10 @@ import { StatusBadge } from '../../components/StatusBadge';
 import { useResource } from '../../hooks/useResource';
 import { causeValue, groupRemedy, groupTitle } from '../../lib/attention';
 import { formatMoney } from '../../lib/format';
-import { ordersPhrase } from '../../lib/text';
+import { groupsPhrase, ordersPhrase } from '../../lib/text';
 import { MapSkuDialog } from '../mapping/MapSkuDialog';
 import { RetryDialog, SkipDialog, useQueueActions } from './actions';
+import { safeHttpUrl } from '../../lib/url';
 
 /**
  * The failed orders, grouped by error code and cause. Failed orders are never retried by
@@ -76,13 +77,13 @@ export function NeedsAttention() {
 						? sprintf(
 								/* translators: 1: number of failed orders, 2: number of groups */
 								_n(
-									'%1$d failed order in %2$d group. Failed orders are never retried by themselves, because retrying cannot fix them.',
-									'%1$d failed orders in %2$d groups. Failed orders are never retried by themselves, because retrying cannot fix them.',
+									'%1$d failed order in %2$s. Failed orders are never retried by themselves, because retrying cannot fix them.',
+									'%1$d failed orders in %2$s. Failed orders are never retried by themselves, because retrying cannot fix them.',
 									total,
 									'estasoft-erp-crm-sync-engine'
 								),
 								total,
-								list.length
+								groupsPhrase( list.length )
 							)
 						: undefined
 				}
@@ -265,8 +266,15 @@ function GroupCard( {
 							) }
 						</Btn>
 					) : null }
-					{ group.count === 1 && first?.order_edit_url ? (
-						<Btn small href={ first.order_edit_url }>
+					{ group.count === 1 &&
+					safeHttpUrl( first?.order_edit_url ) ? (
+						<Btn
+							small
+							href={
+								safeHttpUrl( first?.order_edit_url ) ??
+								undefined
+							}
+						>
 							{ sprintf(
 								/* translators: %s: order number */ __(
 									'Open order #%s',

@@ -9,6 +9,7 @@ import { useAsyncAction } from '../hooks/useAsyncAction';
 import { errorText } from '../lib/text';
 import { Btn } from './Btn';
 import { Callout } from './Callout';
+import { ErrorDetails } from './ErrorDetails';
 
 export interface DialogProps {
 	title: string;
@@ -74,6 +75,8 @@ export interface ConfirmDialogProps {
 	confirmDisabled?: boolean;
 	/** Extra content for the foot, before Cancel. */
 	extraAction?: ReactNode;
+	/** Names a rule in the list of problems that comes with a refused publish. */
+	ruleLabel?: ( ruleId: string ) => string;
 }
 
 /**
@@ -90,6 +93,7 @@ export interface ConfirmDialogProps {
  * @param props.tone
  * @param props.confirmDisabled
  * @param props.extraAction
+ * @param props.ruleLabel
  * @return The modal.
  */
 export function ConfirmDialog( {
@@ -102,6 +106,7 @@ export function ConfirmDialog( {
 	tone = 'primary',
 	confirmDisabled = false,
 	extraAction,
+	ruleLabel,
 }: ConfirmDialogProps ) {
 	const action = useAsyncAction( async () => {
 		await onConfirm();
@@ -145,7 +150,11 @@ export function ConfirmDialog( {
 				{ children }
 				{ action.error ? (
 					<Callout tone="danger" role="alert">
-						{ errorText( action.error ) }
+						<p>{ errorText( action.error ) }</p>
+						<ErrorDetails
+							error={ action.error }
+							ruleLabel={ ruleLabel }
+						/>
 					</Callout>
 				) : null }
 			</form>

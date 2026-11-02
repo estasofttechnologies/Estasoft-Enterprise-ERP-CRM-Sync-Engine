@@ -1266,13 +1266,22 @@ export function makeInvoices(): InvoiceRow[] {
 		status,
 		authority_status: null,
 		issued_at: null,
-		due_at: null,
+		due_at:
+			left === null
+				? null
+				: new Date( Date.parse( NOW ) + left * 1000 ).toISOString(),
 		seconds_left: left,
 		pdf_url: null,
 		reject_reason: null,
 		total: aed( 10000 + ( order % 1000 ) ),
 		...extra,
 	} );
+	// Older invoices already reported, enough to fill more than one page of the list.
+	const older = Array.from( { length: 30 }, ( _unused, index ) =>
+		row( 10300 + index, `INV/2026/${ 1100 + index }`, 'reported', null, {
+			issued_at: iso( '09:00', '2026-10-31' ),
+		} )
+	);
 	return [
 		row( 10443, 'INV/2026/1181', 'waiting', 20400, {
 			issued_at: iso( '17:20', '2026-11-01' ),
@@ -1295,6 +1304,7 @@ export function makeInvoices(): InvoiceRow[] {
 			authority_status:
 				'Consumer sales are outside UAE e-invoicing for now.',
 		} ),
+		...older,
 	];
 }
 

@@ -3,6 +3,7 @@
  * endpoint list at the bottom of `types.ts`; anything beyond it is marked.
  */
 import type {
+	ConnectionTestResult,
 	ItemState,
 	MappingRule,
 	MappingType,
@@ -22,7 +23,9 @@ export interface ToolsExportResult {
 	json: string;
 }
 
-export type ToolsImportResult = { preview: string[] } | { applied: true };
+export type ToolsImportResult =
+	| { preview: string[] }
+	| { applied: true; drafts?: number; skipped?: string[] };
 
 export interface StockRulesInput {
 	enabled?: boolean;
@@ -69,6 +72,7 @@ export interface LogQuery {
 export interface InvoiceQuery {
 	status?: 'waiting' | 'rejected' | 'reported' | 'not_required';
 	page?: number;
+	per_page?: number;
 }
 
 /** Not in the endpoint list of types.ts: requested as a contract change (see docs/admin-app.md). */
@@ -81,3 +85,21 @@ export type QueueCounts = Partial< Record< ItemState | 'all', number > >;
 export type SettingsInput = Partial< Settings >;
 
 export type { MappingType, ReconDiff };
+
+/** One problem of a mapping that cannot be published (`data.details.errors` of the error answer). */
+export interface RuleProblem {
+	rule_id: string;
+	field: string;
+	code: string;
+	message: string;
+}
+
+/** Extra structure the server adds to an error answer (`data.details`). */
+export interface ApiErrorDetails {
+	/** Every problem of a mapping that cannot be published. */
+	errors: RuleProblem[];
+	/** The failed connection test. */
+	test: ConnectionTestResult | null;
+	/** The line to add to wp-config.php when the encryption key is missing. */
+	keyLine: string | null;
+}

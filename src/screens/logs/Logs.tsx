@@ -4,6 +4,7 @@ import { api } from '../../api/endpoints';
 import type { LogQuery } from '../../api/local-types';
 import type { LogEntry, LogLevel } from '../../api/types';
 import { useApp } from '../../app/AppContext';
+import { useDisplaySettings } from '../../app/DisplaySettingsContext';
 import { useNotices } from '../../app/NoticeProvider';
 import { Link, navigate, routeTo, useRoute } from '../../app/router';
 import { Btn } from '../../components/Btn';
@@ -75,6 +76,7 @@ export function Logs() {
 	const route = useRoute();
 	const { notify } = useNotices();
 	const { canManage } = useApp();
+	const { settings } = useDisplaySettings();
 	const level = (
 		[ 'info', 'warning', 'error' ].includes(
 			route.params.get( 'level' ) ?? ''
@@ -136,7 +138,7 @@ export function Logs() {
 		{ keepPrevious: true }
 	);
 	const items = list.data?.items ?? [];
-	const days = range === '7d' ? 7 : 14;
+	const retentionDays = settings?.log_retention_days ?? null;
 
 	const download = async () => {
 		try {
@@ -151,13 +153,20 @@ export function Logs() {
 		<>
 			<PageHeader
 				title={ __( 'Logs', 'estasoft-erp-crm-sync-engine' ) }
-				description={ sprintf(
-					/* translators: %d: days logs are kept */ __(
-						'Kept for %d days. Names, emails and addresses are removed where the plugin finds them. Check before you share a log.',
-						'estasoft-erp-crm-sync-engine'
-					),
-					days
-				) }
+				description={
+					retentionDays !== null
+						? sprintf(
+								/* translators: %d: days logs are kept */ __(
+									'Kept for %d days. Names, emails and addresses are removed where the plugin finds them. Check before you share a log.',
+									'estasoft-erp-crm-sync-engine'
+								),
+								retentionDays
+							)
+						: __(
+								'Names, emails and addresses are removed where the plugin finds them. Check before you share a log.',
+								'estasoft-erp-crm-sync-engine'
+							)
+				}
 				actions={
 					canManage ? (
 						<>
@@ -326,12 +335,9 @@ export function Logs() {
 						</Btn>
 					}
 				>
-					{ sprintf(
-						/* translators: %d: days */ __(
-							'Nothing has been logged in the last %d days, or the filters hide it.',
-							'estasoft-erp-crm-sync-engine'
-						),
-						days
+					{ __(
+						'Nothing has been logged in this range, or the filters hide it.',
+						'estasoft-erp-crm-sync-engine'
 					) }
 				</EmptyState>
 			) : null }

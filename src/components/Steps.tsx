@@ -2,6 +2,21 @@ import { __, sprintf } from '@wordpress/i18n';
 import { Icon } from './Icon';
 
 /**
+ * Names of the five wizard steps.
+ *
+ * @return Translated names, in order.
+ */
+export function getStepLabels(): string[] {
+	return [
+		__( 'Check your store', 'estasoft-erp-crm-sync-engine' ),
+		__( 'Connect a system', 'estasoft-erp-crm-sync-engine' ),
+		__( 'Choose what to sync', 'estasoft-erp-crm-sync-engine' ),
+		__( 'Preview an order', 'estasoft-erp-crm-sync-engine' ),
+		__( 'Go live', 'estasoft-erp-crm-sync-engine' ),
+	];
+}
+
+/**
  * The five wizard steps. The current one is marked in words (`aria-current="step"`) and shape.
  *
  * @param props         Current step number, 1 to 5.
@@ -9,13 +24,7 @@ import { Icon } from './Icon';
  * @return The step list.
  */
 export function Steps( { current }: { current: number } ) {
-	const steps = [
-		__( 'Check your store', 'estasoft-erp-crm-sync-engine' ),
-		__( 'Connect a system', 'estasoft-erp-crm-sync-engine' ),
-		__( 'Choose what to sync', 'estasoft-erp-crm-sync-engine' ),
-		__( 'Preview an order', 'estasoft-erp-crm-sync-engine' ),
-		__( 'Go live', 'estasoft-erp-crm-sync-engine' ),
-	];
+	const steps = getStepLabels();
 	return (
 		<ol
 			className="estasoft-sync-steps"

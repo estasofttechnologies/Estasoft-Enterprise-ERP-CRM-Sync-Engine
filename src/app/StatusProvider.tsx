@@ -7,6 +7,7 @@ import {
 	useEffect,
 	useMemo,
 	useRef,
+	useState,
 } from '@wordpress/element';
 import type { ReactNode } from 'react';
 import { speak } from '@wordpress/a11y';
@@ -15,6 +16,7 @@ import { api } from '../api/endpoints';
 import type { Status } from '../api/types';
 import { useResource } from '../hooks/useResource';
 import { systemName } from '../lib/text';
+import { useNotices } from './NoticeProvider';
 import { NowContext } from './NowContext';
 
 export interface StatusApi {
@@ -41,6 +43,9 @@ export function useStatus(): StatusApi {
 /** Poll interval for the status, in milliseconds. */
 export const STATUS_POLL_MS = 30000;
 
+/** How often the shared clock moves on between polls, in milliseconds. */
+export const CLOCK_TICK_MS = 60000;
+
 /**
  * @param props          Children.
  * @param props.children
@@ -52,6 +57,52 @@ export function StatusProvider( { children }: { children: ReactNode } ) {
 		keepPrevious: true,
 	} );
 	const previous = useRef< Status | undefined >( undefined );
+	const { dismiss } = useNotices();
+
+	// The pause message ("Syncing is paused ...") is stale as soon as the pause ends, whoever ended it.
+	const mode = resource.data?.mode;
+	useEffect( () => {
+		if ( mode !== undefined && mode !== 'paused' ) {
+			dismiss( 'paused' );
+		}
+	}, [ mode, dismiss ] );
+
+	// A clock that follows the server's time between polls, so deadlines (time left to report an
+	// invoice) keep moving without a request.
+	const base = useMemo(
+		() =>
+			resource.data
+				? {
+						server: Date.parse( resource.data.now ),
+						local: Date.now(),
+					}
+				: null,
+		[ resource.data ]
+	);
+	const [ tick, setTick ] = useState( 0 );
+	useEffect( () => {
+		const id = window.setInterval(
+			() => setTick( ( count ) => count + 1 ),
+			CLOCK_TICK_MS
+		);
+		return () => window.clearInterval( id );
+	}, [] );
+	const now = useMemo(
+		() =>
+			new Date(
+				base
+					? // Whole ticks only, so the clock moves a minute at a time, like the numbers shown from it.
+						base.server +
+							Math.floor(
+								( Date.now() - base.local ) / CLOCK_TICK_MS
+							) *
+								CLOCK_TICK_MS
+					: Date.now()
+			).toISOString(),
+		// `tick` is what moves the clock on.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[ base, tick ]
+	);
 
 	// Tell screen readers, politely, when the numbers that matter change between polls.
 	useEffect( () => {
@@ -91,9 +142,7 @@ export function StatusProvider( { children }: { children: ReactNode } ) {
 	);
 	return (
 		<StatusContext.Provider value={ value }>
-			<NowContext.Provider
-				value={ resource.data?.now ?? new Date().toISOString() }
-			>
+			<NowContext.Provider value={ now }>
 				{ children }
 			</NowContext.Provider>
 		</StatusContext.Provider>

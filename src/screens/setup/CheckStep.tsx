@@ -17,14 +17,18 @@ import {
 /**
  * Step 1, Is your store ready?
  *
- * @param props           The readiness resource owned by the wizard (Continue depends on it).
+ * @param props                  The readiness resource owned by the wizard (Continue depends on it).
  * @param props.readiness
+ * @param props.onContinueAnyway
  * @return The step.
  */
 export function CheckStep( {
 	readiness,
+	onContinueAnyway,
 }: {
 	readiness: Resource< Readiness >;
+	/** Moves on although the check could not run. Offered only then. */
+	onContinueAnyway?: () => void;
 } ) {
 	const rerun = useAsyncAction( async () => {
 		readiness.setData( await api.readiness.run() );
@@ -84,10 +88,36 @@ export function CheckStep( {
 				/>
 			) : null }
 			{ readiness.error && ! data ? (
-				<ErrorState
-					error={ readiness.error }
-					onRetry={ () => void readiness.reload() }
-				/>
+				<>
+					<ErrorState
+						error={ readiness.error }
+						onRetry={ () => void readiness.reload() }
+						title={ __(
+							'The store check could not run.',
+							'estasoft-erp-crm-sync-engine'
+						) }
+					/>
+					{ onContinueAnyway ? (
+						<div className="estasoft-sync-pad">
+							<Callout
+								tone="warning"
+								action={
+									<Btn small onClick={ onContinueAnyway }>
+										{ __(
+											'Continue anyway',
+											'estasoft-erp-crm-sync-engine'
+										) }
+									</Btn>
+								}
+							>
+								{ __(
+									'The check could not run, so nothing is known about your store yet. A check that did not run is not a pass. You can continue and run it later under Settings, then Readiness.',
+									'estasoft-erp-crm-sync-engine'
+								) }
+							</Callout>
+						</div>
+					) : null }
+				</>
 			) : null }
 			{ rerun.error ? (
 				<Callout tone="danger" role="alert">

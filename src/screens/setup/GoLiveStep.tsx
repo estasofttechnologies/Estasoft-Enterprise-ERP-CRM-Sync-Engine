@@ -1,4 +1,4 @@
-import { __, sprintf } from '@wordpress/i18n';
+import { __, _n, sprintf } from '@wordpress/i18n';
 import type { Connection, Readiness } from '../../api/types';
 import { Link } from '../../app/router';
 import { Card } from '../../components/Card';
@@ -107,26 +107,38 @@ export function GoLiveStep( {
 								'Store checks',
 								'estasoft-erp-crm-sync-engine'
 							),
-							value:
-								open > 0 ? (
-									<Link
-										to="/settings/readiness"
-										className="estasoft-sync-link"
-									>
-										{ sprintf(
-											/* translators: %d: number of notes */ __(
-												'%d notes still open',
-												'estasoft-erp-crm-sync-engine'
-											),
-											open
-										) }
-									</Link>
-								) : (
-									__(
-										'All passed',
+							value: ! readiness ? (
+								<Link
+									to="/settings/readiness"
+									className="estasoft-sync-link"
+								>
+									{ __(
+										'Not checked yet',
 										'estasoft-erp-crm-sync-engine'
-									)
-								),
+									) }
+								</Link>
+							) : open > 0 ? (
+								<Link
+									to="/settings/readiness"
+									className="estasoft-sync-link"
+								>
+									{ sprintf(
+										/* translators: %d: number of notes */
+										_n(
+											'%d note still open',
+											'%d notes still open',
+											open,
+											'estasoft-erp-crm-sync-engine'
+										),
+										open
+									) }
+								</Link>
+							) : (
+								__(
+									'All passed',
+									'estasoft-erp-crm-sync-engine'
+								)
+							),
 						},
 						{
 							label: __(

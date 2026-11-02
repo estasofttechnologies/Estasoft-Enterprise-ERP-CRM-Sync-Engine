@@ -25,7 +25,7 @@ All commands run from the repository root.
 | `npm run start:mock` | Same, rebuilt on every change. |
 | `npm run typecheck` | `tsc --noEmit`, strict. |
 | `npm run lint:js` / `npm run lint:css` | ESLint (WordPress rules, text domain and translator comment rules) and Stylelint. |
-| `npm run test:js` | Jest 30 with Testing Library and jest-axe. |
+| `npm run test:js` | Jest 30 with Testing Library and jest-axe (13 files, 180 tests). |
 | `npm run check:js` | All of the above, then the production build. |
 
 `wp-scripts test-unit-js` is not used. From `@wordpress/scripts` 37 it runs Vitest, so tests run through `wp-scripts test-unit-jest --config jest.config.js` instead.
@@ -59,6 +59,16 @@ grep -c -e ESTASOFT_MOCK -e createMockServer -e "Cedar" -e mock-nonce build/inde
 ```
 
 Every count must be 0. `build/mock/` is in `.distignore`, so it never ships.
+
+To prove that `build/` is not stale after a source change, rebuild and look for text that only the current source has, and for text that was removed on purpose:
+
+```
+npm run build
+for t in "/queue/bulk" "/mappings/" "/versions/" "Continue anyway" "Restore selected"; do printf '%s: ' "$t"; grep -c -F -- "$t" build/index.js; done
+for t in "Sync again" "Completed when shipped" "nothing is lost"; do printf '%s: ' "$t"; grep -c -F -- "$t" build/index.js; done
+```
+
+The first loop must print 1 for every text, the second 0.
 
 ## Boot data
 
@@ -95,7 +105,12 @@ tests/js/                one test file per area, plus helpers.tsx and setup.ts
 - **Loading data.** `useResource` returns `{ data, loading, error, refreshing, reload }`. It ignores stale answers, polls when asked (`/status` every 30 seconds through `StatusProvider`, and the queue, connection detail, stock and reconciliation screens on their own intervals), doubles the interval after each failure up to 5 minutes, and stops while the tab is hidden. `StatusProvider` also announces changes in the numbers through a polite live region.
 - **Actions.** `useAsyncAction` wraps a write: it blocks double clicks, shows the progress label, and on failure keeps the dialog open and shows the error text in place. Confirmations use `ConfirmDialog`; deleting all plugin data asks for the typed word DELETE.
 - **Notices.** `NoticeProvider` renders WordPress `Notice` components inside two persistent live regions (`role="status"` and `role="alert"`), so screen readers hear them.
-- **Dates, numbers, money.** Always through `lib/format.ts` and the `DateTime` and `Money` components, which use the store time zone, the site locale and the currency decimals from the boot data (never `toLocaleString` directly).
+- **Dates, numbers, money.** Always through `lib/format.ts` and the `DateTime` and `Money` components, which use the store time zone, the site locale and the currency decimals from the boot data (never `toLocaleString` directly). The number of decimals of an amount comes from `currencyDecimals` of the boot data for the store currency, and from the table in `lib/format.ts` for other currencies. That table is a copy of `EXPONENTS` in `includes/Core/Support/Money.php` (IQD has 3 places, JPY 0); Intl is not asked, because it disagrees with the server for IQD. Keep the two in step.
+- **Time.** `StatusProvider` keeps a shared clock (`NowContext`) that starts from the server time of the last `/status` answer and moves on a minute at a time, so deadlines such as the time left to report an invoice change colour while the page stays open, without a request. Settings are loaded for everyone who can open the app (managers read them, administrators change them): the "Show times in" choice and the log retention come from there.
+- **What the server accepts.** Queue actions are only offered for the states the server accepts (Retry: failed, retrying; Skip: queued, retrying, failed; Restore: skipped), and the messages say the number the server reports (`done`), not the number sent. The tracking status is `none` or `completed`; another saved status is kept and shown by its slug. The preview and publish of a mapping use the saved draft on the server, so edits on screen are saved first.
+- **Error details.** `ApiError.details` holds `errors` (every rule problem of a refused publish), `test` (the failed connection test) and `key_line` (the wp-config line for a missing key), read from `data.details` and checked for shape. `ErrorDetails` shows them in dialogs and callouts.
+- **Links.** Addresses that come from a connected system go through `safeHttpUrl` (`lib/url.ts`); only `http:` and `https:` become links.
+- **Connection picker.** On the Mapping screen the chosen connection is in the address (`?connection=13`); `client.ts` adds it as `connection_id` to the mapping, tax and product requests. Other screens send none and the server uses the first connection that is not disconnected.
 - **Theme.** Product colours are CSS variables named `--estasoft-sync-*`, defined in `src/styles/_tokens.scss` on `.estasoft-sync`, `.estasoft-sync-overlay` (dialogs) and `.estasoft-sync-popover` (menus), because those two render in portals. The rest of the look comes from WordPress components and the admin colour scheme variables.
 - **Responsive.** Up to 782 px tables become cards (`ResponsiveTable` keeps real table roles and labels every cell), the tab bar becomes a sections menu, touch targets are at least 44 px, and dialogs below 520 px become bottom sheets.
 - **Accessibility.** Status is always an icon plus a word. Focus ring is 2 px navy. Animations stop under `prefers-reduced-motion`. Every screen has a jest-axe test, and the mock build was also checked with axe in Chrome (colour contrast included) on every route at 1280 and 390 px wide.
@@ -108,7 +123,7 @@ tests/js/                one test file per area, plus helpers.tsx and setup.ts
 3. Create `src/screens/<area>/<Screen>.tsx`. Start from `Invoices.tsx`: `PageHeader`, `useResource`, then `LoadingState`, `ErrorState`, `EmptyState` and the content, each state handled.
 4. Register the route in `src/app/Routes.tsx`. If it is a new top-level section, add it to `src/app/sections.ts` (and `SectionId`).
 5. Add styles to `src/styles/_screens.scss` (or a new partial that `index.scss` loads) using only `--estasoft-sync-*` variables and logical properties (`margin-inline-start`, `inset-block-start`), and the 782 px rules to `_responsive.scss`.
-6. Add `tests/js/<area>.test.tsx`: render with `renderApp({ route: '/your-route' })` from `helpers.tsx` (options also take `scenario`, `boot` and `failures`), assert the heading with `expectHeading`, the states and one key flow, then call `expectNoA11yViolations()`.
+6. Add `tests/js/<area>.test.tsx`: render with `renderApp({ route: '/your-route' })` from `helpers.tsx` (options also take `scenario`, `boot`, `failures` and `wrap`), assert the heading with `expectHeading`, the states and one key flow, then call `expectNoA11yViolations()`. To reach a state the sample world does not have, put a wrapper around the mock transport: `patchJson` changes a JSON answer, `answer` gives a fixed status and body (an error with `data.details`), `failRoute` makes a request fail like a lost connection.
 7. Run `npm run check:js`.
 
 ## Versions this was built and tested with
@@ -117,8 +132,8 @@ tests/js/                one test file per area, plus helpers.tsx and setup.ts
 
 ## Known gaps
 
-- Screens or options with no REST route yet: the Exports screen, connect forms for systems other than Odoo (an explanation is shown), product and customer matching options, the carriers link table, choosing the connection on mapping, stock and reconciliation requests (the picker is display only), and viewing the rules of an old mapping version.
+- Screens or options with no REST route yet: the Exports screen, connect forms for systems other than Odoo (an explanation is shown), product and customer matching options, and the carriers link table. The Stock and Reconciliation screens have no connection picker.
 - Transform argument names in the rule editor (`value`, `mode`, `default_country`, `map`, `equals`, `then`, `else`, `separator`, `index`) are the ones the editor sends; they must match the PHP transform library.
-- `POST /notifications/test` and `{ note }` on publish are used but are not in `src/api/types.ts`.
 - Vendor logos are not shown (letter tiles instead).
+- The order box printed by PHP still has a "Sync again" button; the server only retries failed or retrying items.
 - `npm audit` reports advisories in development tooling and in `@wordpress/*` packages that WordPress itself supplies at run time; none are inside `build/index.js`.

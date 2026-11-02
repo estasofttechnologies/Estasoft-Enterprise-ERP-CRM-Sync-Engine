@@ -12,6 +12,11 @@ export interface FormatConfig {
 	timezone: string;
 	/** Store currency (used when a value carries none). */
 	currency: string;
+	/**
+	 * Minor-unit exponent of the store currency, from the boot data. It wins over the table for
+	 * that currency, because the server decides how many places an amount has.
+	 */
+	currencyDecimals?: number;
 }
 
 /**
@@ -228,21 +233,58 @@ export function formatSmartTime(
 }
 
 /**
- * Number of fraction digits a currency uses (2 for AED, 3 for KWD, 0 for JPY).
+ * Currencies whose minor unit is not 1/100. A copy of `EXPONENTS` in
+ * `includes/Core/Support/Money.php`; keep the two in step. Intl is not used for this: it says 0
+ * for IQD while the server stores 3 places.
+ */
+const EXPONENTS: Readonly< Record< string, number > > = {
+	KWD: 3,
+	BHD: 3,
+	OMR: 3,
+	JOD: 3,
+	TND: 3,
+	LYD: 3,
+	IQD: 3,
+	JPY: 0,
+	KRW: 0,
+	VND: 0,
+	CLP: 0,
+	ISK: 0,
+	UGX: 0,
+	PYG: 0,
+	RWF: 0,
+	KMF: 0,
+	GNF: 0,
+	DJF: 0,
+	BIF: 0,
+	VUV: 0,
+	XAF: 0,
+	XOF: 0,
+	XPF: 0,
+};
+
+/**
+ * Number of decimal places in the minor unit of a currency (2 for AED, 3 for KWD, 0 for JPY).
+ * The store currency uses the exponent the server sent in the boot data; other currencies use
+ * the same table as the server.
  *
  * @param currency ISO 4217 code.
- * @param locale   WordPress locale.
+ * @param cfg      Format configuration, for the store currency and its exponent.
  * @return Digits.
  */
-export function currencyDigits( currency: string, locale: string ): number {
-	try {
-		return new Intl.NumberFormat( toLocaleTag( locale ), {
-			style: 'currency',
-			currency,
-		} ).resolvedOptions().maximumFractionDigits as number;
-	} catch {
-		return 2;
+export function currencyExponent(
+	currency: string,
+	cfg?: Pick< FormatConfig, 'currency' | 'currencyDecimals' >
+): number {
+	const code = currency.toUpperCase();
+	if (
+		cfg &&
+		cfg.currencyDecimals !== undefined &&
+		cfg.currency.toUpperCase() === code
+	) {
+		return cfg.currencyDecimals;
 	}
+	return EXPONENTS[ code ] ?? 2;
 }
 
 /**
@@ -260,9 +302,9 @@ export function formatMoney(
 		return '—';
 	}
 	const currency = money.currency || cfg.currency;
-	const digits = currencyDigits( currency, cfg.locale );
+	const digits = currencyExponent( currency, cfg );
 	const major = money.minor / Math.pow( 10, digits );
-	const key = `n|${ cfg.locale }|${ currency }`;
+	const key = `n|${ cfg.locale }|${ currency }|${ digits }`;
 	let formatter = cache.get( key ) as Intl.NumberFormat | undefined;
 	if ( ! formatter ) {
 		try {
@@ -270,6 +312,8 @@ export function formatMoney(
 				style: 'currency',
 				currency,
 				currencyDisplay: 'code',
+				minimumFractionDigits: digits,
+				maximumFractionDigits: digits,
 			} );
 		} catch {
 			formatter = new Intl.NumberFormat( 'en-US' );

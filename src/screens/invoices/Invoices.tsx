@@ -2,6 +2,7 @@ import { __, sprintf } from '@wordpress/i18n';
 import { api } from '../../api/endpoints';
 import type { InvoiceRow, InvoiceStatus } from '../../api/types';
 import { Link, navigate, routeTo, useRoute } from '../../app/router';
+import { useNow } from '../../app/NowContext';
 import { useStatus, useSystemName } from '../../app/StatusProvider';
 import { Callout } from '../../components/Callout';
 import { DateTime } from '../../components/DateTime';
@@ -19,8 +20,16 @@ import { StatusBadge } from '../../components/StatusBadge';
 import type { Tone } from '../../components/StatusBadge';
 import { useResource } from '../../hooks/useResource';
 import { formatTimeLeft, timeLeftTone } from '../../lib/format';
+import { safeHttpUrl } from '../../lib/url';
 
 type Filter = 'all' | InvoiceStatus;
+
+const STATUSES: InvoiceStatus[] = [
+	'waiting',
+	'rejected',
+	'reported',
+	'not_required',
+];
 
 function statusBadge( row: InvoiceRow ) {
 	const tones: Record< InvoiceStatus, Tone > = {
@@ -39,6 +48,35 @@ function statusBadge( row: InvoiceRow ) {
 		<StatusBadge tone={ tones[ row.status ] }>
 			{ labels[ row.status ] }
 		</StatusBadge>
+	);
+}
+
+/**
+ * Time left to report one invoice, worked out from `due_at` and the shared clock, so the colour
+ * changes at 12 h and 3 h while the page stays open. `seconds_left` is only used when the server
+ * sent no deadline.
+ *
+ * @param props     Row.
+ * @param props.row
+ * @return The cell.
+ */
+export function TimeLeft( { row }: { row: InvoiceRow } ) {
+	const now = useNow();
+	if ( row.status === 'reported' || row.status === 'not_required' ) {
+		return <>—</>;
+	}
+	const left = row.due_at
+		? Math.round( ( Date.parse( row.due_at ) - Date.parse( now ) ) / 1000 )
+		: row.seconds_left;
+	if ( left === null || Number.isNaN( left ) ) {
+		return <>—</>;
+	}
+	return (
+		<span
+			className={ `estasoft-sync-timeleft estasoft-sync-timeleft--${ timeLeftTone( left ) }` }
+		>
+			{ formatTimeLeft( left ) }
+		</span>
 	);
 }
 
@@ -72,19 +110,31 @@ export function Invoices() {
 		[ filter, page ],
 		{ enabled: supported, keepPrevious: true }
 	);
-	const all = useResource(
-		( signal ) => api.invoices.list( {}, signal ),
+	// The counts on the filter come from the server, one query per status asking for a single row:
+	// the total is what counts, so the numbers do not depend on which page is on screen.
+	const counted = useResource(
+		async ( signal ) => {
+			const [ everything, ...byStatus ] = await Promise.all( [
+				api.invoices.list( { per_page: 1 }, signal ),
+				...STATUSES.map( ( name ) =>
+					api.invoices.list( { status: name, per_page: 1 }, signal )
+				),
+			] );
+			return {
+				all: everything.total,
+				by: Object.fromEntries(
+					STATUSES.map( ( name, index ) => [
+						name,
+						byStatus[ index ].total,
+					] )
+				) as Record< InvoiceStatus, number >,
+			};
+		},
 		[],
-		{ enabled: supported }
+		{ enabled: supported, keepPrevious: true }
 	);
-	const counts = ( all.data?.items ?? [] ).reduce<
-		Record< InvoiceStatus, number >
-	>( ( sum, row ) => ( { ...sum, [ row.status ]: sum[ row.status ] + 1 } ), {
-		waiting: 0,
-		rejected: 0,
-		reported: 0,
-		not_required: 0,
-	} );
+	const counts: Partial< Record< InvoiceStatus, number > > =
+		counted.data?.by ?? {};
 	const rows = list.data?.items ?? [];
 
 	return (
@@ -103,7 +153,7 @@ export function Invoices() {
 				{ sprintf(
 					/* translators: 1: system name */
 					__(
-						'The time left is shown for Saudi consumer invoices, which have to reach the tax authority soon after %1$s issues them. %1$s, or the provider you use, creates, signs and reports the invoice. This page only shows what they say. Rules and dates differ by country and change; ask your accountant which apply to you.',
+						'The time left counts down to the reporting time set for this shop. %1$s, or the provider you use, creates, signs and reports the invoice. This page only shows what they say. Rules and dates differ by country and change; ask your accountant which apply to you.',
 						'estasoft-erp-crm-sync-engine'
 					),
 					system
@@ -148,7 +198,7 @@ export function Invoices() {
 									'All',
 									'estasoft-erp-crm-sync-engine'
 								),
-								count: all.data?.total,
+								count: counted.data?.all,
 							},
 							{
 								value: 'waiting',
@@ -287,20 +337,9 @@ export function Invoices() {
 											'Time left',
 											'estasoft-erp-crm-sync-engine'
 										),
-										cell: ( row ) =>
-											row.seconds_left === null ||
-											row.status === 'reported' ||
-											row.status === 'not_required' ? (
-												'—'
-											) : (
-												<span
-													className={ `estasoft-sync-timeleft estasoft-sync-timeleft--${ timeLeftTone( row.seconds_left ) }` }
-												>
-													{ formatTimeLeft(
-														row.seconds_left
-													) }
-												</span>
-											),
+										cell: ( row ) => (
+											<TimeLeft row={ row } />
+										),
 									},
 									{
 										id: 'detail',
@@ -354,11 +393,15 @@ export function Invoices() {
 															'estasoft-erp-crm-sync-engine'
 														) )
 													: null }
-												{ row.pdf_url ? (
+												{ safeHttpUrl( row.pdf_url ) ? (
 													<>
 														{ ' ' }
 														<a
-															href={ row.pdf_url }
+															href={
+																safeHttpUrl(
+																	row.pdf_url
+																) ?? undefined
+															}
 															target="_blank"
 															rel="noopener noreferrer"
 															className="estasoft-sync-link"
