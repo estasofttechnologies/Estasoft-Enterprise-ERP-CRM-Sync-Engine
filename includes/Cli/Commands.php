@@ -59,11 +59,11 @@ final class Commands {
 	private \Closure $memory;
 
 	/**
-	 * @param Container      $container Services, resolved when a command runs.
-	 * @param CliOutput      $out       Where messages go.
-	 * @param StopSignal     $stop      Set by SIGTERM and SIGINT.
-	 * @param \Closure|null  $sleep     Waits for seconds; sleep() by default.
-	 * @param \Closure|null  $memory    Bytes in use; memory_get_usage( true ) by default.
+	 * @param Container     $container Services, resolved when a command runs.
+	 * @param CliOutput     $out       Where messages go.
+	 * @param StopSignal    $stop      Set by SIGTERM and SIGINT.
+	 * @param \Closure|null $sleep     Waits for seconds; sleep() by default.
+	 * @param \Closure|null $memory    Bytes in use; memory_get_usage( true ) by default.
 	 */
 	public function __construct(
 		private readonly Container $container,

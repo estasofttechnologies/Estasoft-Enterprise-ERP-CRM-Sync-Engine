@@ -160,7 +160,7 @@ final class DashboardWidget {
 			__( '%s connected.', 'estasoft-erp-crm-sync-engine' ),
 			$system
 		);
-		$success   = $this->time( $connection['last_success_at'] ?? null );
+		$success = $this->time( $connection['last_success_at'] ?? null );
 		/* translators: %s: time of day. */
 		$detail = '' === $success ? $connected : $connected . ' ' . sprintf( __( 'Last success %s.', 'estasoft-erp-crm-sync-engine' ), $success );
 

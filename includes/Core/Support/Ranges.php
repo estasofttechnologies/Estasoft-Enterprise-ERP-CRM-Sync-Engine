@@ -65,7 +65,7 @@ final class Ranges {
 	/**
 	 * Read a whole number inside a range.
 	 *
-	 * @param mixed                  $value Candidate (int, or a string of digits).
+	 * @param mixed                    $value Candidate (int, or a string of digits).
 	 * @param array{0:int,1:int,2:int} $range Range.
 	 * @return int|null The number, or null when it is not a whole number inside the range.
 	 */

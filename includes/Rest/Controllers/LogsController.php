@@ -104,7 +104,7 @@ final class LogsController extends BaseController {
 	/**
 	 * Send a CSV answer as plain text instead of JSON. Filter `rest_pre_serve_request`.
 	 *
-	 * @param bool                  $served Whether something else already sent the answer.
+	 * @param bool                    $served Whether something else already sent the answer.
 	 * @param \WP_HTTP_Response|mixed $result The answer.
 	 * @return bool
 	 */

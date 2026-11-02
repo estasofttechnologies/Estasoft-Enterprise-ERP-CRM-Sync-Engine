@@ -17,9 +17,9 @@ defined( 'ABSPATH' ) || exit;
 final class ExternalRef {
 
 	/**
-	 * @param string      $id  The system's internal id.
-	 * @param string      $ref Human number such as S00490.
-	 * @param string|null $url Link to the record, when the system has one.
+	 * @param string              $id  The system's internal id.
+	 * @param string              $ref Human number such as S00490.
+	 * @param string|null         $url Link to the record, when the system has one.
 	 * @param array<string,mixed> $extra Optional facts, for example total_minor for reconciliation.
 	 */
 	public function __construct(

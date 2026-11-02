@@ -51,10 +51,10 @@ final class MappingsController extends BaseController {
 				$base,
 				array(
 					'rules' => array(
-						'type'              => 'array',
-						'required'          => true,
-						'maxItems'          => 500,
-						'items'             => array( 'type' => 'object' ),
+						'type'     => 'array',
+						'required' => true,
+						'maxItems' => 500,
+						'items'    => array( 'type' => 'object' ),
 					),
 					'note'  => self::lineArg( 500 ),
 				)

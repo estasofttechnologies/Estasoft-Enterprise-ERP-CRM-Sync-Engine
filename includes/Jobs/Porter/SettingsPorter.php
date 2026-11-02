@@ -122,7 +122,7 @@ final class SettingsPorter {
 	) {
 		$this->saveDraft     = $saveDraft;
 		$this->validateRules = $validateRules;
-		$this->userName  = $userName ?? static function ( int $userId ): string {
+		$this->userName      = $userName ?? static function ( int $userId ): string {
 			$user = get_userdata( $userId );
 			/* translators: %d: user id. */
 			return false === $user ? sprintf( __( 'User #%d', 'estasoft-erp-crm-sync-engine' ), $userId ) : (string) $user->display_name;
@@ -150,7 +150,7 @@ final class SettingsPorter {
 					$mappings[ $connector ][ $type ] = $live['rules'];
 				}
 			}
-			$rules                 = $this->stock->rules( $id );
+			$rules                = $this->stock->rules( $id );
 			$limits[ $connector ] = array(
 				'reliability' => $connection['settings'],
 				'stock'       => array_intersect_key( $rules, array_flip( array( 'enabled', 'interval_minutes', 'safety_buffer', 'subtract_held' ) ) ),
@@ -353,7 +353,7 @@ final class SettingsPorter {
 	private function assertAcceptable( array $file ): void {
 		$problems = $this->settings->validate( $file['settings'] );
 		foreach ( $file['connection_settings'] as $connector => $groups ) {
-			$problems += $this->limits->validate( (array) ( $groups['reliability'] ?? array() ) );
+			$problems  += $this->limits->validate( (array) ( $groups['reliability'] ?? array() ) );
 			$connection = $this->connectionFor( (string) $connector );
 			if ( null !== $connection ) {
 				$extra = array_merge( (array) ( $groups['stock'] ?? array() ), (array) ( $groups['tracking'] ?? array() ) );

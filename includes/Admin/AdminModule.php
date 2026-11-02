@@ -42,18 +42,18 @@ use Estasoft\SyncEngine\Rest\RestModule;
  */
 final class AdminModule implements ModuleInterface {
 
-	public const URLS           = 'admin.urls';
-	public const SNAPSHOT       = 'admin.snapshot';
-	public const NOTICE_FACTS   = 'admin.notice_facts';
-	public const BOOT_DATA      = 'admin.boot_data';
-	public const ASSETS         = 'admin.assets';
-	public const MENU           = 'admin.menu';
-	public const ADMIN_BAR      = 'admin.admin_bar';
-	public const WIDGET         = 'admin.widget';
-	public const NOTICES        = 'admin.notices';
-	public const HELP           = 'admin.help';
-	public const PLUGIN_LINKS   = 'admin.plugin_links';
-	public const WELCOME        = 'admin.welcome';
+	public const URLS         = 'admin.urls';
+	public const SNAPSHOT     = 'admin.snapshot';
+	public const NOTICE_FACTS = 'admin.notice_facts';
+	public const BOOT_DATA    = 'admin.boot_data';
+	public const ASSETS       = 'admin.assets';
+	public const MENU         = 'admin.menu';
+	public const ADMIN_BAR    = 'admin.admin_bar';
+	public const WIDGET       = 'admin.widget';
+	public const NOTICES      = 'admin.notices';
+	public const HELP         = 'admin.help';
+	public const PLUGIN_LINKS = 'admin.plugin_links';
+	public const WELCOME      = 'admin.welcome';
 
 	/**
 	 * Register services.

@@ -32,7 +32,7 @@ final class TaxMapAssembler {
 	/**
 	 * @param TaxMap    $taxes       Tax mapping store (live edit, logged).
 	 * @param TaxSource $source      The store's tax rates and recent use.
-	 * @param callable $systemCodes Lists the system's tax codes for a connection id.
+	 * @param callable  $systemCodes Lists the system's tax codes for a connection id.
 	 */
 	public function __construct(
 		private readonly TaxMap $taxes,
@@ -70,10 +70,10 @@ final class TaxMapAssembler {
 	/**
 	 * Save the rows the screen sends and return the new `TaxMap`.
 	 *
-	 * @param int                                  $connectionId Connection.
-	 * @param array<int,array<string,mixed>>       $rows         Rows with country, tax_name, rate_percent and system_code.
-	 * @param array<int,array<string,mixed>>|null  $buyerRules   Buyer tax number rules, or null to keep them.
-	 * @param string                               $by           Display name of the person.
+	 * @param int                                 $connectionId Connection.
+	 * @param array<int,array<string,mixed>>      $rows         Rows with country, tax_name, rate_percent and system_code.
+	 * @param array<int,array<string,mixed>>|null $buyerRules   Buyer tax number rules, or null to keep them.
+	 * @param string                              $by           Display name of the person.
 	 * @return array<string,mixed>
 	 *
 	 * @throws ValidationException With one message per wrong row when a row has no country code or a rate outside 0 to 100, or a

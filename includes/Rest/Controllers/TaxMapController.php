@@ -36,8 +36,8 @@ final class TaxMapController extends BaseController {
 					'type'     => 'array',
 					'required' => true,
 					'items'    => array(
-						'type'                 => 'object',
-						'properties'           => array(
+						'type'       => 'object',
+						'properties' => array(
 							'country'      => array(
 								'type'    => 'string',
 								'pattern' => '^[A-Za-z]{2}$',
@@ -50,7 +50,7 @@ final class TaxMapController extends BaseController {
 							),
 							'system_code'  => array( 'type' => array( 'string', 'null' ) ),
 						),
-						'required'             => array( 'country', 'rate_percent' ),
+						'required'   => array( 'country', 'rate_percent' ),
 					),
 				),
 				'buyer_tax_rules' => self::structureArg( 'array' ),

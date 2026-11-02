@@ -247,10 +247,10 @@ final class ShadowService {
 	/**
 	 * The `ShadowInfo` shape.
 	 *
-	 * @param array<string,mixed>  $state  Stored state.
-	 * @param array<string,mixed>  $view   Shaped state.
-	 * @param array<string,int>    $counts matches, differs, not_found.
-	 * @param int                  $total  Shadow orders.
+	 * @param array<string,mixed> $state  Stored state.
+	 * @param array<string,mixed> $view   Shaped state.
+	 * @param array<string,int>   $counts matches, differs, not_found.
+	 * @param int                 $total  Shadow orders.
 	 * @return array<string,mixed>
 	 */
 	private function buildInfo( array $state, array $view, array $counts, int $total ): array {
@@ -340,7 +340,7 @@ final class ShadowService {
 	/**
 	 * Keep one verdict right away (read again first, so another request's verdicts are not overwritten).
 	 *
-	 * @param string                                             $key     Queue item id.
+	 * @param string                                               $key     Queue item id.
 	 * @param array{result:string,fields:array<int,string>,at:int} $verdict Verdict.
 	 */
 	private function remember( string $key, array $verdict ): void {

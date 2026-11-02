@@ -182,19 +182,19 @@ final class ConnectionRepository extends Repository {
 		$id = $this->insert(
 			$this->tables->connections(),
 			array(
-				'connector'          => $connector,
-				'type'               => $type->value,
-				'label'              => mb_substr( $label, 0, 191 ),
-				'status'             => ConnectionStatus::Active->value,
-				'config_json'        => Json::encode( $config ),
-				'settings_json'      => Json::encode( $settings ),
-				'secrets_enc'        => $this->box->encrypt( $secrets ),
-				'secret_hints_json'  => Json::encode( $this->hints( $secrets ) ),
-				'key_fingerprint'    => array() === $secrets ? '' : $this->box->fingerprint(),
-				'breaker_failures'   => 0,
-				'inbound_enabled'    => 0,
-				'created_at'         => $now,
-				'updated_at'         => $now,
+				'connector'         => $connector,
+				'type'              => $type->value,
+				'label'             => mb_substr( $label, 0, 191 ),
+				'status'            => ConnectionStatus::Active->value,
+				'config_json'       => Json::encode( $config ),
+				'settings_json'     => Json::encode( $settings ),
+				'secrets_enc'       => $this->box->encrypt( $secrets ),
+				'secret_hints_json' => Json::encode( $this->hints( $secrets ) ),
+				'key_fingerprint'   => array() === $secrets ? '' : $this->box->fingerprint(),
+				'breaker_failures'  => 0,
+				'inbound_enabled'   => 0,
+				'created_at'        => $now,
+				'updated_at'        => $now,
 			)
 		);
 		if ( 0 === $id ) {
@@ -241,8 +241,8 @@ final class ConnectionRepository extends Repository {
 			$data['config_json'] = Json::encode( $config );
 		}
 		if ( isset( $changes['settings'] ) && is_array( $changes['settings'] ) ) {
-			$current                = $this->settings->normalise( Json::decode( (string) $row['settings_json'] ) );
-			$data['settings_json']  = Json::encode( $this->settings->merge( $current, $changes['settings'] ) );
+			$current               = $this->settings->normalise( Json::decode( (string) $row['settings_json'] ) );
+			$data['settings_json'] = Json::encode( $this->settings->merge( $current, $changes['settings'] ) );
 		}
 		if ( isset( $changes['secrets'] ) && is_array( $changes['secrets'] ) ) {
 			$secrets                   = $this->mergeSecrets( $row, $changes['secrets'] );

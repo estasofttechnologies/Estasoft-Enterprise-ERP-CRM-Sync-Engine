@@ -194,6 +194,8 @@ None. DATEV does not answer, so the plugin cannot read anything back: no stock, 
 
 `windows-1252` (default): the official document says "ANSI". Characters that Windows-1252 cannot hold (Arabic, Polish ł, and so on) become `?`; the preview counts them. German umlauts, ß, Nordic æ ø å and euro sign are written exactly. `utf-8-bom`: UTF-8 with a byte order mark; Arabic and every script stay intact. `[third-party]` says current DATEV releases read UTF-8 with BOM; this is not verified. Line ends are CR LF. The format says `rawBytes`: the bytes are already in the chosen character set and the engine adds nothing. The consultant number, client number, origin, exported-by name, dictation code and the encoding are read from the connection when the file is made (`$batch->connection()`), so a change made after an order was queued applies to the header of the file; the account length, the accounts, the chart and the currency stay as the order saw them, because its records were written with them.
 
+Spreadsheet formulas: free text (the Buchungstext, the Zusatzinformation and the text fields of the header) is written through the engine's `CsvWriter` in neutralising mode `space`. A text that starts with `=`, `+`, `-` or `@`, a tab or a carriage return, and is not a plain number, gets one space in front, so Excel shows it as text and does not run it (a customer name such as `=HYPERLINK(...)`). The space counts toward the field length: the text is shortened after it is added, and a longer text ends with three dots inside the limit. Amounts, dates, accounts, BU keys and the other number columns are written as they are. Belegfeld 1 keeps the characters DATEV allows and cannot start with a plus sign or a hyphen (those are removed, because a sign in front means nothing in a document number); the Buchungstext always starts with `WC `. The booking text and the header name cannot hold a line break (it becomes a space), and a NUL byte is dropped. `[inferred]` DATEV reads a leading space inside quotes as padding; this is not verified (see section 19).
+
 Text fields: quotes doubled, semicolons and line breaks inside names are replaced by a space (a name cannot break the record).
 
 ## 14. Rate limits and pacing
@@ -240,6 +242,7 @@ Catalog capabilities: `order_document = voucher_file`, `refund_document = credit
 
 ## 19. Not verified
 
+- That DATEV Rechnungswesen trims the one space that the connector puts in front of a free text that starts like a formula (`=`, `+`, `-`, `@`, tab, carriage return). If it does not, the text shows with a space in front; the alternative is to remove the characters, which loses the text.
 - The header record names after field 17 and their values (Rechnungslegungszweck 0, SKR in field 27, empty reserved fields) are `[inferred]` from third-party files. A header with a wrong count of fields is the likeliest cause of "file not recognised".
 - Format version 13 against the DATEV release in use: version 12 files are accepted by current releases per third-party pages; whether a version 13 file with 125 columns is read by older releases is not known.
 - UTF-8 with a byte order mark.

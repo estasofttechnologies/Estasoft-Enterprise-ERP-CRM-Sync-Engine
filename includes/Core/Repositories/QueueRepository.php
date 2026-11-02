@@ -634,7 +634,7 @@ final class QueueRepository extends Repository {
 	 */
 	public function findRow( int $id ): ?array {
 		$row = $this->row(
-			"SELECT q.*, " . $this->waitingExpression() . " AS waiting_for_earlier FROM {$this->tables->queue()} q WHERE q.id = %d",
+			'SELECT q.*, ' . $this->waitingExpression() . " AS waiting_for_earlier FROM {$this->tables->queue()} q WHERE q.id = %d",
 			array( $id )
 		);
 		if ( null === $row ) {
@@ -727,7 +727,7 @@ final class QueueRepository extends Repository {
 		$total                = (int) $this->value( "SELECT COUNT(*) FROM {$this->tables->queue()} q WHERE $where", $args );
 		$offset               = ( $query->page - 1 ) * $query->perPage;
 		$rows                 = $this->results(
-			"SELECT q.*, " . $this->waitingExpression() . " AS waiting_for_earlier FROM {$this->tables->queue()} q WHERE $where ORDER BY q.id DESC LIMIT %d OFFSET %d",
+			'SELECT q.*, ' . $this->waitingExpression() . " AS waiting_for_earlier FROM {$this->tables->queue()} q WHERE $where ORDER BY q.id DESC LIMIT %d OFFSET %d",
 			array_merge( $args, array( $query->perPage, $offset ) )
 		);
 		return new Paged( array_map( array( $this, 'listShape' ), $rows ), $total, $query->page, $query->perPage );
@@ -832,7 +832,7 @@ final class QueueRepository extends Repository {
 		$last  = $now->setTime( (int) $now->format( 'G' ), 0, 0 );
 		$first = $last->modify( '-23 hours' );
 
-		$rows = $this->results(
+		$rows  = $this->results(
 			"SELECT DATE_FORMAT(finished_at, '%%Y-%%m-%%d %%H:00:00') AS hour_start, state, COUNT(*) AS n
 			FROM {$this->tables->queue()}
 			WHERE finished_at >= %s AND state IN (%s,%s) AND mode = %s
@@ -919,8 +919,8 @@ final class QueueRepository extends Repository {
 	 * @return array<int,array{id:int,reaps:int,failed:bool}> The items taken back, in id order.
 	 */
 	public function reapStale(): array {
-		$now  = $this->now();
-		$rows = $this->results(
+		$now   = $this->now();
+		$rows  = $this->results(
 			"SELECT id, reaps, locked_by FROM {$this->tables->queue()} WHERE state = %s AND locked_until IS NOT NULL AND locked_until < %s ORDER BY id ASC LIMIT 500",
 			array( ItemState::Syncing->value, $now )
 		);
@@ -1016,9 +1016,9 @@ final class QueueRepository extends Repository {
 		$long   = Time::sql( $now->modify( sprintf( '-%d days', self::KEEP_LONG_DAYS ) ) );
 		$total  = 0;
 		$passes = array(
-			array( "state = %s AND failed_before = 0 AND finished_at < %s", array( ItemState::Synced->value, $short ) ),
-			array( "state = %s AND failed_before = 1 AND finished_at < %s", array( ItemState::Synced->value, $long ) ),
-			array( "state = %s AND updated_at < %s", array( ItemState::Skipped->value, $long ) ),
+			array( 'state = %s AND failed_before = 0 AND finished_at < %s', array( ItemState::Synced->value, $short ) ),
+			array( 'state = %s AND failed_before = 1 AND finished_at < %s', array( ItemState::Synced->value, $long ) ),
+			array( 'state = %s AND updated_at < %s', array( ItemState::Skipped->value, $long ) ),
 		);
 		foreach ( $passes as $pass ) {
 			for ( $i = 0; $i < 200; ++$i ) {
@@ -1052,12 +1052,12 @@ final class QueueRepository extends Repository {
 			if ( array() === $rows ) {
 				break;
 			}
-			$ids      = array_map( static fn( array $row ): int => (int) $row['id'], $rows );
-			$deleted  = $this->run(
+			$ids     = array_map( static fn( array $row ): int => (int) $row['id'], $rows );
+			$deleted = $this->run(
 				"DELETE FROM {$this->tables->queue()} WHERE id IN (" . $this->placeholders( $ids ) . ') AND state IN (%s,%s)',
 				array_merge( $ids, array( ItemState::Queued->value, ItemState::Retrying->value ) )
 			);
-			$total   += $deleted;
+			$total  += $deleted;
 			if ( count( $ids ) < self::PRUNE_BATCH || 0 === $deleted ) {
 				break;
 			}

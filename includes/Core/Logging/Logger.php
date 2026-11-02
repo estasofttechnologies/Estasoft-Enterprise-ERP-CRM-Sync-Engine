@@ -100,7 +100,7 @@ final class Logger {
 				'request_excerpt'  => $this->redactor->excerpt( $context['request'] ?? null, $bytes, $personal, $paths, $cap ),
 				'response_excerpt' => $this->redactor->excerpt( $context['response'] ?? null, $bytes, $personal, $paths, $cap ),
 			);
-			$id = $this->logs->write( $entry );
+			$id    = $this->logs->write( $entry );
 			return $id > 0 ? $id : null;
 		} catch ( \Throwable $e ) {
 			unset( $e );

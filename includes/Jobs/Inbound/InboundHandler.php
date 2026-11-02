@@ -204,7 +204,7 @@ final class InboundHandler {
 		if ( strlen( $rawBody ) > self::MAX_BODY ) {
 			throw $this->refuse( $connectionId, 413, __( 'The message is too large.', 'estasoft-erp-crm-sync-engine' ) );
 		}
-		$normal    = array();
+		$normal = array();
 		foreach ( $headers as $name => $value ) {
 			$normal[ strtolower( (string) $name ) ] = is_array( $value ) ? (string) reset( $value ) : (string) $value;
 		}

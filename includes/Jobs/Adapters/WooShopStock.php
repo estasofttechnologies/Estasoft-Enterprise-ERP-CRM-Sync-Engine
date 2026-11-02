@@ -89,7 +89,7 @@ final class WooShopStock implements ShopStock {
 				'has_more' => false,
 			);
 		}
-		$result = wc_get_products(
+		$result   = wc_get_products(
 			array(
 				'status'   => array( 'publish', 'private' ),
 				'type'     => array( 'simple', 'variation' ),
@@ -112,9 +112,9 @@ final class WooShopStock implements ShopStock {
 			if ( '' === $sku ) {
 				continue;
 			}
-			$stock    = $product->get_stock_quantity();
-			$buffer   = $product->get_meta( self::BUFFER, true );
-			$items[]  = array(
+			$stock   = $product->get_stock_quantity();
+			$buffer  = $product->get_meta( self::BUFFER, true );
+			$items[] = array(
 				'id'            => (int) $product->get_id(),
 				'sku'           => $sku,
 				'name'          => (string) $product->get_name(),

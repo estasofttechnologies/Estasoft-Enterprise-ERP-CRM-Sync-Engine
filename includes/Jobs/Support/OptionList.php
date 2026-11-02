@@ -51,8 +51,8 @@ final class OptionList {
 	 * @return int The id given to it.
 	 */
 	public function prepend( array $entry ): int {
-		$stored = $this->options->get( $this->name, array() );
-		$next   = is_array( $stored ) && isset( $stored['next_id'] ) ? max( 1, (int) $stored['next_id'] ) : 1;
+		$stored      = $this->options->get( $this->name, array() );
+		$next        = is_array( $stored ) && isset( $stored['next_id'] ) ? max( 1, (int) $stored['next_id'] ) : 1;
 		$entry['id'] = $next;
 		$items       = $this->all();
 		array_unshift( $items, $entry );

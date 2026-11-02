@@ -94,7 +94,7 @@ final class StockStore {
 	 * @param array<string,mixed> $state        State.
 	 */
 	public function saveLast( int $connectionId, array $state ): void {
-		$all                          = $this->last();
+		$all                           = $this->last();
 		$all[ (string) $connectionId ] = $state;
 		$this->options->set( self::LAST, $all );
 	}
@@ -175,9 +175,9 @@ final class StockStore {
 				return (int) $conflict['id'];
 			}
 		}
-		$id             = $data['next_id'];
+		$id              = $data['next_id'];
 		$data['next_id'] = $id + 1;
-		$data['open'][] = array(
+		$data['open'][]  = array(
 			'id'              => $id,
 			'connection_id'   => $connectionId,
 			'product_id'      => $productId,
@@ -188,7 +188,7 @@ final class StockStore {
 			'system_held'     => $systemHeld,
 			'detected_at'     => $detectedAt,
 		);
-		$data['open'] = array_slice( $data['open'], -self::CONFLICT_CAP );
+		$data['open']    = array_slice( $data['open'], -self::CONFLICT_CAP );
 		$this->options->set( self::CONFLICTS, $data );
 		return $id;
 	}
@@ -232,7 +232,7 @@ final class StockStore {
 		if ( null === $found ) {
 			return null;
 		}
-		$data['open']                                                  = array_values( $data['open'] );
+		$data['open'] = array_values( $data['open'] );
 		$data['decisions'][ $found['connection_id'] . ':' . $found['product_id'] ] = array(
 			'decision' => $decision,
 			'quantity' => (int) $found['system_quantity'],

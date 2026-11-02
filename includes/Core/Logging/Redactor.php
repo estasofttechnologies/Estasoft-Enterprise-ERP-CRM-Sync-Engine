@@ -294,12 +294,12 @@ final class Redactor {
 	/**
 	 * Redact a value of any shape: arrays are walked field by field; strings go through the text rules.
 	 *
-	 * @param mixed              $data            Array, string or scalar.
-	 * @param bool               $redactPersonal  Whether personal data is removed too.
-	 * @param array<int,string>  $sensitivePaths  Extra field paths whose value is personal, for example `partner.vat`. A path
-	 *                                            of one segment is a field name. A longer path matches a field whose names
-	 *                                            from the top, ending in the same segments, are those of the path (so
-	 *                                            `partner.ref` does not hide an unrelated `ref`).
+	 * @param mixed             $data            Array, string or scalar.
+	 * @param bool              $redactPersonal  Whether personal data is removed too.
+	 * @param array<int,string> $sensitivePaths  Extra field paths whose value is personal, for example `partner.vat`. A path
+	 *                                           of one segment is a field name. A longer path matches a field whose names
+	 *                                           from the top, ending in the same segments, are those of the path (so
+	 *                                           `partner.ref` does not hide an unrelated `ref`).
 	 * @return mixed
 	 */
 	public function structure( mixed $data, bool $redactPersonal = true, array $sensitivePaths = array() ): mixed {
@@ -313,12 +313,12 @@ final class Redactor {
 	/**
 	 * A short redacted text for the log: the payload encoded as JSON, redacted, and cut to a size.
 	 *
-	 * @param mixed              $payload         Array or string.
-	 * @param int                $maxBytes        Largest size in bytes; 0 or less keeps nothing.
-	 * @param bool               $redactPersonal  Whether personal data is removed too.
-	 * @param array<int,string>  $sensitivePaths  Extra personal field paths.
-	 * @param int                $capBytes        A payload that encodes to more than this is not processed at all; a short note
-	 *                                            replaces it. 0 or less means no cap.
+	 * @param mixed             $payload         Array or string.
+	 * @param int               $maxBytes        Largest size in bytes; 0 or less keeps nothing.
+	 * @param bool              $redactPersonal  Whether personal data is removed too.
+	 * @param array<int,string> $sensitivePaths  Extra personal field paths.
+	 * @param int               $capBytes        A payload that encodes to more than this is not processed at all; a short note
+	 *                                           replaces it. 0 or less means no cap.
 	 * @return string|null Null when nothing is kept.
 	 */
 	public function excerpt( mixed $payload, int $maxBytes, bool $redactPersonal = true, array $sensitivePaths = array(), int $capBytes = 0 ): ?string {

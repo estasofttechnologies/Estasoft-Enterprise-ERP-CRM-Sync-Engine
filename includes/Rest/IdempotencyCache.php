@@ -70,11 +70,11 @@ final class IdempotencyCache {
 	/**
 	 * The stored answer for a key, if there is one for this request.
 	 *
-	 * @param int    $userId Person making the request.
-	 * @param string $key    Validated key.
-	 * @param string $method HTTP method.
-	 * @param string $route  Route such as /queue/12/retry.
-	 * @param string $body   Raw request body.
+	 * @param int                 $userId Person making the request.
+	 * @param string              $key    Validated key.
+	 * @param string              $method HTTP method.
+	 * @param string              $route  Route such as /queue/12/retry.
+	 * @param string              $body   Raw request body.
 	 * @param array<string,mixed> $query       Query-string parameters.
 	 * @param array<string,mixed> $routeParams Parameters taken from the route, for example the id.
 	 * @return array{status:int,data:mixed}|null Null when the key is new.
@@ -102,13 +102,13 @@ final class IdempotencyCache {
 	/**
 	 * Keep an answer. Only answers below 400 are kept.
 	 *
-	 * @param int    $userId Person making the request.
-	 * @param string $key    Validated key.
-	 * @param string $method HTTP method.
-	 * @param string $route  Route.
-	 * @param string $body   Raw request body.
-	 * @param int    $status HTTP status of the answer.
-	 * @param mixed  $data   Body of the answer.
+	 * @param int                 $userId Person making the request.
+	 * @param string              $key    Validated key.
+	 * @param string              $method HTTP method.
+	 * @param string              $route  Route.
+	 * @param string              $body   Raw request body.
+	 * @param int                 $status HTTP status of the answer.
+	 * @param mixed               $data   Body of the answer.
 	 * @param array<string,mixed> $query       Query-string parameters.
 	 * @param array<string,mixed> $routeParams Parameters taken from the route.
 	 */
@@ -148,6 +148,16 @@ final class IdempotencyCache {
 	 * @param array<string,mixed> $routeParams Route parameters.
 	 */
 	private function fingerprint( string $body, array $query, array $routeParams ): string {
-		return hash_hmac( 'sha256', Json::canonical( array( 'body' => $body, 'query' => $query, 'route' => $routeParams ) ), $this->secret );
+		return hash_hmac(
+			'sha256',
+			Json::canonical(
+				array(
+					'body'  => $body,
+					'query' => $query,
+					'route' => $routeParams,
+				)
+			),
+			$this->secret
+		);
 	}
 }

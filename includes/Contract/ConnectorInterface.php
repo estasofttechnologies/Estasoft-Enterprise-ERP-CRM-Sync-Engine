@@ -142,9 +142,9 @@ interface ConnectorInterface {
 	/**
 	 * Quantities per warehouse for the given SKUs (needs stock_in).
 	 *
-	 * @param Connection         $connection Connection.
-	 * @param array<int,string>  $skus       SKUs.
-	 * @param array<int,string>  $warehouses Warehouse ids that count toward shop stock; empty means all.
+	 * @param Connection        $connection Connection.
+	 * @param array<int,string> $skus       SKUs.
+	 * @param array<int,string> $warehouses Warehouse ids that count toward shop stock; empty means all.
 	 * @return array<string,array{quantity:int,held:int}>|ConnectorError Keyed by SKU.
 	 */
 	public function fetchStock( Connection $connection, array $skus, array $warehouses ): array|ConnectorError;
@@ -161,7 +161,7 @@ interface ConnectorInterface {
 	/**
 	 * Invoice facts for a synced order (needs invoice_readback).
 	 *
-	 * @param Connection $connection Connection.
+	 * @param Connection  $connection Connection.
 	 * @param ExternalRef $ref       The synced order in the system.
 	 * @return array{number:string,status:string,authority_status:string,pdf_url:string,qr:string,issued_at:string}|ConnectorError|null
 	 */

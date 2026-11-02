@@ -88,7 +88,7 @@ interface ShopOrders {
 	/**
 	 * Replace the tracking saved on an order.
 	 *
-	 * @param int                                                  $orderId Order id.
+	 * @param int                                                      $orderId Order id.
 	 * @param array<int,array{carrier:string,number:string,at:string}> $entries Complete list.
 	 */
 	public function saveTracking( int $orderId, array $entries ): void;

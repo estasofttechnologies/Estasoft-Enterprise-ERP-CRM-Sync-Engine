@@ -66,10 +66,10 @@ final class StockService {
 	 * Setting defaults. Stock sync is off until the person turns it on.
 	 */
 	public const DEFAULTS = array(
-		'enabled'         => false,
+		'enabled'          => false,
 		'interval_minutes' => 5,
-		'safety_buffer'   => 2,
-		'subtract_held'   => true,
+		'safety_buffer'    => 2,
+		'subtract_held'    => true,
 	);
 
 	/**
@@ -306,13 +306,13 @@ final class StockService {
 			$this->store->decide( (int) $conflict['id'], 'accept', Time::iso( Time::sql( $this->clock->now() ) ) ?? '' );
 			throw new JobException( __( 'That product no longer exists.', 'estasoft-erp-crm-sync-engine' ), 404 );
 		}
-		$rules   = $this->rules( $connectionId );
-		$system  = (int) $conflict['system_quantity'];
+		$rules  = $this->rules( $connectionId );
+		$system = (int) $conflict['system_quantity'];
 		// The same sum as a normal pass: the product's own buffer when it has one, the units the system held back when the conflict
 		// was found, the units WooCommerce holds, and none sold-but-unsynced (accepting means the system's number is the truth).
-		$after   = $this->target( $rules, $productId, $system, max( 0, (int) ( $conflict['system_held'] ?? 0 ) ), isset( $product['buffer'] ) ? (int) $product['buffer'] : null, 0 );
-		$nowSql  = Time::sql( $this->clock->now() );
-		$before  = (int) ( $product['quantity'] ?? 0 );
+		$after  = $this->target( $rules, $productId, $system, max( 0, (int) ( $conflict['system_held'] ?? 0 ) ), isset( $product['buffer'] ) ? (int) $product['buffer'] : null, 0 );
+		$nowSql = Time::sql( $this->clock->now() );
+		$before = (int) ( $product['quantity'] ?? 0 );
 		if ( $this->shop->setQuantity( $productId, $after, $system, $nowSql ) && $before !== $after ) {
 			$this->store->addChange(
 				array(
@@ -422,8 +422,8 @@ final class StockService {
 			),
 			is_array( $state['partial'] ?? null ) ? $state['partial'] : array()
 		);
-		$before     = $partial;
-		$counted    = $this->shop->countUnsyncedSoldUnits();
+		$before  = $partial;
+		$counted = $this->shop->countUnsyncedSoldUnits();
 		if ( ! $counted['complete'] ) {
 			// Too many orders are waiting to be read in full. A shop quantity set from a short count could be too high, so this pass
 			// writes nothing; it is tried again a little later.
@@ -453,8 +453,8 @@ final class StockService {
 				$eligible[]         = $item;
 			}
 			if ( array() !== $eligible ) {
-				$skus    = array_values( array_unique( array_column( $eligible, 'system_sku' ) ) );
-				$answer  = $this->gateway->call( $connection, $connector, fn() => $connector->fetchStock( $connection, $skus, $warehouses ) );
+				$skus   = array_values( array_unique( array_column( $eligible, 'system_sku' ) ) );
+				$answer = $this->gateway->call( $connection, $connector, fn() => $connector->fetchStock( $connection, $skus, $warehouses ) );
 				if ( $answer instanceof ConnectorError || ! is_array( $answer ) ) {
 					++$summary['errors'];
 					$summary['complete']   = false;
@@ -462,7 +462,16 @@ final class StockService {
 					$summary['unmatched'] += $partial['unmatched'] - $before['unmatched'];
 					$summary['changed']   += $partial['changed'] - $before['changed'];
 					$summary['conflicts'] += $partial['conflicts'] - $before['conflicts'];
-					$this->store->saveLast( $connection->id, array_replace( $state, array( 'next_page' => $page, 'partial' => $partial ) ) );
+					$this->store->saveLast(
+						$connection->id,
+						array_replace(
+							$state,
+							array(
+								'next_page' => $page,
+								'partial'   => $partial,
+							)
+						)
+					);
 					return;
 				}
 				$this->apply( $connection, $rules, $eligible, array_change_key_case( $answer, CASE_LOWER ), $unsynced, $shadow, $partial );
@@ -480,7 +489,16 @@ final class StockService {
 		$summary['conflicts'] += $partial['conflicts'] - $before['conflicts'];
 		if ( ! $complete ) {
 			$summary['complete'] = false;
-			$this->store->saveLast( $connection->id, array_replace( $state, array( 'next_page' => $page, 'partial' => $partial ) ) );
+			$this->store->saveLast(
+				$connection->id,
+				array_replace(
+					$state,
+					array(
+						'next_page' => $page,
+						'partial'   => $partial,
+					)
+				)
+			);
 			return;
 		}
 		$this->store->saveLast(
@@ -511,13 +529,13 @@ final class StockService {
 	/**
 	 * Apply one page of system quantities.
 	 *
-	 * @param Connection                       $connection Connection.
-	 * @param array<string,mixed>              $rules      Stock rules.
-	 * @param array<int,array<string,mixed>>   $items      Eligible products of the page.
-	 * @param array<string,array<string,int>>  $answer     System quantities by lower-case SKU.
-	 * @param array<int,int>                   $unsynced   Units sold and not yet synced, by product.
-	 * @param bool                             $shadow     Whether the shadow window is open (count only).
-	 * @param array<string,int>                $partial    Counts (updated).
+	 * @param Connection                      $connection Connection.
+	 * @param array<string,mixed>             $rules      Stock rules.
+	 * @param array<int,array<string,mixed>>  $items      Eligible products of the page.
+	 * @param array<string,array<string,int>> $answer     System quantities by lower-case SKU.
+	 * @param array<int,int>                  $unsynced   Units sold and not yet synced, by product.
+	 * @param bool                            $shadow     Whether the shadow window is open (count only).
+	 * @param array<string,int>               $partial    Counts (updated).
 	 */
 	private function apply( Connection $connection, array $rules, array $items, array $answer, array $unsynced, bool $shadow, array &$partial ): void {
 		$nowSql = Time::sql( $this->clock->now() );

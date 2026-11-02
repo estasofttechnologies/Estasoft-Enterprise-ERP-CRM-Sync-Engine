@@ -12,14 +12,14 @@ namespace Estasoft\SyncEngine\Domain;
 defined( 'ABSPATH' ) || exit;
 
 enum Capability: string {
-	case Orders            = 'orders';
-	case Customers         = 'customers';
-	case Refunds           = 'refunds';
-	case StockIn           = 'stock_in';
-	case TrackingIn        = 'tracking_in';
-	case PricesIn          = 'prices_in';
-	case InvoiceReadback   = 'invoice_readback';
-	case Reconciliation    = 'reconciliation';
-	case Webhooks          = 'webhooks';
-	case ShadowLookup      = 'shadow_lookup';
+	case Orders          = 'orders';
+	case Customers       = 'customers';
+	case Refunds         = 'refunds';
+	case StockIn         = 'stock_in';
+	case TrackingIn      = 'tracking_in';
+	case PricesIn        = 'prices_in';
+	case InvoiceReadback = 'invoice_readback';
+	case Reconciliation  = 'reconciliation';
+	case Webhooks        = 'webhooks';
+	case ShadowLookup    = 'shadow_lookup';
 }
