@@ -52,4 +52,10 @@ enum Outcome: string {
 	 * The item was skipped because its connection no longer exists.
 	 */
 	case Skipped = 'skipped';
+
+	/**
+	 * The lock on the item was lost while it was being processed (it ran out and the reaper may have given the item to
+	 * another worker). The result was thrown away and the row was left alone. WorkerReport counts it as held.
+	 */
+	case LockLost = 'lock_lost';
 }

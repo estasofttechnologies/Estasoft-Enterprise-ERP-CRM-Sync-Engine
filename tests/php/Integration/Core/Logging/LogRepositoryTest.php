@@ -41,7 +41,7 @@ final class LogRepositoryTest extends CoreIntegrationTestCase {
 			array_keys( $detail )
 		);
 		$this->assertSame( 'error', $detail['level'] );
-		$this->assertSame( '2026-11-02T12:00:00Z', $detail['ts'] );
+		$this->assertSame( '2026-11-02T12:00:00.000Z', $detail['ts'] );
 		$this->assertSame( 840, $detail['duration_ms'] );
 		$this->assertSame( 7, $detail['mapping_version'] );
 		$this->assertSame( '{"ref":"WC-10485"}', $detail['request_excerpt'] );
@@ -87,6 +87,25 @@ final class LogRepositoryTest extends CoreIntegrationTestCase {
 		$this->assertSame( array( 'E5', 'E4', 'E3' ), array_column( $this->h->logs->latest( 3 ), 'message' ) );
 	}
 
+	public function test_timestamps_are_stored_and_read_in_milliseconds(): void {
+		$this->h->clock->advanceMilliseconds( 250 );
+		$first = $this->h->logs->write( array( 'level' => 'info', 'message' => 'one' ) );
+		$this->h->clock->advanceMilliseconds( 600 );
+		$second = $this->h->logs->write( array( 'level' => 'info', 'message' => 'two' ) );
+
+		$this->assertSame( '2026-11-02T12:00:00.250Z', $this->h->logs->find( $first )['ts'] );
+		$this->assertSame( '2026-11-02T12:00:00.850Z', $this->h->logs->find( $second )['ts'] );
+		$this->assertSame( '2026-11-02 12:00:00.250', $this->h->wpdb->get_var( $this->h->wpdb->prepare( "SELECT ts FROM {$this->h->tables->logs()} WHERE id = %d", $first ) ) ); // phpcs:ignore
+
+		$csv = $this->h->logs->csv( LogQuery::fromArray( array() ) );
+		$this->assertStringContainsString( '2026-11-02T12:00:00.850Z', $csv, 'The download shows the same time as the screen.' );
+	}
+
+	public function test_a_message_is_cut_to_500_characters(): void {
+		$id = $this->h->logs->write( array( 'level' => 'info', 'message' => str_repeat( 'é', 800 ) ) );
+		$this->assertSame( 500, mb_strlen( $this->h->logs->find( $id )['message'] ) );
+	}
+
 	public function test_the_timeline_of_one_item_is_oldest_first(): void {
 		$this->h->logs->write( array( 'level' => 'info', 'message' => 'other item', 'queue_id' => 2 ) );
 		$this->h->logs->write( array( 'level' => 'warning', 'message' => 'Try 1 failed', 'queue_id' => 1, 'code' => 'SYNC-NET-001' ) );
@@ -94,7 +113,7 @@ final class LogRepositoryTest extends CoreIntegrationTestCase {
 		$this->h->logs->write( array( 'level' => 'info', 'message' => 'Sent', 'queue_id' => 1 ) );
 		$timeline = $this->h->logs->timeline( 1 );
 		$this->assertSame( array( 'Try 1 failed', 'Sent' ), array_column( $timeline, 'message' ) );
-		$this->assertSame( array( 'at' => '2026-11-02T12:00:00Z', 'level' => 'warning', 'code' => 'SYNC-NET-001', 'message' => 'Try 1 failed' ), $timeline[0] );
+		$this->assertSame( array( 'at' => '2026-11-02T12:00:00.000Z', 'level' => 'warning', 'code' => 'SYNC-NET-001', 'message' => 'Try 1 failed' ), $timeline[0] );
 	}
 
 	public function test_entries_older_than_the_retention_time_are_deleted(): void {
@@ -129,5 +148,108 @@ final class LogRepositoryTest extends CoreIntegrationTestCase {
 		$this->assertStringContainsString( '"error"', $csv );
 		$errors = $this->h->logs->csv( LogQuery::fromArray( array( 'level' => 'error' ) ) );
 		$this->assertCount( 2, explode( "\r\n", trim( $errors ) ) );
+	}
+
+	/**
+	 * Write entries at different ages: 30 minutes, 5 hours, 3 days, 20 days and 60 days old.
+	 *
+	 * @return array<string,int> Entry ids by age label.
+	 */
+	private function entriesOfDifferentAges(): array {
+		$ids = array();
+		foreach ( array( '60d' => 60 * 86400, '20d' => 20 * 86400, '3d' => 3 * 86400, '5h' => 5 * 3600, '30m' => 1800 ) as $label => $age ) {
+			$this->h->clock->set( '2026-11-02 12:00:00' );
+			$this->h->clock->advance( -$age );
+			$ids[ $label ] = $this->h->logs->write( array( 'level' => 'info', 'message' => "age $label", 'queue_id' => 7, 'code' => 'SYNC-NET-001' ) );
+		}
+		$this->h->clock->set( '2026-11-02 12:00:00' );
+		return $ids;
+	}
+
+	/**
+	 * @dataProvider ranges
+	 *
+	 * @param array<int,string> $expected Age labels that stay, newest first.
+	 */
+	public function test_the_range_keeps_only_recent_entries( string $range, array $expected ): void {
+		$ids   = $this->entriesOfDifferentAges();
+		$found = $this->h->logs->query( LogQuery::fromArray( array( 'range' => $range ) ) );
+		$this->assertSame( array_map( static fn( string $label ) => $ids[ $label ], $expected ), array_column( $found->items, 'id' ), $range );
+		$this->assertSame( count( $expected ), $found->total );
+	}
+
+	/**
+	 * @return array<string,array{0:string,1:array<int,string>}>
+	 */
+	public static function ranges(): array {
+		return array(
+			'one hour'     => array( '1h', array( '30m' ) ),
+			'24 hours'     => array( '24h', array( '30m', '5h' ) ),
+			'seven days'   => array( '7d', array( '30m', '5h', '3d' ) ),
+			'thirty days'  => array( '30d', array( '30m', '5h', '3d', '20d' ) ),
+			'all time'     => array( 'all', array( '30m', '5h', '3d', '20d', '60d' ) ),
+		);
+	}
+
+	public function test_without_a_range_or_with_an_unknown_one_everything_is_shown(): void {
+		$this->entriesOfDifferentAges();
+		$this->assertSame( 'all', LogQuery::fromArray( array() )->range );
+		$this->assertSame( 'all', LogQuery::fromArray( array( 'range' => 'forever' ) )->range );
+		$this->assertSame( 'all', LogQuery::fromArray( array( 'range' => '' ) )->range );
+		$this->assertSame( '7d', LogQuery::fromArray( array( 'range' => ' 7D ' ) )->range );
+		$this->assertNull( LogQuery::fromArray( array( 'range' => 'all' ) )->rangeSeconds() );
+		$this->assertSame( 3600, LogQuery::fromArray( array( 'range' => '1h' ) )->rangeSeconds() );
+		$this->assertSame( 5, $this->h->logs->query( LogQuery::fromArray( array( 'range' => 'forever' ) ) )->total );
+		$this->assertSame( 5, $this->h->logs->query( new LogQuery() )->total, 'the constructor default is all time as well' );
+	}
+
+	public function test_the_range_follows_the_clock_not_the_wall(): void {
+		$this->entriesOfDifferentAges();
+		$this->h->clock->advance( 7200 );
+		$this->assertSame( 0, $this->h->logs->query( LogQuery::fromArray( array( 'range' => '1h' ) ) )->total, 'two hours later the 30 minute old entry is outside one hour' );
+		$this->assertSame( 2, $this->h->logs->query( LogQuery::fromArray( array( 'range' => '24h' ) ) )->total, 'the 30 minute and the 5 hour old entries are now 2.5 and 7 hours old' );
+	}
+
+	public function test_queue_id_and_code_filters_match_exactly_and_combine_with_the_range(): void {
+		$this->entriesOfDifferentAges();
+		$this->h->logs->write( array( 'level' => 'error', 'message' => 'other item, other code', 'queue_id' => 8, 'code' => 'SYNC-NET-002' ) );
+		$this->h->logs->write( array( 'level' => 'error', 'message' => 'same item, other code', 'queue_id' => 7, 'code' => 'SYNC-NET-002' ) );
+		$this->h->logs->write( array( 'level' => 'error', 'message' => 'longer code', 'queue_id' => 7, 'code' => 'SYNC-NET-0011' ) );
+
+		$this->assertSame( 7, $this->h->logs->query( LogQuery::fromArray( array( 'queue_id' => 7 ) ) )->total, 'queue 7: five old entries, one with another code, one with a longer code' );
+		$this->assertSame( 1, $this->h->logs->query( LogQuery::fromArray( array( 'queue_id' => 8 ) ) )->total );
+		$this->assertSame( 2, $this->h->logs->query( LogQuery::fromArray( array( 'code' => 'SYNC-NET-002' ) ) )->total, 'exact: not SYNC-NET-0011 and not SYNC-NET-001' );
+		$this->assertSame( 5, $this->h->logs->query( LogQuery::fromArray( array( 'code' => 'SYNC-NET-001' ) ) )->total );
+		$this->assertSame( 1, $this->h->logs->query( LogQuery::fromArray( array( 'queue_id' => 7, 'code' => 'SYNC-NET-002' ) ) )->total );
+		$this->assertSame( 3, $this->h->logs->query( LogQuery::fromArray( array( 'queue_id' => 7, 'code' => 'SYNC-NET-001', 'range' => '7d' ) ) )->total, 'item 7, that code, last 7 days: 30m, 5h, 3d' );
+		$this->assertSame( 0, $this->h->logs->query( LogQuery::fromArray( array( 'queue_id' => 7, 'code' => 'SYNC-NET-002', 'range' => '1h', 'level' => 'info' ) ) )->total );
+		$this->assertNull( LogQuery::fromArray( array( 'queue_id' => 0, 'code' => '  ' ) )->queueId );
+		$this->assertNull( LogQuery::fromArray( array( 'queue_id' => 'x', 'code' => '  ' ) )->code );
+		$this->assertSame( 20, mb_strlen( (string) LogQuery::fromArray( array( 'code' => str_repeat( 'A', 40 ) ) )->code ), 'a code is at most 20 characters, as stored' );
+	}
+
+	public function test_the_csv_applies_the_same_filters_as_the_screen(): void {
+		$ids = $this->entriesOfDifferentAges();
+		$this->h->logs->write( array( 'level' => 'error', 'message' => 'other item', 'queue_id' => 8, 'code' => 'SYNC-NET-002' ) );
+		foreach ( array(
+			array( 'range' => '24h' ),
+			array( 'queue_id' => 7, 'range' => '7d' ),
+			array( 'code' => 'SYNC-NET-002' ),
+			array( 'queue_id' => 7, 'code' => 'SYNC-NET-001', 'range' => '30d', 'level' => 'info' ),
+			array(),
+		) as $filters ) {
+			$query  = LogQuery::fromArray( $filters );
+			$screen = array_column( $this->h->logs->query( $query )->items, 'message' );
+			$lines  = array_values( array_filter( explode( "\r\n", trim( $this->h->logs->csv( $query ) ) ) ) );
+			array_shift( $lines );
+			$this->assertSame( count( $screen ), count( $lines ), json_encode( $filters ) );
+			foreach ( $screen as $message ) {
+				$this->assertStringContainsString( '"' . $message . '"', implode( "\n", $lines ), json_encode( $filters ) . ' ' . $message );
+			}
+		}
+		$csv = $this->h->logs->csv( LogQuery::fromArray( array( 'range' => '1h' ) ) );
+		$this->assertStringContainsString( 'age 30m', $csv );
+		$this->assertStringNotContainsString( 'age 5h', $csv );
+		$this->assertGreaterThan( 0, $ids['30m'] );
 	}
 }

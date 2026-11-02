@@ -31,7 +31,7 @@ final class SecretBoxTest extends TestCase {
 	public function test_the_stored_text_hides_the_secret_and_has_a_version_prefix(): void {
 		$box    = new SecretBox( self::KEY );
 		$stored = $box->encrypt( array( 'api_key' => 'sk_live_123456789abcdef' ) );
-		$this->assertStringStartsWith( 'v1.', $stored );
+		$this->assertStringStartsWith( 'v2.', $stored );
 		$this->assertStringNotContainsString( 'sk_live', $stored );
 		$this->assertStringNotContainsString( 'sk_live', (string) base64_decode( substr( $stored, 3 ), true ) );
 	}
@@ -66,15 +66,61 @@ final class SecretBoxTest extends TestCase {
 		}
 	}
 
-	public function test_a_short_key_counts_as_missing(): void {
+	public function test_a_key_needs_at_least_32_characters(): void {
 		$this->assertFalse( ( new SecretBox( 'short' ) )->keyAvailable() );
 		$this->assertFalse( ( new SecretBox( '' ) )->keyAvailable() );
+		$this->assertFalse( ( new SecretBox( str_repeat( 'k', 31 ) ) )->keyAvailable() );
+		$this->assertTrue( ( new SecretBox( str_repeat( 'k', 32 ) ) )->keyAvailable() );
+		$this->assertTrue( ( new SecretBox( 'short' ) )->keyTooShort() );
+		$this->assertFalse( ( new SecretBox( '' ) )->keyTooShort(), 'No key at all is "missing", not "too short".' );
+		$this->assertFalse( ( new SecretBox( str_repeat( 'k', 32 ) ) )->keyTooShort() );
+	}
+
+	public function test_a_short_key_is_refused_with_a_clear_message_and_sync_cfg_002(): void {
+		$short = new SecretBox( str_repeat( 'k', 31 ) );
+		try {
+			$short->encrypt( array( 'a' => 'b' ) );
+			$this->fail( 'Expected an exception.' );
+		} catch ( CryptoException $e ) {
+			$this->assertSame( ErrorCode::Cfg002, $e->errorCode() );
+			$this->assertStringContainsString( 'too short', $e->getMessage() );
+			$this->assertStringContainsString( '32', $e->getMessage() );
+			$this->assertStringNotContainsString( 'kkkk', $e->getMessage() );
+		}
+		$stored = ( new SecretBox( self::KEY ) )->encrypt( array( 'a' => 'b' ) );
+		$this->expectException( CryptoException::class );
+		$short->decrypt( $stored );
+	}
+
+	public function test_the_cipher_key_is_derived_with_a_context_string(): void {
+		// A v2 text must not open with the plain hash of the key material (the key of the first development builds).
+		$plain = sodium_crypto_generichash( self::KEY, '', SODIUM_CRYPTO_SECRETBOX_KEYBYTES );
+		$nonce = random_bytes( SODIUM_CRYPTO_SECRETBOX_NONCEBYTES );
+		$forged = 'v2.' . sodium_bin2base64( $nonce . sodium_crypto_secretbox( '{"a":"b"}', $nonce, $plain ), SODIUM_BASE64_VARIANT_ORIGINAL );
+		try {
+			( new SecretBox( self::KEY ) )->decrypt( $forged );
+			$this->fail( 'Expected an exception.' );
+		} catch ( CryptoException $e ) {
+			$this->assertNull( $e->errorCode() );
+		}
+		$stored = ( new SecretBox( self::KEY ) )->encrypt( array( 'a' => 'b' ) );
+		$raw    = sodium_base642bin( substr( $stored, 3 ), SODIUM_BASE64_VARIANT_ORIGINAL );
+		$this->assertFalse( sodium_crypto_secretbox_open( substr( $raw, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES ), substr( $raw, 0, SODIUM_CRYPTO_SECRETBOX_NONCEBYTES ), $plain ) );
+	}
+
+	public function test_text_from_the_first_development_builds_can_still_be_read(): void {
+		$legacy = sodium_crypto_generichash( self::KEY, '', SODIUM_CRYPTO_SECRETBOX_KEYBYTES );
+		$nonce  = random_bytes( SODIUM_CRYPTO_SECRETBOX_NONCEBYTES );
+		$text   = 'v1.' . sodium_bin2base64( $nonce . sodium_crypto_secretbox( '{"api_key":"old-secret"}', $nonce, $legacy ), SODIUM_BASE64_VARIANT_ORIGINAL );
+		$box    = new SecretBox( self::KEY );
+		$this->assertSame( array( 'api_key' => 'old-secret' ), $box->decrypt( $text ) );
+		$this->assertStringStartsWith( 'v2.', $box->encrypt( $box->decrypt( $text ) ), 'It is written again in the new format.' );
 	}
 
 	public function test_wrong_key_fails_with_a_clear_message_and_no_auth_code(): void {
 		$stored = ( new SecretBox( self::KEY ) )->encrypt( array( 'api_key' => 'sk_live_123456789abcdef' ) );
 		try {
-			( new SecretBox( 'a-completely-different-key-9876' ) )->decrypt( $stored );
+			( new SecretBox( 'a-completely-different-key-98765432' ) )->decrypt( $stored );
 			$this->fail( 'Expected an exception.' );
 		} catch ( CryptoException $e ) {
 			$this->assertNull( $e->errorCode() );
@@ -89,7 +135,7 @@ final class SecretBoxTest extends TestCase {
 		$stored = $box->encrypt( array( 'a' => 'b' ) );
 		$raw    = (string) base64_decode( substr( $stored, 3 ), true );
 		$raw[ strlen( $raw ) - 1 ] = chr( ord( $raw[ strlen( $raw ) - 1 ] ) ^ 1 );
-		foreach ( array( 'v1.' . base64_encode( $raw ), 'v1.@@@not-base64@@@', 'v1.' . base64_encode( 'tiny' ), 'plain text', 'v2.' . substr( $stored, 3 ) ) as $bad ) {
+		foreach ( array( 'v2.' . base64_encode( $raw ), 'v2.@@@not-base64@@@', 'v2.' . base64_encode( 'tiny' ), 'plain text', 'v3.' . substr( $stored, 3 ) ) as $bad ) {
 			try {
 				$box->decrypt( $bad );
 				$this->fail( 'Expected an exception for ' . $bad );
@@ -102,7 +148,7 @@ final class SecretBoxTest extends TestCase {
 	public function test_fingerprint_is_stable_per_key_and_reveals_nothing_of_it(): void {
 		$a = new SecretBox( self::KEY );
 		$b = new SecretBox( self::KEY );
-		$c = new SecretBox( 'another-key-another-key-123456' );
+		$c = new SecretBox( 'another-key-another-key-1234567890' );
 		$this->assertSame( $a->fingerprint(), $b->fingerprint() );
 		$this->assertNotSame( $a->fingerprint(), $c->fingerprint() );
 		$this->assertMatchesRegularExpression( '/^[0-9a-f]{16}$/', $a->fingerprint() );

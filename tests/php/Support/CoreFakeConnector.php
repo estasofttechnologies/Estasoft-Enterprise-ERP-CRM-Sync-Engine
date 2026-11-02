@@ -70,6 +70,11 @@ final class CoreFakeConnector implements ConnectorInterface {
 	public ?\Throwable $existingThrow = null;
 
 	/**
+	 * Called at the end of findExisting(), to make something happen while the system is being asked.
+	 */
+	public ?\Closure $afterFind = null;
+
+	/**
 	 * Seconds the fake clock moves during each send().
 	 */
 	public int $sendSeconds = 0;
@@ -213,10 +218,11 @@ final class CoreFakeConnector implements ConnectorInterface {
 		if ( null !== $this->existingThrow ) {
 			throw $this->existingThrow;
 		}
-		if ( null !== $this->existingError ) {
-			return $this->existingError;
+		$found = null !== $this->existingError ? $this->existingError : ( $this->documents[ $item->clientReference() ] ?? null );
+		if ( null !== $this->afterFind ) {
+			( $this->afterFind )();
 		}
-		return $this->documents[ $item->clientReference() ] ?? null;
+		return $found;
 	}
 
 	/**

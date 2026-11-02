@@ -49,9 +49,10 @@ final class IdempotencyRepository extends Repository {
 	 *
 	 * @param string $key     Key.
 	 * @param int    $queueId Queue item id.
+	 * @return bool Whether the ledger row was changed.
 	 */
-	public function attach( string $key, int $queueId ): void {
-		$this->run( "UPDATE {$this->tables->idempotency()} SET queue_id = %d WHERE idempotency_key = %s", array( $queueId, $key ) );
+	public function attach( string $key, int $queueId ): bool {
+		return $this->run( "UPDATE {$this->tables->idempotency()} SET queue_id = %d WHERE idempotency_key = %s", array( $queueId, $key ) ) > 0;
 	}
 
 	/**
@@ -117,7 +118,26 @@ final class IdempotencyRepository extends Repository {
 	}
 
 	/**
-	 * How many keys exist for an entity and event: the next ordinal for events that can repeat.
+	 * The ordinal for the next key of an entity and event: the highest ordinal used so far plus one, 0 when there is none.
+	 *
+	 * This is not a count. Keys are deleted after 90 days from the oldest end, so after a cleanup the count can be lower
+	 * than an ordinal that is still stored, and a count would hand out a key that already exists (and the event would be
+	 * dropped as a repeat).
+	 *
+	 * @param int        $connectionId Connection.
+	 * @param EntityType $type         Entity type.
+	 * @param string     $entityId     WooCommerce id.
+	 * @param string     $event        Event.
+	 */
+	public function nextOrdinal( int $connectionId, EntityType $type, string $entityId, string $event ): int {
+		return (int) $this->value(
+			"SELECT COALESCE(MAX(ordinal), -1) + 1 FROM {$this->tables->idempotency()} WHERE connection_id = %d AND entity_type = %s AND entity_id = %s AND event = %s",
+			array( $connectionId, $type->value, mb_substr( $entityId, 0, 64 ), mb_substr( $event, 0, 32 ) )
+		);
+	}
+
+	/**
+	 * How many keys exist for an entity and event. Kept for older callers; use nextOrdinal() to build a key.
 	 *
 	 * @param int        $connectionId Connection.
 	 * @param EntityType $type         Entity type.

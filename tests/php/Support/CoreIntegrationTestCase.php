@@ -47,6 +47,9 @@ abstract class CoreIntegrationTestCase extends IntegrationTestCase {
 		'estasoft_sync_connection_paused',
 		'estasoft_sync_connection_resumed',
 		'estasoft_sync_shadow_processed',
+		'estasoft_sync_item_state_changed',
+		'estasoft_sync_scheduled_tasks',
+		'estasoft_sync_option_names',
 		'estasoft_sync_settings_updated',
 		'estasoft_sync_migrated',
 		'estasoft_sync_run_queue',
@@ -62,9 +65,39 @@ abstract class CoreIntegrationTestCase extends IntegrationTestCase {
 	);
 
 	/**
+	 * Hooks other modules of the plugin listen to (notifications, order meta mirror, jobs). The Core tests run with the whole
+	 * plugin loaded, so these are emptied for the length of a test (and put back after it): a Core test then sees only what Core
+	 * does, and only the callbacks the test adds itself.
+	 *
+	 * @var array<int,string>
+	 */
+	private const ISOLATED_HOOKS = array(
+		'estasoft_sync_should_enqueue',
+		'estasoft_sync_queue_display',
+		'estasoft_sync_classify_error',
+		'estasoft_sync_log_redact',
+		'estasoft_sync_meta_keys',
+		'estasoft_sync_option_names',
+		'estasoft_sync_before_send',
+		'estasoft_sync_after_send',
+		'estasoft_sync_item_synced',
+		'estasoft_sync_item_failed',
+		'estasoft_sync_item_state_changed',
+		'estasoft_sync_shadow_processed',
+		'estasoft_sync_connection_paused',
+		'estasoft_sync_connection_resumed',
+		'estasoft_sync_scheduled_tasks',
+	);
+
+	/**
 	 * Wired services.
 	 */
 	protected CoreHarness $h;
+
+	/**
+	 * Whether an external object cache was in use before the test.
+	 */
+	private bool $hadExtObjectCache = false;
 
 	/**
 	 * Saved hook state: name to a clone of its WP_Hook, or null when there was none.
@@ -81,6 +114,13 @@ abstract class CoreIntegrationTestCase extends IntegrationTestCase {
 		foreach ( self::GUARDED_HOOKS as $name ) {
 			$this->savedHooks[ $name ] = isset( $wp_filter[ $name ] ) ? clone $wp_filter[ $name ] : null;
 		}
+		foreach ( self::ISOLATED_HOOKS as $name ) {
+			unset( $wp_filter[ $name ] );
+		}
+		// The Core tests run against the database. Another test may have left the object cache flag on (restoring it with a null
+		// does nothing), so it is set off here and put back after.
+		$this->hadExtObjectCache = (bool) wp_using_ext_object_cache();
+		wp_using_ext_object_cache( false );
 		$this->h = new CoreHarness();
 		$this->h->reset();
 	}
@@ -98,6 +138,7 @@ abstract class CoreIntegrationTestCase extends IntegrationTestCase {
 			}
 		}
 		$this->savedHooks = array();
+		wp_using_ext_object_cache( $this->hadExtObjectCache );
 		$this->h->reset();
 	}
 

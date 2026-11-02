@@ -153,7 +153,7 @@ final class SchedulerTest extends CoreIntegrationTestCase {
 		$this->h->idempotency->reserve( hash( 'sha256', 'x' ), $conn, \Estasoft\SyncEngine\Domain\EntityType::Order, '1', 'created', 0 );
 		$this->h->clock->advance( 100 * 86400 );
 		$result = $this->h->retention->run();
-		$this->assertSame( array( 'queue' => 1, 'logs' => 1, 'idempotency' => 2, 'recon' => 0 ), $result );
+		$this->assertSame( array( 'queue' => 1, 'disconnected' => 0, 'logs' => 1, 'idempotency' => 2, 'recon' => 0 ), $result );
 		$this->h->scheduler->handlePrune();
 	}
 

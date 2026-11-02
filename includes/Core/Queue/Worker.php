@@ -16,14 +16,18 @@ use Estasoft\SyncEngine\Core\Repositories\QueueRepository;
 use Estasoft\SyncEngine\Core\Settings;
 use Estasoft\SyncEngine\Core\Support\Clock;
 use Estasoft\SyncEngine\Core\Support\Uuid;
-use Estasoft\SyncEngine\Domain\Connection;
 use Estasoft\SyncEngine\Domain\Item;
 
 /**
  * One run: put expired pauses and locks right, probe connections whose circuit is open, then claim and process
  * items until nothing is left to claim or the work limit (at most 20 seconds) is reached. Each connection is limited to its
  * own number of items at once and requests per second; all connections together are limited by the global setting.
- * Several workers can run at once: claiming is atomic and the rate limit is shared.
+ * Several workers can run at once: claiming is atomic, the limits on items at once are checked and applied under one
+ * named lock (see ClaimPlanner), and the rate limit is shared.
+ *
+ * The setting "requests per second" is applied here as a limit on how many items may START per second (one slot is taken
+ * from the limiter before each item). It does not count the HTTP calls an item makes: one item can make several calls
+ * (a lookup, a send, a read-back), and a connector that must keep to the system's limit paces its own calls.
  */
 final class Worker {
 
@@ -45,11 +49,9 @@ final class Worker {
 	private \Closure $sleep;
 
 	/**
-	 * Connection cache for one run.
-	 *
-	 * @var array<int,Connection|null>
+	 * Counts what is running and claims what is left, under the claim lock.
 	 */
-	private array $cache = array();
+	private ClaimPlanner $planner;
 
 	/**
 	 * @param QueueRepository      $queue       Queue.
@@ -62,6 +64,7 @@ final class Worker {
 	 * @param Settings             $settings    Settings (global concurrency).
 	 * @param Clock                $clock       Time source.
 	 * @param \Closure|null        $sleep       Waits for a number of seconds; usleep by default.
+	 * @param ClaimPlanner|null    $planner     Claims items; the standard one when null.
 	 */
 	public function __construct(
 		private readonly QueueRepository $queue,
@@ -73,8 +76,10 @@ final class Worker {
 		private readonly PauseController $pause,
 		private readonly Settings $settings,
 		private readonly Clock $clock,
-		?\Closure $sleep = null
+		?\Closure $sleep = null,
+		?ClaimPlanner $planner = null
 	) {
+		$this->planner = $planner ?? new ClaimPlanner( $queue, $connections );
 		$this->sleep = $sleep ?? static function ( float $seconds ): void {
 			usleep( (int) round( $seconds * 1000000 ) );
 		};
@@ -92,7 +97,7 @@ final class Worker {
 		$started = $this->clock->now();
 		$worker  = Uuid::v4();
 		$report  = new WorkerReport();
-		$this->cache = array();
+		$this->planner->reset();
 
 		$this->pause->resumeDue();
 		$this->breaker->probeDue();
@@ -105,7 +110,7 @@ final class Worker {
 				$report->stoppedBecause = 'time';
 				break;
 			}
-			$batch = $this->claimBatch( $global, $worker );
+			$batch = $this->planner->claim( $global, $worker, self::LOCK_SECONDS );
 			if ( array() === $batch ) {
 				$report->stoppedBecause = 'idle';
 				break;
@@ -115,47 +120,18 @@ final class Worker {
 				if ( $this->elapsed( $started ) >= $limit || ! $this->waitForSlot( $item, $started, $limit ) ) {
 					// Out of time: give this item and the rest of the batch back without a try.
 					foreach ( array_slice( $batch, $index ) as $rest ) {
-						$this->queue->release( $rest->id, null, null, null, true );
+						$this->queue->release( $rest->id, null, null, null, true, $worker );
 						$report->add( Outcome::Held );
 					}
 					$report->stoppedBecause = 'time';
 					break 2;
 				}
-				$report->add( $this->processor->process( $item ) );
+				$report->add( $this->processor->process( $item, $worker ) );
 			}
 		}
 
 		$report->seconds = $this->elapsed( $started );
 		return $report;
-	}
-
-	/**
-	 * Claim items for every active connection, within the per-connection and global limits.
-	 *
-	 * @param int    $global   Items at once, all connections together.
-	 * @param string $workerId Id of this run.
-	 * @return array<int,Item>
-	 */
-	private function claimBatch( int $global, string $workerId ): array {
-		$slots = $global - $this->queue->countSyncing();
-		$batch = array();
-		foreach ( $this->connections->activeIds() as $id ) {
-			if ( $slots <= 0 ) {
-				break;
-			}
-			$connection = $this->connection( $id );
-			if ( null === $connection ) {
-				continue;
-			}
-			$room = min( (int) ( $connection->settings['concurrency'] ?? 2 ), $slots ) - $this->queue->countSyncing( $id );
-			if ( $room <= 0 ) {
-				continue;
-			}
-			$claimed = $this->queue->claim( $room, self::LOCK_SECONDS, $workerId, $id );
-			$slots  -= count( $claimed );
-			$batch   = array_merge( $batch, $claimed );
-		}
-		return $batch;
 	}
 
 	/**
@@ -167,7 +143,7 @@ final class Worker {
 	 * @return bool False when the wait would run past the limit.
 	 */
 	private function waitForSlot( Item $item, \DateTimeImmutable $started, int $limit ): bool {
-		$connection = $this->connection( $item->connectionId );
+		$connection = $this->planner->connection( $item->connectionId );
 		$rate       = (float) ( $connection?->settings['requests_per_second'] ?? 4 );
 		$wait       = $this->limiter->acquire( $item->connectionId, $rate );
 		if ( $wait <= 0.0 ) {
@@ -180,17 +156,6 @@ final class Worker {
 		return true;
 	}
 
-	/**
-	 * A connection without secrets, cached for the run.
-	 *
-	 * @param int $id Connection id.
-	 */
-	private function connection( int $id ): ?Connection {
-		if ( ! array_key_exists( $id, $this->cache ) ) {
-			$this->cache[ $id ] = $this->connections->findWithoutSecrets( $id );
-		}
-		return $this->cache[ $id ];
-	}
 
 	/**
 	 * Seconds since a moment.

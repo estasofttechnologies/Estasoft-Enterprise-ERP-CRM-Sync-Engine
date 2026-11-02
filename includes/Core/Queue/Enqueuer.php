@@ -29,9 +29,16 @@ use Estasoft\SyncEngine\Domain\ItemMode;
  * to run inside the order's own database transaction, so the queue row commits or rolls back with the order. It
  * never throws; if anything goes wrong it records the problem in the log and returns null, so checkout is never blocked.
  *
- * A second call for the same event of the same object is a no-op (same idempotency key). An event that can repeat
- * (`updated`) joins an item that is still waiting instead of adding another one, because the payload is built at send
- * time from the latest data. While the setup is in its shadow window, new items are marked shadow.
+ * The idempotency key, the queue row and the link between them are written as one unit (`QueueRepository::atomically()`):
+ * in a transaction of its own when none is open, and in a savepoint inside the caller's transaction when one is, so that
+ * a failed write leaves neither a key without an item nor an item without its key, and nothing is ever nested or
+ * committed behind the caller's back.
+ *
+ * Every event can happen again for the same object (a second payment, a second cancellation, another edit), so every
+ * event gets a growing ordinal in its key. An event joins an item of the same kind that is still waiting instead of
+ * adding another one, because the payload is built at send time from the latest data; once that item is done, the next
+ * event adds a new item with the next ordinal. Two requests that race for the same ordinal end with one item: the
+ * ledger and the queue both refuse the second key. While the shadow mode is on, new items are marked shadow.
  */
 final class Enqueuer {
 
@@ -60,7 +67,8 @@ final class Enqueuer {
 	 *
 	 * Optional `$meta` keys: `partition` (ordering key; default `order:{id}` for orders, tracking and invoices, otherwise
 	 * `{type}:{id}`; a refund should pass `order:{parent order id}`), `label` (order number for the lists), `customer`,
-	 * `total_minor`, `currency`, `search` (text or list of SKUs and emails to search by). The filter
+	 * `total_minor`, `currency`, `search` (text or list of SKUs and emails to search by), `priority` (0 to 9, claimed lowest
+	 * first among items that are due; default 5). The filter
 	 * `estasoft_sync_queue_display` can supply the same values.
 	 *
 	 * @param EntityType          $type         What the event is about.
@@ -116,38 +124,19 @@ final class Enqueuer {
 			return null;
 		}
 
-		$repeatable = IdempotencyKey::isRepeatable( $event );
-		if ( $repeatable ) {
-			$waiting = $this->queue->findUnfinished( $connection->id, $type, $entityId, $event );
-			if ( null !== $waiting ) {
-				$this->queue->noteChangedWhileWaiting( $waiting );
-				return $waiting;
-			}
-		}
+		// Everything that can be slow or run other people's code is done before the unit starts, so the unit is short.
+		$mode       = $this->onboarding->isShadowActive( $this->clock->now() ) ? ItemMode::Shadow : ItemMode::Live;
+		$display    = $this->display( $type, $entityId, $event, $meta );
+		$partition  = $this->partition( $type, $entityId, $meta );
+		$priority   = isset( $meta['priority'] ) ? (int) $meta['priority'] : QueueRepository::DEFAULT_PRIORITY;
+		$tries      = count( (array) ( $connection->settings['retry_delays_seconds'] ?? ConnectionSettings::DEFAULT_DELAYS ) ) + 1;
 
-		$ordinal = $repeatable ? $this->idempotency->countFor( $connection->id, $type, $entityId, $event ) : 0;
-		$key     = IdempotencyKey::make( $connection->id, $type, $entityId, $event, $ordinal );
-		if ( ! $this->idempotency->reserve( $key, $connection->id, $type, $entityId, $event, $ordinal ) ) {
-			// Seen before. Return the existing item, or null when it was cleaned up long ago (the key remembers, the row is gone).
-			$existing = $this->idempotency->queueIdFor( $key );
-			return ( null !== $existing && null !== $this->queue->find( $existing ) ) ? $existing : null;
-		}
-
-		$mode    = $this->onboarding->isShadowActive( $this->clock->now() ) ? ItemMode::Shadow : ItemMode::Live;
-		$display = $this->display( $type, $entityId, $event, $meta );
-		$id      = $this->queue->enqueue(
-			$connection->id,
-			$type,
-			$entityId,
-			$event,
-			$this->partition( $type, $entityId, $meta ),
-			$key,
-			$mode,
-			count( (array) ( $connection->settings['retry_delays_seconds'] ?? ConnectionSettings::DEFAULT_DELAYS ) ) + 1,
-			$display
+		// The ledger key, the queue row and the link between them are one unit: all kept or all dropped. Inside the order's
+		// own transaction this is a savepoint in it, and it commits and rolls back with the order.
+		$id = $this->queue->atomically(
+			fn(): int|null|false => $this->store( $connection->id, $type, $entityId, $event, $partition, $mode, $tries, $display, $priority )
 		);
-		if ( $id <= 0 ) {
-			$this->idempotency->release( $key );
+		if ( false === $id ) {
 			$this->logger->error(
 				__( 'An event could not be added to the queue.', 'estasoft-erp-crm-sync-engine' ),
 				array(
@@ -157,8 +146,53 @@ final class Enqueuer {
 			);
 			return null;
 		}
-		$this->idempotency->attach( $key, $id );
 		return $id;
+	}
+
+	/**
+	 * The writes of one event, run inside the unit.
+	 *
+	 * @param int                 $connectionId Connection.
+	 * @param EntityType          $type         Entity type.
+	 * @param string              $entityId     Id.
+	 * @param string              $event        Event.
+	 * @param string              $partition    Ordering key.
+	 * @param ItemMode            $mode         live or shadow.
+	 * @param int                 $tries        Tries allowed.
+	 * @param array<string,mixed> $display      Values for the lists.
+	 * @param int                 $priority     0 to 9.
+	 * @return int|null|false The item id; null when nothing was queued because the event was seen before and the item is gone; false when a write failed and the unit must be undone.
+	 */
+	private function store( int $connectionId, EntityType $type, string $entityId, string $event, string $partition, ItemMode $mode, int $tries, array $display, int $priority ): int|null|false {
+		// An item of the same kind that has not finished takes this event: the payload is built later from the latest data.
+		$waiting = $this->queue->findUnfinished( $connectionId, $type, $entityId, $event );
+		if ( null !== $waiting ) {
+			$this->queue->noteChangedWhileWaiting( $waiting );
+			return $waiting;
+		}
+
+		$ordinal = $this->idempotency->nextOrdinal( $connectionId, $type, $entityId, $event );
+		$key     = IdempotencyKey::make( $connectionId, $type, $entityId, $event, $ordinal );
+		if ( ! $this->idempotency->reserve( $key, $connectionId, $type, $entityId, $event, $ordinal ) ) {
+			// Seen before. Return the existing item, or null when it was cleaned up long ago (the key remembers, the row is gone).
+			$existing = $this->idempotency->queueIdFor( $key );
+			return ( null !== $existing && null !== $this->queue->find( $existing ) ) ? $existing : null;
+		}
+
+		$queued = $this->queue->enqueueOnce( $connectionId, $type, $entityId, $event, $partition, $key, $mode, $tries, $display, $priority );
+		if ( $queued['id'] <= 0 ) {
+			$this->idempotency->release( $key );
+			return false;
+		}
+		if ( ! $queued['created'] ) {
+			// The queue already holds an item with this key (a request raced us, or the ledger was cleaned but the row stayed).
+			$this->idempotency->attach( $key, $queued['id'] );
+			return $queued['id'];
+		}
+		if ( ! $this->idempotency->attach( $key, $queued['id'] ) ) {
+			return false;
+		}
+		return $queued['id'];
 	}
 
 	/**

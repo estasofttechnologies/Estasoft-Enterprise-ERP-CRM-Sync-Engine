@@ -54,8 +54,11 @@ namespace {
 		return 42;
 	}
 	function as_get_scheduled_actions( $args = array(), $return = 'ids' ) {
-		$GLOBALS['a1_log'][] = array( 'query', $args['status'], $args['group'], $args['date_compare'] );
-		return $GLOBALS['a1_actions'][ $args['status'] ] ?? array();
+		$GLOBALS['a1_log'][] = array( 'query', $args['status'], $args['group'], $args['date_compare'], $args['date'], $args['per_page'] );
+		if ( ! isset( $GLOBALS['a1_actions'][ $args['status'] ] ) ) {
+			return array();
+		}
+		return array_splice( $GLOBALS['a1_actions'][ $args['status'] ], 0, (int) $args['per_page'] );
 	}
 	function wp_next_scheduled( $hook ) { return false; }
 	function wp_schedule_event( ...$args ) { $GLOBALS['a1_log'][] = array( 'WP-CRON-USED', $args[2] ); return true; }
@@ -185,6 +188,34 @@ PHP
 			$this->assertSame( '<', $query[3] );
 		}
 		$this->assertSame( array( '11', '12', '13' ), array_column( $this->logged( 'delete_action' ), 1 ) );
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_only_rows_older_than_7_days_are_purged(): void {
+		$this->fakeEnvironment();
+		$this->assertSame( 7, \Estasoft\SyncEngine\Core\Queue\Scheduler::PURGE_AFTER_DAYS );
+		$before = time();
+		$this->newScheduler()->handlePurge();
+		$after = time();
+		foreach ( $this->logged( 'query' ) as $query ) {
+			$this->assertGreaterThanOrEqual( $before - 7 * 86400, $query[4] );
+			$this->assertLessThanOrEqual( $after - 7 * 86400, $query[4], 'seven days back, not one' );
+		}
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_a_large_backlog_is_purged_in_batches(): void {
+		$this->fakeEnvironment();
+		$GLOBALS['a1_actions']['complete'] = range( 1, 1200 );
+		$this->assertSame( 1201, $this->newScheduler()->handlePurge(), '1,200 complete and one canceled' );
+		$this->assertSame( array( 'complete', 'complete', 'complete', 'canceled', 'failed' ), array_column( $this->logged( 'query' ), 1 ) );
+		$this->assertSame( array( 500, 500, 500, 500, 500 ), array_column( $this->logged( 'query' ), 5 ) );
 	}
 
 	/**

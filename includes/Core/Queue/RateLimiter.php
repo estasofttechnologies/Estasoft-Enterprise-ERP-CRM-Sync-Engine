@@ -14,10 +14,15 @@ defined( 'ABSPATH' ) || exit;
 use Estasoft\SyncEngine\Core\Support\Clock;
 
 /**
- * Each request reserves the next free slot (the generic cell rate algorithm, a token bucket with one token): slots are
+ * Each reservation takes the next free slot (the generic cell rate algorithm, a token bucket with one token): slots are
  * `1 / rate` seconds apart. The reservation is a compare-and-set on a shared counter, so any number of workers share
  * one limit. The caller waits as long as `acquire()` says. There is a limit per connection and an optional one for
  * all connections together.
+ *
+ * What is counted. The worker takes one slot for each ITEM it starts, so the setting "requests per second" is a limit
+ * on item starts per second, not on HTTP calls. One item can make several calls to the system (look for an existing
+ * record, send, read back), so the number of calls per second can be higher than the setting. A connector that has to
+ * keep to a hard limit of the other system paces its own HTTP calls; the queue does not count them for it.
  */
 final class RateLimiter {
 
@@ -37,7 +42,7 @@ final class RateLimiter {
 	}
 
 	/**
-	 * Reserve a slot for one request.
+	 * Reserve a slot for one item start (see the class description).
 	 *
 	 * @param int   $connectionId     Connection.
 	 * @param float $perSecond        Requests per second for this connection.

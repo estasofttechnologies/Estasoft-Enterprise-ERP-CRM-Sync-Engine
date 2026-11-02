@@ -46,7 +46,161 @@ final class RedactorTest extends TestCase {
 			'with brackets'     => array( '+44 (0) 20 7946 0958' ),
 			'double zero'       => array( '00966 55 123 4567' ),
 			'uk local'          => array( '020 7946 0958' ),
+			'no plus uae'       => array( '971501234567' ),
+			'no plus saudi'     => array( '966551234567' ),
+			'us brackets'       => array( '(212) 555-0199' ),
+			'us dashes'         => array( '212-555-0199' ),
+			'us dots'           => array( '212.555.0199' ),
+			'spaced groups'     => array( '971 50 123 4567' ),
+			'ten digits'        => array( '2125550199' ),
+			'nine digits'       => array( '501234567' ),
 		);
+	}
+
+	/**
+	 * @dataProvider notPhones
+	 */
+	public function test_money_ids_dates_and_codes_are_not_taken_for_phone_numbers( string $text ): void {
+		$this->assertSame( $text, $this->redactor->message( $text ), $text );
+	}
+
+	/**
+	 * @return array<string,array{0:string}>
+	 */
+	public static function notPhones(): array {
+		return array(
+			'plain amount'          => array( 'Total 1234567.89 charged' ),
+			'big amount'            => array( 'Total 1234567890.12 charged' ),
+			'grouped amount'        => array( 'Total 1,234,567,890.00 charged' ),
+			'european amount'       => array( 'Total 1.234.567.890,50 charged' ),
+			'spaced amount'         => array( 'Amount: 12 345 678.90' ),
+			'currency before'       => array( 'AED 1234567890 due' ),
+			'currency symbol'       => array( 'Price €1234567890 incl. tax' ),
+			'currency after'        => array( '1234567890 AED due' ),
+			'order id'              => array( 'Order 100234567 shipped' ),
+			'order hash'            => array( 'Order #100234567 shipped' ),
+			'order id field'        => array( '{"order_id":"100234567"}' ),
+			'invoice number'        => array( 'Invoice number: 202600123456' ),
+			'sku'                   => array( 'SKU 123456789012 not found' ),
+			'tracking'              => array( 'Tracking no. 1234567890123' ),
+			'json number'           => array( '{"created":1730563200}' ),
+			'id list'               => array( '{"ids":["123456789012"]}' ),
+			'iso date and time'     => array( 'Started 2026-11-02 14:30:00 UTC' ),
+			'iso date long'         => array( 'On 2026-11-02 1234567' ),
+			'slash date'            => array( 'On 12/11/2026 at noon' ),
+			'ip address'            => array( 'From 192.168.100.200 blocked' ),
+			'short order id'        => array( 'Order 10490 and order 1234567 were sent' ),
+			'italian style code'    => array( 'Reference IT00123456 matched' ),
+			'tax amount in json'    => array( '{"tax":123456,"total":99900}' ),
+			'six digit value'       => array( 'Waited 123456 ms' ),
+		);
+	}
+
+	public function test_a_number_inside_a_longer_word_is_not_touched(): void {
+		$this->assertSame( 'Ref AB971501234567 ok', $this->redactor->message( 'Ref AB971501234567 ok' ) );
+		$this->assertSame( 'Ref 971501234567X ok', $this->redactor->message( 'Ref 971501234567X ok' ) );
+	}
+
+	public function test_a_phone_in_a_phone_field_is_removed_whatever_its_shape(): void {
+		$out = $this->redactor->structure( array( 'phone' => 1234, 'billing' => array( 'phone_number' => '12' ), 'mobile_number' => '99' ) );
+		$this->assertSame( Redactor::PERSONAL, $out['phone'] );
+		$this->assertSame( Redactor::PERSONAL, $out['billing'] );
+		$this->assertSame( Redactor::PERSONAL, $out['mobile_number'] );
+	}
+
+	public function test_numeric_looking_ids_under_id_like_keys_survive_in_a_structure(): void {
+		$out = $this->redactor->structure( array( 'order_id' => '100234567', 'sku' => '123456789012', 'ids' => array( '123456789012' ), 'notes' => 'call 971501234567' ) );
+		$this->assertSame( '100234567', $out['order_id'] );
+		$this->assertSame( '123456789012', $out['sku'] );
+		$this->assertSame( array( '123456789012' ), $out['ids'] );
+		$this->assertSame( 'call [phone]', $out['notes'], 'Free text is still searched for phone numbers.' );
+	}
+
+	public function test_the_new_phone_rule_follows_the_personal_data_setting(): void {
+		$this->assertSame( 'Call 971501234567 now', $this->redactor->message( 'Call 971501234567 now', false ) );
+		$this->assertSame( 'Call [phone] now', $this->redactor->message( 'Call 971501234567 now', true ) );
+	}
+
+	/**
+	 * @dataProvider personalKeys
+	 */
+	public function test_more_personal_field_names_are_removed( string $key ): void {
+		$out = $this->redactor->structure( array( $key => 'Some Value' ) );
+		$this->assertSame( Redactor::PERSONAL, $out[ $key ], $key );
+	}
+
+	/**
+	 * @return array<string,array{0:string}>
+	 */
+	public static function personalKeys(): array {
+		$keys = array( 'name', 'nickname', 'username', 'recipient', 'receiver', 'sender', 'ship_to', 'bill_to', 'date_of_birth', 'dob', 'ip_address', 'iban', 'account_number', 'national_id', 'passport', 'whatsapp', 'cardholder', 'phone_number' );
+		return array_combine( $keys, array_map( static fn( string $key ): array => array( $key ), $keys ) );
+	}
+
+	public function test_card_data_names_are_secrets_and_stay_removed_with_personal_redaction_off(): void {
+		$out = $this->redactor->structure( array( 'card_number' => '4111111111111111', 'cvv' => '123' ), false );
+		$this->assertSame( Redactor::SECRET, $out['card_number'] );
+		$this->assertSame( Redactor::SECRET, $out['cvv'] );
+	}
+
+	public function test_a_sensitive_path_hides_a_field_that_has_an_ordinary_name(): void {
+		$payload = array(
+			'acct'  => array( 'tier' => 'gold' ),
+			'other' => array( 'tier' => 'visible' ),
+			'deep'  => array( 'wrap' => array( 'acct' => array( 'tier' => 'gold-too' ) ) ),
+		);
+		$out = $this->redactor->structure( $payload, true, array( 'acct.tier' ) );
+		$this->assertSame( Redactor::PERSONAL, $out['acct']['tier'] );
+		$this->assertSame( 'visible', $out['other']['tier'], 'The same last name under another parent is not touched.' );
+		$this->assertSame( Redactor::PERSONAL, $out['deep']['wrap']['acct']['tier'], 'The path may sit anywhere below the top.' );
+
+		$out = $this->redactor->structure( $payload, true, array( 'tier' ) );
+		$this->assertSame( Redactor::PERSONAL, $out['other']['tier'], 'A path of one part is a field name.' );
+
+		$out = $this->redactor->structure( $payload, false, array( 'acct.tier' ) );
+		$this->assertSame( 'gold', $out['acct']['tier'], 'With personal redaction off, paths do nothing.' );
+	}
+
+	public function test_an_excerpt_uses_the_sensitive_paths(): void {
+		$text = $this->redactor->excerpt( array( 'acct' => array( 'tier' => 'gold' ), 'sku' => 'A1' ), 500, true, array( 'acct.tier' ) );
+		$this->assertStringNotContainsString( 'gold', (string) $text );
+		$this->assertStringContainsString( 'A1', (string) $text );
+	}
+
+	/**
+	 * @dataProvider urlCredentials
+	 */
+	public function test_user_and_password_in_an_address_are_removed_even_with_personal_redaction_off( string $text, string $secret ): void {
+		foreach ( array( true, false ) as $personal ) {
+			$out = $this->redactor->message( $text, $personal );
+			$this->assertStringNotContainsString( $secret, $out );
+			$this->assertStringContainsString( '[secret]@', $out );
+			$this->assertStringContainsString( 'example.com', $out );
+		}
+	}
+
+	/**
+	 * @return array<string,array{0:string,1:string}>
+	 */
+	public static function urlCredentials(): array {
+		return array(
+			'https'            => array( 'GET https://bob:hunter2@example.com/api failed', 'hunter2' ),
+			'with port'        => array( 'Could not reach https://admin:p%40ss@example.com:8069/jsonrpc', 'p%40ss' ),
+			'ftp'              => array( 'ftp://user:secret-word@example.com/file.csv', 'secret-word' ),
+			'user is an email' => array( 'https://jane.doe:pw123@example.com/x', 'pw123' ),
+		);
+	}
+
+	public function test_an_address_without_credentials_is_left_alone(): void {
+		$text = 'See https://example.com:8069/path?a=1 and mail me at someone@example.com';
+		$this->assertSame( 'See https://example.com:8069/path?a=1 and mail me at [email]', $this->redactor->message( $text ) );
+		$this->assertSame( 'See https://example.com:8069/path?a=1 and mail me at someone@example.com', $this->redactor->message( $text, false ) );
+	}
+
+	public function test_eight_character_codes_that_look_like_vat_are_not_masked_but_real_numbers_are(): void {
+		$this->assertSame( 'IT00123456', $this->redactor->message( 'IT00123456' ) );
+		$this->assertStringContainsString( '[tax number]', $this->redactor->message( 'VAT IT12345678901 on file' ) );
+		$this->assertStringContainsString( '[tax number]', $this->redactor->message( 'Customer DK12345678 unknown' ) );
 	}
 
 	/**

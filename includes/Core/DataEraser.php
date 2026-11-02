@@ -16,8 +16,13 @@ use Estasoft\SyncEngine\Core\Queue\Scheduler;
 
 /**
  * Used by uninstall (when "Delete all plugin data when the plugin is deleted" is on) and by the Delete data tool. It drops
- * the nine tables, deletes every option and transient with the plugin prefix, removes the plugin's own meta keys from orders,
- * products and users, deletes the export folder in uploads, and unschedules the background tasks.
+ * the nine tables, deletes the options listed in OptionNames (and the filter `estasoft_sync_option_names`) and every
+ * transient with the plugin prefix, removes the plugin's own meta keys from orders, products and users, deletes the export
+ * folder in uploads, and unschedules the background tasks. It does not delete an option only because its name starts with
+ * the plugin prefix.
+ *
+ * User meta is shared by every site of a network, so on multisite it is removed only when the whole network is erased
+ * (`eraseUserMeta()`, called once by the uninstaller when no site keeps its data), never by the erase of one site.
  *
  * It never deletes, changes or reads a WooCommerce order other than to remove the plugin's own meta keys from it, and it does
  * that through the WooCommerce CRUD layer when WooCommerce is loaded.
@@ -97,20 +102,31 @@ final class DataEraser {
 	/**
 	 * Erase the plugin's data on this site.
 	 *
-	 * @param bool $revokeCapabilities Also remove the two capabilities from every role (uninstall does; the Delete data tool does not).
+	 * @param bool      $revokeCapabilities Also remove the two capabilities from every role (uninstall does; the Delete data tool does not).
+	 * @param bool|null $deleteUserMeta     Whether to remove the plugin's user meta. Null decides by itself: yes on a single site, no on
+	 *                                      multisite (the users belong to the whole network; see eraseUserMeta()).
 	 */
-	public function erase( bool $revokeCapabilities = true ): void {
+	public function erase( bool $revokeCapabilities = true, ?bool $deleteUserMeta = null ): void {
 		Scheduler::unschedule();
 		$this->dropTables();
 		$this->deleteOptions();
 		$this->deleteOrderMeta();
 		$this->deleteMeta( 'post', MetaKeys::product() );
 		$this->deleteMeta( 'post', MetaKeys::order() );
-		$this->deleteMeta( 'user', MetaKeys::user() );
+		if ( $deleteUserMeta ?? ! is_multisite() ) {
+			$this->eraseUserMeta();
+		}
 		$this->deleteExportFolder();
 		if ( $revokeCapabilities ) {
 			Capabilities::revoke();
 		}
+	}
+
+	/**
+	 * Remove the plugin's user meta keys for every user. On multisite call this only when the whole network is erased.
+	 */
+	public function eraseUserMeta(): void {
+		$this->deleteMeta( 'user', MetaKeys::user() );
 	}
 
 	/**
@@ -124,22 +140,35 @@ final class DataEraser {
 	}
 
 	/**
-	 * Delete every option and transient whose name starts with the plugin prefix. Each one goes through delete_option(), so
-	 * a persistent object cache forgets it too.
+	 * Delete the options named in OptionNames, and every transient with the plugin prefix. Each one goes through
+	 * delete_option(), so a persistent object cache forgets it too.
 	 */
 	private function deleteOptions(): void {
-		$prefix = $this->wpdb->esc_like( 'estasoft_sync_' );
-		$names  = array();
-		foreach ( array( $prefix . '%', $this->wpdb->esc_like( '_transient_' ) . $prefix . '%', $this->wpdb->esc_like( '_transient_timeout_' ) . $prefix . '%' ) as $pattern ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
-			$found = $this->wpdb->get_col( $this->wpdb->prepare( "SELECT option_name FROM {$this->wpdb->options} WHERE option_name LIKE %s", $pattern ) );
-			$names = array_merge( $names, (array) $found );
+		$names = OptionNames::exact();
+		foreach ( OptionNames::prefixes() as $prefix ) {
+			$names = array_merge( $names, $this->optionsStartingWith( $prefix ) );
+		}
+		// Transients are disposable and the prefix is ours, so all of them go (also the ones with an id in their name).
+		foreach ( array( '_transient_', '_transient_timeout_', '_site_transient_', '_site_transient_timeout_' ) as $kind ) {
+			$names = array_merge( $names, $this->optionsStartingWith( $kind . 'estasoft_sync_' ) );
 		}
 		foreach ( array_unique( $names ) as $name ) {
 			delete_option( (string) $name );
 		}
 		wp_cache_delete( 'alloptions', 'options' );
 		wp_cache_delete( 'notoptions', 'options' );
+	}
+
+	/**
+	 * Names of the stored options that start with a text.
+	 *
+	 * @param string $prefix Start of the name.
+	 * @return array<int,string>
+	 */
+	private function optionsStartingWith( string $prefix ): array {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$found = $this->wpdb->get_col( $this->wpdb->prepare( "SELECT option_name FROM {$this->wpdb->options} WHERE option_name LIKE %s", $this->wpdb->esc_like( $prefix ) . '%' ) );
+		return array_map( 'strval', (array) $found );
 	}
 
 	/**

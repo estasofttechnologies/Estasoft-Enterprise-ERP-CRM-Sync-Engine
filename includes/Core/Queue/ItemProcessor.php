@@ -44,6 +44,12 @@ use Estasoft\SyncEngine\Sync\PayloadResult;
  * class throws. Shadow items are built and, when the connector can look things up read-only, compared, but nothing is
  * sent and nothing is changed in either system.
  *
+ * The lock token. `process()` is given the `workerId` that claimed the item. Every write to the queue row is guarded by it
+ * (the row must still be `syncing` and held by that token), and the lock is refreshed before each connector call. If the
+ * lock was lost (it ran out and the reaper handed the item to someone else), the result is discarded: the row is left alone,
+ * a warning is logged, the outcome is `Outcome::LockLost`, and no hook fires. The facts the other system now holds are still
+ * recorded (id map, state hash, idempotency ledger), because they are true and keep the next worker from sending twice.
+ *
  * Hooks, all actions:
  * - `estasoft_sync_before_send( Item $item, array $payload, int $connectionId )`
  * - `estasoft_sync_after_send( Item $item, SendResult $result, int $milliseconds )`
@@ -62,6 +68,11 @@ final class ItemProcessor {
 	 * Seconds an item waits when its connector is not installed.
 	 */
 	private const MISSING_CONNECTOR_WAIT = 300;
+
+	/**
+	 * The lock token of the item being processed; null when the caller did not give one.
+	 */
+	private ?string $token = null;
 
 	/**
 	 * @param ConnectionRepository  $connections Connections.
@@ -98,15 +109,18 @@ final class ItemProcessor {
 	/**
 	 * Process one claimed item to its next resting state. Never throws.
 	 *
-	 * @param Item $item An item returned by QueueRepository::claim().
+	 * @param Item        $item      An item returned by QueueRepository::claim().
+	 * @param string|null $lockToken The `workerId` that was given to claim(). Without it the queue row is written unguarded.
 	 * @return Outcome How it ended.
 	 */
-	public function process( Item $item ): Outcome {
+	public function process( Item $item, ?string $lockToken = null ): Outcome {
+		$previous    = $this->token;
+		$this->token = $lockToken;
 		try {
 			return $this->run( $item );
 		} catch ( \Throwable $e ) {
 			// Something unexpected in the plugin itself. Put the item back without a try and say so; never lose it.
-			$this->queue->release( $item->id, Time::sql( Time::plus( $this->clock->now(), self::MISSING_CONNECTOR_WAIT ) ), null, null, true );
+			$this->queue->release( $item->id, Time::sql( Time::plus( $this->clock->now(), self::MISSING_CONNECTOR_WAIT ) ), null, null, true, $this->token );
 			$this->logger->error(
 				sprintf(
 					/* translators: %s: PHP error class name. */
@@ -120,7 +134,50 @@ final class ItemProcessor {
 				)
 			);
 			return Outcome::Held;
+		} finally {
+			$this->token = $previous;
 		}
+	}
+
+	/**
+	 * The result of an item could not be written because its lock was lost. Say so and leave the row alone.
+	 *
+	 * @param Item $item Item.
+	 */
+	private function lost( Item $item ): Outcome {
+		$this->logger->warning(
+			__( 'The result of this item was thrown away because its lock ran out and another worker may have taken it over. The item was left as it is.', 'estasoft-erp-crm-sync-engine' ),
+			array(
+				'connection_id' => $item->connectionId,
+				'queue_id'      => $item->id,
+				'entity_ref'    => $this->reference( $item ),
+				'code'          => ErrorCode::Lock001,
+			)
+		);
+		return Outcome::LockLost;
+	}
+
+	/**
+	 * Push the lock out before a call to a system, and say whether this worker still holds it.
+	 *
+	 * @param Item $item Item.
+	 */
+	private function holdsLock( Item $item ): bool {
+		if ( null === $this->token ) {
+			return true;
+		}
+		return $this->queue->extendLock( $item->id, self::SEND_LOCK_SECONDS, $this->token );
+	}
+
+	/**
+	 * Turn a queue write into an outcome: the given one when the row was written, LockLost when it was not.
+	 *
+	 * @param bool    $written Whether the guarded write changed the row.
+	 * @param Item    $item    Item.
+	 * @param Outcome $outcome Outcome to report when written.
+	 */
+	private function settle( bool $written, Item $item, Outcome $outcome ): Outcome {
+		return $written ? $outcome : $this->lost( $item );
 	}
 
 	/**
@@ -135,13 +192,14 @@ final class ItemProcessor {
 			return $this->holdForCredentials( $item, $e );
 		}
 		if ( null === $connection ) {
-			$this->queue->release( $item->id, null, null, null, true );
+			if ( ! $this->queue->release( $item->id, null, null, null, true, $this->token ) ) {
+				return $this->lost( $item );
+			}
 			$this->queue->skip( $item->id, __( 'The connection was removed.', 'estasoft-erp-crm-sync-engine' ) );
 			return Outcome::Skipped;
 		}
 		if ( ! $connection->status->allowsClaiming() ) {
-			$this->queue->release( $item->id, null, null, null, true );
-			return Outcome::Held;
+			return $this->settle( $this->queue->release( $item->id, null, null, null, true, $this->token ), $item, Outcome::Held );
 		}
 
 		$connector = ( $this->connectors )()->get( $connection->connector );
@@ -172,7 +230,7 @@ final class ItemProcessor {
 			);
 		}
 		if ( ! $built->isReady() && null !== $built->error ) {
-			return $this->handleFailure( $item, $connection, $connector, $built->error, 0, null, $built->mappingVersion, false );
+			return $this->handleFailure( $item, $connection, $connector, $built->error, 0, null, $built->mappingVersion, false, $built->sensitivePaths );
 		}
 
 		if ( ItemMode::Shadow === $item->mode ) {
@@ -185,7 +243,9 @@ final class ItemProcessor {
 
 		// Nothing changed since the last sync: do not send.
 		if ( null !== $mapped && $this->state->isUnchanged( $item->connectionId, $item->entityType, $item->entityId, $hash ) ) {
-			$this->queue->markSynced( $item->id, $mapped['external_id'], (string) $mapped['external_ref'], $mapped['external_url'], $built->mappingVersion, null, false );
+			if ( ! $this->queue->markSynced( $item->id, $mapped['external_id'], (string) $mapped['external_ref'], $mapped['external_url'], $built->mappingVersion, null, false, null, $this->token ) ) {
+				return $this->lost( $item );
+			}
 			$this->idempotency->markDone( $item->idempotencyKey, $mapped['external_id'] );
 			$this->note( $item, __( 'Nothing changed since the last sync, so nothing was sent.', 'estasoft-erp-crm-sync-engine' ), $built->mappingVersion );
 			return Outcome::NoChange;
@@ -193,16 +253,21 @@ final class ItemProcessor {
 
 		// A first send: the system may already have the record (a retry after a lost answer, or a manual entry).
 		if ( null === $mapped ) {
+			if ( ! $this->holdsLock( $item ) ) {
+				return $this->lost( $item );
+			}
 			$found = $this->guard( fn() => $connector->findExisting( $connection, $item ), $connector );
 			if ( $found instanceof ConnectorError ) {
-				return $this->handleFailure( $item, $connection, $connector, $found, 0, $payload, $built->mappingVersion, true );
+				return $this->handleFailure( $item, $connection, $connector, $found, 0, $payload, $built->mappingVersion, true, $built->sensitivePaths );
 			}
 			if ( $found instanceof ExternalRef ) {
 				return $this->linkExisting( $item, $connection, $connector, $found, $built->mappingVersion );
 			}
 		}
 
-		$this->queue->extendLock( $item->id, self::SEND_LOCK_SECONDS );
+		if ( ! $this->holdsLock( $item ) ) {
+			return $this->lost( $item );
+		}
 
 		/**
 		 * Fires just before an item is sent.
@@ -228,10 +293,10 @@ final class ItemProcessor {
 		do_action( 'estasoft_sync_after_send', $item, $result, $ms );
 
 		if ( $result->isSuccess() && null !== $result->ref ) {
-			return $this->succeed( $item, $connection, $connector, $result->ref, $result->alreadyExisted, $hash, $payload, $built->mappingVersion, $ms );
+			return $this->succeed( $item, $connection, $connector, $result->ref, $result->alreadyExisted, $hash, $payload, $built->mappingVersion, $ms, $built->sensitivePaths );
 		}
 		$error = $result->error ?? new ConnectorError( ErrorCode::Val002, array( 'field' => 'response', 'reason' => __( 'The connector returned nothing.', 'estasoft-erp-crm-sync-engine' ) ) );
-		return $this->handleFailure( $item, $connection, $connector, $error, $ms, $payload, $built->mappingVersion, true );
+		return $this->handleFailure( $item, $connection, $connector, $error, $ms, $payload, $built->mappingVersion, true, $built->sensitivePaths );
 	}
 
 	/**
@@ -277,9 +342,12 @@ final class ItemProcessor {
 		$message = str_replace( array( '{system}', '{ref}' ), array( $connector->label(), $found->ref ), ErrorCode::Dup001->template() );
 		$this->idMap->link( $item->connectionId, $item->entityType, $item->entityId, $found->id, $found->ref, $found->url );
 		$this->idempotency->markDone( $item->idempotencyKey, $found->id );
-		$this->queue->markSynced( $item->id, $found->id, $found->ref, $found->url, $mappingVersion, ErrorCode::Dup001->value, true, $message );
+		$written = $this->queue->markSynced( $item->id, $found->id, $found->ref, $found->url, $mappingVersion, ErrorCode::Dup001->value, true, $message, $this->token );
 		$this->connections->recordSuccess( $connection->id, 0 );
 		$this->breaker->recordReachable( $connection );
+		if ( ! $written ) {
+			return $this->lost( $item );
+		}
 		$this->note( $item, $message, $mappingVersion, ErrorCode::Dup001 );
 		do_action( 'estasoft_sync_item_synced', $item, $found, true );
 		return Outcome::Linked;
@@ -297,16 +365,20 @@ final class ItemProcessor {
 	 * @param array<string,mixed> $payload        Payload, for the log excerpt.
 	 * @param int|null            $mappingVersion Mapping version.
 	 * @param int                 $ms             Milliseconds the send took.
+	 * @param array<int,string>   $sensitivePaths Field paths of the payload that hold personal data, for the log excerpt.
 	 */
-	private function succeed( Item $item, Connection $connection, ConnectorInterface $connector, ExternalRef $ref, bool $alreadyExisted, string $hash, array $payload, ?int $mappingVersion, int $ms ): Outcome {
+	private function succeed( Item $item, Connection $connection, ConnectorInterface $connector, ExternalRef $ref, bool $alreadyExisted, string $hash, array $payload, ?int $mappingVersion, int $ms, array $sensitivePaths = array() ): Outcome {
 		$this->idMap->link( $item->connectionId, $item->entityType, $item->entityId, $ref->id, $ref->ref, $ref->url );
 		if ( ! $alreadyExisted ) {
 			$this->state->save( $item->connectionId, $item->entityType, $item->entityId, $hash, $mappingVersion );
 		}
 		$this->idempotency->markDone( $item->idempotencyKey, $ref->id );
 		$duplicate = str_replace( array( '{system}', '{ref}' ), array( $connector->label(), $ref->ref ), ErrorCode::Dup001->template() );
-		$this->queue->markSynced( $item->id, $ref->id, $ref->ref, $ref->url, $mappingVersion, $alreadyExisted ? ErrorCode::Dup001->value : null, true, $alreadyExisted ? $duplicate : null );
+		$written = $this->queue->markSynced( $item->id, $ref->id, $ref->ref, $ref->url, $mappingVersion, $alreadyExisted ? ErrorCode::Dup001->value : null, true, $alreadyExisted ? $duplicate : null, $this->token );
 		$this->breaker->recordSuccess( $connection, $ms );
+		if ( ! $written ) {
+			return $this->lost( $item );
+		}
 
 		if ( ErrorCode::State001->value === $item->errorCode ) {
 			$this->note( $item, ErrorCode::State001->template(), $mappingVersion, ErrorCode::State001 );
@@ -330,6 +402,7 @@ final class ItemProcessor {
 				'attempt'         => $item->attempt + 1,
 				'mapping_version' => $mappingVersion,
 				'request'         => $payload,
+				'sensitive_paths' => $sensitivePaths,
 			)
 		);
 		if ( null !== $log_id ) {
@@ -350,12 +423,54 @@ final class ItemProcessor {
 	 * @param array<string,mixed>|null $payload        Payload, for the log excerpt.
 	 * @param int|null                 $mappingVersion Mapping version.
 	 * @param bool                     $sent           Whether the system was contacted (errors found before sending are not tries).
+	 * @param array<int,string>        $sensitivePaths Field paths of the payload that hold personal data, for the log excerpt.
 	 */
-	private function handleFailure( Item $item, Connection $connection, ConnectorInterface $connector, ConnectorError $error, int $ms, ?array $payload, ?int $mappingVersion, bool $sent ): Outcome {
+	private function handleFailure( Item $item, Connection $connection, ConnectorInterface $connector, ConnectorError $error, int $ms, ?array $payload, ?int $mappingVersion, bool $sent, array $sensitivePaths = array() ): Outcome {
 		$decision = $this->classifier->classify( $error, $connector, $connector->label() );
 		$failure  = $decision->error;
 		$message  = $failure->message();
 		$cause    = $this->classifier->cause( $failure );
+
+		// The row is written first, guarded by the lock token; the log entry and the hooks follow only when it was.
+		$written   = true;
+		$willRetry = null;
+		switch ( $decision->action ) {
+			case FailureAction::PauseSignIn:
+				$this->pause->pauseForRefusedSignIn( $connection->id, $connector->label() );
+				$written = $this->queue->release( $item->id, null, $failure->code->value, $message, false, $this->token );
+				$outcome = Outcome::Held;
+				break;
+			case FailureAction::NeedsReconnect:
+				$this->pause->markNeedsReconnect( $connection->id, $failure->code, $connector->label() );
+				$written = $this->queue->release( $item->id, null, $failure->code->value, $message, false, $this->token );
+				$outcome = Outcome::Held;
+				break;
+			case FailureAction::Retry:
+				$tries = $item->attempt + 1;
+				$next  = $tries >= $item->maxAttempts ? null : $this->retry->nextAttemptAt( $tries, $connection->settings, $decision->retryAfter );
+				$this->breaker->recordRetryableFailure( $connection, $decision->countsForBreaker );
+				if ( null === $next ) {
+					$written   = $this->queue->markFailed( $item->id, $failure->code->value, $message, $cause, true, $this->token );
+					$willRetry = false;
+					$outcome   = Outcome::Failed;
+				} else {
+					$written   = $this->queue->markRetrying( $item->id, $next, $failure->code->value, $message, $cause, $this->token );
+					$willRetry = true;
+					$outcome   = Outcome::Retrying;
+				}
+				break;
+			default:
+				$written = $this->queue->markFailed( $item->id, $failure->code->value, $message, $cause, $sent, $this->token );
+				if ( $sent ) {
+					$this->connections->recordFailure( $connection->id, $ms );
+					$this->breaker->recordReachable( $connection );
+				}
+				$willRetry = false;
+				$outcome   = Outcome::Failed;
+		}
+		if ( ! $written ) {
+			return $this->lost( $item );
+		}
 
 		$log_id = $this->logger->log(
 			FailureAction::Retry === $decision->action ? 'warning' : 'error',
@@ -371,46 +486,14 @@ final class ItemProcessor {
 				'mapping_version' => $mappingVersion,
 				'request'         => $sent ? $payload : null,
 				'response'        => '' !== $failure->detail ? $failure->detail : null,
+				'sensitive_paths' => $sensitivePaths,
 			)
 		);
-
-		switch ( $decision->action ) {
-			case FailureAction::PauseSignIn:
-				$this->pause->pauseForRefusedSignIn( $connection->id, $connector->label() );
-				$this->queue->release( $item->id, null, $failure->code->value, $message );
-				$outcome = Outcome::Held;
-				break;
-			case FailureAction::NeedsReconnect:
-				$this->pause->markNeedsReconnect( $connection->id, $failure->code, $connector->label() );
-				$this->queue->release( $item->id, null, $failure->code->value, $message );
-				$outcome = Outcome::Held;
-				break;
-			case FailureAction::Retry:
-				$tries = $item->attempt + 1;
-				$next  = $tries >= $item->maxAttempts ? null : $this->retry->nextAttemptAt( $tries, $connection->settings, $decision->retryAfter );
-				$this->breaker->recordRetryableFailure( $connection, $decision->countsForBreaker );
-				if ( null === $next ) {
-					$this->queue->markFailed( $item->id, $failure->code->value, $message, $cause );
-					do_action( 'estasoft_sync_item_failed', $item, $failure, false );
-					$outcome = Outcome::Failed;
-				} else {
-					$this->queue->markRetrying( $item->id, $next, $failure->code->value, $message, $cause );
-					do_action( 'estasoft_sync_item_failed', $item, $failure, true );
-					$outcome = Outcome::Retrying;
-				}
-				break;
-			default:
-				$this->queue->markFailed( $item->id, $failure->code->value, $message, $cause, $sent );
-				if ( $sent ) {
-					$this->connections->recordFailure( $connection->id, $ms );
-					$this->breaker->recordReachable( $connection );
-				}
-				do_action( 'estasoft_sync_item_failed', $item, $failure, false );
-				$outcome = Outcome::Failed;
-		}
-
 		if ( null !== $log_id ) {
 			$this->queue->setLastLog( $item->id, $log_id );
+		}
+		if ( null !== $willRetry ) {
+			do_action( 'estasoft_sync_item_failed', $item, $failure, $willRetry );
 		}
 		return $outcome;
 	}
@@ -427,10 +510,15 @@ final class ItemProcessor {
 	private function shadow( Item $item, Connection $connection, ConnectorInterface $connector, PayloadResult $built ): Outcome {
 		$found = null;
 		if ( ! empty( $connector->capabilities()[ Capability::ShadowLookup->value ] ) ) {
+			if ( ! $this->holdsLock( $item ) ) {
+				return $this->lost( $item );
+			}
 			$found = $this->guard( fn() => $connector->findExisting( $connection, $item ), $connector );
 		}
 		$ref = $found instanceof ExternalRef ? $found : null;
-		$this->queue->markSynced( $item->id, $ref?->id ?? '', $ref?->ref ?? '', $ref?->url, $built->mappingVersion, null, true );
+		if ( ! $this->queue->markSynced( $item->id, $ref?->id ?? '', $ref?->ref ?? '', $ref?->url, $built->mappingVersion, null, true, null, $this->token ) ) {
+			return $this->lost( $item );
+		}
 		$log_id = $this->logger->info(
 			__( 'Shadow check: the payload was built and nothing was sent.', 'estasoft-erp-crm-sync-engine' ),
 			array(
@@ -439,6 +527,7 @@ final class ItemProcessor {
 				'entity_ref'      => $this->reference( $item ),
 				'mapping_version' => $built->mappingVersion,
 				'request'         => $built->payload,
+				'sensitive_paths' => $built->sensitivePaths,
 			)
 		);
 		if ( null !== $log_id ) {
@@ -466,12 +555,12 @@ final class ItemProcessor {
 		$code = $e->errorCode();
 		if ( ErrorCode::Cfg002 === $code ) {
 			$this->pause->holdForPerson( $item->connectionId, ErrorCode::Cfg002, ConnectionStatus::Paused );
-			$this->queue->release( $item->id, null, ErrorCode::Cfg002->value, ErrorCode::Cfg002->template() );
+			$written = $this->queue->release( $item->id, null, ErrorCode::Cfg002->value, ErrorCode::Cfg002->template(), false, $this->token );
 		} else {
 			$this->pause->holdForPerson( $item->connectionId, ErrorCode::Auth002, ConnectionStatus::NeedsReconnect, '', $e->getMessage() );
-			$this->queue->release( $item->id, null, null, $e->getMessage() );
+			$written = $this->queue->release( $item->id, null, null, $e->getMessage(), false, $this->token );
 		}
-		return Outcome::Held;
+		return $this->settle( $written, $item, Outcome::Held );
 	}
 
 	/**
@@ -482,7 +571,9 @@ final class ItemProcessor {
 	 */
 	private function holdWithoutConnector( Item $item, Connection $connection ): Outcome {
 		$next = Time::sql( Time::plus( $this->clock->now(), self::MISSING_CONNECTOR_WAIT ) );
-		$this->queue->release( $item->id, $next, ErrorCode::Pause001->value, ErrorCode::Pause001->template() );
+		if ( ! $this->queue->release( $item->id, $next, ErrorCode::Pause001->value, ErrorCode::Pause001->template(), false, $this->token ) ) {
+			return $this->lost( $item );
+		}
 		if ( ErrorCode::Pause001->value !== $item->errorCode ) {
 			$this->logger->warning(
 				sprintf(

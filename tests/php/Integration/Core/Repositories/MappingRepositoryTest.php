@@ -12,6 +12,7 @@ namespace Estasoft\SyncEngine\Tests\Integration\Core\Repositories;
 require_once dirname( __DIR__, 3 ) . '/Support/CoreIntegrationTestCase.php';
 
 use Estasoft\SyncEngine\Tests\Support\CoreIntegrationTestCase;
+use Estasoft\SyncEngine\Tests\Support\CoreProcessBarrier;
 
 final class MappingRepositoryTest extends CoreIntegrationTestCase {
 
@@ -191,14 +192,15 @@ final class MappingRepositoryTest extends CoreIntegrationTestCase {
 
 	public function test_two_processes_editing_and_publishing_at_once_never_make_two_live_versions(): void {
 		$script = dirname( __DIR__, 3 ) . '/Support/CoreMappingWorkerProcess.php';
-		$start  = microtime( true ) + 1.5;
-		$procs  = array();
+		$barrier = new CoreProcessBarrier();
+		$procs   = array();
 		foreach ( array( 'a', 'b' ) as $name ) {
 			$pipes   = array();
-			$proc    = proc_open( array( PHP_BINARY, $script, $name, '25', (string) $start, (string) $this->conn ), array( 1 => array( 'pipe', 'w' ), 2 => array( 'pipe', 'w' ) ), $pipes );
+			$proc    = proc_open( array( PHP_BINARY, $script, $name, '25', $barrier->dir(), (string) $this->conn ), array( 1 => array( 'pipe', 'w' ), 2 => array( 'pipe', 'w' ) ), $pipes );
 			$this->assertIsResource( $proc );
 			$procs[ $name ] = array( $proc, $pipes );
 		}
+		$this->assertTrue( $barrier->release( 2 ) );
 		$published = 0;
 		foreach ( $procs as $name => $parts ) {
 			list( $proc, $pipes ) = $parts;
@@ -217,5 +219,101 @@ final class MappingRepositoryTest extends CoreIntegrationTestCase {
 		$versions = array_map( 'intval', array_column( $this->h->mappings->versions( $this->conn, 'orders' ), 'version' ) );
 		$this->assertSame( range( count( $versions ), 1 ), $versions, 'one linear run of version numbers, none twice' );
 		$this->assertSame( $published, count( $versions ) - $this->countStatus( 'orders', 'draft' ), 'every successful publish made one version' );
+	}
+
+	/**
+	 * Build the history live v3, draft v4.
+	 */
+	private function liveThreeDraftFour(): void {
+		$this->h->mappings->seedLive( $this->conn, 'orders', $this->rules( 'v1' ), 'seed' );
+		$this->h->mappings->saveDraft( $this->conn, 'orders', $this->rules( 'v2' ), null, 'Layla' );
+		$this->h->mappings->publish( $this->conn, 'orders', 'Layla' );
+		$this->h->mappings->saveDraft( $this->conn, 'orders', $this->rules( 'v3' ), null, 'Layla' );
+		$this->h->mappings->publish( $this->conn, 'orders', 'Layla' );
+		$this->h->mappings->saveDraft( $this->conn, 'orders', $this->rules( 'v4' ), 'the draft', 'Layla' );
+		$this->assertSame( 3, $this->h->mappings->live( $this->conn, 'orders' )['version'] );
+		$this->assertSame( 4, $this->h->mappings->draft( $this->conn, 'orders' )['version'] );
+	}
+
+	public function test_publishing_a_draft_older_than_a_rollback_renumbers_it_so_history_stays_linear(): void {
+		$this->liveThreeDraftFour();
+
+		$rolled = $this->h->mappings->rollback( $this->conn, 'orders', 2, 'Layla' );
+		$this->assertSame( 5, $rolled['version'], 'rollback creates the next number after the highest' );
+		$this->assertSame( 'v2', $rolled['rules'][0]['target'] );
+		$this->assertSame( 4, $this->h->mappings->draft( $this->conn, 'orders' )['version'], 'the draft is still numbered 4 until it is published' );
+
+		$live = $this->h->mappings->publish( $this->conn, 'orders', 'Layla', 'Ship the draft' );
+		$this->assertSame( 6, $live['version'], 'the draft is renumbered above the rollback' );
+		$this->assertSame( 'live', $live['status'] );
+		$this->assertSame( 'v4', $live['rules'][0]['target'], 'it is still the draft that went live' );
+		$this->assertSame( 'Ship the draft', $live['note'] );
+		$this->assertSame( 'retired', $this->h->mappings->find( $this->conn, 'orders', 5 )['status'], 'the rollback version is retired' );
+		$this->assertNull( $this->h->mappings->find( $this->conn, 'orders', 4 ), 'there is no version 4 any more: its number moved up' );
+		$this->assertNull( $this->h->mappings->draft( $this->conn, 'orders' ) );
+		$this->assertSame( 1, $this->countStatus( 'orders', 'live' ) );
+		$this->assertSame( array( 6, 5, 3, 2, 1 ), array_column( $this->h->mappings->versions( $this->conn, 'orders' ), 'version' ) );
+	}
+
+	public function test_the_next_rollback_and_the_next_draft_keep_counting_up(): void {
+		$this->liveThreeDraftFour();
+		$this->h->mappings->rollback( $this->conn, 'orders', 2, 'Layla' );
+		$this->h->mappings->publish( $this->conn, 'orders', 'Layla' );
+		$this->assertSame( 7, $this->h->mappings->rollback( $this->conn, 'orders', 1, 'Layla' )['version'] );
+		$this->assertSame( 8, $this->h->mappings->saveDraft( $this->conn, 'orders', $this->rules( 'next' ), null, 'Layla' )['version'] );
+		$this->assertSame( 8, $this->h->mappings->publish( $this->conn, 'orders', 'Layla' )['version'], 'a draft that is already the highest keeps its number' );
+	}
+
+	public function test_a_published_version_number_never_goes_down_and_queue_items_record_it_going_up(): void {
+		$this->liveThreeDraftFour();
+		$seen   = array();
+		$record = function ( string $order ) use ( &$seen ): void {
+			$live = $this->h->mappings->live( $this->conn, 'orders' );
+			$id   = $this->h->item( $this->conn, $order );
+			$this->h->queue->markSynced( $id, '1', 'S1', null, $live['version'] );
+			$seen[] = (int) $this->h->queue->findRow( $id )['mapping_version'];
+		};
+		$record( '1' );
+		$this->h->mappings->rollback( $this->conn, 'orders', 2, 'Layla' );
+		$record( '2' );
+		$this->h->mappings->publish( $this->conn, 'orders', 'Layla' );
+		$record( '3' );
+		$this->h->mappings->rollback( $this->conn, 'orders', 5, 'Layla' );
+		$record( '4' );
+
+		$this->assertSame( array( 3, 5, 6, 7 ), $seen );
+		$sorted = $seen;
+		sort( $sorted );
+		$this->assertSame( $sorted, $seen, 'the version on queue items only increases' );
+	}
+
+	public function test_a_draft_saved_after_a_rollback_keeps_its_number_on_publish(): void {
+		$this->h->mappings->seedLive( $this->conn, 'orders', $this->rules( 'v1' ), 'seed' );
+		$this->h->mappings->saveDraft( $this->conn, 'orders', $this->rules( 'v2' ), null, 'Layla' );
+		$this->h->mappings->publish( $this->conn, 'orders', 'Layla' );
+		$this->h->mappings->rollback( $this->conn, 'orders', 1, 'Layla' );
+		$draft = $this->h->mappings->saveDraft( $this->conn, 'orders', $this->rules( 'v4' ), null, 'Layla' );
+		$this->assertSame( 4, $draft['version'] );
+		$this->assertSame( 4, $this->h->mappings->publish( $this->conn, 'orders', 'Layla' )['version'], 'nothing was created after this draft, so nothing changes' );
+	}
+
+	public function test_renumbering_is_part_of_the_publish_transaction(): void {
+		$this->liveThreeDraftFour();
+		$this->h->mappings->rollback( $this->conn, 'orders', 2, 'Layla' );
+		// A statement that fails halfway must undo the retire and the renumber together.
+		$failing = static fn( string $query ): string => str_contains( $query, "SET version = 6" ) ? 'UPDATE definitely_not_a_table SET x = 1' : $query;
+		add_filter( 'query', $failing );
+		$this->h->wpdb->suppress_errors( true );
+		try {
+			$this->h->mappings->publish( $this->conn, 'orders', 'Layla' );
+			$this->fail( 'Expected the publish to fail.' );
+		} catch ( \RuntimeException $e ) {
+			$this->assertSame( 'The mapping could not be saved.', $e->getMessage() );
+		} finally {
+			$this->h->wpdb->suppress_errors( false );
+			remove_filter( 'query', $failing );
+		}
+		$this->assertSame( 5, $this->h->mappings->live( $this->conn, 'orders' )['version'], 'the rollback version is still live' );
+		$this->assertSame( 4, $this->h->mappings->draft( $this->conn, 'orders' )['version'], 'and the draft still has its number' );
 	}
 }

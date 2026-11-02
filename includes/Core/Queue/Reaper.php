@@ -18,6 +18,10 @@ use Estasoft\SyncEngine\Domain\ErrorCode;
 /**
  * An item claimed by a worker has a lock of 60 seconds. If the worker dies (timeout, crash, server restart) the lock
  * runs out and the item is put back in the queue without counting a try, marked SYNC-LOCK-001. Runs every minute.
+ *
+ * An item that is taken back three times is a poison item (something in it keeps killing the worker). It is stopped as
+ * Failed with SYNC-LOCK-001 so a person looks at it, instead of being retried forever. A person's retry starts the count
+ * again. Only items this run really changed are logged and counted.
  */
 final class Reaper {
 
@@ -37,16 +41,26 @@ final class Reaper {
 	 * @return int How many items were put back.
 	 */
 	public function run(): int {
-		$ids = $this->queue->reapStaleLockIds();
-		foreach ( $ids as $id ) {
+		$taken = $this->queue->reapStale();
+		foreach ( $taken as $item ) {
+			if ( $item['failed'] ) {
+				$this->logger->error(
+					QueueRepository::poisonMessage( $item['reaps'] ),
+					array(
+						'queue_id' => $item['id'],
+						'code'     => ErrorCode::Lock001,
+					)
+				);
+				continue;
+			}
 			$this->logger->warning(
 				ErrorCode::Lock001->template(),
 				array(
-					'queue_id' => $id,
+					'queue_id' => $item['id'],
 					'code'     => ErrorCode::Lock001,
 				)
 			);
 		}
-		return count( $ids );
+		return count( $taken );
 	}
 }

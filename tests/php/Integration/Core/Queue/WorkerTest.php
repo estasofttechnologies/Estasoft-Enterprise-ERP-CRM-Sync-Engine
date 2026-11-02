@@ -299,4 +299,48 @@ final class WorkerTest extends CoreIntegrationTestCase {
 		$this->h->connections->setStatus( $conn, ConnectionStatus::Disconnected );
 		$this->assertSame( 0, $this->h->worker->run()->claimed );
 	}
+
+	public function test_a_worker_gives_up_quietly_while_another_holds_the_claim_lock(): void {
+		$conn = $this->fastConnection();
+		$id   = $this->h->item( $conn, '1' );
+		$host = (string) ( getenv( 'WP_DB_HOST' ) ?: 'localhost' );
+		$other = new \mysqli( $host, (string) ( getenv( 'WP_DB_USER' ) ?: 'root' ), (string) ( getenv( 'WP_DB_PASSWORD' ) ?: '' ), (string) ( getenv( 'WP_DB_NAME' ) ?: 'estasoft_test' ) );
+		$name  = $this->h->queue->claimLockName();
+		$this->assertSame( '1', (string) $other->query( "SELECT GET_LOCK('$name', 0)" )->fetch_row()[0] );
+		try {
+			$report = $this->h->worker->run();
+			$this->assertSame( 0, $report->claimed, 'another worker is filling the slots' );
+			$this->assertSame( 'idle', $report->stoppedBecause );
+			$this->assertSame( 'queued', $this->h->queue->findRow( $id )['state'], 'the item waits for the next run' );
+		} finally {
+			$other->query( "SELECT RELEASE_LOCK('$name')" );
+			$other->close();
+		}
+		$this->assertSame( 1, $this->h->worker->run()->claimed, 'the next run goes through' );
+	}
+
+	public function test_a_run_writes_results_with_its_own_lock_token(): void {
+		$conn = $this->fastConnection();
+		$id   = $this->h->item( $conn, '1' );
+		$seen = null;
+		$this->h->connector->script[] = function () use ( $id, &$seen ) {
+			$seen = $this->h->row( $id )['locked_by'];
+			return null;
+		};
+		$this->h->worker->run();
+		$this->assertNotEmpty( $seen );
+		$this->assertMatchesRegularExpression( '/^[0-9a-f-]{36}$/', (string) $seen, 'a UUID per run is the token' );
+		$this->assertSame( 'synced', $this->h->queue->findRow( $id )['state'] );
+	}
+
+	public function test_a_run_that_runs_out_of_time_gives_the_rest_back_with_its_token(): void {
+		$conn = $this->fastConnection( array( 'concurrency' => 2 ) );
+		$this->h->item( $conn, '1' );
+		$b = $this->h->item( $conn, '2' );
+		$this->h->connector->sendSeconds = 21;
+		$report = $this->h->worker->run();
+		$this->assertSame( 'time', $report->stoppedBecause );
+		$this->assertSame( 'queued', $this->h->queue->findRow( $b )['state'] );
+		$this->assertNull( $this->h->row( $b )['locked_by'] );
+	}
 }

@@ -45,7 +45,7 @@ final class ItemProcessorTest extends CoreIntegrationTestCase {
 		$items = $h->queue->claim( 20, 60, 'test-worker' );
 		foreach ( $items as $item ) {
 			if ( $item->id === $id ) {
-				return $h->processor->process( $item );
+				return $h->processor->process( $item, 'test-worker' );
 			}
 			$h->queue->release( $item->id );
 		}
@@ -305,7 +305,7 @@ final class ItemProcessorTest extends CoreIntegrationTestCase {
 		$this->assertSame( 'Fakesystem refused the sign-in. Check the user and the API key.', $row['error_message'] );
 		$connection = $this->h->connections->findPublic( $this->conn );
 		$this->assertSame( 'paused', $connection['status'] );
-		$this->assertSame( 'person', $connection['paused_reason'] );
+		$this->assertSame( 'sign_in', $connection['paused_reason'], 'the real reason, not "person"' );
 		$this->assertSame( array( array( $this->conn, 'sign_in' ) ), $paused->getArrayCopy() );
 		$this->assertSame( array(), $this->h->queue->claim( 10, 60, 'w' ), 'workers leave the item alone while the connection is paused' );
 
@@ -318,6 +318,7 @@ final class ItemProcessorTest extends CoreIntegrationTestCase {
 		$this->h->connector->script[] = new ConnectorError( ErrorCode::Auth002, array(), 401 );
 		$this->assertSame( Outcome::Held, $this->process( $id ) );
 		$this->assertSame( 'needs_reconnect', $this->h->connections->findPublic( $this->conn )['status'] );
+		$this->assertSame( 'sign_in', $this->h->connections->findPublic( $this->conn )['paused_reason'] );
 		$this->assertSame( 'queued', $this->h->queue->findRow( $id )['state'] );
 		$this->assertSame( 'SYNC-AUTH-002', $this->h->queue->findRow( $id )['error_code'] );
 	}
@@ -398,17 +399,19 @@ final class ItemProcessorTest extends CoreIntegrationTestCase {
 		$this->assertSame( 'SYNC-CFG-002', $row['error_code'] );
 		$this->assertSame( 'The encryption key is missing from wp-config.php.', $row['error_message'] );
 		$this->assertSame( 'paused', $keyless->connections->findPublic( $conn )['status'] );
+		$this->assertSame( 'key_missing', $keyless->connections->findPublic( $conn )['paused_reason'] );
 		$this->assertSame( 0, $keyless->connector->count( 'send' ) );
 		$this->assertSame( 'SYNC-CFG-002', $keyless->logs->latest( 5 )[0]['code'] );
 	}
 
 	public function test_a_changed_key_asks_for_a_reconnect_instead_of_calling_it_a_refused_sign_in(): void {
-		$other = new CoreHarness( '2026-11-02 12:00:00', 'a-completely-different-key-9876' );
+		$other = new CoreHarness( '2026-11-02 12:00:00', 'a-completely-different-key-98765432' );
 		$id    = $this->h->item( $this->conn, '10490' );
 
 		$this->assertSame( Outcome::Held, $this->process( $id, $other ) );
 
 		$this->assertSame( 'needs_reconnect', $this->h->connections->findPublic( $this->conn )['status'] );
+		$this->assertSame( 'sign_in', $this->h->connections->findPublic( $this->conn )['paused_reason'], 'the person has to sign in again' );
 		$row = $this->h->queue->findRow( $id );
 		$this->assertSame( 'queued', $row['state'] );
 		$this->assertNull( $row['error_code'], 'not an AUTH code' );
@@ -508,6 +511,179 @@ final class ItemProcessorTest extends CoreIntegrationTestCase {
 		$this->process( $id );
 		$this->assertSame( 'syncing', $seen['state'] );
 		$this->assertSame( '2026-11-02 12:01:30', $seen['locked_until'], 'pushed out to 90 seconds so a slow system cannot lose the lock' );
+	}
+
+	/**
+	 * Claim an item as worker A, the way the Worker does, and return it.
+	 *
+	 * @param int $id Queue id.
+	 */
+	private function claimAs( int $id, string $worker ): \Estasoft\SyncEngine\Domain\Item {
+		foreach ( $this->h->queue->claim( 20, 60, $worker ) as $item ) {
+			if ( $item->id === $id ) {
+				return $item;
+			}
+		}
+		$this->fail( "Item $id was not claimable." );
+	}
+
+	/**
+	 * Lose the lock the way it happens in life: it runs out, the reaper takes the item back, and another worker claims it.
+	 *
+	 * @param int    $id     Queue id.
+	 * @param string $worker The worker that takes it over.
+	 */
+	private function takeOver( int $id, string $worker ): void {
+		$this->h->clock->advance( 120 );
+		$this->assertSame( array( $id ), $this->h->queue->reapStaleLockIds() );
+		$this->claimAs( $id, $worker );
+	}
+
+	public function test_a_stale_workers_success_is_discarded_and_the_new_owner_keeps_the_row(): void {
+		$id   = $this->h->item( $this->conn, '10490' );
+		$item = $this->claimAs( $id, 'worker-a' );
+		$this->h->connector->script[] = function () use ( $id ) {
+			// While worker A waits for the system, its lock runs out and worker B takes the item over.
+			$this->takeOver( $id, 'worker-b' );
+			return null;
+		};
+		$synced = $this->listen( 'estasoft_sync_item_synced', 3 );
+
+		$this->assertSame( Outcome::LockLost, $this->h->processor->process( $item, 'worker-a' ) );
+
+		$row = $this->h->row( $id );
+		$this->assertSame( 'syncing', $row['state'], 'the row is left alone' );
+		$this->assertSame( 'worker-b', $row['locked_by'] );
+		$this->assertNull( $row['external_id'], 'the stale result did not overwrite the row' );
+		$this->assertSame( '0', $row['attempt'] );
+		$this->assertCount( 0, $synced, 'no hook fires for a result that was thrown away' );
+		$this->assertSame( 'warning', $this->h->logs->latest( 1 )[0]['level'] );
+		$this->assertSame( 'SYNC-LOCK-001', $this->h->logs->latest( 1 )[0]['code'] );
+
+		// The system does have the record, so it is remembered: the next worker will not send it a second time.
+		$this->assertNotNull( $this->h->idMap->get( $this->conn, EntityType::Order, '10490' ) );
+		$this->assertSame( 1, $this->h->connector->count( 'send' ) );
+	}
+
+	public function test_a_stale_workers_failure_is_discarded_too(): void {
+		$id   = $this->h->item( $this->conn, '10490' );
+		$item = $this->claimAs( $id, 'worker-a' );
+		$this->h->connector->script[] = function () use ( $id ) {
+			$this->takeOver( $id, 'worker-b' );
+			return new ConnectorError( ErrorCode::Net001, array() );
+		};
+		$failed = $this->listen( 'estasoft_sync_item_failed', 3 );
+
+		$this->assertSame( Outcome::LockLost, $this->h->processor->process( $item, 'worker-a' ) );
+
+		$row = $this->h->row( $id );
+		$this->assertSame( 'syncing', $row['state'] );
+		$this->assertSame( 'worker-b', $row['locked_by'] );
+		$this->assertSame( '0', $row['attempt'], 'no try was counted for the stale worker' );
+		$this->assertNull( $row['next_attempt_at'] );
+		$this->assertSame( 'SYNC-LOCK-001', $row['error_code'], 'only the reaper\'s note is on the row' );
+		$this->assertCount( 0, $failed );
+	}
+
+	public function test_a_worker_that_lost_its_lock_before_the_call_makes_no_call_at_all(): void {
+		$id   = $this->h->item( $this->conn, '10490' );
+		$item = $this->claimAs( $id, 'worker-a' );
+		$this->takeOver( $id, 'worker-b' );
+
+		$this->assertSame( Outcome::LockLost, $this->h->processor->process( $item, 'worker-a' ) );
+
+		$this->assertSame( 0, $this->h->connector->count( 'findExisting' ) + $this->h->connector->count( 'send' ), 'the lock is checked before each call to the system' );
+		$this->assertSame( 'worker-b', $this->h->row( $id )['locked_by'] );
+	}
+
+	public function test_the_lock_is_checked_again_before_the_send_after_the_lookup(): void {
+		$id   = $this->h->item( $this->conn, '10490' );
+		$item = $this->claimAs( $id, 'worker-a' );
+		// The lock is lost while the system is being asked whether the record exists. The send must not happen.
+		$this->h->connector->afterFind = function () use ( $id ): void {
+			$this->takeOver( $id, 'worker-b' );
+		};
+		$before = $this->listen( 'estasoft_sync_before_send', 3 );
+
+		$this->assertSame( Outcome::LockLost, $this->h->processor->process( $item, 'worker-a' ) );
+
+		$this->assertSame( 1, $this->h->connector->count( 'findExisting' ) );
+		$this->assertSame( 0, $this->h->connector->count( 'send' ), 'no send for a worker that lost the lock' );
+		$this->assertCount( 0, $before, 'and the before-send hook did not fire' );
+	}
+
+	public function test_another_workers_token_cannot_write_the_result(): void {
+		$id   = $this->h->item( $this->conn, '10490' );
+		$item = $this->claimAs( $id, 'worker-a' );
+		$this->assertSame( Outcome::LockLost, $this->h->processor->process( $item, 'worker-z' ) );
+		$this->assertSame( 'worker-a', $this->h->row( $id )['locked_by'] );
+		$this->assertSame( 'syncing', $this->h->row( $id )['state'] );
+	}
+
+	public function test_a_hold_is_guarded_by_the_token_too(): void {
+		$id   = $this->h->item( $this->conn, '10490' );
+		$item = $this->claimAs( $id, 'worker-a' );
+		$this->takeOver( $id, 'worker-b' );
+		$this->h->connections->setStatus( $this->conn, ConnectionStatus::Paused, null, 'person' );
+
+		$this->assertSame( Outcome::LockLost, $this->h->processor->process( $item, 'worker-a' ) );
+		$this->assertSame( 'syncing', $this->h->row( $id )['state'], 'worker B still owns it' );
+	}
+
+	public function test_without_a_token_the_row_is_written_as_before(): void {
+		$id   = $this->h->item( $this->conn, '10490' );
+		$item = $this->claimAs( $id, 'worker-a' );
+		$this->assertSame( Outcome::Synced, $this->h->processor->process( $item ) );
+		$this->assertSame( 'synced', $this->h->row( $id )['state'] );
+	}
+
+	public function test_the_sensitive_paths_of_the_payload_hide_those_fields_in_the_log_excerpt(): void {
+		$id = $this->h->item( $this->conn, '10490' );
+		$this->h->builder->payloads['10490']  = array(
+			'client_order_ref' => 'WC-10490',
+			'loyalty'          => array( 'tier' => 'GOLD-77' ),
+			'other'            => array( 'tier' => 'visible-tier' ),
+		);
+		$this->h->builder->sensitivePaths = array( 'loyalty.tier' );
+
+		$this->assertSame( Outcome::Synced, $this->process( $id ) );
+
+		$entry = $this->h->logs->find( (int) $this->h->queue->findRow( $id )['log_id'] );
+		$this->assertStringNotContainsString( 'GOLD-77', (string) $entry['request_excerpt'] );
+		$this->assertStringContainsString( 'visible-tier', (string) $entry['request_excerpt'], 'only the named path is hidden' );
+		$this->assertStringContainsString( '****', (string) $entry['request_excerpt'] );
+	}
+
+	public function test_the_sensitive_paths_are_used_for_a_failed_send_too(): void {
+		$id = $this->h->item( $this->conn, '10490' );
+		$this->h->builder->payloads['10490']  = array( 'client_order_ref' => 'WC-10490', 'loyalty' => array( 'tier' => 'GOLD-77' ) );
+		$this->h->builder->sensitivePaths = array( 'loyalty.tier' );
+		$this->h->connector->script[]     = new ConnectorError( ErrorCode::Net001 );
+
+		$this->assertSame( Outcome::Retrying, $this->process( $id ) );
+		$entry = $this->h->logs->find( (int) $this->h->queue->findRow( $id )['log_id'] );
+		$this->assertStringNotContainsString( 'GOLD-77', (string) $entry['request_excerpt'] );
+	}
+
+	public function test_a_system_message_with_private_text_is_redacted_in_the_queue_row_the_log_and_the_hook(): void {
+		$id      = $this->h->item( $this->conn, '10490' );
+		$failed  = $this->listen( 'estasoft_sync_item_failed', 3 );
+		$this->h->connector->script[] = new ConnectorError(
+			ErrorCode::Val002,
+			array(
+				'field'  => 'partner.email',
+				'reason' => 'noor@example.com is not valid, Authorization: Bearer abcdef1234567890abcdef',
+			),
+			422
+		);
+
+		$this->assertSame( Outcome::Failed, $this->process( $id ) );
+
+		$row = $this->h->queue->findRow( $id );
+		$this->assertStringNotContainsString( 'noor@example.com', (string) $row['error_message'] );
+		$this->assertStringNotContainsString( 'abcdef1234567890abcdef', (string) $row['error_message'] );
+		$this->assertStringNotContainsString( 'noor@example.com', (string) $this->h->logs->latest( 1 )[0]['message'] );
+		$this->assertStringNotContainsString( 'noor@example.com', $failed[0][1]->message(), 'nor does the hook carry it' );
 	}
 
 	public function test_the_connector_can_decide_that_an_error_is_worth_retrying(): void {

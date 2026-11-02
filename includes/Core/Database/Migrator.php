@@ -84,6 +84,7 @@ final class Migrator {
 
 		try {
 			require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+			( new Upgrades( $this->wpdb, $this->tables ) )->run();
 			foreach ( $this->schema->statements() as $statement ) {
 				dbDelta( $statement );
 			}

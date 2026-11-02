@@ -210,4 +210,72 @@ abstract class Repository {
 	protected static function stringOrNull( mixed $value ): ?string {
 		return null === $value ? null : (string) $value;
 	}
+
+	/**
+	 * Run work as one unit that is kept whole or dropped whole.
+	 *
+	 * When the connection has no transaction open, the work runs in a transaction of its own: START TRANSACTION, then COMMIT
+	 * when it succeeds and ROLLBACK when it does not. When one is already open (the order's own transaction, which is where
+	 * a queue row belongs), the work runs in a savepoint inside it: nothing is committed here, a failure undoes only this
+	 * work, and the caller's transaction goes on. A transaction is never nested.
+	 *
+	 * The work succeeds by returning anything but `false`; it fails by returning `false` or by throwing (the exception is
+	 * passed on after the rollback). A deadlock is tried once more, but only in a transaction of its own: inside the caller's
+	 * transaction InnoDB has already ended it.
+	 *
+	 * @param \Closure $work Work to do.
+	 * @return mixed What the work returned, or false when it was undone.
+	 *
+	 * @throws \Throwable Whatever the work throws.
+	 */
+	protected function unit( \Closure $work ): mixed {
+		$name     = 'estasoft_unit';
+		$previous = $this->wpdb->suppress_errors( true );
+		try {
+			for ( $attempt = 1; $attempt <= 2; ++$attempt ) {
+				// A savepoint can be rolled back to only inside an open transaction; outside one, MySQL forgets it at once.
+				// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+				$this->wpdb->query( 'SAVEPOINT ' . $name );
+				$inside = false !== $this->wpdb->query( 'ROLLBACK TO SAVEPOINT ' . $name );
+				if ( ! $inside ) {
+					$this->wpdb->query( 'START TRANSACTION' );
+				}
+				try {
+					$result = $work();
+				} catch ( \Throwable $e ) {
+					$this->wpdb->query( $inside ? 'ROLLBACK TO SAVEPOINT ' . $name : 'ROLLBACK' );
+					if ( $inside ) {
+						$this->wpdb->query( 'RELEASE SAVEPOINT ' . $name );
+					}
+					throw $e;
+				}
+				if ( false !== $result ) {
+					if ( $inside ) {
+						$this->wpdb->query( 'RELEASE SAVEPOINT ' . $name );
+						return $result;
+					}
+					if ( false !== $this->wpdb->query( 'COMMIT' ) ) {
+						return $result;
+					}
+					$this->wpdb->query( 'ROLLBACK' );
+					return false;
+				}
+				$deadlock = 1 === preg_match( '/deadlock|lock wait timeout/i', (string) $this->wpdb->last_error );
+				if ( $inside ) {
+					$this->wpdb->query( 'ROLLBACK TO SAVEPOINT ' . $name );
+					$this->wpdb->query( 'RELEASE SAVEPOINT ' . $name );
+					return false;
+				}
+				$this->wpdb->query( 'ROLLBACK' );
+				// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+				if ( ! $deadlock ) {
+					return false;
+				}
+				usleep( 20000 );
+			}
+			return false;
+		} finally {
+			$this->wpdb->suppress_errors( $previous );
+		}
+	}
 }

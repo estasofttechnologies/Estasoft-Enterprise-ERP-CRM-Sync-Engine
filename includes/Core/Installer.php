@@ -66,7 +66,19 @@ final class Installer {
 	 */
 	public static function uninstall(): void {
 		if ( is_multisite() ) {
-			self::forEachSite( array( self::class, 'uninstallSite' ) );
+			// User meta belongs to the whole network: it goes only when every site chose to delete its data.
+			$all = true;
+			self::forEachSite(
+				static function () use ( &$all ): void {
+					if ( ! self::uninstallSite( false ) ) {
+						$all = false;
+					}
+				}
+			);
+			if ( $all ) {
+				$wpdb = ( new WpdbProvider() )->get();
+				( new DataEraser( $wpdb, new Tables( $wpdb->base_prefix ) ) )->eraseUserMeta();
+			}
 			return;
 		}
 		self::uninstallSite();
@@ -114,16 +126,20 @@ final class Installer {
 
 	/**
 	 * Uninstall the current site.
+	 *
+	 * @param bool|null $deleteUserMeta Whether to remove the plugin's user meta too; null: yes on a single site, no on multisite.
+	 * @return bool Whether the site's data was deleted (false when the site chose to keep it).
 	 */
-	public static function uninstallSite(): void {
+	public static function uninstallSite( ?bool $deleteUserMeta = null ): bool {
 		$options  = new WpOptionStore();
 		$settings = new Settings( $options );
 		if ( ! $settings->deleteOnUninstall() ) {
 			Scheduler::unschedule();
-			return;
+			return false;
 		}
 		$wpdb = ( new WpdbProvider() )->get();
-		( new DataEraser( $wpdb, new Tables( $wpdb->prefix ) ) )->erase( true );
+		( new DataEraser( $wpdb, new Tables( $wpdb->prefix ) ) )->erase( true, $deleteUserMeta );
+		return true;
 	}
 
 	/**

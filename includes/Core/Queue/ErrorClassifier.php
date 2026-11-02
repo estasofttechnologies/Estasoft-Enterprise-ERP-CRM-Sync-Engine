@@ -14,6 +14,8 @@ defined( 'ABSPATH' ) || exit;
 use Estasoft\SyncEngine\Contract\ConnectorError;
 use Estasoft\SyncEngine\Contract\ConnectorInterface;
 use Estasoft\SyncEngine\Contract\HttpResponse;
+use Estasoft\SyncEngine\Core\Logging\Redactor;
+use Estasoft\SyncEngine\Core\Settings;
 use Estasoft\SyncEngine\Domain\ErrorClass;
 use Estasoft\SyncEngine\Domain\ErrorCode;
 
@@ -22,8 +24,34 @@ use Estasoft\SyncEngine\Domain\ErrorCode;
  * filter `estasoft_sync_classify_error`. A refused sign-in (SYNC-AUTH-001) pauses the connection and leaves the
  * item Queued; an expired or unfinished sign-in (AUTH-002, AUTH-003, AUTH-005) marks the connection as needing
  * reconnection and the item waits. Rate limiting (429) retries but never counts toward the circuit breaker.
+ *
+ * The text a system sends back (`reason`, `field`, `detail`, and similar) is redacted before it is used to fill a message
+ * template: secrets always, personal data while that setting is on. So the message that reaches the queue, the log, the
+ * hooks and the emails never carries it raw.
  */
 final class ErrorClassifier {
+
+	/**
+	 * Context keys whose value is text written by the other system.
+	 *
+	 * @var array<int,string>
+	 */
+	private const EXTERNAL_TEXT = array( 'reason', 'field', 'message', 'error', 'detail' );
+
+	/**
+	 * Longest external text kept in a message, in characters.
+	 */
+	private const EXTERNAL_LIMIT = 300;
+
+	/**
+	 * @param Redactor|null $redactor Redaction rules; a default one is used when null.
+	 * @param Settings|null $settings Tells whether personal data is removed too; it is removed when null.
+	 */
+	public function __construct(
+		private readonly ?Redactor $redactor = null,
+		private readonly ?Settings $settings = null
+	) {
+	}
 
 	/**
 	 * Classify a failure.
@@ -33,7 +61,7 @@ final class ErrorClassifier {
 	 * @param string                  $system    Name of the system, filled into {system}.
 	 */
 	public function classify( ConnectorError $error, ?ConnectorInterface $connector = null, string $system = '' ): Classification {
-		$error = $this->withSystem( $error, $system );
+		$error = $this->redacted( $this->withSystem( $error, $system ) );
 		$class = $error->errorClass();
 
 		if ( null === $error->classOverride && null !== $connector ) {
@@ -74,6 +102,7 @@ final class ErrorClassifier {
 	 * The default mapping from an HTTP answer to a catalog error (spec section 11), for connectors that have nothing
 	 * more specific to say. Returns null for a successful answer.
 	 *
+	 * A 3xx answer is a failure that needs a person (SYNC-VAL-002): the address redirects and the final address should be used.
 	 * 401 sign-in refused; 403 not allowed; 408, 425 and transport errors network; 429 slow down; 5xx server error;
 	 * other 4xx the system rejected the request. A certificate problem is SYNC-NET-003.
 	 *
@@ -91,8 +120,21 @@ final class ErrorClassifier {
 			}
 			return new ConnectorError( ErrorCode::Net001, $context, null, null, null, $this->shortDetail( $response->error ) );
 		}
-		if ( $status >= 200 && $status < 400 ) {
+		if ( $status >= 200 && $status < 300 ) {
 			return null;
+		}
+		if ( $status >= 300 && $status < 400 ) {
+			// A redirect is not an answer to the request. Following it could send credentials to another host, so a person
+			// has to change the address to the final one.
+			return new ConnectorError(
+				ErrorCode::Val002,
+				$context + array(
+					'field'  => 'address',
+					/* translators: %d: HTTP status code, for example 301. */
+					'reason' => sprintf( __( 'The address redirects to another address (HTTP %d). Use the final address in the connection settings.', 'estasoft-erp-crm-sync-engine' ), $status ),
+				),
+				$status
+			);
 		}
 		if ( 401 === $status ) {
 			return new ConnectorError( ErrorCode::Auth001, $context, $status );
@@ -157,6 +199,32 @@ final class ErrorClassifier {
 			$error->classOverride,
 			$error->detail
 		);
+	}
+
+	/**
+	 * A copy of the error whose external text is redacted and cut. The same object when there is nothing to change.
+	 *
+	 * @param ConnectorError $error The failure.
+	 */
+	private function redacted( ConnectorError $error ): ConnectorError {
+		$personal = null === $this->settings || $this->settings->redactionEnabled();
+		$redactor = $this->redactor ?? new Redactor();
+		$context  = $error->context;
+		$changed  = false;
+		foreach ( self::EXTERNAL_TEXT as $key ) {
+			if ( isset( $context[ $key ] ) && is_string( $context[ $key ] ) ) {
+				$clean = mb_substr( $redactor->message( $context[ $key ], $personal ), 0, self::EXTERNAL_LIMIT );
+				if ( $clean !== $context[ $key ] ) {
+					$context[ $key ] = $clean;
+					$changed         = true;
+				}
+			}
+		}
+		$detail = $redactor->message( $error->detail, $personal );
+		if ( ! $changed && $detail === $error->detail ) {
+			return $error;
+		}
+		return new ConnectorError( $error->code, $context, $error->httpStatus, $error->retryAfter, $error->classOverride, $detail );
 	}
 
 	/**
