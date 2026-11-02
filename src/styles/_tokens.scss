@@ -1,0 +1,75 @@
+// Sand and navy palette, scoped to the plugin's own elements. The WordPress admin frame is not
+// recoloured. Modals and popovers render outside the app root, so they carry the same variables.
+.estasoft-sync,
+.estasoft-sync-overlay,
+.estasoft-sync-popover {
+	--estasoft-sync-font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", sans-serif;
+	--estasoft-sync-mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", sfmono-regular, menlo, consolas, monospace;
+
+	--estasoft-sync-primary: #12355b;
+	--estasoft-sync-primary-hover: #0b2540;
+	--estasoft-sync-primary-pressed: #0a1f36;
+	--estasoft-sync-tint: #e7eef6;
+	--estasoft-sync-tint-strong: #d6e2ef;
+	--estasoft-sync-primary-border: #9db4cd;
+	--estasoft-sync-canvas: #f5f0e6;
+	--estasoft-sync-card: #fffdf8;
+	--estasoft-sync-subtle: #f8f3e9;
+	--estasoft-sync-hover: #efe8d8;
+	--estasoft-sync-border: #e6dcc8;
+	--estasoft-sync-divider: #e6dcc8;
+	--estasoft-sync-border-strong: #cfc3aa;
+	--estasoft-sync-border-control: #8a8070;
+	--estasoft-sync-text: #1f2430;
+	--estasoft-sync-text-muted: #5a5346;
+	--estasoft-sync-text-disabled: #a59c8b;
+	--estasoft-sync-accent: #a24a20;
+	--estasoft-sync-accent-tint: #f6e7de;
+
+	--estasoft-sync-success-icon: #1f6b38;
+	--estasoft-sync-success-text: #1a5730;
+	--estasoft-sync-success-tint: #e6f4ea;
+	--estasoft-sync-success-border: #b7d9c1;
+	--estasoft-sync-warning-icon: #8a5200;
+	--estasoft-sync-warning-text: #5f3800;
+	--estasoft-sync-warning-tint: #fdf1dc;
+	--estasoft-sync-warning-border: #e8cb92;
+	--estasoft-sync-danger-icon: #a32424;
+	--estasoft-sync-danger-text: #7a1b1b;
+	--estasoft-sync-danger-tint: #fbe9e9;
+	--estasoft-sync-danger-border: #e5b3b3;
+	--estasoft-sync-neutral-icon: #4b5563;
+	--estasoft-sync-neutral-tint: #eef0f3;
+
+	--estasoft-sync-state-queued-fg: #4b5563;
+	--estasoft-sync-state-queued-bg: #eef0f3;
+	--estasoft-sync-state-syncing-fg: #12355b;
+	--estasoft-sync-state-syncing-bg: #e7eef6;
+	--estasoft-sync-state-synced-fg: #1f6b38;
+	--estasoft-sync-state-synced-bg: #e6f4ea;
+	--estasoft-sync-state-retrying-fg: #8a5200;
+	--estasoft-sync-state-retrying-bg: #fdf1dc;
+	--estasoft-sync-state-failed-fg: #a32424;
+	--estasoft-sync-state-failed-bg: #fbe9e9;
+	--estasoft-sync-state-paused-fg: #374151;
+	--estasoft-sync-state-paused-bg: #e5e7eb;
+
+	--estasoft-sync-scrim: rgb(31 36 48 / 45%);
+	--estasoft-sync-shadow-1: 0 1px 2px rgb(31 36 48 / 10%);
+	--estasoft-sync-shadow-2: 0 2px 8px rgb(31 36 48 / 14%), 0 0 1px rgb(31 36 48 / 18%);
+	--estasoft-sync-shadow-3: 0 16px 40px rgb(31 36 48 / 22%), 0 0 1px rgb(31 36 48 / 22%);
+	--estasoft-sync-radius: 4px;
+	--estasoft-sync-radius-lg: 8px;
+	--estasoft-sync-control: 32px;
+	--estasoft-sync-control-sm: 24px;
+	--estasoft-sync-focus: 2px solid var(--estasoft-sync-primary);
+
+	// WordPress components read these, so buttons, switches, checkboxes and focus rings follow the palette here only.
+	--wp-admin-theme-color: #12355b;
+	--wp-admin-theme-color--rgb: 18, 53, 91;
+	--wp-admin-theme-color-darker-10: #0b2540;
+	--wp-admin-theme-color-darker-10--rgb: 11, 37, 64;
+	--wp-admin-theme-color-darker-20: #0a1f36;
+	--wp-admin-theme-color-darker-20--rgb: 10, 31, 54;
+	--wp-admin-border-width-focus: 2px;
+}

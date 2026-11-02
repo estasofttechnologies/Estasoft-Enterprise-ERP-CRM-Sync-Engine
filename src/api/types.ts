@@ -11,12 +11,16 @@
 
 import type { ErrorClass } from './errors';
 
-export type ItemState = 'queued' | 'syncing' | 'synced' | 'retrying' | 'failed' | 'skipped';
+export type ItemState =
+	'queued' | 'syncing' | 'synced' | 'retrying' | 'failed' | 'skipped';
 export type ItemMode = 'live' | 'shadow';
-export type EntityType = 'order' | 'refund' | 'customer' | 'stock' | 'tracking' | 'invoice';
-export type ConnectionStatus = 'active' | 'paused' | 'paused_circuit' | 'needs_reconnect' | 'disconnected';
+export type EntityType =
+	'order' | 'refund' | 'customer' | 'stock' | 'tracking' | 'invoice';
+export type ConnectionStatus =
+	'active' | 'paused' | 'paused_circuit' | 'needs_reconnect' | 'disconnected';
 export type ConnectorType = 'erp' | 'accounting' | 'crm';
-export type MappingType = 'orders' | 'customers' | 'products' | 'refunds' | 'stock' | 'tracking';
+export type MappingType =
+	'orders' | 'customers' | 'products' | 'refunds' | 'stock' | 'tracking';
 export type LogLevel = 'info' | 'warning' | 'error';
 
 export interface Money {
@@ -36,7 +40,8 @@ export interface Paged< T > {
 
 /* ---------------------------------------------------------------- status (GET /status) */
 
-export type DashboardMode = 'not_connected' | 'first_run' | 'normal' | 'paused' | 'shadow';
+export type DashboardMode =
+	'not_connected' | 'first_run' | 'normal' | 'paused' | 'shadow';
 
 export interface ConnectionSummary {
 	id: number;
@@ -146,7 +151,10 @@ export interface QueueItemDetail extends QueueItem {
 	response_excerpt: string | null;
 	log_id: number | null;
 	/** Sibling items of the same order, oldest first. */
-	siblings: Pick< QueueItem, 'id' | 'event' | 'state' | 'error_code' | 'created_at' >[];
+	siblings: Pick<
+		QueueItem,
+		'id' | 'event' | 'state' | 'error_code' | 'created_at'
+	>[];
 }
 
 export interface QueueQuery {
@@ -198,10 +206,18 @@ export interface ReliabilitySettings {
 
 export interface Connection extends ConnectionSummary {
 	company: string;
-	warehouses: { id: string; name: string; counts_toward_stock: boolean; countries: string[] }[];
+	warehouses: {
+		id: string;
+		name: string;
+		counts_toward_stock: boolean;
+		countries: string[];
+	}[];
 	settings: ReliabilitySettings;
 	/** Credential fields with values for non-secret ones; secrets are never returned. */
-	credentials: ( CredentialFieldDef & { value: string | null; has_value: boolean } )[];
+	credentials: ( CredentialFieldDef & {
+		value: string | null;
+		has_value: boolean;
+	} )[];
 	inbound_enabled: boolean;
 	created_at: string;
 }
@@ -244,7 +260,10 @@ export interface CatalogEntry {
 
 export interface MappingTransform {
 	type: string;
-	args?: Record< string, string | number | boolean | Record< string, string > >;
+	args?: Record<
+		string,
+		string | number | boolean | Record< string, string >
+	>;
 }
 
 export interface MappingRule {
@@ -276,8 +295,19 @@ export interface MappingSet {
 	live: MappingVersion | null;
 	draft: MappingVersion | null;
 	versions: Omit< MappingVersion, 'rules' >[];
-	target_fields: { path: string; label: string; type: string; required: boolean; group: string }[];
-	source_fields: { path: string; label: string; type: string; group: string }[];
+	target_fields: {
+		path: string;
+		label: string;
+		type: string;
+		required: boolean;
+		group: string;
+	}[];
+	source_fields: {
+		path: string;
+		label: string;
+		type: string;
+		group: string;
+	}[];
 }
 
 export interface MappingPreviewRequest {
@@ -309,7 +339,11 @@ export interface TaxMapRow {
 export interface TaxMap {
 	rows: TaxMapRow[];
 	system_codes: { code: string; label: string; rate_percent: number }[];
-	buyer_tax_rules: { country: string; digits: number | null; required_for_business: boolean }[];
+	buyer_tax_rules: {
+		country: string;
+		digits: number | null;
+		required_for_business: boolean;
+	}[];
 }
 
 export interface ProductMatch {
@@ -331,7 +365,12 @@ export interface StockRules {
 	safety_buffer: number;
 	subtract_held: boolean;
 	system_wins: true;
-	warehouses: { id: string; name: string; counts_toward_stock: boolean; countries: string[] }[];
+	warehouses: {
+		id: string;
+		name: string;
+		counts_toward_stock: boolean;
+		countries: string[];
+	}[];
 	tracking_enabled: boolean;
 	delivered_becomes: string;
 	cod_payment_on_delivery: boolean;
@@ -364,12 +403,19 @@ export interface StockOverview {
 	unmatched: number;
 	changes: StockChange[];
 	conflicts: StockConflict[];
-	tracking_recent: { order_id: number; order_label: string; carrier: string; number: string; at: string }[];
+	tracking_recent: {
+		order_id: number;
+		order_label: string;
+		carrier: string;
+		number: string;
+		at: string;
+	}[];
 }
 
 /* ---------------------------------------------------------------- reconciliation, invoices */
 
-export type DiffType = 'missing_in_system' | 'total_differs' | 'refund_missing' | 'status_differs';
+export type DiffType =
+	'missing_in_system' | 'total_differs' | 'refund_missing' | 'status_differs';
 
 export interface ReconDiff {
 	id: number;
@@ -407,7 +453,8 @@ export interface ReconOverview {
 	auto_repair_missing: boolean;
 }
 
-export type InvoiceStatus = 'waiting' | 'rejected' | 'reported' | 'not_required';
+export type InvoiceStatus =
+	'waiting' | 'rejected' | 'reported' | 'not_required';
 
 export interface InvoiceRow {
 	order_id: number;
@@ -531,7 +578,11 @@ export interface SampleOrder {
 export interface ApiErrorBody {
 	code: string;
 	message: string;
-	data?: { status: number; class: ErrorClass; context?: Record< string, string > };
+	data?: {
+		status: number;
+		class: ErrorClass;
+		context?: Record< string, string >;
+	};
 }
 
 export interface Notice {
