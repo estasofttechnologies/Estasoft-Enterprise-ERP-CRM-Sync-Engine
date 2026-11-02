@@ -53,7 +53,7 @@ use Estasoft\SyncEngine\Jobs\Support\StoreTime;
  *
  * Only one request advances a run at a time: the tick, the continue event and a manual run take a short lock (the option
  * `estasoft_sync_recon_lock`, which expires), and a request that finds it taken returns the run as it stands. Each difference
- * remembers the connection it was found in (`estasoft_sync_recon_diff_conn`), and a repair goes there, never to "the first
+ * carries the connection it was found in (`connection_id`), and a repair goes there, never to "the first
  * connection". No repair, manual or automatic, happens while a shadow window is open on that connection. Copying a cancellation
  * into WooCommerce first checks that the order still has the status the check saw.
  */
@@ -70,20 +70,9 @@ final class ReconService {
 	public const SYSTEM = 'estasoft_sync_recon_system';
 
 	/**
-	 * Option: which connection each difference belongs to (difference id to connection id). The repository's difference shape does
-	 * not carry it, and a repair must go to the system the difference was found in.
-	 */
-	public const DIFF_CONNECTIONS = 'estasoft_sync_recon_diff_conn';
-
-	/**
 	 * Option: the run lock (a token and the time it expires).
 	 */
 	public const LOCK = 'estasoft_sync_recon_lock';
-
-	/**
-	 * Most differences whose connection is remembered.
-	 */
-	private const DIFF_CONNECTIONS_CAP = 3000;
 
 	/**
 	 * Orders compared per chunk.
@@ -524,7 +513,6 @@ final class ReconService {
 		if ( null === $id ) {
 			$id                      = $this->recon->addDiff( (int) $progress['run_id'], (int) $progress['connection_id'], (int) $order['id'], (string) $order['label'], $difference['type'], $difference['wc_value'], $difference['system_value'] );
 			$progress['known'][ $key ] = $id;
-			$this->rememberDiffConnection( $id, (int) $progress['connection_id'] );
 		}
 		if ( $autoRepair && 'missing_in_system' === $difference['type'] && $id > 0 ) {
 			try {
@@ -749,8 +737,7 @@ final class ReconService {
 	 * @throws JobException 409 when the system is gone, or cannot be told.
 	 */
 	private function diffConnection( array $diff ): int {
-		$map    = $this->options->get( self::DIFF_CONNECTIONS, array() );
-		$stored = is_array( $map ) ? (int) ( $map[ (string) $diff['id'] ] ?? 0 ) : 0;
+		$stored = (int) ( $diff['connection_id'] ?? 0 );
 		if ( $stored > 0 ) {
 			$connection = $this->connections->findWithoutSecrets( $stored );
 			if ( null === $connection || ConnectionStatus::Disconnected === $connection->status ) {
@@ -758,30 +745,7 @@ final class ReconService {
 			}
 			return $stored;
 		}
-		$connected = array_values( array_filter( $this->connections->allWithoutSecrets(), static fn( $connection ): bool => ConnectionStatus::Disconnected !== $connection->status ) );
-		if ( 1 === count( $connected ) ) {
-			return $connected[0]->id;
-		}
 		throw new JobException( __( 'It is not known which system this difference belongs to. Run the check again, then repair the new difference.', 'estasoft-erp-crm-sync-engine' ), 409 );
-	}
-
-	/**
-	 * Remember which connection a difference belongs to.
-	 *
-	 * @param int $diffId       Difference id.
-	 * @param int $connectionId Connection id.
-	 */
-	private function rememberDiffConnection( int $diffId, int $connectionId ): void {
-		if ( $diffId <= 0 || $connectionId <= 0 ) {
-			return;
-		}
-		$map = $this->options->get( self::DIFF_CONNECTIONS, array() );
-		$map = is_array( $map ) ? $map : array();
-		$map[ (string) $diffId ] = $connectionId;
-		if ( count( $map ) > self::DIFF_CONNECTIONS_CAP ) {
-			$map = array_slice( $map, -self::DIFF_CONNECTIONS_CAP, null, true );
-		}
-		$this->options->set( self::DIFF_CONNECTIONS, $map );
 	}
 
 	/**
