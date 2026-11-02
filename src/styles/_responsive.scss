@@ -1,0 +1,200 @@
+// 782px and below: tabs become a sections menu, tables become cards, targets are 44px.
+@media (max-width: 782px) {
+
+	.estasoft-sync-tabs {
+		display: none;
+	}
+
+	.estasoft-sync-sections {
+		display: block;
+	}
+
+	.estasoft-sync-appbar {
+		gap: 0 12px;
+		padding-inline: 12px;
+	}
+
+	.estasoft-sync-body {
+		padding: 12px;
+	}
+
+	.estasoft-sync-split,
+	.estasoft-sync-filters {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.estasoft-sync-kv__row {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0;
+	}
+
+	.estasoft-sync-meter {
+		grid-template-columns: 80px minmax(0, 1fr) 36px;
+	}
+
+	.estasoft-sync-chart {
+		gap: 4px;
+		padding-inline: 12px;
+	}
+
+	.estasoft-sync-savebar {
+		inset-inline: 0;
+		border-radius: 0;
+	}
+
+	.estasoft-sync .components-button.estasoft-sync-btn,
+	.estasoft-sync-overlay .components-button.estasoft-sync-btn,
+	.estasoft-sync-popover .components-button.estasoft-sync-btn,
+	.estasoft-sync-segment,
+	.estasoft-sync-sections__button,
+	.estasoft-sync-subtab,
+	.estasoft-sync-helptip__button {
+		min-block-size: 44px;
+		min-inline-size: 44px;
+	}
+
+	.estasoft-sync .components-button.estasoft-sync-btn.is-link {
+		min-block-size: 44px;
+	}
+
+	.estasoft-sync .components-text-control__input,
+	.estasoft-sync .components-select-control__input,
+	.estasoft-sync-overlay .components-text-control__input,
+	.estasoft-sync-overlay .components-select-control__input {
+		min-block-size: 44px;
+	}
+
+	.estasoft-sync input[type="checkbox"],
+	.estasoft-sync input[type="radio"],
+	.estasoft-sync-overlay input[type="checkbox"],
+	.estasoft-sync-overlay input[type="radio"],
+	.estasoft-sync .components-checkbox-control__input[type="checkbox"] {
+		inline-size: 24px;
+		block-size: 24px;
+	}
+
+	.estasoft-sync-menuitem.components-button {
+		min-block-size: 44px;
+	}
+
+	// A table is a list of cards. The cells keep their table roles, so the structure is still announced.
+	.estasoft-sync-table-wrap {
+		overflow: visible;
+	}
+
+	.estasoft-sync-table,
+	.estasoft-sync-table tbody,
+	.estasoft-sync-table tr,
+	.estasoft-sync-table td {
+		display: block;
+		inline-size: 100%;
+	}
+
+	.estasoft-sync-table thead {
+		position: absolute;
+		inline-size: 1px;
+		block-size: 1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+	}
+
+	.estasoft-sync-table tr {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 4px 12px;
+		padding: 12px 16px;
+		border-block-end: 1px solid var(--estasoft-sync-border);
+	}
+
+	.estasoft-sync-table tbody tr:last-child {
+		border-block-end: 0;
+	}
+
+	.estasoft-sync-table td,
+	.estasoft-sync-table tbody tr:last-child td {
+		inline-size: auto;
+		padding: 0;
+		border: 0;
+		background: none;
+	}
+
+	.estasoft-sync-table tr.is-selected,
+	.estasoft-sync-table tr.is-chosen {
+		background: var(--estasoft-sync-tint);
+	}
+
+	.estasoft-sync-table td[data-card-role="primary"] {
+		flex: 1 1 60%;
+		font-size: 16px;
+		font-weight: 600;
+	}
+
+	.estasoft-sync-table td[data-label] {
+		flex: 1 1 100%;
+	}
+
+	.estasoft-sync-table td[data-label]::before {
+		content: attr(data-label);
+		display: block;
+		color: var(--estasoft-sync-text-muted);
+		font-size: 12px;
+		font-weight: 600;
+		line-height: 16px;
+	}
+
+	.estasoft-sync-table td[data-card-role="actions"] {
+		flex: 1 1 100%;
+		text-align: end;
+	}
+
+	.estasoft-sync-table td.is-end {
+		text-align: start;
+	}
+
+	.estasoft-sync-table td[data-card-role="select"] {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		inline-size: 44px;
+		block-size: 44px;
+		margin-inline-start: -8px;
+	}
+
+	.estasoft-sync-table td[data-card-role="actions"] .estasoft-sync-rowactions {
+		justify-content: flex-end;
+	}
+
+	.estasoft-sync-group .estasoft-sync-table-wrap {
+		margin-inline: -16px;
+	}
+}
+
+// 520px and below: dialogs become bottom sheets.
+@media (max-width: 520px) {
+
+	.estasoft-sync-overlay.components-modal__screen-overlay {
+		align-items: flex-end;
+	}
+
+	.estasoft-sync-modal.components-modal__frame {
+		position: fixed;
+		inset: auto 0 0;
+		inline-size: 100%;
+		max-inline-size: 100%;
+		max-block-size: 92vh;
+		border-radius: 12px 12px 0 0;
+	}
+
+	.estasoft-sync-chart {
+		block-size: 150px;
+	}
+
+	.estasoft-sync-steps {
+		gap: 6px 16px;
+	}
+
+	.estasoft-sync-appbar__guide {
+		display: none;
+	}
+}

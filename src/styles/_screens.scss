@@ -1,0 +1,22 @@
+// Screen-specific touches that do not belong to a shared component.
+.estasoft-sync-group .estasoft-sync-table-wrap {
+	margin-inline: -20px;
+}
+
+.estasoft-sync-group .estasoft-sync-card__body {
+	gap: 12px;
+}
+
+.estasoft-sync-choose section {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.estasoft-sync-card .estasoft-sync-table-wrap {
+	border-radius: 0;
+}
+
+.estasoft-sync-diff .estasoft-sync-code__line {
+	font-weight: 500;
+}

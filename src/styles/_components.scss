@@ -1,0 +1,1225 @@
+// Buttons, chips, badges, callouts, fields, tables, dialogs and small parts.
+
+// WordPress buttons, sized for the plugin.
+.estasoft-sync .components-button.estasoft-sync-btn,
+.estasoft-sync-overlay .components-button.estasoft-sync-btn,
+.estasoft-sync-popover .components-button.estasoft-sync-btn {
+	justify-content: center;
+	gap: 6px;
+	min-block-size: var(--estasoft-sync-control);
+	padding-block: 0;
+	padding-inline: 12px;
+	border-radius: var(--estasoft-sync-radius);
+	font-family: inherit;
+	font-size: 14px;
+	font-weight: 600;
+	line-height: 20px;
+	white-space: nowrap;
+
+	&.is-secondary,
+	&.is-tertiary:not(.is-link) {
+		background: var(--estasoft-sync-card);
+		color: var(--estasoft-sync-text);
+		box-shadow: inset 0 0 0 1px var(--estasoft-sync-border-strong);
+
+		&:hover:not(:disabled, [aria-disabled="true"]) {
+			background: var(--estasoft-sync-hover);
+			color: var(--estasoft-sync-text);
+			box-shadow: inset 0 0 0 1px var(--estasoft-sync-border-strong);
+		}
+	}
+
+	&.is-tertiary:not(.is-link) {
+		box-shadow: none;
+		color: var(--estasoft-sync-primary);
+		background: transparent;
+
+		&:hover:not(:disabled, [aria-disabled="true"]) {
+			background: var(--estasoft-sync-tint);
+			color: var(--estasoft-sync-primary-pressed);
+			box-shadow: none;
+		}
+	}
+
+	&.is-primary {
+		background: var(--estasoft-sync-primary);
+		color: #fff;
+
+		&:hover:not(:disabled, [aria-disabled="true"]) {
+			background: var(--estasoft-sync-primary-hover);
+			color: #fff;
+		}
+
+		&:active:not(:disabled) {
+			background: var(--estasoft-sync-primary-pressed);
+		}
+	}
+
+	&.is-link {
+		min-block-size: 0;
+		padding: 0;
+		color: var(--estasoft-sync-primary);
+		font-weight: 600;
+		white-space: normal;
+		text-decoration: underline;
+	}
+
+	&.estasoft-sync-btn--danger.is-primary,
+	&.estasoft-sync-btn--danger {
+		background: var(--estasoft-sync-danger-icon);
+		color: #fff;
+		box-shadow: none;
+
+		&:hover:not(:disabled, [aria-disabled="true"]) {
+			background: #821c1c;
+			color: #fff;
+		}
+	}
+
+	&.estasoft-sync-btn--sm {
+		min-block-size: var(--estasoft-sync-control-sm);
+		padding-inline: 8px;
+		font-size: 12px;
+		line-height: 16px;
+	}
+
+	&.estasoft-sync-btn--icon {
+		padding-inline: 6px;
+	}
+
+	&:disabled,
+	&[aria-disabled="true"] {
+		opacity: 0.55;
+		cursor: not-allowed;
+	}
+
+	&:focus-visible {
+		outline: var(--estasoft-sync-focus);
+		outline-offset: 2px;
+		box-shadow: none;
+	}
+}
+
+.estasoft-sync-linkbutton {
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--estasoft-sync-primary);
+	font: inherit;
+	font-weight: 600;
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+// Sync state chips: icon plus word, never colour alone.
+.estasoft-sync-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	min-block-size: 20px;
+	padding-block: 0;
+	padding-inline: 6px 8px;
+	border: 1px solid transparent;
+	border-radius: 999px;
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 16px;
+	white-space: nowrap;
+
+	.estasoft-sync-icon {
+		inline-size: 14px;
+		block-size: 14px;
+	}
+
+	&--lg {
+		min-block-size: 28px;
+		padding-inline: 10px 12px;
+		font-size: 14px;
+		line-height: 20px;
+
+		.estasoft-sync-icon {
+			inline-size: 16px;
+			block-size: 16px;
+		}
+	}
+
+	@each $state, $border in (queued: #d3d7dd, syncing: #b9cde1, synced: #b7d9c1, retrying: #e8cb92, failed: #e5b3b3, paused: #c9cdd3) {
+		&--#{$state} {
+			border-color: $border;
+			background: var(--estasoft-sync-state-#{$state}-bg);
+			color: var(--estasoft-sync-state-#{$state}-fg);
+		}
+	}
+}
+
+.estasoft-sync-tag {
+	display: inline-block;
+	padding-inline: 6px;
+	border: 1px solid var(--estasoft-sync-border-strong);
+	border-radius: 2px;
+	background: var(--estasoft-sync-card);
+	color: var(--estasoft-sync-text-muted);
+	font-size: 12px;
+	line-height: 16px;
+}
+
+.estasoft-sync-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	min-block-size: 20px;
+	padding-inline: 6px 8px;
+	border: 1px solid transparent;
+	border-radius: 999px;
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 16px;
+	white-space: nowrap;
+
+	.estasoft-sync-icon {
+		inline-size: 14px;
+		block-size: 14px;
+	}
+
+	&--success {
+		border-color: var(--estasoft-sync-success-border);
+		background: var(--estasoft-sync-success-tint);
+		color: var(--estasoft-sync-success-text);
+	}
+
+	&--warning {
+		border-color: var(--estasoft-sync-warning-border);
+		background: var(--estasoft-sync-warning-tint);
+		color: var(--estasoft-sync-warning-text);
+	}
+
+	&--danger {
+		border-color: var(--estasoft-sync-danger-border);
+		background: var(--estasoft-sync-danger-tint);
+		color: var(--estasoft-sync-danger-text);
+	}
+
+	&--info {
+		border-color: var(--estasoft-sync-primary-border);
+		background: var(--estasoft-sync-tint-strong);
+		color: var(--estasoft-sync-primary-pressed);
+	}
+
+	&--neutral {
+		border-color: var(--estasoft-sync-border);
+		background: var(--estasoft-sync-neutral-tint);
+		color: var(--estasoft-sync-text-muted);
+	}
+}
+
+// Messages inside the plugin: icon, text and one action.
+.estasoft-sync-callout {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: 8px 12px;
+	padding: 12px 16px;
+	border: 1px solid var(--estasoft-sync-primary-border);
+	border-radius: var(--estasoft-sync-radius-lg);
+	background: var(--estasoft-sync-tint);
+	color: var(--estasoft-sync-text);
+
+	> .estasoft-sync-icon {
+		margin-block-start: 0;
+	}
+
+	&--success {
+		border-color: var(--estasoft-sync-success-border);
+		background: var(--estasoft-sync-success-tint);
+
+		> .estasoft-sync-icon {
+			color: var(--estasoft-sync-success-icon);
+		}
+	}
+
+	&--warning {
+		border-color: var(--estasoft-sync-warning-border);
+		background: var(--estasoft-sync-warning-tint);
+
+		> .estasoft-sync-icon {
+			color: var(--estasoft-sync-warning-icon);
+		}
+	}
+
+	&--danger {
+		border-color: var(--estasoft-sync-danger-border);
+		background: var(--estasoft-sync-danger-tint);
+
+		> .estasoft-sync-icon {
+			color: var(--estasoft-sync-danger-icon);
+		}
+	}
+
+	&--info > .estasoft-sync-icon {
+		color: var(--estasoft-sync-primary);
+	}
+}
+
+.estasoft-sync-callout__text {
+	display: flex;
+	flex: 1 1 280px;
+	flex-direction: column;
+	gap: 6px;
+	min-inline-size: 0;
+}
+
+.estasoft-sync-callout__action {
+	flex: none;
+}
+
+.estasoft-sync-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 6px;
+	padding: 20px;
+	border: 1px dashed var(--estasoft-sync-border-strong);
+	border-radius: var(--estasoft-sync-radius-lg);
+	background: var(--estasoft-sync-card);
+}
+
+.estasoft-sync-empty__title {
+	font-size: 16px;
+	font-weight: 600;
+}
+
+.estasoft-sync-loading {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 4px 0;
+}
+
+.estasoft-sync-loading__block {
+	display: block;
+	block-size: 56px;
+	border-radius: var(--estasoft-sync-radius-lg);
+	background: var(--estasoft-sync-hover);
+}
+
+.estasoft-sync-busy {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+}
+
+// Forms.
+.estasoft-sync .components-base-control,
+.estasoft-sync-overlay .components-base-control {
+	font-family: inherit;
+}
+
+.estasoft-sync .components-base-control__label,
+.estasoft-sync-overlay .components-base-control__label,
+.estasoft-sync-label {
+	color: var(--estasoft-sync-text);
+	font-size: 13px;
+	font-weight: 600;
+	text-transform: none;
+}
+
+.estasoft-sync .components-base-control__help,
+.estasoft-sync-overlay .components-base-control__help {
+	margin-block: 4px 0;
+	color: var(--estasoft-sync-text-muted);
+	font-size: 12px;
+	line-height: 16px;
+}
+
+.estasoft-sync .components-text-control__input,
+.estasoft-sync .components-select-control__input,
+.estasoft-sync-overlay .components-text-control__input,
+.estasoft-sync-overlay .components-select-control__input,
+.estasoft-sync-textarea {
+	min-block-size: var(--estasoft-sync-control);
+	border: 1px solid var(--estasoft-sync-border-control);
+	border-radius: var(--estasoft-sync-radius);
+	background-color: var(--estasoft-sync-card);
+	color: var(--estasoft-sync-text);
+	font-family: inherit;
+	font-size: 14px;
+
+	&:focus {
+		border-color: var(--estasoft-sync-primary);
+		box-shadow: 0 0 0 1px var(--estasoft-sync-primary);
+		outline: 2px solid transparent;
+	}
+
+	&[aria-invalid="true"] {
+		border-color: var(--estasoft-sync-danger-icon);
+		box-shadow: 0 0 0 1px var(--estasoft-sync-danger-icon);
+	}
+}
+
+.estasoft-sync-textarea {
+	inline-size: 100%;
+	padding: 8px;
+}
+
+.estasoft-sync-field-error {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--estasoft-sync-danger-icon);
+	font-size: 13px;
+	line-height: 18px;
+
+	.estasoft-sync-icon {
+		inline-size: 14px;
+		block-size: 14px;
+	}
+}
+
+.estasoft-sync-fieldset {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	min-inline-size: 0;
+	margin: 0;
+	padding: 0;
+	border: 0;
+
+	&--flush {
+		gap: 16px;
+	}
+
+	&:disabled {
+		opacity: 1;
+	}
+}
+
+.estasoft-sync-subtitle {
+	margin-block-start: 8px;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.estasoft-sync-inline-fields {
+	display: grid;
+	gap: 12px 16px;
+	grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+}
+
+.estasoft-sync-checklist {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	max-block-size: 220px;
+	margin: 0;
+	padding: 8px;
+	overflow: auto;
+	border: 1px solid var(--estasoft-sync-border);
+	border-radius: var(--estasoft-sync-radius);
+}
+
+.estasoft-sync-steplist {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+.estasoft-sync-step {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 12px;
+	border: 1px solid var(--estasoft-sync-border);
+	border-radius: var(--estasoft-sync-radius);
+	background: var(--estasoft-sync-subtle);
+}
+
+.estasoft-sync-choices {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+.estasoft-sync-choice {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	cursor: pointer;
+
+	input {
+		flex: none;
+		margin: 3px 0 0;
+	}
+
+	&--card {
+		padding: 12px 16px;
+		border: 1px solid var(--estasoft-sync-border);
+		border-radius: var(--estasoft-sync-radius-lg);
+		background: var(--estasoft-sync-card);
+
+		&.is-selected {
+			border-color: var(--estasoft-sync-primary);
+			background: var(--estasoft-sync-tint);
+			box-shadow: 0 0 0 1px var(--estasoft-sync-primary);
+		}
+	}
+}
+
+.estasoft-sync-choice__text {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.estasoft-sync-filters {
+	display: grid;
+	gap: 12px;
+	grid-template-columns: minmax(200px, 2fr) repeat(auto-fit, minmax(150px, 1fr));
+	align-items: end;
+}
+
+.estasoft-sync-connpick {
+	max-inline-size: 420px;
+}
+
+// Segmented filter and sub tabs.
+.estasoft-sync-segments {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-self: flex-start;
+	overflow: hidden;
+	border: 1px solid var(--estasoft-sync-border-control);
+	border-radius: var(--estasoft-sync-radius);
+	background: var(--estasoft-sync-card);
+}
+
+.estasoft-sync-segment {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	min-block-size: 30px;
+	padding-inline: 12px;
+	border: 0;
+	border-inline-start: 1px solid var(--estasoft-sync-border);
+	background: var(--estasoft-sync-card);
+	color: var(--estasoft-sync-text);
+	font: inherit;
+	cursor: pointer;
+
+	&:first-child {
+		border-inline-start: 0;
+	}
+
+	&:hover {
+		background: var(--estasoft-sync-hover);
+	}
+
+	&[aria-pressed="true"] {
+		background: var(--estasoft-sync-tint-strong);
+		color: var(--estasoft-sync-primary-pressed);
+		font-weight: 600;
+	}
+}
+
+.estasoft-sync-segment__count {
+	color: var(--estasoft-sync-text-muted);
+	font-size: 12px;
+	font-variant-numeric: tabular-nums;
+}
+
+.estasoft-sync-subtabs {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 20px;
+	border-block-end: 1px solid var(--estasoft-sync-border);
+}
+
+.estasoft-sync-subtab {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	min-block-size: 40px;
+	border-block-end: 3px solid transparent;
+	color: var(--estasoft-sync-text);
+	text-decoration: none;
+
+	&[aria-current="page"] {
+		border-block-end-color: var(--estasoft-sync-primary);
+		color: var(--estasoft-sync-primary);
+		font-weight: 650;
+	}
+}
+
+// Tables become cards at 782px and below.
+.estasoft-sync-table-wrap {
+	min-inline-size: 0;
+	overflow-x: auto;
+}
+
+.estasoft-sync-table {
+	inline-size: 100%;
+	border-collapse: collapse;
+	background: var(--estasoft-sync-card);
+
+	th,
+	td {
+		padding: 10px 14px;
+		border-block-end: 1px solid var(--estasoft-sync-border);
+		text-align: start;
+		vertical-align: middle;
+	}
+
+	th {
+		background: var(--estasoft-sync-subtle);
+		color: var(--estasoft-sync-text-muted);
+		font-size: 12px;
+		font-weight: 600;
+		white-space: nowrap;
+	}
+
+	tbody tr:last-child td {
+		border-block-end: 0;
+	}
+
+	tr.is-selected td,
+	tr.is-chosen td {
+		background: var(--estasoft-sync-tint);
+	}
+
+	.is-end {
+		text-align: end;
+	}
+
+	.is-wide {
+		inline-size: 100%;
+	}
+
+	.estasoft-sync-table__select {
+		inline-size: 40px;
+	}
+}
+
+.estasoft-sync-plain-table {
+	inline-size: 100%;
+	border-collapse: collapse;
+
+	th,
+	td {
+		padding: 10px 20px;
+		border-block-start: 1px solid var(--estasoft-sync-border);
+		text-align: start;
+		vertical-align: top;
+	}
+
+	thead th {
+		background: var(--estasoft-sync-subtle);
+		color: var(--estasoft-sync-text-muted);
+		font-size: 12px;
+	}
+
+	tbody th {
+		font-weight: 600;
+	}
+}
+
+.estasoft-sync-rowactions {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 6px;
+}
+
+.estasoft-sync-pager {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.estasoft-sync-pager__buttons {
+	display: flex;
+	gap: 8px;
+}
+
+.estasoft-sync-bulkbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px 16px;
+	padding: 10px 16px;
+	border: 1px solid var(--estasoft-sync-primary-border);
+	border-radius: var(--estasoft-sync-radius-lg);
+	background: var(--estasoft-sync-tint);
+}
+
+.estasoft-sync-bulkbar__buttons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.estasoft-sync-savebar {
+	position: sticky;
+	inset-block-end: 0;
+	z-index: 5;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px 16px;
+	padding: 12px 20px;
+	border: 1px solid var(--estasoft-sync-border);
+	border-radius: var(--estasoft-sync-radius-lg);
+	background: var(--estasoft-sync-card);
+	box-shadow: var(--estasoft-sync-shadow-2);
+}
+
+.estasoft-sync-savebar__buttons {
+	display: flex;
+	gap: 8px;
+}
+
+// Lists.
+.estasoft-sync-list {
+	padding-inline-start: 20px;
+	list-style: disc;
+
+	li + li {
+		margin-block-start: 4px;
+	}
+
+	&--plain {
+		padding-inline-start: 0;
+		list-style: none;
+	}
+}
+
+.estasoft-sync-ol {
+	padding-inline-start: 22px;
+	list-style: decimal;
+
+	li + li {
+		margin-block-start: 6px;
+	}
+}
+
+.estasoft-sync-attlist {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.estasoft-sync-att {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 12px 16px;
+	padding: 12px 16px;
+
+	+ .estasoft-sync-att {
+		border-block-start: 1px solid var(--estasoft-sync-border);
+	}
+
+	> .estasoft-sync-icon {
+		color: var(--estasoft-sync-text-muted);
+	}
+}
+
+.estasoft-sync-att__text {
+	flex: 1 1 280px;
+	min-inline-size: 0;
+}
+
+.estasoft-sync-att__badge {
+	flex: none;
+	min-inline-size: 110px;
+}
+
+.estasoft-sync-events {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+
+	li {
+		display: flex;
+		align-items: flex-start;
+		gap: 12px;
+		padding: 10px 20px;
+		border-block-start: 1px solid var(--estasoft-sync-border);
+	}
+}
+
+.estasoft-sync-events__text {
+	flex: 1 1 auto;
+	min-inline-size: 0;
+}
+
+.estasoft-sync-timeline {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+
+	li {
+		display: flex;
+		gap: 12px;
+		padding-block: 8px;
+	}
+}
+
+.estasoft-sync-numbered {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+
+	li {
+		display: flex;
+		gap: 16px;
+		padding: 16px 20px;
+		border-block-start: 1px solid var(--estasoft-sync-border);
+	}
+}
+
+.estasoft-sync-kv {
+	display: grid;
+	gap: 8px;
+	margin: 0;
+
+	&__row {
+		display: grid;
+		gap: 4px 16px;
+		grid-template-columns: minmax(120px, 190px) minmax(0, 1fr);
+	}
+
+	dt {
+		color: var(--estasoft-sync-text-muted);
+	}
+
+	dd {
+		min-inline-size: 0;
+		margin: 0;
+		overflow-wrap: anywhere;
+	}
+
+	&--stack &__row {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 0;
+	}
+
+	&--stack dt {
+		font-size: 12px;
+		line-height: 16px;
+	}
+}
+
+.estasoft-sync-code {
+	margin: 0;
+	padding: 12px 16px;
+	overflow-x: auto;
+	border: 1px solid var(--estasoft-sync-border);
+	border-radius: var(--estasoft-sync-radius);
+	background: var(--estasoft-sync-subtle);
+	color: var(--estasoft-sync-text);
+	font-family: var(--estasoft-sync-mono);
+	font-size: 13px;
+	line-height: 20px;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+
+	code {
+		display: block;
+		background: none;
+		color: inherit;
+		font: inherit;
+	}
+
+	&--inline {
+		margin-block: 4px;
+	}
+}
+
+.estasoft-sync-code__line {
+	display: block;
+	margin-inline: -16px;
+	padding-inline: 16px;
+
+	&.is-changed {
+		background: var(--estasoft-sync-accent-tint);
+	}
+
+	&.is-added {
+		background: var(--estasoft-sync-success-tint);
+		color: var(--estasoft-sync-success-text);
+	}
+
+	&.is-removed {
+		background: var(--estasoft-sync-danger-tint);
+		color: var(--estasoft-sync-danger-text);
+	}
+}
+
+// Dashboard parts.
+.estasoft-sync-chart {
+	display: flex;
+	align-items: flex-end;
+	gap: 8px;
+	block-size: 178px;
+	padding: 8px 20px 16px;
+}
+
+.estasoft-sync-chart__summary {
+	padding: 0 20px;
+	color: var(--estasoft-sync-text-muted);
+}
+
+.estasoft-sync-chart__col {
+	display: flex;
+	flex: 1 1 0;
+	flex-direction: column;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 6px;
+	min-inline-size: 0;
+	block-size: 100%;
+}
+
+.estasoft-sync-chart__stack {
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+	inline-size: 100%;
+	max-inline-size: 28px;
+}
+
+.estasoft-sync-chart__bar {
+	display: block;
+	inline-size: 100%;
+	border-radius: 2px 2px 0 0;
+	background: var(--estasoft-sync-primary);
+
+	&--failed {
+		background: var(--estasoft-sync-danger-icon);
+	}
+}
+
+.estasoft-sync-chart__col.is-now .estasoft-sync-chart__bar:not(.estasoft-sync-chart__bar--failed) {
+	background: var(--estasoft-sync-primary-border);
+}
+
+.estasoft-sync-chart__table {
+	padding: 0 20px 16px;
+
+	summary {
+		cursor: pointer;
+		color: var(--estasoft-sync-primary);
+		font-weight: 600;
+	}
+
+	.estasoft-sync-plain-table {
+		margin-block-start: 8px;
+
+		th,
+		td {
+			padding: 6px 12px;
+		}
+	}
+}
+
+.estasoft-sync-meters {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.estasoft-sync-meter {
+	display: grid;
+	grid-template-columns: 92px minmax(0, 1fr) 40px;
+	align-items: center;
+	gap: 12px;
+}
+
+.estasoft-sync-meter__bar {
+	display: block;
+	block-size: 8px;
+	overflow: hidden;
+	border-radius: 4px;
+	background: var(--estasoft-sync-hover);
+
+	> span {
+		display: block;
+		block-size: 100%;
+		border-radius: 4px;
+		background: var(--estasoft-sync-primary);
+	}
+}
+
+.estasoft-sync-meter--queued .estasoft-sync-meter__bar > span {
+	background: #6b7280;
+}
+
+.estasoft-sync-meter--retrying .estasoft-sync-meter__bar > span {
+	background: var(--estasoft-sync-warning-icon);
+}
+
+.estasoft-sync-meter--failed .estasoft-sync-meter__bar > span {
+	background: var(--estasoft-sync-danger-icon);
+}
+
+.estasoft-sync-meter__value {
+	font-variant-numeric: tabular-nums;
+	text-align: end;
+}
+
+.estasoft-sync-progress {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+
+	progress {
+		flex: 1 1 auto;
+		accent-color: var(--estasoft-sync-primary);
+	}
+}
+
+.estasoft-sync-timeleft {
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+
+	&--warning {
+		color: var(--estasoft-sync-warning-text);
+	}
+
+	&--danger {
+		color: var(--estasoft-sync-danger-text);
+	}
+}
+
+.estasoft-sync-statusline {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 12px;
+}
+
+// Setup wizard.
+.estasoft-sync-wizard {
+	display: flex;
+	flex-direction: column;
+	gap: 24px;
+	inline-size: 100%;
+	max-inline-size: 1180px;
+	margin-inline: auto;
+}
+
+.estasoft-sync-wizard__foot {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px 16px;
+	padding-block: 8px;
+}
+
+.estasoft-sync-steps {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 24px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+
+	li {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		color: var(--estasoft-sync-text-muted);
+
+		&[aria-current="step"] {
+			color: var(--estasoft-sync-text);
+			font-weight: 600;
+
+			.estasoft-sync-steps__num {
+				background: var(--estasoft-sync-primary);
+				color: #fff;
+			}
+		}
+
+		&.is-done .estasoft-sync-steps__num {
+			background: var(--estasoft-sync-success-tint);
+			color: var(--estasoft-sync-success-text);
+		}
+	}
+}
+
+.estasoft-sync-steps__num {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	inline-size: 24px;
+	block-size: 24px;
+	border-radius: 50%;
+	background: var(--estasoft-sync-hover);
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.estasoft-sync-tile {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	inline-size: 36px;
+	block-size: 36px;
+	border-radius: var(--estasoft-sync-radius-lg);
+	background: var(--estasoft-sync-tint-strong);
+	color: var(--estasoft-sync-primary-pressed);
+	font-weight: 600;
+}
+
+.estasoft-sync-sys {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.estasoft-sync-sys-card {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 16px;
+	border: 1px solid var(--estasoft-sync-border);
+	border-radius: var(--estasoft-sync-radius-lg);
+	background: var(--estasoft-sync-card);
+	box-shadow: var(--estasoft-sync-shadow-1);
+
+	&.is-selected {
+		border-color: var(--estasoft-sync-primary);
+		background: var(--estasoft-sync-tint);
+		box-shadow: 0 0 0 1px var(--estasoft-sync-primary);
+	}
+
+	.estasoft-sync-btn {
+		margin-block-start: auto;
+		align-self: flex-start;
+	}
+}
+
+.estasoft-sync-sys-card__head {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.estasoft-sync-choose {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+.estasoft-sync-typed {
+	padding: 12px;
+	border: 1px solid var(--estasoft-sync-danger-border);
+	border-radius: var(--estasoft-sync-radius);
+	background: var(--estasoft-sync-danger-tint);
+}
+
+.estasoft-sync-codecell {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+
+// Help tip.
+.estasoft-sync-helptip {
+	display: inline-flex;
+	vertical-align: middle;
+}
+
+.estasoft-sync-helptip__button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-inline-size: 24px;
+	min-block-size: 24px;
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--estasoft-sync-primary);
+	cursor: pointer;
+}
+
+.estasoft-sync-helptip__body {
+	max-inline-size: 280px;
+	padding: 12px;
+	font-size: 13px;
+}
+
+// Dialogs: centred, a bottom sheet at 520px and below.
+.estasoft-sync-overlay.components-modal__screen-overlay {
+	background: var(--estasoft-sync-scrim);
+	font-family: var(--estasoft-sync-font);
+}
+
+.estasoft-sync-modal.components-modal__frame {
+	border-radius: var(--estasoft-sync-radius-lg);
+	background: var(--estasoft-sync-card);
+	color: var(--estasoft-sync-text);
+	box-shadow: var(--estasoft-sync-shadow-3);
+	max-inline-size: min(560px, 100vw);
+
+	&.is-full-screen {
+		max-inline-size: none;
+	}
+
+	.components-modal__header {
+		border-block-end: 1px solid var(--estasoft-sync-border);
+	}
+
+	.components-modal__header-heading {
+		font-size: 18px;
+		font-weight: 600;
+	}
+}
+
+.estasoft-sync-dialog__body,
+.estasoft-sync-dialog__form {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.estasoft-sync-dialog__foot {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-block-start: 20px;
+}
+
+.estasoft-sync-popover .components-popover__content {
+	border: 1px solid var(--estasoft-sync-border);
+	border-radius: var(--estasoft-sync-radius-lg);
+	background: var(--estasoft-sync-card);
+	box-shadow: var(--estasoft-sync-shadow-2);
+	color: var(--estasoft-sync-text);
+	font-family: var(--estasoft-sync-font);
+}
+
+.estasoft-sync-menuitem.components-button {
+	min-block-size: 36px;
+	color: var(--estasoft-sync-text);
+
+	&.has-rule {
+		border-block-start: 1px solid var(--estasoft-sync-border);
+	}
+}

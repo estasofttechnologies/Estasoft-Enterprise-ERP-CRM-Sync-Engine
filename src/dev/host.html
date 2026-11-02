@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en-GB" dir="ltr">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>ESTASOFT SYNC (mock data)</title>
+		<link rel="stylesheet" href="./style-index.css" />
+		<link rel="stylesheet" href="./index.css" />
+		<style>
+			/* A stand-in for the WordPress admin page the app normally sits in. */
+			html { background: #f0f0f1; }
+			body { margin: 0; color: #1d2327; font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif; }
+			.dev-note { margin: 0; padding: 6px 16px; background: #1d2327; color: #f0f0f1; font-size: 12px; }
+			.dev-note a { color: #72aee6; }
+			.wrap { margin-block: 0; margin-inline: 20px; }
+		</style>
+	</head>
+	<body class="wp-admin">
+		<p class="dev-note">
+			Mock data, nothing is sent anywhere. Try
+			<a href="?scenario=normal">normal</a>,
+			<a href="?scenario=first_run">first_run</a>,
+			<a href="?scenario=paused">paused</a>,
+			<a href="?scenario=shadow">shadow</a>,
+			<a href="?role=manager">manager role</a>,
+			<a href="?dir=rtl">right-to-left</a>.
+		</p>
+		<div class="wrap">
+			<div id="estasoft-sync-root"></div>
+		</div>
+		<script>
+			if ( new URLSearchParams( window.location.search ).get( 'dir' ) === 'rtl' ) {
+				document.documentElement.dir = 'rtl';
+			}
+		</script>
+		<script src="./index.js"></script>
+	</body>
+</html>

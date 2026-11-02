@@ -1,0 +1,349 @@
+/**
+ * Words the screens share: state names, event names, error messages and the "what happened" text.
+ */
+import { __, _n, sprintf } from '@wordpress/i18n';
+import { ApiError } from '../api/client';
+import { ERROR_CATALOG } from '../api/errors';
+import type {
+	ConnectionStatus,
+	ConnectionSummary,
+	EntityType,
+	ItemState,
+	QueueItem,
+} from '../api/types';
+import type { FormatConfig } from './format';
+import { formatTime } from './format';
+
+/**
+ * Display name for a queue state.
+ *
+ * @param state Item state.
+ * @return Word shown next to the state icon.
+ */
+export function stateLabel( state: ItemState ): string {
+	switch ( state ) {
+		case 'queued':
+			return __( 'Queued', 'estasoft-erp-crm-sync-engine' );
+		case 'syncing':
+			return __( 'Syncing', 'estasoft-erp-crm-sync-engine' );
+		case 'synced':
+			return __( 'Synced', 'estasoft-erp-crm-sync-engine' );
+		case 'retrying':
+			return __( 'Retrying', 'estasoft-erp-crm-sync-engine' );
+		case 'failed':
+			return __( 'Failed', 'estasoft-erp-crm-sync-engine' );
+		case 'skipped':
+			return __( 'Skipped', 'estasoft-erp-crm-sync-engine' );
+	}
+}
+
+/**
+ * One sentence on what a state means (S02).
+ *
+ * @param state Item state.
+ * @return Sentence.
+ */
+export function stateMeaning( state: ItemState ): string {
+	switch ( state ) {
+		case 'queued':
+			return __(
+				'Waiting its turn. Nothing has been sent yet.',
+				'estasoft-erp-crm-sync-engine'
+			);
+		case 'syncing':
+			return __(
+				'Being sent to the system right now.',
+				'estasoft-erp-crm-sync-engine'
+			);
+		case 'synced':
+			return __(
+				'The system accepted it. Its number is saved on the order.',
+				'estasoft-erp-crm-sync-engine'
+			);
+		case 'retrying':
+			return __(
+				'The system did not answer well. The plugin will try again on its own.',
+				'estasoft-erp-crm-sync-engine'
+			);
+		case 'failed':
+			return __(
+				'Retrying cannot fix it. A person has to change something.',
+				'estasoft-erp-crm-sync-engine'
+			);
+		case 'skipped':
+			return __(
+				'A person chose not to send it. It can be restored.',
+				'estasoft-erp-crm-sync-engine'
+			);
+	}
+}
+
+/**
+ * Word for a connection status.
+ *
+ * @param status Connection status.
+ * @return Word.
+ */
+export function connectionStatusLabel( status: ConnectionStatus ): string {
+	switch ( status ) {
+		case 'active':
+			return __( 'Connected', 'estasoft-erp-crm-sync-engine' );
+		case 'paused':
+		case 'paused_circuit':
+			return __( 'Paused', 'estasoft-erp-crm-sync-engine' );
+		case 'needs_reconnect':
+			return __( 'Needs reconnect', 'estasoft-erp-crm-sync-engine' );
+		case 'disconnected':
+			return __( 'Disconnected', 'estasoft-erp-crm-sync-engine' );
+	}
+}
+
+/**
+ * Short system name for sentences, such as "Odoo".
+ *
+ * @param connection Connection summary, if any.
+ * @return Name, or "your system".
+ */
+export function systemName(
+	connection:
+		Pick< ConnectionSummary, 'connector' | 'label' > | null | undefined
+): string {
+	if ( ! connection ) {
+		return __( 'your system', 'estasoft-erp-crm-sync-engine' );
+	}
+	const known: Record< string, string > = { odoo: 'Odoo' };
+	if ( known[ connection.connector ] ) {
+		return known[ connection.connector ];
+	}
+	return (
+		connection.label ||
+		connection.connector.charAt( 0 ).toUpperCase() +
+			connection.connector.slice( 1 )
+	);
+}
+
+/**
+ * Name of an event such as "Order created".
+ *
+ * @param event      Event key from the queue (`created`, `order.paid`, `refund`, ...).
+ * @param entityType Entity type of the item.
+ * @return Label.
+ */
+export function eventLabel( event: string, entityType: EntityType ): string {
+	const key = event.replace( /^[a-z]+\./, '' ).toLowerCase();
+	if ( entityType === 'refund' || key === 'refund' || key === 'refunded' ) {
+		return __( 'Refund', 'estasoft-erp-crm-sync-engine' );
+	}
+	switch ( entityType ) {
+		case 'customer':
+			return __( 'Customer', 'estasoft-erp-crm-sync-engine' );
+		case 'stock':
+			return __( 'Stock', 'estasoft-erp-crm-sync-engine' );
+		case 'tracking':
+			return __( 'Tracking', 'estasoft-erp-crm-sync-engine' );
+		case 'invoice':
+			return __( 'Invoice', 'estasoft-erp-crm-sync-engine' );
+		default:
+			break;
+	}
+	switch ( key ) {
+		case 'created':
+		case 'create':
+		case 'placed':
+			return __( 'Order created', 'estasoft-erp-crm-sync-engine' );
+		case 'paid':
+		case 'payment':
+		case 'payment_complete':
+			return __( 'Order paid', 'estasoft-erp-crm-sync-engine' );
+		case 'completed':
+		case 'complete':
+			return __( 'Order completed', 'estasoft-erp-crm-sync-engine' );
+		case 'cancelled':
+		case 'canceled':
+			return __( 'Order cancelled', 'estasoft-erp-crm-sync-engine' );
+		case 'updated':
+		case 'update':
+			return __( 'Order updated', 'estasoft-erp-crm-sync-engine' );
+		default:
+			return __( 'Order', 'estasoft-erp-crm-sync-engine' );
+	}
+}
+
+/**
+ * Fills `{placeholder}` markers in a catalog message.
+ *
+ * @param template Message with markers.
+ * @param values   Values by marker name.
+ * @return The message; unknown markers are left out cleanly.
+ */
+export function fillPlaceholders(
+	template: string,
+	values: Record< string, string >
+): string {
+	return template
+		.replace( /\{(\w+)\}/g, ( _match, key: string ) => values[ key ] ?? '' )
+		.replace( /\s{2,}/g, ' ' )
+		.replace( /\s+([.,;:])/g, '$1' )
+		.trim();
+}
+
+/**
+ * The message for an error code from the catalog, with the placeholders filled in.
+ *
+ * @param code    Error code such as SYNC-MAP-001.
+ * @param context Placeholder values.
+ * @param system  Name of the connected system.
+ * @return Message, or an empty string for unknown codes.
+ */
+export function catalogMessage(
+	code: string,
+	context: Record< string, string > = {},
+	system = ''
+): string {
+	const info = ERROR_CATALOG[ code ];
+	if ( ! info ) {
+		return '';
+	}
+	return fillPlaceholders( info.message, {
+		system: system || __( 'your system', 'estasoft-erp-crm-sync-engine' ),
+		...context,
+	} );
+}
+
+/**
+ * Message to show for any thrown value.
+ *
+ * @param error Thrown value.
+ * @return Text for the person.
+ */
+export function errorText( error: unknown ): string {
+	if ( error instanceof ApiError ) {
+		return error.message || catalogMessage( error.code, error.context );
+	}
+	if ( error instanceof Error && error.message ) {
+		return error.message;
+	}
+	return __(
+		'Something went wrong. Try again.',
+		'estasoft-erp-crm-sync-engine'
+	);
+}
+
+function problemOf( item: QueueItem, system: string ): string {
+	return (
+		item.error_message ||
+		( item.error_code ? catalogMessage( item.error_code, {}, system ) : '' )
+	);
+}
+
+/**
+ * The "what happened" cell of a queue row.
+ *
+ * @param item   Queue item.
+ * @param system Short system name.
+ * @param cfg    Format configuration.
+ * @return Text.
+ */
+export function whatHappened(
+	item: QueueItem,
+	system: string,
+	cfg: FormatConfig
+): string {
+	if ( item.mode === 'shadow' && item.state === 'synced' ) {
+		return __(
+			'Compared with the system. Nothing was sent.',
+			'estasoft-erp-crm-sync-engine'
+		);
+	}
+	switch ( item.state ) {
+		case 'queued':
+			return item.waiting_for_earlier
+				? __(
+						'Waiting for an earlier step of this order',
+						'estasoft-erp-crm-sync-engine'
+					)
+				: __( 'Waiting to be sent', 'estasoft-erp-crm-sync-engine' );
+		case 'syncing':
+			return sprintf(
+				/* translators: %s: system name such as Odoo */
+				__( 'Sending to %s', 'estasoft-erp-crm-sync-engine' ),
+				system
+			);
+		case 'synced':
+			if ( item.entity_type === 'refund' && item.external_ref ) {
+				return sprintf(
+					/* translators: %s: credit note number */
+					__( 'Credit note %s', 'estasoft-erp-crm-sync-engine' ),
+					item.external_ref
+				);
+			}
+			if ( item.external_ref ) {
+				return sprintf(
+					/* translators: 1: system name, 2: number in that system such as S00490 */
+					__( '%1$s %2$s', 'estasoft-erp-crm-sync-engine' ),
+					system,
+					item.external_ref
+				);
+			}
+			return __( 'Synced', 'estasoft-erp-crm-sync-engine' );
+		case 'retrying': {
+			const problem = problemOf( item, system );
+			const retriesAllowed = Math.max( 1, item.max_attempts - 1 );
+			const next = item.next_attempt_at
+				? formatTime( item.next_attempt_at, cfg )
+				: '';
+			const text = sprintf(
+				/* translators: 1: problem such as "Odoo answered 503", 2: retry number, 3: number of retries allowed, 4: clock time of the next try */
+				__(
+					'%1$s. Retry %2$d of %3$d, next try %4$s',
+					'estasoft-erp-crm-sync-engine'
+				),
+				problem ||
+					__(
+						'The system did not answer well',
+						'estasoft-erp-crm-sync-engine'
+					),
+				Math.max( 1, item.attempt ),
+				retriesAllowed,
+				next
+			);
+			return next ? text : text.replace( /, next try\s*$/, '' );
+		}
+		case 'failed':
+			return (
+				problemOf( item, system ) ||
+				__( 'Failed', 'estasoft-erp-crm-sync-engine' )
+			);
+		case 'skipped':
+			if ( item.skip_reason ) {
+				return sprintf(
+					/* translators: 1: reason the person gave, 2: clock time */
+					__(
+						'%1$s. Skipped at %2$s',
+						'estasoft-erp-crm-sync-engine'
+					),
+					item.skip_reason,
+					formatTime( item.updated_at, cfg )
+				);
+			}
+			return sprintf(
+				/* translators: %s: clock time */
+				__( 'Skipped at %s', 'estasoft-erp-crm-sync-engine' ),
+				formatTime( item.updated_at, cfg )
+			);
+	}
+}
+
+/**
+ * Plural-safe "n orders" phrase.
+ *
+ * @param count Number of orders.
+ * @return Text such as "3 orders".
+ */
+export function ordersPhrase( count: number ): string {
+	return sprintf(
+		/* translators: %d: number of orders */
+		_n( '%d order', '%d orders', count, 'estasoft-erp-crm-sync-engine' ),
+		count
+	);
+}
