@@ -88,7 +88,7 @@ final class ReconServiceTest extends JobsTestCase {
 		$this->assertSame( 7, $overview['runs'][0]['window_days'] );
 		$this->assertCount( 2, $overview['diffs'] );
 		$this->assertSame( $run['id'], $overview['diffs'][0]['run_id'] );
-		$this->assertSame( array( 'id', 'run_id', 'order_id', 'order_label', 'type', 'wc_value', 'system_value', 'status', 'note', 'acted_by', 'acted_at' ), array_keys( $overview['diffs'][0] ) );
+		$this->assertSame( array( 'id', 'run_id', 'connection_id', 'order_id', 'order_label', 'type', 'wc_value', 'system_value', 'status', 'note', 'acted_by', 'acted_at' ), array_keys( $overview['diffs'][0] ) );
 	}
 
 	public function test_one_minor_unit_is_equal_by_the_currency_exponent_and_the_tolerance_is_editable(): void {
@@ -201,26 +201,6 @@ final class ReconServiceTest extends JobsTestCase {
 			$this->assertSame( 409, $e->httpStatus() );
 		}
 		$this->assertSame( 0, $this->h->queue->countsByState( $this->connection, null )['queued'], 'it was not sent to some other system instead' );
-	}
-
-	public function test_a_difference_from_before_the_connection_was_recorded_uses_the_only_connected_system_or_asks_for_a_new_check(): void {
-		$this->j->orders->add( 602 );
-		$this->document( 602, array( 'total_minor' => 99999 ) );
-		$this->j->reconService->run( 7 );
-		$id = (int) $this->h->recon->diffs()[0]['id'];
-		$this->h->options->delete( ReconService::DIFF_CONNECTIONS );
-
-		$second = $this->j->connect();
-		try {
-			$this->j->reconService->repair( $id, 'wc_to_system', 7 );
-			$this->fail( 'with two systems it cannot be told which one' );
-		} catch ( JobException $e ) {
-			$this->assertSame( 409, $e->httpStatus() );
-		}
-		$this->h->connections->delete( $second );
-
-		$this->assertSame( 'repaired', $this->j->reconService->repair( $id, 'wc_to_system', 7 )['status'] );
-		$this->assertSame( 1, $this->h->queue->countsByState( $this->connection, null )['queued'] );
 	}
 
 	public function test_copying_a_cancellation_is_refused_when_the_order_is_no_longer_in_the_status_the_check_saw(): void {

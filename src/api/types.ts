@@ -420,6 +420,8 @@ export type DiffType =
 export interface ReconDiff {
 	id: number;
 	run_id: number;
+	/** The connection the difference was found in (always sent by the server; the screens do not need it). */
+	connection_id?: number;
 	order_id: number;
 	order_label: string;
 	type: DiffType;

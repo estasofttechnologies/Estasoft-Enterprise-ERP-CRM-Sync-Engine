@@ -686,6 +686,154 @@ final class ItemProcessorTest extends CoreIntegrationTestCase {
 		$this->assertStringNotContainsString( 'noor@example.com', $failed[0][1]->message(), 'nor does the hook carry it' );
 	}
 
+	/**
+	 * The warning-level entries of the log, oldest first, without the notes the queue writes about its own locks.
+	 *
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function connectorWarnings( int $id ): array {
+		$found = array();
+		foreach ( array_reverse( $this->h->logs->query( \Estasoft\SyncEngine\Core\Repositories\LogQuery::fromArray( array( 'queue_id' => $id, 'level' => 'warning' ) ) )->items ) as $entry ) {
+			if ( 'SYNC-LOCK-001' !== $entry['code'] ) {
+				$found[] = $entry;
+			}
+		}
+		return $found;
+	}
+
+	/**
+	 * A successful send that carries warnings in the way the Odoo connector does.
+	 *
+	 * @param array<int,mixed> $warnings Warnings.
+	 */
+	private function sentWithWarnings( array $warnings, bool $existing = false ): SendResult {
+		$ref = new ExternalRef( '1001', 'S90001', 'https://erp.example.test/o/1001', array( 'state' => 'sale', 'warnings' => $warnings ) );
+		return $existing ? SendResult::existing( $ref ) : SendResult::created( $ref );
+	}
+
+	public function test_a_warning_from_the_connector_is_logged_once_at_warning_level_with_the_order_reference(): void {
+		$id = $this->h->item( $this->conn, '10490' );
+		$this->h->connector->script[] = $this->sentWithWarnings(
+			array(
+				array(
+					'code'           => 'total_mismatch',
+					'expected_minor' => 50000,
+					'odoo_minor'     => 48615,
+					'currency'       => 'AED',
+					'document'       => 'S90001',
+					'message'        => 'Odoo calculates 486.15 AED for S90001 but the shop total is 500.00 AED. Check the taxes.',
+				),
+			)
+		);
+
+		$this->assertSame( Outcome::Synced, $this->process( $id ), 'the record was accepted, so the item is synced' );
+
+		$warnings = $this->connectorWarnings( $id );
+		$this->assertCount( 1, $warnings, 'once for this send' );
+		$this->assertSame( 'warning', $warnings[0]['level'] );
+		$this->assertSame( 'order:10490', $warnings[0]['entity_ref'], 'with the order reference' );
+		$this->assertSame( $id, $warnings[0]['queue_id'] );
+		$this->assertSame( $this->conn, $warnings[0]['connection_id'] );
+		$this->assertSame( 'Odoo calculates 486.15 AED for S90001 but the shop total is 500.00 AED. Check the taxes.', $warnings[0]['message'] );
+		$detail = $this->h->logs->find( $warnings[0]['id'] );
+		$this->assertStringContainsString( '"expected_minor":50000', (string) $detail['response_excerpt'], 'the facts are kept in the excerpt' );
+		$this->assertStringNotContainsString( 'Check the taxes', (string) $detail['response_excerpt'], 'the sentence is not repeated there' );
+		$this->assertSame( 3, $detail['mapping_version'] );
+		$this->assertSame( 'synced', $this->h->queue->findRow( $id )['state'] );
+	}
+
+	public function test_each_warning_of_a_send_is_its_own_entry_and_a_send_without_warnings_adds_none(): void {
+		$id = $this->h->item( $this->conn, '10490' );
+		$this->h->connector->script[] = $this->sentWithWarnings( array( array( 'message' => 'First thing.' ), array( 'message' => 'Second thing.' ), 'A plain string.', array( 'code' => 'no_sentence' ) ) );
+		$this->process( $id );
+		$messages = array_column( $this->connectorWarnings( $id ), 'message' );
+		$this->assertSame( array( 'First thing.', 'Second thing.', 'A plain string.', 'Fakesystem accepted the order and added a warning.' ), $messages );
+
+		$clean = $this->h->item( $this->conn, '10491' );
+		$this->process( $clean );
+		$this->assertSame( array(), $this->connectorWarnings( $clean ) );
+
+		$empty = $this->h->item( $this->conn, '10492' );
+		$this->h->connector->script[] = $this->sentWithWarnings( array() );
+		$this->process( $empty );
+		$this->assertSame( array(), $this->connectorWarnings( $empty ) );
+	}
+
+	public function test_no_more_than_ten_warnings_of_one_send_are_written(): void {
+		$id = $this->h->item( $this->conn, '10490' );
+		$this->h->connector->script[] = $this->sentWithWarnings( array_map( static fn( int $n ): array => array( 'message' => "Warning $n." ), range( 1, 25 ) ) );
+		$this->process( $id );
+		$this->assertCount( 10, $this->connectorWarnings( $id ) );
+	}
+
+	public function test_warnings_are_redacted_like_every_other_message(): void {
+		$id = $this->h->item( $this->conn, '10490' );
+		$this->h->connector->script[] = $this->sentWithWarnings(
+			array(
+				array(
+					'message'  => 'Customer noor@example.com, phone 971501234567, was matched; api_key=sk_live_123456789abcdef',
+					'customer' => 'Noor Al Mansouri',
+					'contact'  => array( 'email' => 'noor@example.com' ),
+					'token'    => 'abcdef1234567890abcdef',
+				),
+			)
+		);
+		$this->process( $id );
+		$entry  = $this->connectorWarnings( $id )[0];
+		$detail = $this->h->logs->find( $entry['id'] );
+		$text   = $entry['message'] . ' ' . $detail['response_excerpt'];
+		foreach ( array( 'noor@example.com', '971501234567', 'sk_live_123456789abcdef', 'abcdef1234567890abcdef', 'Noor Al Mansouri' ) as $private ) {
+			$this->assertStringNotContainsString( $private, $text, $private );
+		}
+		$this->assertStringContainsString( 'was matched', $entry['message'] );
+	}
+
+	public function test_with_personal_redaction_off_only_secrets_are_removed_from_a_warning(): void {
+		$this->h->settings->update( array( 'redaction' => false ) );
+		$id = $this->h->item( $this->conn, '10490' );
+		$this->h->connector->script[] = $this->sentWithWarnings( array( array( 'message' => 'Matched noor@example.com with api_key=sk_live_123456789abcdef' ) ) );
+		$this->process( $id );
+		$message = $this->connectorWarnings( $id )[0]['message'];
+		$this->assertStringContainsString( 'noor@example.com', $message );
+		$this->assertStringNotContainsString( 'sk_live_123456789abcdef', $message );
+	}
+
+	public function test_a_record_that_already_existed_still_logs_its_warnings_once(): void {
+		$id = $this->h->item( $this->conn, '10490' );
+		$this->h->connector->script[] = $this->sentWithWarnings( array( array( 'message' => 'Total differs.' ) ), true );
+		$this->assertSame( Outcome::Linked, $this->process( $id ) );
+		$this->assertCount( 1, $this->connectorWarnings( $id ) );
+	}
+
+	public function test_warnings_are_not_repeated_by_a_later_pass_that_sends_nothing(): void {
+		$id = $this->h->item( $this->conn, '10490' );
+		$this->h->connector->script[] = $this->sentWithWarnings( array( array( 'message' => 'Total differs.' ) ) );
+		$this->process( $id );
+		$again = $this->h->item( $this->conn, '10490', 'updated' );
+		$this->assertSame( Outcome::NoChange, $this->process( $again ), 'nothing changed, nothing was sent' );
+		$this->assertCount( 1, $this->connectorWarnings( $id ) );
+		$this->assertSame( array(), $this->connectorWarnings( $again ) );
+	}
+
+	public function test_a_failed_send_has_no_warnings_to_log(): void {
+		$id = $this->h->item( $this->conn, '10490' );
+		$this->h->connector->script[] = new ConnectorError( ErrorCode::Net001 );
+		$this->process( $id );
+		$this->assertCount( 1, $this->connectorWarnings( $id ), 'only the retry notice of the failure itself, at warning level' );
+		$this->assertSame( 'SYNC-NET-001', $this->connectorWarnings( $id )[0]['code'] );
+	}
+
+	public function test_warnings_of_a_send_are_kept_even_when_the_row_could_not_be_written(): void {
+		$id   = $this->h->item( $this->conn, '10490' );
+		$item = $this->claimAs( $id, 'worker-a' );
+		$this->h->connector->script[] = function () use ( $id ) {
+			$this->takeOver( $id, 'worker-b' );
+			return $this->sentWithWarnings( array( array( 'message' => 'Total differs.' ) ) );
+		};
+		$this->assertSame( Outcome::LockLost, $this->h->processor->process( $item, 'worker-a' ) );
+		$this->assertSame( array( 'Total differs.' ), array_column( $this->connectorWarnings( $id ), 'message' ) );
+	}
+
 	public function test_the_connector_can_decide_that_an_error_is_worth_retrying(): void {
 		$id = $this->h->item( $this->conn, '10490' );
 		$this->h->connector->classOverride = ErrorClass::Retry;

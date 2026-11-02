@@ -14,7 +14,8 @@ defined( 'ABSPATH' ) || exit;
 use Estasoft\SyncEngine\Core\Support\Time;
 
 /**
- * Reads and writes `estasoft_sync_recon_runs` and `estasoft_sync_recon_diffs` (`ReconRun` and `ReconDiff` in types.ts).
+ * Reads and writes `estasoft_sync_recon_runs` and `estasoft_sync_recon_diffs` (`ReconRun` and `ReconDiff` in types.ts). Both shapes
+ * carry `connection_id`, the system the run compared or the difference was found in, so a repair can be sent to the right one.
  */
 final class ReconRepository extends Repository {
 
@@ -233,15 +234,16 @@ final class ReconRepository extends Repository {
 	 */
 	private function runShape( array $row ): array {
 		return array(
-			'id'          => (int) $row['id'],
-			'started_at'  => (string) Time::iso( (string) $row['started_at'] ),
-			'finished_at' => Time::iso( self::stringOrNull( $row['finished_at'] ) ),
-			'window_days' => (int) $row['window_days'],
-			'compared'    => (int) $row['compared'],
-			'matched'     => (int) $row['matched'],
-			'differences' => (int) $row['differences'],
-			'repaired'    => (int) $row['repaired'],
-			'status'      => (string) $row['status'],
+			'id'            => (int) $row['id'],
+			'connection_id' => (int) $row['connection_id'],
+			'started_at'    => (string) Time::iso( (string) $row['started_at'] ),
+			'finished_at'   => Time::iso( self::stringOrNull( $row['finished_at'] ) ),
+			'window_days'   => (int) $row['window_days'],
+			'compared'      => (int) $row['compared'],
+			'matched'       => (int) $row['matched'],
+			'differences'   => (int) $row['differences'],
+			'repaired'      => (int) $row['repaired'],
+			'status'        => (string) $row['status'],
 		);
 	}
 
@@ -253,17 +255,18 @@ final class ReconRepository extends Repository {
 	 */
 	private function diffShape( array $row ): array {
 		return array(
-			'id'           => (int) $row['id'],
-			'run_id'       => (int) $row['run_id'],
-			'order_id'     => (int) $row['order_id'],
-			'order_label'  => (string) $row['order_label'],
-			'type'         => (string) $row['diff_type'],
-			'wc_value'     => (string) $row['wc_value'],
-			'system_value' => (string) $row['system_value'],
-			'status'       => (string) $row['status'],
-			'note'         => self::stringOrNull( $row['note'] ),
-			'acted_by'     => self::stringOrNull( $row['acted_by'] ),
-			'acted_at'     => Time::iso( self::stringOrNull( $row['acted_at'] ) ),
+			'id'            => (int) $row['id'],
+			'run_id'        => (int) $row['run_id'],
+			'connection_id' => (int) $row['connection_id'],
+			'order_id'      => (int) $row['order_id'],
+			'order_label'   => (string) $row['order_label'],
+			'type'          => (string) $row['diff_type'],
+			'wc_value'      => (string) $row['wc_value'],
+			'system_value'  => (string) $row['system_value'],
+			'status'        => (string) $row['status'],
+			'note'          => self::stringOrNull( $row['note'] ),
+			'acted_by'      => self::stringOrNull( $row['acted_by'] ),
+			'acted_at'      => Time::iso( self::stringOrNull( $row['acted_at'] ) ),
 		);
 	}
 }

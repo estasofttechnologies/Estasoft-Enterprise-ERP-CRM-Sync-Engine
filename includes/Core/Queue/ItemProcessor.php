@@ -44,6 +44,10 @@ use Estasoft\SyncEngine\Sync\PayloadResult;
  * class throws. Shadow items are built and, when the connector can look things up read-only, compared, but nothing is
  * sent and nothing is changed in either system.
  *
+ * Warnings. A connector can accept a record and still have something to say (the Odoo connector reports a total that differs
+ * from the shop's when it is set to go on): it puts a list in `extra['warnings']` of the reference it returns. Each one is
+ * written to the log once for that send, at warning level, with the order reference, and redacted like every other message.
+ *
  * The lock token. `process()` is given the `workerId` that claimed the item. Every write to the queue row is guarded by it
  * (the row must still be `syncing` and held by that token), and the lock is refreshed before each connector call. If the
  * lock was lost (it ran out and the reaper handed the item to someone else), the result is discarded: the row is left alone,
@@ -68,6 +72,11 @@ final class ItemProcessor {
 	 * Seconds an item waits when its connector is not installed.
 	 */
 	private const MISSING_CONNECTOR_WAIT = 300;
+
+	/**
+	 * Most warnings of one send that are written to the log.
+	 */
+	private const MAX_WARNINGS = 10;
 
 	/**
 	 * The lock token of the item being processed; null when the caller did not give one.
@@ -377,6 +386,8 @@ final class ItemProcessor {
 		$written = $this->queue->markSynced( $item->id, $ref->id, $ref->ref, $ref->url, $mappingVersion, $alreadyExisted ? ErrorCode::Dup001->value : null, true, $alreadyExisted ? $duplicate : null, $this->token );
 		$this->breaker->recordSuccess( $connection, $ms );
 		if ( ! $written ) {
+			// The row is not ours to write any more, but the system did accept the record with these warnings.
+			$this->logWarnings( $item, $ref, $connector, $mappingVersion );
 			return $this->lost( $item );
 		}
 
@@ -408,6 +419,7 @@ final class ItemProcessor {
 		if ( null !== $log_id ) {
 			$this->queue->setLastLog( $item->id, $log_id );
 		}
+		$this->logWarnings( $item, $ref, $connector, $mappingVersion );
 		do_action( 'estasoft_sync_item_synced', $item, $ref, $alreadyExisted );
 		return $alreadyExisted ? Outcome::Linked : Outcome::Synced;
 	}
@@ -542,6 +554,47 @@ final class ItemProcessor {
 		 */
 		do_action( 'estasoft_sync_shadow_processed', $item, $built, $found );
 		return Outcome::Shadow;
+	}
+
+	/**
+	 * Write what the connector said about a record it accepted: each entry of `extra['warnings']`, as one log entry at warning
+	 * level with the order reference. Called once for each send. A warning is an array with a `message` (a sentence) and
+	 * whatever facts the connector adds (kept as the redacted response excerpt), or just a string. At most
+	 * MAX_WARNINGS are written, so a connector cannot flood the log.
+	 *
+	 * @param Item               $item           Item.
+	 * @param ExternalRef        $ref            The record the connector returned.
+	 * @param ConnectorInterface $connector      The connector, for its name.
+	 * @param int|null           $mappingVersion Mapping version.
+	 */
+	private function logWarnings( Item $item, ExternalRef $ref, ConnectorInterface $connector, ?int $mappingVersion ): void {
+		$warnings = $ref->extra['warnings'] ?? null;
+		if ( ! is_array( $warnings ) || array() === $warnings ) {
+			return;
+		}
+		foreach ( array_slice( array_values( $warnings ), 0, self::MAX_WARNINGS ) as $warning ) {
+			$facts = is_array( $warning ) ? $warning : array( 'message' => (string) ( is_scalar( $warning ) ? $warning : '' ) );
+			$text  = isset( $facts['message'] ) && is_scalar( $facts['message'] ) ? trim( (string) $facts['message'] ) : '';
+			if ( '' === $text ) {
+				$text = sprintf(
+					/* translators: %s: name of the external system, for example Odoo. */
+					__( '%s accepted the order and added a warning.', 'estasoft-erp-crm-sync-engine' ),
+					$connector->label()
+				);
+			}
+			unset( $facts['message'] );
+			$this->logger->warning(
+				$text,
+				array(
+					'connection_id'   => $item->connectionId,
+					'queue_id'        => $item->id,
+					'entity_ref'      => $this->reference( $item ),
+					'attempt'         => $item->attempt + 1,
+					'mapping_version' => $mappingVersion,
+					'response'        => array() === $facts ? null : $facts,
+				)
+			);
+		}
 	}
 
 	/**

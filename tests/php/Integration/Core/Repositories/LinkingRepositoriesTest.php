@@ -158,12 +158,12 @@ final class LinkingRepositoriesTest extends CoreIntegrationTestCase {
 
 		$last = $this->h->recon->lastRun();
 		$this->assertSame( 'done', $last['status'] );
-		$this->assertSame( array( 'id', 'started_at', 'finished_at', 'window_days', 'compared', 'matched', 'differences', 'repaired', 'status' ), array_keys( $last ) );
+		$this->assertSame( array( 'id', 'connection_id', 'started_at', 'finished_at', 'window_days', 'compared', 'matched', 'differences', 'repaired', 'status' ), array_keys( $last ) );
 		$this->assertSame( 118, $last['matched'] );
 		$this->assertSame( 2, $this->h->recon->openCount() );
 
 		$diff = $this->h->recon->diff( $a );
-		$this->assertSame( array( 'id', 'run_id', 'order_id', 'order_label', 'type', 'wc_value', 'system_value', 'status', 'note', 'acted_by', 'acted_at' ), array_keys( $diff ) );
+		$this->assertSame( array( 'id', 'run_id', 'connection_id', 'order_id', 'order_label', 'type', 'wc_value', 'system_value', 'status', 'note', 'acted_by', 'acted_at' ), array_keys( $diff ) );
 		$this->assertSame( 'total_differs', $diff['type'] );
 		$this->assertSame( 'open', $diff['status'] );
 
@@ -178,6 +178,24 @@ final class LinkingRepositoriesTest extends CoreIntegrationTestCase {
 		$this->assertSame( 0, $this->h->recon->openCount() );
 		$this->assertCount( 2, $this->h->recon->diffs( null, $run ) );
 		$this->assertCount( 1, $this->h->recon->diffs( 'repaired' ) );
+	}
+
+	public function test_runs_and_differences_say_which_connection_they_belong_to(): void {
+		$first  = $this->h->recon->startRun( 11, 7 );
+		$second = $this->h->recon->startRun( 22, 7 );
+		$a      = $this->h->recon->addDiff( $first, 11, 10490, '10490', 'total_differs', 'a', 'b' );
+		$b      = $this->h->recon->addDiff( $second, 22, 10490, '10490', 'missing_in_system', 'a', '' );
+
+		$this->assertSame( 11, $this->h->recon->findRun( $first )['connection_id'] );
+		$this->assertSame( 22, $this->h->recon->findRun( $second )['connection_id'] );
+		$this->assertSame( array( 22, 11 ), array_column( $this->h->recon->runs(), 'connection_id' ), 'also in the list of runs' );
+		$this->assertSame( 22, $this->h->recon->lastRun()['connection_id'] );
+
+		$this->assertSame( 11, $this->h->recon->diff( $a )['connection_id'], 'the same order number in two systems stays apart' );
+		$this->assertSame( 22, $this->h->recon->diff( $b )['connection_id'] );
+		$this->assertSame( array( $b => 22, $a => 11 ), array_column( $this->h->recon->diffs(), 'connection_id', 'id' ), 'and in the list of differences' );
+		$this->assertSame( array( 11 ), array_column( $this->h->recon->diffs( null, $first ), 'connection_id' ) );
+		$this->assertIsInt( $this->h->recon->diff( $a )['connection_id'] );
 	}
 
 	public function test_a_failed_run_is_recorded_with_its_code(): void {

@@ -76,7 +76,6 @@ A task that throws is caught, logged once with the exception class only, and nev
 | `estasoft_sync_recon_settings` | `schedule_time` (02:00), `window_days` (7), `tolerance_minor` (1), `auto_repair_missing` (off), date of the last nightly run |
 | `estasoft_sync_recon_progress`, `estasoft_sync_recon_system` | the run in progress and the system's answer for it; deleted when the run ends |
 | `estasoft_sync_recon_lock` | the run lock: a token and when it expires (budget + 60 s); only the request that holds it advances a run |
-| `estasoft_sync_recon_diff_conn` | which connection each difference was found in (difference id to connection id, at most 3000); repairs go there |
 | `estasoft_sync_shadow_verdicts` | Matches / Differs / Not found per shadow item (at most 500; refreshed after 6 hours while the window is open, final once it is closed) |
 | `estasoft_sync_readiness` | last readiness result |
 | `estasoft_sync_capacity` | last capacity result |
@@ -172,9 +171,8 @@ Only one request advances a run at a time: `run()`, `continueRun()` and the tick
 request that finds it taken returns the run as it stands (or, when no run exists yet, a 409 asking to wait). The lock expires, so a
 request that died does not block the check for long.
 
-Each difference remembers the connection it was found in (the repository's difference shape does not carry it, so Jobs keeps the map
-in `estasoft_sync_recon_diff_conn`) and a repair, manual or automatic, goes to that connection and no other. A difference found before
-this was recorded uses the only connected system, and is refused (409) when there are several. No repair of any kind happens while a
+Each difference carries the connection it was found in (`connection_id`) and a repair, manual or automatic, goes to that connection
+and no other. No repair of any kind happens while a
 shadow window is open on that connection (409 for a person; the automatic repair leaves the difference open and the next run after
 the window repairs it). Copying a cancellation first checks that the order still has the status the check saw (`wc_value`);
 otherwise it is refused (409) and nothing is cancelled.
