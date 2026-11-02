@@ -126,7 +126,7 @@ final class MyobApi {
 	 */
 	public static function items( ApiResponse $response ): array {
 		$data = $response->jsonValue();
-		$list = is_array( $data ) && isset( $data['Items'] ) && is_array( $data['Items'] ) ? $data['Items'] : ( is_array( $data ) && array_is_list( $data ) ? $data : array() );
+		$list = is_array( $data ) && isset( $data['Items'] ) && is_array( $data['Items'] ) ? $data['Items'] : ( is_array( $data ) && \Estasoft\SyncEngine\Core\Support\Lists::isList( $data ) ? $data : array() );
 		return array_values( array_filter( $list, 'is_array' ) );
 	}
 

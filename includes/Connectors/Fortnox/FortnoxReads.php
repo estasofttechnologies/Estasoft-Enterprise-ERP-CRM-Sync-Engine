@@ -199,9 +199,9 @@ final class FortnoxReads {
 	 * @return array<int,array<string,mixed>>
 	 */
 	private static function balances( array $data ): array {
-		if ( ! array_is_list( $data ) ) {
+		if ( ! \Estasoft\SyncEngine\Core\Support\Lists::isList( $data ) ) {
 			foreach ( $data as $value ) {
-				if ( is_array( $value ) && array_is_list( $value ) ) {
+				if ( is_array( $value ) && \Estasoft\SyncEngine\Core\Support\Lists::isList( $value ) ) {
 					$data = $value;
 					break;
 				}

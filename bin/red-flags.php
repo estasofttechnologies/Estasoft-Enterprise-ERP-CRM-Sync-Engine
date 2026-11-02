@@ -6,7 +6,8 @@
  *   php bin/red-flags.php [--root=/path/to/plugin]
  *
  * Flags: eval, base64_decode, extract, error_reporting, ini_set, shell execution, the @ operator, die and exit (except the
- * `defined( 'ABSPATH' ) || exit;` guard), create_function, includes of remote files, and outbound HTTP outside the one class
+ * `defined( 'ABSPATH' ) || exit;` guard), create_function, array_is_list (Plugin Check treats it as a WordPress 6.5 function and
+ * the plugin supports 6.4; Core\Support\Lists::isList is the same check), includes of remote files, and outbound HTTP outside the one class
  * that talks to the network (includes/Core/Support/WpHttpClient.php). A legitimate use is listed as `path:label` in
  * bin/red-flags-allowlist.txt, with a comment saying why.
  *
@@ -30,6 +31,7 @@ $function_flags = array(
 	'error_reporting'  => 'error_reporting',
 	'ini_set'          => 'ini_set',
 	'create_function'  => 'create_function',
+	'array_is_list'    => 'array_is_list (Plugin Check reads it as WordPress 6.5 code; use Core\\Support\\Lists::isList)',
 	'exec'             => 'shell execution',
 	'shell_exec'       => 'shell execution',
 	'system'           => 'shell execution',

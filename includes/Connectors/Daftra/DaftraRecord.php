@@ -173,7 +173,7 @@ final class DaftraRecord {
 				continue;
 			}
 			$inner  = reset( $entry );
-			$rows[] = 1 === count( $entry ) && is_array( $inner ) && ! array_is_list( $inner ) && ! isset( $entry['id'] ) ? $inner : $entry;
+			$rows[] = 1 === count( $entry ) && is_array( $inner ) && ! \Estasoft\SyncEngine\Core\Support\Lists::isList( $inner ) && ! isset( $entry['id'] ) ? $inner : $entry;
 		}
 		return $rows;
 	}

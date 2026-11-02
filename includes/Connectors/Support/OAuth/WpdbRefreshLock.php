@@ -41,7 +41,7 @@ final class WpdbRefreshLock implements RefreshLock {
 	 * @return string|null An owner token, or null when somebody else holds the lock.
 	 */
 	public function acquire( string $key, int $ttl ): ?string {
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared -- the options table name comes from $wpdb; every value is a placeholder.
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- the options table name comes from $wpdb; every value is a placeholder.
 		$name  = $this->name( $key );
 		$token = bin2hex( random_bytes( 8 ) );
 		$value = ( $this->clock->now()->getTimestamp() + max( 1, $ttl ) ) . ':' . $token;
@@ -69,7 +69,7 @@ final class WpdbRefreshLock implements RefreshLock {
 	 * @param string $token Token from acquire().
 	 */
 	public function release( string $key, string $token ): void {
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared -- the options table name comes from $wpdb; every value is a placeholder.
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- the options table name comes from $wpdb; every value is a placeholder.
 		$this->wpdb->query( $this->wpdb->prepare( "DELETE FROM {$this->wpdb->options} WHERE option_name = %s AND option_value LIKE %s", $this->name( $key ), '%:' . $this->wpdb->esc_like( $token ) ) );
 		// phpcs:enable
 	}

@@ -285,7 +285,7 @@ final class RuleEngine {
 	 * @return mixed
 	 */
 	private function step( Transform $transform, mixed $value, array $args, TransformContext $context ): mixed {
-		if ( ! $transform->handlesLists() && is_array( $value ) && array_is_list( $value ) ) {
+		if ( ! $transform->handlesLists() && is_array( $value ) && \Estasoft\SyncEngine\Core\Support\Lists::isList( $value ) ) {
 			return array_map( fn( mixed $entry ): mixed => $this->step( $transform, $entry, $args, $context ), $value );
 		}
 		return $transform->apply( $value, $args, $context );

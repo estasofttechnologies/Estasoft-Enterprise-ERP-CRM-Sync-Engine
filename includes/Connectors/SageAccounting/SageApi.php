@@ -117,7 +117,7 @@ final class SageApi {
 	 */
 	public static function items( ApiResponse $response ): array {
 		$data = $response->jsonValue();
-		$list = is_array( $data ) && isset( $data['$items'] ) && is_array( $data['$items'] ) ? $data['$items'] : ( is_array( $data ) && array_is_list( $data ) ? $data : array() );
+		$list = is_array( $data ) && isset( $data['$items'] ) && is_array( $data['$items'] ) ? $data['$items'] : ( is_array( $data ) && \Estasoft\SyncEngine\Core\Support\Lists::isList( $data ) ? $data : array() );
 		return array_values( array_filter( $list, 'is_array' ) );
 	}
 

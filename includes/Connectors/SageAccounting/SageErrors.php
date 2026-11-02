@@ -34,7 +34,7 @@ final class SageErrors {
 	 * @return array<int,array{code:string,message:string,source:string}>
 	 */
 	public static function entries( array $data ): array {
-		$list = isset( $data['$errors'] ) && is_array( $data['$errors'] ) ? $data['$errors'] : ( array_is_list( $data ) ? $data : array() );
+		$list = isset( $data['$errors'] ) && is_array( $data['$errors'] ) ? $data['$errors'] : ( \Estasoft\SyncEngine\Core\Support\Lists::isList( $data ) ? $data : array() );
 		$out  = array();
 		foreach ( $list as $error ) {
 			if ( ! is_array( $error ) || ! ( isset( $error['$message'] ) || isset( $error['$dataCode'] ) ) ) {

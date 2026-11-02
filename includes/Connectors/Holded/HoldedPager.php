@@ -53,7 +53,7 @@ final class HoldedPager {
 		$this->quota->note( $api, $response );
 		$json = $response->json();
 		$this->guard( $json );
-		$data = array_is_list( $json ) ? $json : ( is_array( $json['data'] ?? null ) ? $json['data'] : array() );
+		$data = \Estasoft\SyncEngine\Core\Support\Lists::isList( $json ) ? $json : ( is_array( $json['data'] ?? null ) ? $json['data'] : array() );
 		$rows = array();
 		foreach ( $data as $row ) {
 			if ( is_array( $row ) ) {

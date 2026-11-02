@@ -127,7 +127,7 @@ final class WafeqErrorMapper {
 			}
 		}
 		foreach ( $json as $key => $value ) {
-			if ( is_array( $value ) && array_is_list( $value ) && array() !== $value ) {
+			if ( is_array( $value ) && \Estasoft\SyncEngine\Core\Support\Lists::isList( $value ) && array() !== $value ) {
 				$first = $value[0];
 				if ( is_array( $first ) ) {
 					$inner = $this->describe( new ApiResponse( 400, (string) wp_json_encode( $first ) ) );

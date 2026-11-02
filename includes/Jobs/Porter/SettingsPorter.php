@@ -453,7 +453,7 @@ final class SettingsPorter {
 				throw $fail( esc_html__( 'The mappings in the file are not laid out as expected.', 'estasoft-erp-crm-sync-engine' ) );
 			}
 			foreach ( $types as $type => $rules ) {
-				if ( ! in_array( $type, self::TYPES, true ) || ! is_array( $rules ) || ! array_is_list( $rules ) || count( $rules ) > self::MAX_RULES ) {
+				if ( ! in_array( $type, self::TYPES, true ) || ! is_array( $rules ) || ! \Estasoft\SyncEngine\Core\Support\Lists::isList( $rules ) || count( $rules ) > self::MAX_RULES ) {
 					throw $fail( esc_html( sprintf( /* translators: %s: mapping type. */ __( 'The %s mapping in the file is not valid.', 'estasoft-erp-crm-sync-engine' ), $this->plain( (string) $type ) ) ) );
 				}
 				foreach ( $rules as $rule ) {

@@ -142,11 +142,11 @@ final class HttpErrorMapper {
 				return $value;
 			}
 			if ( is_array( $value ) ) {
-				$nested = self::findMessage( array_is_list( $value ) && isset( $value[0] ) && is_array( $value[0] ) ? $value[0] : $value );
+				$nested = self::findMessage( \Estasoft\SyncEngine\Core\Support\Lists::isList( $value ) && isset( $value[0] ) && is_array( $value[0] ) ? $value[0] : $value );
 				if ( '' !== $nested ) {
 					return $nested;
 				}
-				if ( array_is_list( $value ) && isset( $value[0] ) && is_string( $value[0] ) ) {
+				if ( \Estasoft\SyncEngine\Core\Support\Lists::isList( $value ) && isset( $value[0] ) && is_string( $value[0] ) ) {
 					return $value[0];
 				}
 			}

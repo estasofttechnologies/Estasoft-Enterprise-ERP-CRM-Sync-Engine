@@ -13,9 +13,9 @@ Keeps WooCommerce in step with your ERP, accounting system or CRM through a queu
 
 == Description ==
 
-Estasoft Enterprise ERP/CRM Sync Engine sends WooCommerce orders, customers and refunds to the system your business runs on, and reads stock levels, delivery tracking and invoice status back. Every order event is saved to a queue in your own database, in the same step that saves the order. A background worker delivers the queue, so a slow or offline ERP never holds up a customer at checkout.
+Estasoft Enterprise ERP/CRM Sync Engine sends WooCommerce orders, customers and refunds to the system your business runs on, and reads stock, delivery tracking and invoice status back. Every order event is saved to a queue in your own database, in the same step that saves the order, so a slow or offline ERP never holds up checkout.
 
-The plugin is free, with every feature included: no paid tier, licence key, trial or usage limit. It has no telemetry and no Estasoft server; the only outside system it talks to is the one you connect (see External services). It never signs, issues or certifies a tax invoice: the connected system does that.
+The plugin is free, with every feature included: no paid tier, licence key, trial or usage limit, no telemetry and no Estasoft server. It talks only to the system you connect (see External services). It never signs or certifies a tax invoice: the connected system does that.
 
 = Supported systems =
 
@@ -24,26 +24,22 @@ The plugin is free, with every feature included: no paid tier, licence key, tria
 * **CRM:** HubSpot, Zoho CRM, Salesforce, Dynamics 365 Sales, Pipedrive, SuiteCRM.
 * **Files you import yourself** (nothing is sent anywhere): DATEV, Sage 50, TallyPrime.
 
-Pennylane and SMACC are listed on the setup screen but cannot be selected yet (see the FAQ).
+Pennylane and SMACC are listed but cannot be selected yet.
 
-**Please read this before you go live.** Every connector was built from the vendor's public documentation and tested against a simulated copy of its API. None has been tried with a live account of its vendor yet. Start with Shadow mode, a dry run (seven days by default) that changes nothing in either system, and compare the results before anything is sent. Connectors you do not set up stay idle.
+**Before you go live:** Every connector was built from the vendor's public documentation and tested against a simulated copy of its API; none has been tried with a live account yet. Start with Shadow mode, a dry run that changes nothing in either system, and compare the results first.
 
 = Features =
 
-* **Durable queue.** Failed deliveries retry with growing delays. If the other system keeps failing, the connection pauses and orders wait.
-* **No duplicates.** Each order carries a reference (WC-{order number}) that is looked up before anything is created.
-* **Preview before sending.** See exactly what your system will receive for a real order.
-* **Mapping you can read.** Rules that turn WooCommerce fields into the other system's fields, with tax mapping, SKU matching, versions and rollback.
-* **Shadow mode.** Run the whole process without changing anything in either system, and compare the results.
-* **Needs attention.** Failed orders are grouped by cause, with a plain explanation and a fix.
-* **Stock, tracking and invoice status back** into the store, and a nightly reconciliation that lists differences, where the connected system supports them.
-* **Dashboard, logs and readiness check**, a support report that leaves secrets out, and email alerts.
-* **Encrypted credentials.** The encryption key lives in wp-config.php.
-* **WooCommerce compatible.** HPOS and the block checkout are declared compatible; data is read through WooCommerce's CRUD API only.
+* **Durable queue.** Failed deliveries retry with growing delays; a system that keeps failing pauses its connection and orders wait.
+* **No duplicates.** Every order has a reference (WC-{order number}) checked before anything is created.
+* **Preview and shadow mode.** See what your system will receive, or run everything without changing a thing.
+* **Mapping you can read**, with tax mapping, SKU matching and rollback. Failed orders are grouped by cause, with a plain explanation and a fix.
+* **Stock, tracking and invoice status back**, a nightly reconciliation, a dashboard and email alerts.
+* **Encrypted credentials**, with the key in wp-config.php; HPOS and the block checkout are supported.
 
 = Trademarks =
 
-All product and company names are trademarks of their owners, used only to say which systems the plugin works with. This plugin is independent: it is not made, endorsed or sponsored by any of them, and it includes no vendor logos.
+All product and company names are trademarks of their owners, used only to say which systems the plugin works with. The plugin is independent of them and includes no vendor logos.
 
 == External services ==
 

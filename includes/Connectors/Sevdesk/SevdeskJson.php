@@ -30,7 +30,7 @@ final class SevdeskJson {
 		if ( ! is_array( $objects ) || array() === $objects ) {
 			return array();
 		}
-		if ( array_is_list( $objects ) ) {
+		if ( \Estasoft\SyncEngine\Core\Support\Lists::isList( $objects ) ) {
 			return array_values( array_filter( $objects, 'is_array' ) );
 		}
 		return array( $objects );

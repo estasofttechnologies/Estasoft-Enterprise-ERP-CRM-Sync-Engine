@@ -363,7 +363,7 @@ final class MoneybirdConnector extends AbstractApiConnector {
 			)
 		)->json();
 		$found = array();
-		foreach ( array_is_list( $rows ) ? $rows : array() as $product ) {
+		foreach ( \Estasoft\SyncEngine\Core\Support\Lists::isList( $rows ) ? $rows : array() as $product ) {
 			if ( is_array( $product ) ) {
 				$found[] = $this->productRef( $product );
 			}
@@ -412,7 +412,7 @@ final class MoneybirdConnector extends AbstractApiConnector {
 					'per_page' => 100,
 				)
 			)->json();
-			$rows = array_is_list( $rows ) ? $rows : array();
+			$rows = \Estasoft\SyncEngine\Core\Support\Lists::isList( $rows ) ? $rows : array();
 			foreach ( $rows as $row ) {
 				if ( is_array( $row ) && '' !== PayloadReader::text( $row['id'] ?? '' ) ) {
 					$codes[] = array(

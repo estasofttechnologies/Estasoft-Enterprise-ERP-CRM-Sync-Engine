@@ -367,6 +367,11 @@ if ( isset( $sections['External services'] ) ) {
 // Every system of the connector documents is named in the readme, and the numbers it quotes match the documents and the catalog.
 if ( isset( $sections['Description'] ) ) {
 	$description = implode( "\n", $sections['Description'] );
+	// The WordPress.org parser cuts the Description at 2,500 characters (Plugin Check: readme_parser_warnings_trimmed_section_description).
+	$description_length = mb_strlen( trim( $description ) );
+	if ( $description_length > 2500 ) {
+		$errors[] = "The Description section is {$description_length} characters; WordPress.org shows at most 2,500.";
+	}
 	foreach ( ESTASOFT_README_DOCS as $doc ) {
 		if ( false === strpos( $description, $doc['name'] ) ) {
 			$errors[] = "The Description does not name the system '{$doc['name']}' (connector document {$doc['slug']}.md).";

@@ -49,7 +49,7 @@ final class QoyodPager {
 		$ignored = false;
 		for ( $page = 1; $page <= self::MAX_PAGES; ++$page ) {
 			$json  = $api->get( $path, $query + array( 'page' => $page ) )->json();
-			$batch = $json[ $root ] ?? ( array_is_list( $json ) ? $json : array() );
+			$batch = $json[ $root ] ?? ( \Estasoft\SyncEngine\Core\Support\Lists::isList( $json ) ? $json : array() );
 			$fresh = 0;
 			foreach ( (array) $batch as $row ) {
 				if ( ! is_array( $row ) ) {

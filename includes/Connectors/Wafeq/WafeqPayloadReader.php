@@ -92,7 +92,7 @@ final class WafeqPayloadReader {
 		if ( ! is_array( $value ) || array() === $value ) {
 			return array();
 		}
-		if ( ! array_is_list( $value ) ) {
+		if ( ! \Estasoft\SyncEngine\Core\Support\Lists::isList( $value ) ) {
 			return array( $value );
 		}
 		return array_values( array_filter( $value, 'is_array' ) );

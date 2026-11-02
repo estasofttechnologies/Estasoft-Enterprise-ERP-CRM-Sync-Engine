@@ -42,7 +42,7 @@ final class Xml {
 	 */
 	public static function element( string $name, mixed $value ): string {
 		$name = self::name( $name );
-		if ( is_array( $value ) && array_is_list( $value ) ) {
+		if ( is_array( $value ) && \Estasoft\SyncEngine\Core\Support\Lists::isList( $value ) ) {
 			return implode( '', array_map( static fn( $item ): string => self::element( $name, $item ), $value ) );
 		}
 		if ( ! is_array( $value ) ) {

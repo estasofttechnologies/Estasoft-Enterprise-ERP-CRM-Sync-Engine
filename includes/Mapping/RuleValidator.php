@@ -42,7 +42,7 @@ final class RuleValidator {
 	 * @return array<int,RuleError>
 	 */
 	public function validate( array $rules, array $fields = array(), bool $checkSources = true ): array {
-		if ( array() !== $rules && ! array_is_list( $rules ) ) {
+		if ( array() !== $rules && ! \Estasoft\SyncEngine\Core\Support\Lists::isList( $rules ) ) {
 			return array( new RuleError( '', 'rules', 'rules_not_a_list', __( 'The rules must be a list.', 'estasoft-erp-crm-sync-engine' ) ) );
 		}
 

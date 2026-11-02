@@ -116,7 +116,7 @@ final class HoldedDocuments {
 		$this->quota->note( $api, $response );
 		$json = $response->json();
 		$this->pager->guard( $json );
-		return new HoldedRecord( ( array_is_list( $json ) ? array() : $json ) + array( 'id' => $id ) );
+		return new HoldedRecord( ( \Estasoft\SyncEngine\Core\Support\Lists::isList( $json ) ? array() : $json ) + array( 'id' => $id ) );
 	}
 
 	/**
@@ -136,7 +136,7 @@ final class HoldedDocuments {
 		}
 		$json = $response->json();
 		$this->pager->guard( $json );
-		return new HoldedRecord( ( array_is_list( $json ) ? array() : $json ) + array( 'id' => $id ) );
+		return new HoldedRecord( ( \Estasoft\SyncEngine\Core\Support\Lists::isList( $json ) ? array() : $json ) + array( 'id' => $id ) );
 	}
 
 	/**

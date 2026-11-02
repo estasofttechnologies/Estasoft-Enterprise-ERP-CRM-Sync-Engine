@@ -59,7 +59,7 @@ final class MoneybirdContacts {
 					'per_page' => self::PER_PAGE,
 				)
 			)->json();
-			$rows = array_is_list( $rows ) ? $rows : array();
+			$rows = \Estasoft\SyncEngine\Core\Support\Lists::isList( $rows ) ? $rows : array();
 			foreach ( $rows as $contact ) {
 				if ( is_array( $contact ) && $this->hasEmail( $contact, $email ) ) {
 					$found[] = $contact;

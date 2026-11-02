@@ -88,7 +88,7 @@ abstract class Repository {
 	 * @return array<int,array<string,mixed>>
 	 */
 	protected function results( string $sql, array $args = array() ): array {
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared -- custom tables of the plugin; the statement is prepared by self::prepare() and the data must not be cached.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- custom tables of the plugin; the statement is prepared by self::prepare() and the data must not be cached.
 		$rows = $this->wpdb->get_results( $this->prepare( $sql, $args ), ARRAY_A );
 		$this->noteError();
 		return is_array( $rows ) ? $rows : array();
@@ -102,7 +102,7 @@ abstract class Repository {
 	 * @return array<string,mixed>|null
 	 */
 	protected function row( string $sql, array $args = array() ): ?array {
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared -- custom tables of the plugin; the statement is prepared by self::prepare() and the data must not be cached.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- custom tables of the plugin; the statement is prepared by self::prepare() and the data must not be cached.
 		$row = $this->wpdb->get_row( $this->prepare( $sql, $args ), ARRAY_A );
 		$this->noteError();
 		return is_array( $row ) ? $row : null;
@@ -115,7 +115,7 @@ abstract class Repository {
 	 * @param array<int,mixed> $args Arguments.
 	 */
 	protected function value( string $sql, array $args = array() ): ?string {
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared -- custom tables of the plugin; the statement is prepared by self::prepare() and the data must not be cached.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- custom tables of the plugin; the statement is prepared by self::prepare() and the data must not be cached.
 		$value = $this->wpdb->get_var( $this->prepare( $sql, $args ) );
 		$this->noteError();
 		return null === $value ? null : (string) $value;
@@ -129,7 +129,7 @@ abstract class Repository {
 	 * @return int Rows affected; 0 on failure.
 	 */
 	protected function run( string $sql, array $args = array() ): int {
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared -- custom tables of the plugin; the statement is prepared by self::prepare() and the data must not be cached.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared,PluginCheck.Security.DirectDB.UnescapedDBParameter -- custom tables of the plugin; the statement is prepared by self::prepare() and the data must not be cached.
 		$affected = $this->wpdb->query( $this->prepare( $sql, $args ) );
 		$this->noteError();
 		return is_int( $affected ) ? $affected : 0;

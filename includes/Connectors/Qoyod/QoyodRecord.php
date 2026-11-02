@@ -34,7 +34,7 @@ final class QoyodRecord {
 	 */
 	public static function unwrap( array $json, string $key ): self {
 		$inner = $json[ $key ] ?? null;
-		if ( is_array( $inner ) && ! array_is_list( $inner ) ) {
+		if ( is_array( $inner ) && ! \Estasoft\SyncEngine\Core\Support\Lists::isList( $inner ) ) {
 			return new self( $inner );
 		}
 		if ( is_array( $inner ) && isset( $inner[0] ) && is_array( $inner[0] ) ) {

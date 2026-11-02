@@ -63,7 +63,7 @@ final class Json {
 		foreach ( $value as $key => $item ) {
 			$sorted[ $key ] = self::sortKeys( $item );
 		}
-		if ( ! array_is_list( $sorted ) ) {
+		if ( ! \Estasoft\SyncEngine\Core\Support\Lists::isList( $sorted ) ) {
 			ksort( $sorted, SORT_STRING );
 		}
 		return $sorted;

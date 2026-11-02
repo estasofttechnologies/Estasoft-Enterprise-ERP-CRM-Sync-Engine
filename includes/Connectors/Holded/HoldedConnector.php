@@ -260,7 +260,7 @@ final class HoldedConnector extends AbstractApiConnector {
 			return new TestResult( false, 'API v1', self::LABEL, array(), array( 'read_warehouses' => false ), $refusal );
 		}
 		$warehouse = array();
-		foreach ( array_is_list( $json ) ? $json : array() as $row ) {
+		foreach ( \Estasoft\SyncEngine\Core\Support\Lists::isList( $json ) ? $json : array() as $row ) {
 			if ( is_array( $row ) ) {
 				$warehouse[] = array(
 					'id'   => HoldedPayloadReader::text( $row['id'] ?? '' ),

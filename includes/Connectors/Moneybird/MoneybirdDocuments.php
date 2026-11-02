@@ -96,7 +96,7 @@ final class MoneybirdDocuments {
 					'per_page' => 100,
 				)
 			)->json();
-			$rows = array_is_list( $rows ) ? $rows : array();
+			$rows = \Estasoft\SyncEngine\Core\Support\Lists::isList( $rows ) ? $rows : array();
 			foreach ( $rows as $row ) {
 				if ( is_array( $row ) && '' !== PayloadReader::text( $row['id'] ?? '' ) && PayloadReader::text( $row['reference'] ?? '' ) === $reference ) {
 					$found[] = $row;

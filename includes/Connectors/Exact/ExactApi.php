@@ -207,7 +207,7 @@ final class ExactApi {
 		}
 		if ( isset( $data['results'] ) && is_array( $data['results'] ) ) {
 			$data = $data['results'];
-		} elseif ( ! array_is_list( $data ) ) {
+		} elseif ( ! \Estasoft\SyncEngine\Core\Support\Lists::isList( $data ) ) {
 			return array( $data );
 		}
 		return array_values( array_filter( $data, 'is_array' ) );

@@ -89,8 +89,6 @@ final class Plugin {
 		}
 		$this->booted = true;
 
-		add_action( 'init', array( $this, 'loadTextDomain' ), 1 );
-
 		$modules = array();
 		foreach ( self::moduleClasses() as $class ) {
 			if ( class_exists( $class ) && is_subclass_of( $class, ModuleInterface::class ) ) {
@@ -103,13 +101,6 @@ final class Plugin {
 		foreach ( $modules as $module ) {
 			$module->hooks( $this->container );
 		}
-	}
-
-	/**
-	 * Load translations. Only English ships; the strings stay translatable.
-	 */
-	public function loadTextDomain(): void {
-		load_plugin_textdomain( ESTASOFT_SYNC_TEXT_DOMAIN, false, dirname( plugin_basename( ESTASOFT_SYNC_FILE ) ) . '/languages' );
 	}
 
 	/**

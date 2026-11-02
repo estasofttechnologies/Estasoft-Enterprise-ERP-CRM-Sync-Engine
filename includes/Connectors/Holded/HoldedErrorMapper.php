@@ -72,7 +72,7 @@ final class HoldedErrorMapper {
 	 * @param array<mixed> $json Decoded answer.
 	 */
 	public function answer( array $json ): ?ConnectorError {
-		if ( array_is_list( $json ) || ! array_key_exists( 'status', $json ) || ! is_numeric( $json['status'] ) || 0 !== (int) $json['status'] ) {
+		if ( \Estasoft\SyncEngine\Core\Support\Lists::isList( $json ) || ! array_key_exists( 'status', $json ) || ! is_numeric( $json['status'] ) || 0 !== (int) $json['status'] ) {
 			return null;
 		}
 		$reason = $this->reason( $json );

@@ -1,15 +1,31 @@
 # Plugin Check notes
 
 The official Plugin Check (the WordPress.org plugin and the GitHub action `WordPress/plugin-check-action`) cannot be
-run on the build machine: wordpress.org and GitHub archives are blocked. This page records how each of its
-categories was approximated with the tools that exist here, the result of each on 2 Nov 2026, and what only the real
-tool can verify. The real run is the job `plugin-check` in `.github/workflows/plugin-check.yml`; read its summary
+run on the build machine: wordpress.org is blocked. This page records the first real run on GitHub, how each category
+was approximated with the tools that exist on the build machine, the result of each on 2 Nov 2026, and what only the
+real tool can verify. The real run is the job `plugin-check` in `.github/workflows/plugin-check.yml`; read its summary
 before submitting ([OWNER-ACTIONS.md](OWNER-ACTIONS.md), item 3).
 
 Every command is run from the repository root. The release zip (not the working tree) is what the real tool checks;
 `bin/build-zip.sh` and `bin/smoke-install.sh` make and install that zip.
 
-## Results
+## The first real run (3 Nov 2026)
+
+The job `plugin-check` ran on GitHub against the release zip (WordPress latest, Plugin Check 2.1.0). It found what the
+approximations on the build machine could not:
+
+| Finding | What was done |
+| --- | --- |
+| 33 errors, `wp_function_not_compatible_with_requires_wp`: `array_is_list()` is read as a WordPress 6.5 function, and the plugin supports 6.4 (it runs on PHP 8.1, where the function exists natively). | Every call now goes through `Core\Support\Lists::isList()`, which gives the same answer (a unit test compares the two). `bin/red-flags.php` fails on a new call to `array_is_list()`. |
+| Warning: `load_plugin_textdomain()` is discouraged for plugins hosted on WordPress.org. | Removed. WordPress.org loads the translations of a hosted plugin by itself. |
+| Warning: the readme Description is longer than 2,500 characters and is cut. | Shortened to 2,456; `bin/check-readme.php` now fails above 2,500. |
+| 8 warnings, `PluginCheck.Security.DirectDB.UnescapedDBParameter`, in `Core\Repositories\Repository` and `Connectors\Support\OAuth\WpdbRefreshLock`: a statement built by `$wpdb->prepare()` is passed to `$wpdb`. | Marked with `phpcs:ignore` and the reason (the statement is prepared; the table names come from `$wpdb`). |
+
+The first attempt of the job failed before it checked anything: the workflow added Plugin Check and WooCommerce to the
+test site by itself while the action installs both, and the two copies stopped with "Cannot redeclare
+wp_plugin_check_load()". The workflow now leaves both to the action.
+
+## Results on the build machine
 
 | Category of Plugin Check | Approximated with | Result |
 | --- | --- | --- |
