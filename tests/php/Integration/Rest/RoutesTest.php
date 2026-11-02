@@ -46,6 +46,12 @@ final class RoutesTest extends RestIntegrationCase {
 		'POST /connections/{n}/oauth/start'                  => 'configure',
 		'GET /connections/{n}/oauth/organisations'           => 'configure',
 		'GET /connections/{n}/oauth/callback'                => 'state',
+		'POST /connections/{n}/oauth/organisation'           => 'configure',
+		'GET /oauth/callback'                                => 'state',
+		'GET /exports'                                       => 'manage',
+		'POST /exports'                                      => 'configure',
+		'GET /exports/{n}/download'                          => 'manage',
+		'DELETE /exports/{n}'                                => 'configure',
 		'GET /catalog'                                       => 'manage',
 		'GET /mappings/{t}'                                  => 'manage',
 		'PUT /mappings/{t}'                                  => 'configure',
@@ -121,6 +127,9 @@ final class RoutesTest extends RestIntegrationCase {
 		'POST /tools/delete-data'                     => array( 'word' => 'not the word' ),
 		'POST /go-live'                               => array( 'mode' => 'shadow' ),
 		'GET /connections/{n}/oauth/callback'         => array( 'state' => 'x' ),
+		'GET /oauth/callback'                         => array( 'state' => 'x' ),
+		'POST /connections/{n}/oauth/organisation'    => array( 'id' => 'org-1' ),
+		'POST /exports'                               => array( 'connection_id' => 1 ),
 	);
 
 	/**
@@ -151,6 +160,7 @@ final class RoutesTest extends RestIntegrationCase {
 	 */
 	private static function normal( string $route ): string {
 		$route = (string) preg_replace( '/\(\?P<type>[^)]+\)/', '{t}', $route );
+		$route = (string) preg_replace( '/\(\?P<file>[^)]+\)\)?/', '{n}', str_replace( '(?P<file>[a-f0-9]{1,32})', '(?P<file>x)', $route ) );
 		return (string) preg_replace( '/\(\?P<\w+>\\\\d\+\)/', '{n}', $route );
 	}
 

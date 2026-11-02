@@ -17,6 +17,7 @@ use Estasoft\SyncEngine\Core\Crypto\SecretBox;
 use Estasoft\SyncEngine\Core\Support\ValidationException;
 use Estasoft\SyncEngine\Domain\ConnectionStatus;
 use Estasoft\SyncEngine\Domain\ErrorCode;
+use Estasoft\SyncEngine\Jobs\Connections\CatalogForms;
 use Estasoft\SyncEngine\Jobs\Connections\ConnectionService;
 use Estasoft\SyncEngine\Jobs\JobException;
 
@@ -480,7 +481,7 @@ final class ConnectionServiceTest extends JobsTestCase {
 		$this->assertTrue( $catalog[0]['available'], 'its connector is in the registry' );
 		$this->assertFalse( $catalog[1]['available'] );
 		$this->assertNull( $catalog[1]['connector'] );
-		$this->assertSame( array( 'name', 'type', 'regions', 'connector', 'connection_method', 'needs', 'available', 'wave' ), array_keys( $catalog[0] ) );
+		$this->assertSame( array( 'name', 'type', 'regions', 'connector', 'connection_method', 'needs', 'available', 'verified', 'variants', 'hosts', 'terms_url', 'privacy_url', 'developer_url', 'steps', 'wave', 'credential_fields', 'can_sign_in', 'auth_style' ), array_keys( $catalog[0] ) );
 
 		add_filter(
 			'estasoft_sync_catalog',
@@ -491,6 +492,80 @@ final class ConnectionServiceTest extends JobsTestCase {
 		);
 		$this->assertSame( 'Extra', $this->j->connectionService->catalog()[2]['name'] );
 		remove_all_filters( 'estasoft_sync_catalog' );
+	}
+
+	/**
+	 * A service over chosen catalog rows.
+	 *
+	 * @param array<int,array<string,mixed>> $rows  Catalog rows.
+	 * @param CatalogForms|null              $forms Form builder; none (nothing kept) by default.
+	 */
+	private function serviceWith( array $rows, ?CatalogForms $forms = null ): ConnectionService {
+		return new ConnectionService( $this->h->connections, $this->h->connectionSettings, $this->h->mappings, fn() => $this->h->registry, $this->h->box, $this->h->logger, $this->h->clock, $this->h->pause, $this->j->signIns, static fn(): array => $rows, $forms );
+	}
+
+	public function test_an_available_row_carries_the_connect_form_and_a_missing_one_has_none(): void {
+		$catalog = $this->j->connectionService->catalog();
+
+		$fields = $catalog[0]['credential_fields'];
+		$this->assertSame( array( 'address', 'user', 'api_key' ), array_column( $fields, 'name' ) );
+		$this->assertSame( array( 'name', 'label', 'secret', 'required', 'hint', 'default', 'type', 'options', 'group' ), array_keys( $fields[0] ) );
+		$this->assertSame( array( false, false, true ), array_column( $fields, 'secret' ) );
+		$this->assertFalse( $catalog[0]['can_sign_in'] );
+		$this->assertSame( 'key', $catalog[0]['auth_style'], 'A connector that names no style gets the one of its connection method.' );
+
+		$this->assertSame( array(), $catalog[1]['credential_fields'], 'No connector, no fields.' );
+		$this->assertFalse( $catalog[1]['can_sign_in'] );
+		$this->assertSame( CatalogForms::styleFromMethod( $catalog[1]['connection_method'] ), $catalog[1]['auth_style'] );
+	}
+
+	public function test_each_variant_carries_its_own_form_and_a_system_that_cannot_be_chosen_has_none(): void {
+		$service = $this->serviceWith(
+			array(
+				array( 'name' => 'Sage family', 'type' => 'erp', 'connector' => null, 'connection_method' => 'cloud_app', 'variants' => array( array( 'id' => 'fake', 'label' => 'Installed' ), array( 'id' => 'not-built', 'label' => 'Later' ) ) ),
+				array( 'name' => 'SMACC', 'type' => 'accounting', 'connector' => 'fake', 'connection_method' => 'export_file', 'selectable' => false ),
+			)
+		);
+		$catalog = $service->catalog();
+
+		$this->assertTrue( $catalog[0]['available'] );
+		$this->assertSame( array(), $catalog[0]['credential_fields'], 'A row that holds variants has no form of its own.' );
+		$this->assertSame( 'oauth_client_credentials', $catalog[0]['auth_style'] );
+		$this->assertFalse( $catalog[0]['can_sign_in'] );
+		$installed = $catalog[0]['variants'][0];
+		$this->assertTrue( $installed['available'] );
+		$this->assertSame( array( 'address', 'user', 'api_key' ), array_column( $installed['credential_fields'], 'name' ) );
+		$this->assertFalse( $installed['can_sign_in'] );
+		$this->assertSame( 'oauth_client_credentials', $installed['auth_style'], 'The fake connector names no style, so the row connection method decides.' );
+		$later = $catalog[0]['variants'][1];
+		$this->assertFalse( $later['available'] );
+		$this->assertSame( array(), $later['credential_fields'] );
+
+		$this->assertFalse( $catalog[1]['available'] );
+		$this->assertSame( array(), $catalog[1]['credential_fields'], 'Even with a connector installed, a row marked not selectable shows no form.' );
+		$this->assertSame( 'export_file', $catalog[1]['auth_style'] );
+	}
+
+	public function test_the_forms_are_kept_in_a_transient_for_ten_minutes_and_never_hold_a_secret(): void {
+		global $wpdb;
+		$like = $wpdb->esc_like( '_transient_estasoft_sync_catalog_forms_' ) . '%';
+		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s", $like, $wpdb->esc_like( '_transient_timeout_estasoft_sync_catalog_forms_' ) . '%' ) );
+
+		$rows    = array( array( 'name' => 'Odoo', 'type' => 'erp', 'connector' => 'fake', 'connection_method' => 'key' ) );
+		$service = $this->serviceWith( $rows, CatalogForms::cached( fn() => $this->h->registry ) );
+		$first   = $service->catalog();
+		$names   = $wpdb->get_col( $wpdb->prepare( "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE %s", $like ) );
+		$this->assertCount( 1, $names, 'One transient holds every connector form.' );
+		$timeout = (int) get_option( str_replace( '_transient_', '_transient_timeout_', (string) $names[0] ) );
+		$this->assertEqualsWithDelta( time() + CatalogForms::TTL, $timeout, 5 );
+		$this->assertSame( 600, CatalogForms::TTL );
+
+		$this->assertSame( $first, $service->catalog(), 'The second request reads the kept answer.' );
+		$kept = (string) wp_json_encode( get_transient( substr( (string) $names[0], strlen( '_transient_' ) ) ) );
+		$this->assertStringContainsString( 'api_key', $kept );
+		$this->assertStringNotContainsString( 'secret_value', $kept );
+
+		$wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s", $like, $wpdb->esc_like( '_transient_timeout_estasoft_sync_catalog_forms_' ) . '%' ) );
 	}
 
 	public function test_the_static_catalog_file_loads_with_all_34_systems(): void {

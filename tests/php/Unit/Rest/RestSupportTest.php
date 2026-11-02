@@ -12,7 +12,9 @@ namespace Estasoft\SyncEngine\Tests\Unit\Rest;
 use Estasoft\SyncEngine\Rest\ApiException;
 use Estasoft\SyncEngine\Rest\IdempotencyCache;
 use Estasoft\SyncEngine\Rest\OAuth\OAuthState;
+use Estasoft\SyncEngine\Rest\Support\AtomicKeyValueStore;
 use Estasoft\SyncEngine\Rest\Support\ConnectionResolver;
+use Estasoft\SyncEngine\Rest\Support\KeyValueStore;
 use Estasoft\SyncEngine\Tests\Support\RestArrayStore;
 use PHPUnit\Framework\TestCase;
 
@@ -200,6 +202,67 @@ final class RestSupportTest extends TestCase {
 		$later = $state->begin( 7, 3 );
 		$this->store->expireAll();
 		$this->assertNull( $state->peek( $later['state'], 3 ), 'ten minutes passed' );
+	}
+
+	public function test_the_stable_callback_uses_a_state_once_whichever_way_it_is_asked(): void {
+		$state = new OAuthState( $this->store );
+		$begin = $state->begin( 7, 3, '/connections/3' );
+		$first = $state->consumeAny( $begin['state'] );
+		$this->assertSame( 3, $first['connection'] );
+		$this->assertSame( 7, $first['user'] );
+		$this->assertNull( $state->consumeAny( $begin['state'] ), 'used up' );
+		$this->assertNull( $state->consume( $begin['state'], 3 ) );
+	}
+
+	public function test_of_two_callbacks_that_read_the_state_together_only_one_succeeds(): void {
+		$racing = new class( $this->store ) implements AtomicKeyValueStore {
+			public bool $other = false;
+			public function __construct( private RestArrayStore $inner ) {}
+			public function get( string $key ): mixed {
+				$value = $this->inner->get( $key );
+				if ( $this->other ) {
+					$this->other = false;
+					$this->inner->take( $key ); // The other callback took it right after this one read it.
+				}
+				return $value;
+			}
+			public function set( string $key, mixed $value, int $seconds ): void {
+				$this->inner->set( $key, $value, $seconds );
+			}
+			public function delete( string $key ): void {
+				$this->inner->delete( $key );
+			}
+			public function take( string $key ): mixed {
+				return $this->inner->take( $key );
+			}
+		};
+		$state = new OAuthState( $racing );
+		$begin = $state->begin( 7, 3 );
+		$racing->other = true;
+		$this->assertNull( $state->consume( $begin['state'], 3 ), 'The read succeeded, but the other callback had already taken the state.' );
+
+		$again = $state->begin( 7, 3 );
+		$this->assertNotNull( $state->consumeAny( $again['state'] ) );
+		$this->assertNull( $state->consumeAny( $again['state'] ) );
+	}
+
+	public function test_a_store_without_an_atomic_take_still_gives_a_state_out_once(): void {
+		$plain = new class( $this->store ) implements KeyValueStore {
+			public function __construct( private RestArrayStore $inner ) {}
+			public function get( string $key ): mixed {
+				return $this->inner->get( $key );
+			}
+			public function set( string $key, mixed $value, int $seconds ): void {
+				$this->inner->set( $key, $value, $seconds );
+			}
+			public function delete( string $key ): void {
+				$this->inner->delete( $key );
+			}
+		};
+		$state = new OAuthState( $plain );
+		$begin = $state->begin( 7, 3 );
+		$this->assertNotNull( $state->consumeAny( $begin['state'] ) );
+		$this->assertNull( $state->consumeAny( $begin['state'] ) );
 	}
 
 	public function test_a_made_up_or_malformed_state_is_never_valid_and_the_state_itself_is_not_stored(): void {

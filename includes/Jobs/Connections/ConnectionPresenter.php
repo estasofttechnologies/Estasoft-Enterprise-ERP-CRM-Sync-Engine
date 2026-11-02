@@ -23,7 +23,7 @@ final class ConnectionPresenter {
 	/**
 	 * The `ConnectionSummary`.
 	 *
-	 * @param array<string,mixed>    $public    A row from ConnectionRepository::findPublic() or all().
+	 * @param array<string,mixed>     $public    A row from ConnectionRepository::findPublic() or all().
 	 * @param ConnectorInterface|null $connector Its connector, for the live capability flags.
 	 * @return array<string,mixed>
 	 */
@@ -94,26 +94,51 @@ final class ConnectionPresenter {
 	/**
 	 * The credential fields with their values: text for ordinary fields, only "has a value" for secrets.
 	 *
-	 * @param array<int,CredentialField>  $fields Fields the connector declares.
-	 * @param array<string,mixed>         $config Connection config.
-	 * @param array<string,mixed>         $hints  Which secrets exist, from the repository (name to true).
+	 * @param array<int,CredentialField> $fields Fields the connector declares.
+	 * @param array<string,mixed>        $config Connection config.
+	 * @param array<string,mixed>        $hints  Which secrets exist, from the repository (name to true).
 	 * @return array<int,array<string,mixed>>
 	 */
 	private static function credentials( array $fields, array $config, array $hints ): array {
 		$out = array();
 		foreach ( $fields as $field ) {
 			$value = $field->secret || ! isset( $config[ $field->name ] ) || ! is_scalar( $config[ $field->name ] ) ? null : (string) $config[ $field->name ];
-			$out[] = array(
-				'name'      => $field->name,
-				'label'     => $field->label,
-				'secret'    => $field->secret,
-				'required'  => $field->required,
-				'hint'      => $field->hint,
-				'default'   => $field->default,
-				'value'     => $value,
-				'has_value' => $field->secret ? ! empty( $hints[ $field->name ] ) : ( null !== $value && '' !== $value ),
+			$out[] = self::definition( $field ) + array(
+				'value'     => 'display' === $field->type ? $field->default : $value,
+				'has_value' => $field->secret ? ! empty( $hints[ $field->name ] ) : ( 'display' === $field->type || ( null !== $value && '' !== $value ) ),
 			);
 		}
 		return $out;
+	}
+
+	/**
+	 * Credential fields as `CredentialFieldDef` list. A secret field (and a password input) never carries a default.
+	 *
+	 * @param array<int,CredentialField> $fields Fields a connector declares.
+	 * @return array<int,array{name:string,label:string,secret:bool,required:bool,hint:string,default:string,type:string,options:array<string,string>,group:string}>
+	 */
+	public static function definitions( array $fields ): array {
+		return array_values( array_map( array( self::class, 'definition' ), $fields ) );
+	}
+
+	/**
+	 * One `CredentialFieldDef`.
+	 *
+	 * @param CredentialField $field The field.
+	 * @return array{name:string,label:string,secret:bool,required:bool,hint:string,default:string,type:string,options:array<string,string>,group:string}
+	 */
+	public static function definition( CredentialField $field ): array {
+		$secret = $field->secret || 'password' === $field->type;
+		return array(
+			'name'     => $field->name,
+			'label'    => $field->label,
+			'secret'   => $field->secret,
+			'required' => $field->required,
+			'hint'     => $field->hint,
+			'default'  => $secret ? '' : $field->default,
+			'type'     => $field->type,
+			'options'  => $field->options,
+			'group'    => $field->group,
+		);
 	}
 }

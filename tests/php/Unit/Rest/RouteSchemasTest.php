@@ -43,7 +43,7 @@ final class RouteSchemasTest extends RestStubCase {
 	}
 
 	public function test_there_is_one_controller_per_group_and_each_registers_routes(): void {
-		$this->assertCount( 22, RestModule::CONTROLLERS );
+		$this->assertCount( 23, RestModule::CONTROLLERS );
 		$container = new Container();
 		$container->instance( RestModule::ERRORS, new ErrorMapper() );
 		$container->instance( RestModule::IDEMPOTENCY, new IdempotencyCache( new RestArrayStore(), 'salt' ) );
@@ -73,6 +73,11 @@ final class RouteSchemasTest extends RestStubCase {
 	 */
 	private const BROWSER_LANDING = '/connections/(?P<id>\d+)/oauth/callback';
 
+	/**
+	 * The same landing on the one stable redirect address of the site (the connection comes from the state).
+	 */
+	private const BROWSER_LANDING_STABLE = '/oauth/callback';
+
 	public function test_the_sign_in_callback_is_the_only_route_with_loose_arguments_and_it_requires_nothing_but_the_state(): void {
 		$loose = array();
 		foreach ( $this->routes() as $route ) {
@@ -82,7 +87,7 @@ final class RouteSchemasTest extends RestStubCase {
 				}
 			}
 		}
-		$this->assertSame( array( self::BROWSER_LANDING => array( 'code', 'error' ) ), $loose );
+		$this->assertSame( array( self::BROWSER_LANDING_STABLE => array( 'code', 'error' ), self::BROWSER_LANDING => array( 'code', 'error' ) ), $loose );
 		$callback = array_values( array_filter( $this->routes(), static fn( array $route ): bool => self::BROWSER_LANDING === $route['route'] ) )[0]['args']['args'];
 		$this->assertSame( array( 'state' ), array_keys( array_filter( $callback, static fn( array $schema ): bool => true === ( $schema['required'] ?? false ) ) ) );
 		$this->assertArrayNotHasKey( 'maxLength', $callback['code'] );
@@ -91,7 +96,7 @@ final class RouteSchemasTest extends RestStubCase {
 
 	public function test_every_argument_has_a_type_and_the_ids_in_the_url_are_required_positive_integers(): void {
 		foreach ( $this->routes() as $route ) {
-			if ( self::BROWSER_LANDING === $route['route'] ) {
+			if ( in_array( $route['route'], array( self::BROWSER_LANDING, self::BROWSER_LANDING_STABLE ), true ) ) {
 				continue;
 			}
 			foreach ( $route['args']['args'] as $name => $schema ) {

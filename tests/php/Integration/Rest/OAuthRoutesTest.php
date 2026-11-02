@@ -64,7 +64,8 @@ final class OAuthRoutesTest extends RestIntegrationCase {
 		$this->assertStringStartsWith( 'https://login.example.test/authorize?state=', $response->get_data()['url'] );
 		$this->assertMatchesRegularExpression( '/^[A-Za-z0-9_\-]{40,}$/', $connector->authorized['state'] );
 		$this->assertMatchesRegularExpression( '/^[A-Za-z0-9_\-]{43}$/', $connector->authorized['codeChallenge'], 'SHA-256 challenge' );
-		$this->assertStringEndsWith( "/estasoft-sync/v1/connections/$id/oauth/callback", $connector->authorized['redirectUri'] );
+		$this->assertSame( \Estasoft\SyncEngine\Connectors\Support\OAuth\OAuthRedirect::uri(), $connector->authorized['redirectUri'], 'one stable address for the whole site' );
+		$this->assertStringEndsWith( '/estasoft-sync/v1/oauth/callback', $connector->authorized['redirectUri'] );
 	}
 
 	/**
@@ -99,7 +100,7 @@ final class OAuthRoutesTest extends RestIntegrationCase {
 
 		$done = $this->call( 'GET', "/connections/$id/oauth/callback", array( 'state' => $state, 'code' => 'the-code' ) );
 		$this->assertSame( 302, $done->get_status() );
-		$this->assertStringEndsWith( "#/connections/$id?signin=ok", $done->get_headers()['Location'] );
+		$this->assertStringEndsWith( "#/connections/$id?signin=ok&connection=$id", $done->get_headers()['Location'] );
 		$this->assertNull( $done->get_data() );
 		$this->assertSame( 'the-code', $connector->completed['code'] );
 		$this->assertNotSame( '', $connector->completed['codeVerifier'] );
@@ -166,6 +167,37 @@ final class OAuthRoutesTest extends RestIntegrationCase {
 		$this->assertFailedRedirect( $this->call( 'GET', "/connections/$id/oauth/callback", array( 'state' => $state, 'code' => 'c' ) ), 'and giving the capability back does not revive the link' );
 	}
 
+	public function test_a_browser_signed_in_as_somebody_else_cannot_finish_a_sign_in_that_another_person_started(): void {
+		list( $id, $connector ) = $this->signInConnection();
+		$state                  = $this->startAndLeave( $id, $connector ); // Started by the administrator.
+
+		// The link reaches a browser where another person is signed in (a prepared link; the attacker started it with their own vendor account).
+		$stranger = $this->userId( 'subscriber' );
+		wp_set_current_user( $stranger );
+		try {
+			$this->assertFailedRedirect( $this->call( 'GET', '/oauth/callback', array( 'state' => $state, 'code' => 'attacker-code' ) ), 'the signed-in person is not the one who started it' );
+		} finally {
+			wp_set_current_user( 0 );
+		}
+		$this->assertSame( array(), $connector->completed, 'The code was not exchanged.' );
+		$this->assertFailedRedirect( $this->call( 'GET', '/oauth/callback', array( 'state' => $state, 'code' => 'attacker-code' ) ), 'and the state is used up' );
+	}
+
+	public function test_the_person_who_started_it_can_finish_it_while_signed_in(): void {
+		list( $id, $connector ) = $this->signInConnection();
+		$state                  = $this->startAndLeave( $id, $connector );
+
+		wp_set_current_user( $this->userId( 'administrator' ) );
+		try {
+			$done = $this->call( 'GET', '/oauth/callback', array( 'state' => $state, 'code' => 'the-code' ) );
+		} finally {
+			wp_set_current_user( 0 );
+		}
+		$this->assertSame( 302, $done->get_status() );
+		$this->assertStringEndsWith( "signin=ok&connection=$id", $done->get_headers()['Location'] );
+		$this->assertSame( 'the-code', $connector->completed['code'] );
+	}
+
 	public function test_odd_values_after_a_good_state_still_end_in_a_redirect(): void {
 		list( $id, $connector ) = $this->signInConnection();
 		foreach (
@@ -179,7 +211,7 @@ final class OAuthRoutesTest extends RestIntegrationCase {
 			$response = $this->call( 'GET', "/connections/$id/oauth/callback", array( 'state' => $state ) + $params );
 			$this->assertSame( 302, $response->get_status(), $label . ' ' . wp_json_encode( $response->get_data() ) );
 			$this->assertNull( $response->get_data(), $label );
-			$this->assertMatchesRegularExpression( '/\?signin=(failed|cancelled)$/', $response->get_headers()['Location'], $label );
+			$this->assertMatchesRegularExpression( '/\?signin=(failed|cancelled)&connection=\d+$/', $response->get_headers()['Location'], $label );
 		}
 		$this->assertSame( array(), $connector->completed ?? array(), 'the oversized or malformed code was never sent to the provider' );
 	}
@@ -202,7 +234,7 @@ final class OAuthRoutesTest extends RestIntegrationCase {
 		$this->call( 'POST', "/connections/$id/oauth/start" );
 		$this->actAs( 'anonymous' );
 		$cancelled = $this->call( 'GET', "/connections/$id/oauth/callback", array( 'state' => $connector->authorized['state'], 'error' => 'access_denied' ) );
-		$this->assertStringEndsWith( "?signin=cancelled", $cancelled->get_headers()['Location'] );
+		$this->assertStringEndsWith( "?signin=cancelled&connection=$id", $cancelled->get_headers()['Location'] );
 		$this->assertSame( '', $connector->completed['code'] ?? '', 'the code was never exchanged' );
 
 		$this->actAs( 'administrator' );
@@ -210,7 +242,7 @@ final class OAuthRoutesTest extends RestIntegrationCase {
 		$connector->completes = new ConnectorError( ErrorCode::Auth003 );
 		$this->actAs( 'anonymous' );
 		$failed = $this->call( 'GET', "/connections/$id/oauth/callback", array( 'state' => $connector->authorized['state'], 'code' => 'x' ) );
-		$this->assertStringEndsWith( '?signin=failed', $failed->get_headers()['Location'] );
+		$this->assertStringEndsWith( "?signin=failed&connection=$id", $failed->get_headers()['Location'] );
 	}
 
 	public function test_organisations_are_listed_for_a_signed_in_connection(): void {

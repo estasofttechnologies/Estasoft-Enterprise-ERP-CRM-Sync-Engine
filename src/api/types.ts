@@ -185,6 +185,36 @@ export interface RetryRequest {
 
 /* ---------------------------------------------------------------- connections */
 
+export type CredentialFieldType =
+	| 'text'
+	| 'password'
+	| 'select'
+	| 'textarea'
+	| 'url'
+	| 'number'
+	/** A read-only value to copy (the redirect address of a sign-in app). */
+	| 'display';
+
+export type CredentialFieldGroup = 'connection' | 'app' | 'advanced';
+
+/** How a connector signs in to its system (`AuthStyle` in PHP). It decides which connect form is drawn. */
+export type AuthStyle =
+	/** An API key or token the merchant pastes. */
+	| 'key'
+	/** A user name and password sent as Basic authentication. */
+	| 'basic'
+	/** The person signs in on the system's page (a stable redirect address, then `POST /connections/{id}/oauth/organisation`). */
+	| 'oauth_authorization_code'
+	/** The merchant's app id and secret; tested at once, no sign-in page. */
+	| 'oauth_client_credentials'
+	/** A signed assertion (private key); tested at once, no sign-in page. */
+	| 'oauth_jwt_bearer'
+	/** A server address, database, user and password (a session login). */
+	| 'server_login'
+	/** The plugin writes a file for the merchant to import; no connection to test. */
+	| 'export_file'
+	| 'none';
+
 export interface CredentialFieldDef {
 	name: string;
 	label: string;
@@ -192,6 +222,12 @@ export interface CredentialFieldDef {
 	required: boolean;
 	hint: string;
 	default: string;
+	/** How the field is drawn (default text). Always sent by the server. */
+	type?: CredentialFieldType;
+	/** Value to label pairs of a select. Empty for the other types. Always sent by the server. */
+	options?: Record< string, string >;
+	/** Where the field belongs on the connect form: the system's address and key, the merchant's own app, or advanced (default connection). Always sent by the server. */
+	group?: CredentialFieldGroup;
 }
 
 export interface ReliabilitySettings {
@@ -252,8 +288,77 @@ export interface CatalogEntry {
 	/** How the merchant connects: key, own_app, cloud_app, server_login, export_file, none, unknown. */
 	connection_method: string;
 	needs: string;
+	/** True when a connector for this system (or one of its variants) is installed. */
 	available: boolean;
+	/** False until the connector has been tried on a real account. Always sent by the server. */
+	verified?: boolean;
+	/** Rows that hold several products (Sage 200, 300 and X3) list them here; each has its own connector id. Always sent by the server. */
+	variants?: CatalogVariant[];
+	/** Every host the plugin contacts for this system (for the external services disclosure). Always sent by the server. */
+	hosts?: string[];
+	terms_url?: string;
+	privacy_url?: string;
+	/** The vendor's developer page where the merchant makes an app or a key. */
+	developer_url?: string;
+	/** At most six short steps (140 characters each) of how the merchant connects. */
+	steps?: string[];
+	/** The connect form of this system's connector, so the screen can be drawn without another request. Empty when the system is not available. Secret fields never carry a default. Always sent by the server. */
+	credential_fields?: CredentialFieldDef[];
+	/** True when the person signs in on the system's own page (the connector has the sign-in routes). Always sent by the server. */
+	can_sign_in?: boolean;
+	/** The shape of the connection: for a row that holds variants, the style of the connection method; each variant carries its own. Always sent by the server. */
+	auth_style?: AuthStyle;
 	wave: number;
+}
+
+/** One product of a catalog row that holds several (Sage 200, 300 and X3). Has its own connector id and its own form. */
+export interface CatalogVariant {
+	/** Connector id. */
+	id: string;
+	label: string;
+	/** True when this connector is installed. Always sent by the server. */
+	available?: boolean;
+	/** Empty when the variant is not available. Always sent by the server. */
+	credential_fields?: CredentialFieldDef[];
+	/** Always sent by the server. */
+	can_sign_in?: boolean;
+	/** Always sent by the server. */
+	auth_style?: AuthStyle;
+}
+
+/* ---------------------------------------------------------------- exports */
+
+/** A second file that goes with an export file. The server sends no link: download it with `GET /exports/{id}/download?part=N` (N from 1, in list order), through the signed-in request. */
+export interface ExportAttachmentInfo {
+	/** What the file is ("Masters list"). */
+	name: string;
+	filename: string;
+	size_bytes: number;
+}
+
+export interface ExportFileInfo {
+	id: string;
+	connection_id: number;
+	filename: string;
+	size_bytes: number;
+	orders: number;
+	/** ISO 8601, UTC. */
+	created_at: string;
+	/** ISO 8601, UTC. Files are kept 30 days. */
+	expires_at: string;
+	created_by: string;
+	/** Name of the file format ("Sage 50 CSV import"). */
+	format_label: string;
+	/** Orders that are not in the file, and why (SYNC-EXP-002). */
+	left_out: { order: string; reason: string }[];
+	/** Extra files that go with this one (a list of customers and items to import first); empty when there are none. Always sent by the server. Download with `GET /exports/{id}/download?part=1`, 2, ... */
+	attachments: ExportAttachmentInfo[];
+}
+
+export interface ExportsResponse {
+	files: ExportFileInfo[];
+	/** Orders waiting for the next file of the connection, or null. */
+	open_batch: { connection_id: number; orders: number; since: string } | null;
 }
 
 /* ---------------------------------------------------------------- mapping */
@@ -641,7 +746,13 @@ export interface BootData {
  * POST   /connections/{id}/inbound {enabled}  -> { enabled: false } | { enabled: true, secret, url }  (the secret is shown once)
  * POST   /connections/{id}/oauth/start         -> { url }              (SYNC-CFG-004 for connectors that connect with a key)
  * GET    /connections/{id}/oauth/organisations -> { id, name }[]       (SYNC-CFG-004 for connectors that connect with a key)
- * GET    /connections/{id}/oauth/callback?state=&code=&error= -> 302 to the admin screen with signin=ok|cancelled|failed (never JSON once the state looks valid)
+ * POST   /connections/{id}/oauth/organisation {id} -> Connection        (chooses the organisation, tests, activates; SYNC-CFG-004 for connectors that connect with a key)
+ * GET    /oauth/callback?state=&code=&error=   -> 302 to the admin screen with signin=ok|cancelled|failed and connection=<id>: the one stable redirect address of the site, to register in the vendor's app
+ * GET    /connections/{id}/oauth/callback?state=&code=&error= -> same, the older address with the connection id (kept for apps registered with it)
+ * GET    /exports?connection_id=               -> ExportsResponse
+ * POST   /exports {connection_id}              -> ExportFileInfo       (SYNC-EXP-001, SYNC-EXP-002)
+ * GET    /exports/{id}/download?part=          -> the file (attachment); part 1, 2, ... are the extra files in `attachments`
+ * DELETE /exports/{id}                         -> { deleted: true }
  * POST   /connections/{id}/test                -> ConnectionTestResult
  * POST   /connections/test     ConnectionInput -> ConnectionTestResult  (before saving)
  * GET    /connections/{id}/pause-history       -> not in Phase 1

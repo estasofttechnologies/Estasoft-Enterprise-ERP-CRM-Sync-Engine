@@ -43,6 +43,8 @@ Community and the "about 8 official connectors" cap (decisions), section 3 (phas
 | [../rest-api.md](../rest-api.md) | Every REST route: capability, parameters, response, error codes. |
 | [../cli.md](../cli.md) | The `wp estasoft-sync` commands. |
 | [../admin-app.md](../admin-app.md) | The React admin app: structure, mock development build, how to add a screen. |
+| [../connectors/README.md](../connectors/README.md) | Index of the connector documents (generated from their front matter by `bin/generate-catalog-from-docs.php`). |
+| [../connectors/BUILDING.md](../connectors/BUILDING.md) | How to build a connector on the shared base: provider, meta, API client, OAuth, exports, tests, the document, the catalog. |
 | [../connectors/odoo.md](../connectors/odoo.md) | The Odoo connector: verified API facts with sources, transports, field mapping, smoke test. |
 | [../error-catalog.md](../error-catalog.md) | The thirty-three `SYNC-...` error codes: class, message, what the person does, retries. |
 | [../design/uiux-status.md](../design/uiux-status.md) | State of the UI/UX design: direction, boards, what was checked and what was not, open decisions. |
