@@ -11,6 +11,7 @@ namespace Estasoft\SyncEngine\Mapping;
 
 use Estasoft\SyncEngine\Domain\ErrorCode;
 use Estasoft\SyncEngine\Mapping\Support\CountryIndex;
+use Estasoft\SyncEngine\Mapping\Support\TaxNumber;
 use Estasoft\SyncEngine\Mapping\Support\Text;
 
 defined( 'ABSPATH' ) || exit;
@@ -93,13 +94,13 @@ final class BuyerTaxRules {
 	}
 
 	/**
-	 * A tax number with spaces, dashes and dots removed and Arabic-Indic digits turned into ASCII digits.
+	 * A tax number in its plain form (see TaxNumber): the reader already stores it this way, and a number typed by hand in a test or a
+	 * filter is cleaned the same way.
 	 *
 	 * @param mixed $value Value.
 	 */
 	private function digitsOnly( mixed $value ): string {
-		$text = is_scalar( $value ) ? Text::asciiDigits( Text::toString( $value ) ) : '';
-		return (string) preg_replace( '/[\s\-.\x{200E}\x{200F}]+/u', '', $text );
+		return is_scalar( $value ) ? TaxNumber::normalise( Text::toString( $value ) ) : '';
 	}
 
 	/**

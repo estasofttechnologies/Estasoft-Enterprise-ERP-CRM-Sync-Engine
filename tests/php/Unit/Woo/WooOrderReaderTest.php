@@ -206,12 +206,104 @@ final class WooOrderReaderTest extends WooTestCase {
 		$this->assertSame( '', $this->reader()->read( EntityType::Order, '20013' )->get( 'order.buyer_tax_number' ) );
 	}
 
+	/**
+	 * @dataProvider typedTaxNumbers
+	 */
+	public function test_the_buyer_tax_number_is_stored_in_the_plain_form_that_is_validated( string $typed, string $plain ): void {
+		$this->order( 20012, array(), array(), array( '_billing_vat_number' => $typed ) );
+		$this->assertSame( $plain, $this->reader()->read( EntityType::Order, '20012' )->get( 'order.buyer_tax_number' ) );
+	}
+
+	/**
+	 * @return array<string,array{0:string,1:string}>
+	 */
+	public static function typedTaxNumbers(): array {
+		return array(
+			'spaces'                 => array( '300 1234 5678 9003', '300123456789003' ),
+			'dashes'                 => array( '300-123456789-003', '300123456789003' ),
+			'dots and slashes'       => array( '300.123456789/003', '300123456789003' ),
+			'arabic-indic digits'    => array( '٣٠٠١٢٣٤٥٦٧٨٩٠٠٣', '300123456789003' ),
+			'persian digits'         => array( '۳۰۰۱۲۳۴۵۶۷۸۹۰۰۳', '300123456789003' ),
+			'mixed and spaced'       => array( "\u{200F}٣٠٠ 123456789 ٠٠٣\u{200E}", '300123456789003' ),
+			'no-break space'         => array( "300\u{00A0}123456789\u{00A0}003", '300123456789003' ),
+			'letters are upper case' => array( 'de 123 456 789', 'DE123456789' ),
+			'nothing but separators' => array( ' - . ', '' ),
+		);
+	}
+
+	public function test_a_blank_first_tax_number_key_does_not_hide_the_next_one(): void {
+		$this->order( 20012, array(), array(), array( '_billing_vat_number' => ' - ', '_billing_tax_number' => '٣٠٠ ١٢٣٤٥٦٧٨٩ ٠٠٣' ) );
+		$this->assertSame( '300123456789003', $this->reader()->read( EntityType::Order, '20012' )->get( 'order.buyer_tax_number' ) );
+	}
+
+	public function test_what_is_validated_is_what_is_sent(): void {
+		$this->order( 20012, array( 'billing_country' => 'SA', 'billing_company' => 'شركة الأمل' ), array(), array( '_billing_vat_number' => '٣٠٠-١٢٣٤٥٦٧٨٩-٠٠٣' ) );
+		$order    = $this->reader()->read( EntityType::Order, '20012' );
+		$failure  = ( new \Estasoft\SyncEngine\Mapping\BuyerTaxRules() )->check( ( new \Estasoft\SyncEngine\Mapping\BuyerTaxRules() )->defaults(), $order );
+		$this->assertNull( $failure, 'A 15-digit number typed with Arabic digits and dashes passes.' );
+		$this->assertSame( '300123456789003', $order->get( 'order.buyer_tax_number' ), 'The same plain number is the one in the payload.' );
+	}
+
 	public function test_requested_meta_keys_are_exposed_and_others_are_not(): void {
 		$this->order( 20014, array(), array(), array( '_gift_message' => 'Happy birthday نور', '_secret' => 'x', 'bad key!' => 'y', '_array' => array( 'a' ), '_flag' => true ) );
 		$data = $this->reader()->read( EntityType::Order, '20014', array( '_gift_message', 'missing', 'bad key!', '_array', '_flag' ) )->toArray();
 		$this->assertSame( array( '_gift_message' => 'Happy birthday نور', 'missing' => '', '_flag' => 'true' ), $data['meta'] );
 		$this->assertTrue( ( new CanonicalFields() )->has( 'meta._gift_message' ) );
 		$this->assertArrayNotHasKey( 'meta', $this->reader()->read( EntityType::Order, '20014' )->toArray() );
+	}
+
+	public function test_meta_keys_that_hold_payment_or_visitor_data_are_never_returned_even_if_asked_for(): void {
+		$this->order(
+			20015,
+			array(),
+			array(),
+			array(
+				'_gift_message'        => 'Happy birthday',
+				'_payment_token'       => 'tok_123',
+				'_stripe_source_id'    => 'src_1',
+				'_card_last4'          => '4242',
+				'_customer_ip_address' => '203.0.113.9',
+				'_transaction_nonce'   => 'abc',
+				'_api_key'             => 'k',
+				'_paypal_payer_id'     => 'p',
+			)
+		);
+		$asked = array( '_gift_message', '_payment_token', '_stripe_source_id', '_card_last4', '_customer_ip_address', '_transaction_nonce', '_api_key', '_paypal_payer_id' );
+		$data  = $this->reader()->read( EntityType::Order, '20015', $asked )->toArray();
+		$this->assertSame( array( '_gift_message' => 'Happy birthday' ), $data['meta'] );
+	}
+
+	public function test_a_key_without_a_sensitive_word_is_returned(): void {
+		$this->order( 20016, array(), array(), array( '_loyalty_pin' => '1234', '_delivery_slot' => 'Morning' ) );
+		$data = $this->reader()->read( EntityType::Order, '20016', array( '_loyalty_pin', '_delivery_slot' ) )->toArray();
+		$this->assertSame( array( '_loyalty_pin' => '1234', '_delivery_slot' => 'Morning' ), $data['meta'], 'Only the built-in word list applies unless a site widens it with the filter.' );
+	}
+
+	public function test_the_totals_of_excluded_lines_are_reported_so_a_total_in_the_other_system_can_be_worked_out(): void {
+		$gift = $this->product( 700, array( 'sku' => 'GIFT' ), array( ProductMeta::EXCLUDE => 'yes' ) );
+		$bowl = $this->product( 701, array( 'sku' => 'CS-BOWL-02' ) );
+		$this->order(
+			20017,
+			array( 'total' => '131.25', 'total_tax' => '6.25', 'shipping_total' => '0.00' ),
+			array(
+				'line_item' => array(
+					$this->line( $gift, array( 'total' => '25.00', 'total_tax' => '1.25' ) ),
+					$this->line( $bowl, array( 'total' => '100.00', 'total_tax' => '5.00' ) ),
+				),
+			)
+		);
+		$order = $this->reader()->read( EntityType::Order, '20017' );
+		$this->assertSame( 13125, $order->get( 'order.total' ), 'The WooCommerce total is not changed.' );
+		$this->assertSame( 1, $order->get( 'order.excluded_count' ) );
+		$this->assertSame( 2625, $order->get( 'order.excluded_total' ), 'Total of the left-out lines, with their tax.' );
+		$this->assertSame( 125, $order->get( 'order.excluded_tax' ) );
+		$this->assertSame( array( 'CS-BOWL-02' ), $order->get( 'lines[].sku' ) );
+	}
+
+	public function test_an_order_without_excluded_products_reports_zero(): void {
+		$this->sample();
+		$order = $this->reader()->read( EntityType::Order, '10490' );
+		$this->assertSame( array( 0, 0, 0 ), array( $order->get( 'order.excluded_count' ), $order->get( 'order.excluded_total' ), $order->get( 'order.excluded_tax' ) ) );
 	}
 
 	public function test_a_missing_order_or_a_refund_id_is_not_found(): void {
@@ -245,11 +337,84 @@ final class WooOrderReaderTest extends WooTestCase {
 					'amount'     => 21900,
 					'reason'     => 'Damaged in delivery',
 					'created_at' => '2026-11-03T09:00:00Z',
-					'lines'      => array( array( 'sku' => 'CS-BOWL-02', 'quantity' => 1, 'amount' => 21900 ) ),
+					'lines'      => array( array( 'sku' => 'CS-BOWL-02', 'quantity' => 1, 'amount' => 21900, 'tax' => 0 ) ),
+					'shipping_amount' => 0,
+					'excluded_amount' => 0,
+					'other_amount'    => 0,
 				),
 				$data['refund'],
 				'Refund ' . $id . ': amounts are positive.'
 			);
+		}
+	}
+
+	/**
+	 * A refund with the given items, registered under its parent.
+	 *
+	 * @param string                          $amount Refund amount (positive, as WooCommerce reports it).
+	 * @param array<string,array<int,object>> $items  Items by type.
+	 */
+	private function refundOf( string $amount, array $items ): \WC_Order_Refund {
+		$parent = $this->order( 10490, array( 'currency' => 'AED' ), array( 'line_item' => array( $this->line( $this->product( 501, array( 'sku' => 'CS-BOWL-02' ) ) ) ) ) );
+		$refund = new \WC_Order_Refund( array( 'id' => 10500, 'parent_id' => 10490, 'amount' => $amount, 'reason' => '' ) );
+		$refund->items              = $items;
+		WooRegistry::$orders[10500] = $refund;
+		$parent->refunds            = array( $refund );
+		return $refund;
+	}
+
+	public function test_a_shipping_only_refund_has_no_lines_but_says_where_the_amount_went(): void {
+		$this->refundOf( '26.25', array( 'shipping' => array( new \WC_Order_Item_Shipping( array( 'total' => '-25.00', 'total_tax' => '-1.25' ) ) ) ) );
+		$refund = $this->reader()->read( EntityType::Refund, '10500' )->toArray()['refund'];
+		$this->assertSame( 2625, $refund['amount'] );
+		$this->assertSame( array(), $refund['lines'] );
+		$this->assertSame( 2625, $refund['shipping_amount'] );
+		$this->assertSame( 0, $refund['excluded_amount'] );
+		$this->assertSame( 0, $refund['other_amount'] );
+	}
+
+	public function test_refund_lines_of_excluded_products_are_dropped_and_counted_separately(): void {
+		$gift = $this->product( 700, array( 'sku' => 'GIFT' ), array( ProductMeta::EXCLUDE => 'yes' ) );
+		$bowl = $this->product( 501, array( 'sku' => 'CS-BOWL-02' ) );
+		$this->refundOf(
+			'157.50',
+			array(
+				'line_item' => array(
+					$this->line( $gift, array( 'quantity' => -1, 'total' => '-25.00', 'total_tax' => '-1.25' ) ),
+					$this->line( $bowl, array( 'quantity' => -1, 'total' => '-100.00', 'total_tax' => '-5.00' ) ),
+				),
+				'shipping'  => array( new \WC_Order_Item_Shipping( array( 'total' => '-25.00', 'total_tax' => '-1.25' ) ) ),
+			)
+		);
+		$refund = $this->reader()->read( EntityType::Refund, '10500' )->toArray()['refund'];
+		$this->assertSame( array( array( 'sku' => 'CS-BOWL-02', 'quantity' => 1, 'amount' => 10000, 'tax' => 500 ) ), $refund['lines'], 'No credit note line for the excluded product.' );
+		$this->assertSame( 2625, $refund['excluded_amount'] );
+		$this->assertSame( 2625, $refund['shipping_amount'] );
+		$this->assertSame( 0, $refund['other_amount'] );
+		$this->assertSame( 15750, $refund['amount'] );
+	}
+
+	public function test_a_manual_refund_amount_with_no_items_is_other_amount(): void {
+		$this->refundOf( '40.00', array() );
+		$refund = $this->reader()->read( EntityType::Refund, '10500' )->toArray()['refund'];
+		$this->assertSame( array( 4000, 0, 0, 0 ), array( $refund['other_amount'], $refund['shipping_amount'], $refund['excluded_amount'], count( $refund['lines'] ) ) );
+	}
+
+	public function test_every_refund_field_the_mapping_screen_offers_is_present_in_a_read_refund(): void {
+		$bowl = $this->product( 501, array( 'sku' => 'CS-BOWL-02' ) );
+		$this->refundOf( '105.00', array( 'line_item' => array( $this->line( $bowl, array( 'quantity' => -1, 'total' => '-100.00', 'total_tax' => '-5.00' ) ) ) ) );
+		$data = $this->reader()->read( EntityType::Refund, '10500' )->toArray();
+		foreach ( ( new CanonicalFields() )->all() as $field ) {
+			if ( 0 !== strpos( $field['path'], 'refund.' ) ) {
+				continue;
+			}
+			$node = $data['refund'];
+			foreach ( explode( '.', substr( $field['path'], 7 ) ) as $segment ) {
+				$isList = '[]' === substr( $segment, -2 );
+				$key    = $isList ? substr( $segment, 0, -2 ) : $segment;
+				$this->assertTrue( is_array( $node ) && array_key_exists( $key, $node ), $field['path'] . ' is missing from the canonical refund.' );
+				$node = $isList ? ( $node[ $key ][0] ?? array() ) : $node[ $key ];
+			}
 		}
 	}
 

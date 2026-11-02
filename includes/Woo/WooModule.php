@@ -16,6 +16,7 @@ use Estasoft\SyncEngine\Mapping\Adapters\CoreIdMapStore;
 use Estasoft\SyncEngine\Mapping\Adapters\CoreEventLog;
 use Estasoft\SyncEngine\ModuleInterface;
 use Estasoft\SyncEngine\Woo\Adapters\CoreConnectionInfo;
+use Estasoft\SyncEngine\Woo\Adapters\CoreGoLiveInfo;
 use Estasoft\SyncEngine\Woo\Adapters\CoreQueueGateway;
 
 defined( 'ABSPATH' ) || exit;
@@ -26,6 +27,8 @@ defined( 'ABSPATH' ) || exit;
  * - woo.order_reader      WooOrderReader (the canonical source the mapping module reads orders through)
  * - woo.order_meta        OrderMeta
  * - woo.product_meta      ProductMeta
+ * - woo.eligibility       OrderEligibility (drafts and excluded products)
+ * - woo.go_live           GoLive (was an order placed after go-live?), over Ports\GoLiveInfo and the core onboarding state
  * - woo.queue_gateway     Ports\QueueGateway over the core queue
  * - woo.state_mirror      StateMirror (copies queue state onto orders)
  * - woo.order_hooks       OrderHooks
@@ -46,6 +49,8 @@ final class WooModule implements ModuleInterface {
 		$container->set( 'woo.order_meta', static fn (): OrderMeta => new OrderMeta() );
 		$container->set( 'woo.chips', static fn (): StateChip => new StateChip() );
 		$container->set( 'woo.times', static fn ( Container $c ): TimeLabel => new TimeLabel( $c->get( Services::CLOCK ) ) );
+		$container->set( 'woo.eligibility', static fn ( Container $c ): OrderEligibility => new OrderEligibility( $c->get( 'woo.product_meta' ) ) );
+		$container->set( 'woo.go_live', static fn ( Container $c ): GoLive => new GoLive( new CoreGoLiveInfo( $c->get( Services::ONBOARDING ) ) ) );
 		$container->set( 'woo.order_reader', static fn ( Container $c ): WooOrderReader => new WooOrderReader( $c->get( 'woo.product_meta' ) ) );
 
 		$container->set(
@@ -69,17 +74,17 @@ final class WooModule implements ModuleInterface {
 		);
 		$container->set(
 			'woo.order_actions',
-			static fn ( Container $c ): OrderActions => new OrderActions( $c->get( 'woo.queue_gateway' ), $c->get( 'woo.state_mirror' ) )
+			static fn ( Container $c ): OrderActions => new OrderActions( $c->get( 'woo.queue_gateway' ), $c->get( 'woo.state_mirror' ), $c->get( 'woo.eligibility' ) )
 		);
 		$container->set(
 			'woo.order_hooks',
 			static fn ( Container $c ): OrderHooks => new OrderHooks(
 				$c->get( 'woo.queue_gateway' ),
 				$c->get( 'woo.order_meta' ),
-				$c->get( 'woo.product_meta' ),
+				$c->get( 'woo.eligibility' ),
 				$c->get( 'woo.state_mirror' ),
 				$c->get( 'woo.log' ),
-				$c->get( Services::CLOCK )
+				$c->get( 'woo.go_live' )
 			)
 		);
 	}
@@ -134,7 +139,8 @@ final class WooModule implements ModuleInterface {
 		( new OrderBox(
 			$container->get( 'woo.queue_gateway' ),
 			$container->get( 'woo.order_meta' ),
-			$container->get( 'woo.product_meta' ),
+			$container->get( 'woo.eligibility' ),
+			$container->get( 'woo.go_live' ),
 			$container->get( 'woo.order_actions' ),
 			$container->get( 'woo.connection_info' ),
 			$chips,
@@ -144,11 +150,9 @@ final class WooModule implements ModuleInterface {
 		) )->register();
 
 		( new OrdersList(
-			$container->get( 'woo.queue_gateway' ),
 			$container->get( 'woo.order_meta' ),
 			$container->get( 'woo.order_actions' ),
 			$chips,
-			$times,
 			$manage
 		) )->register();
 

@@ -268,6 +268,76 @@ final class RuleEngineTest extends TestCase {
 		$this->engine()->apply( array( Presets::rule( 'r1', 'l[].sku', 'lines[].sku', array(), true, 'SYNC-MAP-001' ) ), new CanonicalOrder( $order ) );
 	}
 
+	public function test_a_required_rule_over_an_empty_list_fails(): void {
+		$data          = Orders::dubai();
+		$data['lines'] = array();
+		$rule          = Presets::rule( 'line_sku', 'order_line[].sku', 'lines[].sku', array( $this->t( 'trim' ) ), true, 'SYNC-MAP-001' );
+		try {
+			$this->engine()->apply( array( $rule ), new CanonicalOrder( $data ) );
+			$this->fail( 'An order with no lines must not pass a required line rule.' );
+		} catch ( MappingException $e ) {
+			$this->assertSame( ErrorCode::Map001, $e->errorCode );
+		}
+	}
+
+	public function test_a_required_rule_over_a_list_that_is_missing_altogether_fails(): void {
+		$data = Orders::dubai();
+		unset( $data['lines'] );
+		$this->expectException( MappingException::class );
+		$this->engine()->apply( array( Presets::rule( 'line_sku', 'order_line[].sku', 'lines[].sku', array(), true, 'SYNC-MAP-001' ) ), new CanonicalOrder( $data ) );
+	}
+
+	public function test_a_required_rule_over_an_empty_list_is_one_failure_for_the_preview_too(): void {
+		$data          = Orders::dubai();
+		$data['lines'] = array();
+		$output        = $this->engine()->applyAll( array( Presets::rule( 'line_sku', 'order_line[].sku', 'lines[].sku', array(), true, 'SYNC-MAP-001' ) ), new CanonicalOrder( $data ) );
+		$this->assertCount( 1, $output->errors );
+		$this->assertSame( ErrorCode::Map001, $output->errors[0]->errorCode );
+	}
+
+	public function test_an_optional_rule_over_an_empty_list_writes_nothing(): void {
+		$data          = Orders::dubai();
+		$data['lines'] = array();
+		$output        = $this->engine()->apply( array( Presets::rule( 'l', 'order_line[].sku', 'lines[].sku' ) ), new CanonicalOrder( $data ) );
+		$this->assertSame( array(), $output->payload );
+	}
+
+	public function test_a_constant_only_list_rule_never_makes_a_row_of_its_own(): void {
+		$data          = Orders::dubai();
+		$data['lines'] = array();
+		$output        = $this->engine()->apply(
+			array(
+				Presets::rule( 'sku', 'order_line[].sku', 'lines[].sku' ),
+				Presets::rule( 'kind', 'order_line[].kind', array( 'const' => 'product' ) ),
+			),
+			new CanonicalOrder( $data )
+		);
+		$this->assertArrayNotHasKey( 'order_line', $output->payload, 'No phantom order_line[0] holding only the fixed value.' );
+	}
+
+	public function test_a_constant_list_rule_alone_writes_nothing(): void {
+		$output = $this->engine()->apply( array( Presets::rule( 'kind', 'order_line[].kind', array( 'const' => 'product' ) ) ), new CanonicalOrder( Orders::dubai() ) );
+		$this->assertSame( array(), $output->payload );
+	}
+
+	public function test_a_constant_list_rule_still_reaches_every_row_made_before_it(): void {
+		$order            = Orders::dubai();
+		$order['lines'][] = array( 'sku' => 'B', 'quantity' => 1 );
+		$output           = $this->engine()->apply(
+			array(
+				Presets::rule( 'sku', 'order_line[].sku', 'lines[].sku' ),
+				Presets::rule( 'kind', 'order_line[].kind', array( 'const' => 'product' ) ),
+			),
+			new CanonicalOrder( $order )
+		);
+		$this->assertSame( array( 'product', 'product' ), array_column( $output->payload['order_line'], 'kind' ) );
+	}
+
+	public function test_a_single_value_path_rule_still_makes_one_row_when_nothing_made_rows_before_it(): void {
+		$output = $this->engine()->apply( array( Presets::rule( 'pay', 'payments[].amount', 'order.total' ) ), new CanonicalOrder( Orders::dubai() ) );
+		$this->assertCount( 1, $output->payload['payments'] );
+	}
+
 	public function test_lookups_are_row_aware(): void {
 		$taxes = new class() implements TaxResolver {
 			public function resolve( int $connectionId, string $country, string $taxClass, string $rateKey ): ?string {

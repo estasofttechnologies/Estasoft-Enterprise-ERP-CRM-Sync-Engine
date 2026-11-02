@@ -9,14 +9,13 @@ declare(strict_types=1);
 
 namespace Estasoft\SyncEngine\Woo;
 
-use Estasoft\SyncEngine\Woo\Ports\QueueGateway;
-
 defined( 'ABSPATH' ) || exit;
 
 /**
  * Works with high-performance order storage (screen wc-orders, WooCommerce's list table hooks) and with the older posts storage
- * (screen edit-shop_order). The column reads the order meta that StateMirror keeps; the filter is a meta query on that state, built
- * through WooCommerce's own query arguments. The three bulk actions use OrderActions, like the order box.
+ * (screen edit-shop_order). The column reads the order meta that StateMirror keeps and asks the queue nothing, so a page of fifty
+ * orders costs no queue queries; the filter is a meta query on that state, built through WooCommerce's own query arguments. The three
+ * bulk actions use OrderActions, like the order box.
  */
 final class OrdersList {
 
@@ -60,31 +59,27 @@ final class OrdersList {
 	);
 
 	/**
-	 * Seconds the view counts are kept.
+	 * Seconds the view counts are kept (five minutes; a bulk action or a button on an order clears them sooner).
 	 */
-	private const COUNT_TTL = 60;
+	private const COUNT_TTL = 300;
 
 	/**
 	 * Transient that holds the view counts.
 	 */
-	private const COUNT_TRANSIENT = 'estasoft_sync_order_view_counts';
+	public const COUNT_TRANSIENT = 'estasoft_sync_order_view_counts';
 
 	/**
 	 * Set up with what it depends on.
 	 *
-	 * @param QueueGateway $queue      Queue.
 	 * @param OrderMeta    $orders     Order meta.
 	 * @param OrderActions $actions    What the bulk actions do.
 	 * @param StateChip    $chips      State labels.
-	 * @param TimeLabel    $times      Time labels.
 	 * @param string       $capability Capability needed to see and use the column and actions.
 	 */
 	public function __construct(
-		private readonly QueueGateway $queue,
 		private readonly OrderMeta $orders,
 		private readonly OrderActions $actions,
 		private readonly StateChip $chips,
-		private readonly TimeLabel $times,
 		private readonly string $capability
 	) {
 	}
@@ -165,12 +160,7 @@ final class OrdersList {
 		if ( '' === $state ) {
 			return '<span class="estasoft-sync-muted"><span aria-hidden="true">&mdash;</span><span class="screen-reader-text">' . esc_html__( 'Not synced', 'estasoft-erp-crm-sync-engine' ) . '</span></span>';
 		}
-		$suffix = '';
-		if ( 'retrying' === $state ) {
-			$item   = $this->queue->latestForOrder( (int) $order->get_id() );
-			$suffix = null === $item ? '' : $this->times->format( (string) ( $item['next_attempt_at'] ?? '' ) );
-		}
-		return $this->chips->html( $state, $suffix );
+		return $this->chips->html( $state );
 	}
 
 	/**
@@ -274,6 +264,7 @@ final class OrdersList {
 			}
 		}
 		unset( $results['nothing'], $results['failed'] );
+		delete_transient( self::COUNT_TRANSIENT );
 		arsort( $results );
 		$key = (string) array_key_first( $results );
 
@@ -352,10 +343,19 @@ final class OrdersList {
 	/**
 	 * The meta query for a filter choice.
 	 *
-	 * @param string $choice failed, waiting, skipped or not_synced.
+	 * @param string $choice failed, waiting, skipped, not_synced, or any (an order with any state).
 	 * @return array<int,array<string,mixed>>
 	 */
 	private function metaQuery( string $choice ): array {
+		if ( 'any' === $choice ) {
+			return array(
+				array(
+					'key'     => OrderMeta::STATE,
+					'value'   => OrderMeta::STATES,
+					'compare' => 'IN',
+				),
+			);
+		}
 		$states = self::CHOICES[ $choice ] ?? array();
 		if ( array() === $states ) {
 			return array(
@@ -375,7 +375,8 @@ final class OrdersList {
 	}
 
 	/**
-	 * Orders in each filter choice. Kept for a minute, because counting orders with no state scans every order.
+	 * Orders in each filter choice. Kept for five minutes. "Not synced yet" is every order minus the orders that have a state, because
+	 * asking for orders without a meta key makes the database look at every order.
 	 *
 	 * @return array<string,int>
 	 */
@@ -385,20 +386,35 @@ final class OrdersList {
 			return $cached;
 		}
 		$counts = array();
-		foreach ( array_keys( self::CHOICES ) as $choice ) {
-			$result            = wc_get_orders(
-				array(
-					'limit'      => 1,
-					'paginate'   => true,
-					'return'     => 'ids',
-					'status'     => array_keys( wc_get_order_statuses() ),
-					'meta_query' => $this->metaQuery( $choice ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- one meta key; cached for a minute.
-				)
-			);
-			$counts[ $choice ] = is_object( $result ) && isset( $result->total ) ? (int) $result->total : 0;
+		foreach ( self::CHOICES as $choice => $states ) {
+			if ( array() !== $states ) {
+				$counts[ $choice ] = $this->countOrders( $this->metaQuery( $choice ) );
+			}
 		}
+		$all                  = $this->countOrders( array() );
+		$counts['not_synced'] = max( 0, $all - $this->countOrders( $this->metaQuery( 'any' ) ) );
+
 		set_transient( self::COUNT_TRANSIENT, $counts, self::COUNT_TTL );
 		return $counts;
+	}
+
+	/**
+	 * How many orders match a meta query (every order when it is empty).
+	 *
+	 * @param array<int,array<string,mixed>> $metaQuery Meta query.
+	 */
+	private function countOrders( array $metaQuery ): int {
+		$args = array(
+			'limit'    => 1,
+			'paginate' => true,
+			'return'   => 'ids',
+			'status'   => array_keys( wc_get_order_statuses() ),
+		);
+		if ( array() !== $metaQuery ) {
+			$args['meta_query'] = $metaQuery; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- one meta key; cached for five minutes.
+		}
+		$result = wc_get_orders( $args );
+		return is_object( $result ) && isset( $result->total ) ? (int) $result->total : 0;
 	}
 
 	/**

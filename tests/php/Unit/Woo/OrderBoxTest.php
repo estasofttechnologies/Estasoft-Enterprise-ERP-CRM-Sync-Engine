@@ -10,10 +10,13 @@ declare(strict_types=1);
 namespace Estasoft\SyncEngine\Tests\Unit\Woo;
 
 use Estasoft\SyncEngine\Tests\Support\WooFixedClock;
+use Estasoft\SyncEngine\Tests\Support\WooFixedGoLive;
 use Estasoft\SyncEngine\Tests\Support\WooRecordingQueue;
 use Estasoft\SyncEngine\Tests\Unit\Mapping\Fakes\RecordingLog;
+use Estasoft\SyncEngine\Woo\GoLive;
 use Estasoft\SyncEngine\Woo\OrderActions;
 use Estasoft\SyncEngine\Woo\OrderBox;
+use Estasoft\SyncEngine\Woo\OrderEligibility;
 use Estasoft\SyncEngine\Woo\OrderMeta;
 use Estasoft\SyncEngine\Woo\Ports\ConnectionInfo;
 use Estasoft\SyncEngine\Woo\ProductMeta;
@@ -38,11 +41,13 @@ final class OrderBoxTest extends WooTestCase {
 				return 'Odoo';
 			}
 		};
-		$this->box = new OrderBox(
+		$eligibility = new OrderEligibility( new ProductMeta() );
+		$this->box   = new OrderBox(
 			$this->queue,
 			$orders,
-			new ProductMeta(),
-			new OrderActions( $this->queue, new StateMirror( $orders, $this->queue, new RecordingLog() ) ),
+			$eligibility,
+			new GoLive( new WooFixedGoLive( '2026-11-01 08:00:00' ) ),
+			new OrderActions( $this->queue, new StateMirror( $orders, $this->queue, new RecordingLog() ), $eligibility ),
 			$info,
 			new StateChip(),
 			new TimeLabel( new WooFixedClock( '2026-11-02 11:45:00' ) ),
@@ -136,12 +141,36 @@ final class OrderBoxTest extends WooTestCase {
 		$this->assertStringNotContainsString( '>Sync again<', $html );
 	}
 
-	public function test_an_order_that_was_never_queued_is_not_sent_and_can_be_sent_by_hand(): void {
-		$html = $this->html( '', array(), null );
+	public function test_an_order_placed_before_go_live_is_not_sent_and_can_be_sent_by_hand(): void {
+		$order = $this->order( 10490, array( 'date_created' => new \DateTimeImmutable( '2026-10-20 07:34:00', new \DateTimeZone( 'UTC' ) ) ) );
+		$html  = $this->box->html( $order );
 		$this->assertStringContainsString( 'Not sent', $html );
 		$this->assertStringContainsString( 'Placed before syncing went live', $html );
 		$this->assertStringContainsString( '>Send this order<', $html );
 		$this->assertStringNotContainsString( 'View log', $html );
+	}
+
+	public function test_an_order_placed_after_go_live_that_is_not_queued_yet_says_so_and_can_be_sent(): void {
+		$html = $this->html( '', array(), null );
+		$this->assertStringContainsString( 'Not added to the queue yet', $html );
+		$this->assertStringNotContainsString( 'Placed before syncing went live', $html );
+		$this->assertStringContainsString( '>Send this order<', $html );
+	}
+
+	public function test_a_draft_order_has_no_send_button(): void {
+		foreach ( array( 'auto-draft', 'checkout-draft', 'trash' ) as $status ) {
+			$html = $this->box->html( $this->order( 10490, array( 'status' => $status ) ) );
+			$this->assertStringContainsString( 'Save the order first', $html, $status );
+			$this->assertStringNotContainsString( 'Send this order', $html, $status );
+			$this->assertStringNotContainsString( 'admin-post.php', $html, $status );
+		}
+	}
+
+	public function test_a_failed_order_whose_queue_item_is_missing_says_where_to_look(): void {
+		$html = $this->html( 'failed', array(), null );
+		$this->assertStringContainsString( 'estasoft-sync-chip--failed', $html );
+		$this->assertStringContainsString( 'The details are in the log.', $html );
+		$this->assertStringContainsString( '>Retry<', $html );
 	}
 
 	public function test_an_order_with_only_excluded_products_is_marked_excluded(): void {

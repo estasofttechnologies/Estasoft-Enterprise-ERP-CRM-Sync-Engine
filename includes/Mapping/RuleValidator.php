@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Estasoft\SyncEngine\Mapping;
 
 use Estasoft\SyncEngine\Domain\ErrorCode;
+use Estasoft\SyncEngine\Mapping\Support\MetaKeyPolicy;
 use Estasoft\SyncEngine\Mapping\Transforms\TransformRegistry;
 
 defined( 'ABSPATH' ) || exit;
@@ -152,7 +153,9 @@ final class RuleValidator {
 		}
 		$errors = array();
 		foreach ( $rule->sources as $path ) {
-			if ( ! CanonicalOrder::isValidPath( $path ) || ( $checkSources && ! $this->sources->has( $path ) ) ) {
+			if ( $checkSources && self::isBlockedMeta( $path ) ) {
+				$errors[] = new RuleError( $rule->id, 'source', 'source_blocked', __( 'This field holds payment, card, password or visitor data and cannot be sent to another system.', 'estasoft-erp-crm-sync-engine' ) );
+			} elseif ( ! CanonicalOrder::isValidPath( $path ) || ( $checkSources && ! $this->sources->has( $path ) ) ) {
 				$errors[] = new RuleError( $rule->id, 'source', 'source_unknown', __( 'This WooCommerce field does not exist.', 'estasoft-erp-crm-sync-engine' ) );
 			}
 		}
@@ -197,10 +200,21 @@ final class RuleValidator {
 		if ( '' !== $rule->errorCode && null === ErrorCode::tryFrom( $rule->errorCode ) ) {
 			$errors[] = new RuleError( $rule->id, 'error_code', 'error_code_unknown', __( 'This error code is not in the catalog.', 'estasoft-erp-crm-sync-engine' ) );
 		}
-		if ( null !== $rule->when && ( ! CanonicalOrder::isValidPath( $rule->when['source'] ) || ( $checkSources && ! $this->sources->has( $rule->when['source'] ) ) ) ) {
+		if ( null !== $rule->when && $checkSources && self::isBlockedMeta( $rule->when['source'] ) ) {
+			$errors[] = new RuleError( $rule->id, 'when', 'when_blocked', __( 'The condition reads a field that holds payment, card, password or visitor data.', 'estasoft-erp-crm-sync-engine' ) );
+		} elseif ( null !== $rule->when && ( ! CanonicalOrder::isValidPath( $rule->when['source'] ) || ( $checkSources && ! $this->sources->has( $rule->when['source'] ) ) ) ) {
 			$errors[] = new RuleError( $rule->id, 'when', 'when_unknown', __( 'The condition reads a WooCommerce field that does not exist.', 'estasoft-erp-crm-sync-engine' ) );
 		}
 		return $errors;
+	}
+
+	/**
+	 * Whether a path reads a store field that looks like payment, card, password or visitor data.
+	 *
+	 * @param string $path Source path.
+	 */
+	private static function isBlockedMeta( string $path ): bool {
+		return 0 === strpos( $path, 'meta.' ) && MetaKeyPolicy::isBlocked( substr( $path, 5 ) );
 	}
 
 	/**

@@ -93,6 +93,42 @@ final class MoneyAndDateTest extends TransformTestCase {
 		);
 	}
 
+	public function test_the_default_output_zone_is_utc_whatever_the_store_zone_is(): void {
+		$date = new DateUtc( static fn(): \DateTimeZone => new \DateTimeZone( 'Asia/Dubai' ) );
+		$this->assertSame( '2026-11-02', $date->apply( '2026-11-02T22:30:00Z', array( 'format' => 'date' ), $this->context() ), 'Nothing changes unless output_timezone is given.' );
+	}
+
+	public function test_an_order_placed_at_half_past_one_in_dubai_can_give_the_shops_own_date(): void {
+		$store = new DateUtc( static fn(): \DateTimeZone => new \DateTimeZone( 'Asia/Dubai' ) );
+		// 3 Nov 01:30 in Dubai (UTC+4) is 2 Nov 21:30 in UTC.
+		$utc = '2026-11-02T21:30:00Z';
+		$this->assertSame( '2026-11-02', $store->apply( $utc, array( 'format' => 'date' ), $this->context() ) );
+		$this->assertSame( '2026-11-03', $store->apply( $utc, array( 'format' => 'date', 'output_timezone' => 'store' ), $this->context() ) );
+		$this->assertSame( '2026-11-03', $store->apply( $utc, array( 'format' => 'date', 'output_timezone' => 'Asia/Dubai' ), $this->context() ) );
+		$this->assertSame( '2026-11-03 01:30:00', $store->apply( $utc, array( 'output_timezone' => 'store' ), $this->context() ) );
+	}
+
+	public function test_a_utc_plus_three_store_gets_its_own_date_too(): void {
+		$riyadh = new DateUtc( static fn(): \DateTimeZone => new \DateTimeZone( 'Asia/Riyadh' ) );
+		$this->assertSame( '2026-11-03', $riyadh->apply( '2026-11-02T22:30:00Z', array( 'format' => 'date', 'output_timezone' => 'store' ), $this->context() ) );
+		$this->assertSame( '2026-11-02', $riyadh->apply( '2026-11-02T20:59:59Z', array( 'format' => 'date', 'output_timezone' => 'store' ), $this->context() ) );
+	}
+
+	public function test_an_iso_result_in_another_zone_carries_its_offset(): void {
+		$date = new DateUtc();
+		$this->assertSame( '2026-11-03T01:30:00+04:00', $date->apply( '2026-11-02T21:30:00Z', array( 'format' => 'iso', 'output_timezone' => 'Asia/Dubai' ), $this->context() ) );
+		$this->assertSame( '2026-11-02T21:30:00Z', $date->apply( '2026-11-02T21:30:00Z', array( 'format' => 'iso', 'output_timezone' => 'UTC' ), $this->context() ) );
+	}
+
+	public function test_store_zone_outside_wordpress_is_utc_and_a_bad_output_zone_is_refused(): void {
+		$date = new DateUtc();
+		$this->assertSame( '2026-11-02', $date->apply( '2026-11-02T21:30:00Z', array( 'format' => 'date', 'output_timezone' => 'store' ), $this->context() ) );
+		$this->assertCount( 1, $date->check( array( 'output_timezone' => 'Mars/Olympus' ) ) );
+		$this->assertSame( array(), $date->check( array( 'output_timezone' => 'store' ) ) );
+		$this->expectException( TransformArgumentException::class );
+		$date->apply( '2026-11-02', array( 'output_timezone' => 'Mars/Olympus' ), $this->context() );
+	}
+
 	public function test_unreadable_date_becomes_empty_with_a_warning(): void {
 		$context = $this->context();
 		$this->assertSame( '', ( new DateUtc() )->apply( 'next tuesday-ish?!', array(), $context ) );

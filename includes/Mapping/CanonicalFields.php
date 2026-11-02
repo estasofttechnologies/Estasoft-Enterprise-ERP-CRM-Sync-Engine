@@ -9,11 +9,13 @@ declare(strict_types=1);
 
 namespace Estasoft\SyncEngine\Mapping;
 
+use Estasoft\SyncEngine\Mapping\Support\MetaKeyPolicy;
+
 defined( 'ABSPATH' ) || exit;
 
 /**
  * Mirrors the canonical model in docs/ARCHITECTURE.md. The mapping screen lists these as "WooCommerce fields"; the validator checks
- * rule sources against them. Fields the store adds itself are read as meta.<key> (for example meta._gift_message).
+ * rule sources against them. Fields the store adds itself are read as meta.<key> (for example meta._gift_message), except keys that look like payment tokens, card data, passwords or visitor addresses (MetaKeyPolicy).
  */
 final class CanonicalFields {
 
@@ -56,7 +58,7 @@ final class CanonicalFields {
 	public function has( string $path ): bool {
 		$normal = (string) preg_replace( '/\[\d+\]/', '[]', $path );
 		if ( 1 === preg_match( '/^meta\.[A-Za-z0-9_\-]+$/', $normal ) ) {
-			return true;
+			return MetaKeyPolicy::isAllowed( substr( $normal, 5 ) );
 		}
 		foreach ( $this->table() as $row ) {
 			if ( $row[0] === $normal ) {
@@ -80,7 +82,7 @@ final class CanonicalFields {
 		}
 		$keys = array();
 		foreach ( $paths as $path ) {
-			if ( 0 === strpos( $path, 'meta.' ) ) {
+			if ( 0 === strpos( $path, 'meta.' ) && MetaKeyPolicy::isAllowed( substr( $path, 5 ) ) ) {
 				$keys[] = substr( $path, 5 );
 			}
 		}
@@ -107,6 +109,9 @@ final class CanonicalFields {
 			array( 'order.discount_total', 'money', __( 'Discount total', 'estasoft-erp-crm-sync-engine' ), 'Order' ),
 			array( 'order.shipping_total', 'money', __( 'Shipping total', 'estasoft-erp-crm-sync-engine' ), 'Order' ),
 			array( 'order.tax_total', 'money', __( 'Tax total', 'estasoft-erp-crm-sync-engine' ), 'Order' ),
+			array( 'order.excluded_count', 'number', __( 'Product lines left out (Exclude from syncing)', 'estasoft-erp-crm-sync-engine' ), 'Order' ),
+			array( 'order.excluded_total', 'money', __( 'Total of the lines left out, with tax', 'estasoft-erp-crm-sync-engine' ), 'Order' ),
+			array( 'order.excluded_tax', 'money', __( 'Tax of the lines left out', 'estasoft-erp-crm-sync-engine' ), 'Order' ),
 			array( 'order.buyer_tax_number', 'text', __( 'Buyer tax number', 'estasoft-erp-crm-sync-engine' ), 'Order' ),
 			array( 'order.payment.method_id', 'text', __( 'Payment method ID', 'estasoft-erp-crm-sync-engine' ), 'Payment' ),
 			array( 'order.payment.method_title', 'text', __( 'Payment method', 'estasoft-erp-crm-sync-engine' ), 'Payment' ),
@@ -173,6 +178,10 @@ final class CanonicalFields {
 			array( 'refund.lines[].sku', 'text', __( 'Refunded line SKU', 'estasoft-erp-crm-sync-engine' ), 'Refund' ),
 			array( 'refund.lines[].quantity', 'number', __( 'Refunded line quantity', 'estasoft-erp-crm-sync-engine' ), 'Refund' ),
 			array( 'refund.lines[].amount', 'money', __( 'Refunded line amount', 'estasoft-erp-crm-sync-engine' ), 'Refund' ),
+			array( 'refund.lines[].tax', 'money', __( 'Refunded line tax', 'estasoft-erp-crm-sync-engine' ), 'Refund' ),
+			array( 'refund.shipping_amount', 'money', __( 'Refunded shipping, with tax', 'estasoft-erp-crm-sync-engine' ), 'Refund' ),
+			array( 'refund.excluded_amount', 'money', __( 'Refunded amount of the lines left out', 'estasoft-erp-crm-sync-engine' ), 'Refund' ),
+			array( 'refund.other_amount', 'money', __( 'Refunded amount not explained by lines or shipping', 'estasoft-erp-crm-sync-engine' ), 'Refund' ),
 		);
 	}
 }

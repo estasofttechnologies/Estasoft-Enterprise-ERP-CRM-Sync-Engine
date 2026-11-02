@@ -93,7 +93,21 @@ final class PayloadBuilder implements PayloadBuilderInterface {
 		$system  = $this->systemName( $connection );
 
 		try {
-			$order = $this->source->read( $item->entityType, $item->entityId, $this->fields->metaKeys( $rules ) );
+			$order  = $this->source->read( $item->entityType, $item->entityId, $this->fields->metaKeys( $rules ) );
+			$reason = NothingToSend::reason( $item->entityType, $order );
+			if ( '' !== $reason ) {
+				return $this->failure(
+					new ConnectorError(
+						ErrorCode::Val002,
+						array(
+							'system' => $system,
+							'field'  => __( 'Order lines', 'estasoft-erp-crm-sync-engine' ),
+							'reason' => $reason,
+						)
+					),
+					$version
+				);
+			}
 			if ( EntityType::Order === $item->entityType ) {
 				$this->taxes->assertBuyerTaxNumber( $connection->id, $order );
 			}

@@ -129,6 +129,67 @@ final class MappingServiceTest extends TestCase {
 		$this->assertNotNull( $this->store->draft( 1, 'orders' ), 'The draft is kept so it can be fixed.' );
 	}
 
+	/**
+	 * A service with another connector list.
+	 *
+	 * @param array<int,object> $connectors Connectors installed.
+	 */
+	private function serviceWith( array $connectors ): MappingService {
+		return new MappingService(
+			$this->store,
+			new RuleEngine( TransformRegistry::standard() ),
+			new RuleSanitizer(),
+			new ArrayConnections(),
+			new ConnectorRegistry( $connectors ),
+			new CanonicalFields(),
+			$this->log
+		);
+	}
+
+	/**
+	 * Publishing must refuse, say why, and leave the draft alone.
+	 *
+	 * @param MappingService $service Service.
+	 * @param int            $connectionId Connection.
+	 */
+	private function assertPublishRefusedBecauseFieldsAreUnknown( MappingService $service, int $connectionId ): void {
+		$service->saveDraft( $connectionId, 'orders', $this->rules(), null, 'x' );
+		try {
+			$service->publish( $connectionId, 'orders', 'x' );
+			$this->fail( 'A mapping that cannot be checked must not go live.' );
+		} catch ( RuleValidationException $e ) {
+			$this->assertContains( 'fields_unavailable', array_map( static fn( $error ): string => $error->code, $e->errors ) );
+			$this->assertStringContainsString( 'cannot be checked', $e->errors[0]->message );
+		}
+		$this->assertNull( $this->store->live( $connectionId, 'orders' ) );
+		$this->assertNotNull( $this->store->draft( $connectionId, 'orders' ) );
+	}
+
+	public function test_publish_is_refused_when_the_connection_does_not_exist(): void {
+		$this->assertPublishRefusedBecauseFieldsAreUnknown( $this->service, 9 );
+	}
+
+	public function test_publish_is_refused_when_the_connector_is_not_installed(): void {
+		$this->assertPublishRefusedBecauseFieldsAreUnknown( $this->serviceWith( array() ), 1 );
+	}
+
+	public function test_publish_is_refused_when_the_connector_offers_no_fields_for_the_type(): void {
+		$this->connector->fields['orders'] = array();
+		$this->assertPublishRefusedBecauseFieldsAreUnknown( $this->service, 1 );
+	}
+
+	public function test_validate_says_the_same_without_publishing(): void {
+		$errors = $this->serviceWith( array() )->validate( 1, 'orders', $this->rules() );
+		$this->assertSame( 'fields_unavailable', $errors[0]->code );
+		$this->assertSame( 'target', $errors[0]->field );
+	}
+
+	public function test_stock_rules_need_no_connector_fields_to_be_published(): void {
+		$service = $this->serviceWith( array() );
+		$service->saveDraft( 1, 'stock', array( Presets::rule( 'q', 'product.stock_quantity', 'qty_available' ) ), null, 'x' );
+		$this->assertSame( 1, $service->publish( 1, 'stock', 'x' )['version'], 'An inbound rule reads the other system, so its fields are not needed to check it.' );
+	}
+
 	public function test_discarding_the_draft_keeps_the_live_version(): void {
 		$this->service->saveDraft( 1, 'orders', $this->rules(), null, 'x' );
 		$this->service->publish( 1, 'orders', 'x' );

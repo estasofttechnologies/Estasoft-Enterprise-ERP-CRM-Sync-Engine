@@ -69,6 +69,13 @@ final class WooRegistry {
 	public static array $transients = array();
 
 	/**
+	 * Lifetimes given to transients, by name.
+	 *
+	 * @var array<string,int>
+	 */
+	public static array $transientTtls = array();
+
+	/**
 	 * Forget everything.
 	 */
 	public static function reset(): void {
@@ -80,6 +87,7 @@ final class WooRegistry {
 		self::$capsAsked    = array();
 		self::$options      = array();
 		self::$transients   = array();
+		self::$transientTtls = array();
 		$_GET               = array();
 		$_POST              = array();
 	}

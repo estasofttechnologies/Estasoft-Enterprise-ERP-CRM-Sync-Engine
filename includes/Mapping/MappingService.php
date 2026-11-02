@@ -120,7 +120,22 @@ final class MappingService {
 		}
 		$connector = $this->connectorFor( $connectionId );
 		$targets   = null === $connector ? array() : $connector->describeFields( $type );
-		return $this->engine->validate( $this->sanitizer->clean( $rules ), $targets );
+		$rules     = $this->sanitizer->clean( $rules );
+		if ( array() === $targets ) {
+			// Without the other system's field list nothing can be checked, so nothing may be published: the problems list says why.
+			return array_merge(
+				array(
+					new RuleError(
+						'',
+						'target',
+						'fields_unavailable',
+						__( 'The fields of the connected system could not be read, so this mapping cannot be checked. Check the connection, then try again.', 'estasoft-erp-crm-sync-engine' )
+					),
+				),
+				$this->engine->validate( $rules, array() )
+			);
+		}
+		return $this->engine->validate( $rules, $targets );
 	}
 
 	/**

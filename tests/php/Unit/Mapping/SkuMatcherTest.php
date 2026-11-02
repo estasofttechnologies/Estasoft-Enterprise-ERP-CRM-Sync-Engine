@@ -144,6 +144,38 @@ final class SkuMatcherTest extends TestCase {
 		$this->assertSame( array(), $this->connector->calls );
 	}
 
+	public function test_a_hand_made_match_for_another_product_is_not_used_for_this_sku(): void {
+		// A person mapped product 900 (which also carries the SKU in the stored list) to a system product by hand.
+		$this->matcher->setOverride( 1, 900, '500', 'OTHER', 'CS-BOWL-02' );
+		$this->connector->calls = array();
+
+		$found = $this->matcher->resolve( 1, 'CS-BOWL-02', 501 );
+		$this->assertSame( '77', $found?->id, 'Product 501 is not product 900: its own lookup decides.' );
+		$this->assertSame( array( 'lookupProduct:CS-BOWL-02' ), $this->connector->calls );
+		$this->assertSame( '500', $this->idMap->get( 1, 'product', '900' )['external_id'], 'The hand-made match of product 900 is left alone.' );
+		$this->assertTrue( $this->idMap->get( 1, 'product', '900' )['is_override'] );
+	}
+
+	public function test_a_hand_made_match_still_applies_to_its_own_product_and_variation(): void {
+		$this->matcher->setOverride( 1, 900, '500', 'OTHER', 'CS-BOWL-02' );
+		$this->assertSame( '500', $this->matcher->resolve( 1, 'CS-BOWL-02', 900 )?->id );
+		$this->assertSame( '500', $this->matcher->resolve( 1, 'CS-BOWL-02', 12, 900 )?->id, 'As the line variation.' );
+		$this->assertSame( '500', $this->matcher->resolve( 1, 'CS-BOWL-02', 900, 12 )?->id, 'As the line product, when the variation has no match of its own.' );
+	}
+
+	public function test_a_stored_match_for_the_same_sku_on_another_id_is_still_used(): void {
+		$this->idMap->link( 1, 'product', '300', '88', 'CS-BOWL-02', null, 'CS-BOWL-02', false );
+		$this->connector->calls = array();
+		$this->assertSame( '88', $this->matcher->resolve( 1, 'CS-BOWL-02', 501 )?->id, 'The product was re-created with a new id; the SKU still matches.' );
+		$this->assertSame( array(), $this->connector->calls );
+	}
+
+	public function test_the_match_of_this_very_product_is_tried_before_a_search_by_sku(): void {
+		$this->idMap->link( 1, 'product', '300', '88', 'CS-BOWL-02', null, 'CS-BOWL-02', false );
+		$this->idMap->link( 1, 'product', '501', '99', 'CS-BOWL-02', null, 'CS-BOWL-02', false );
+		$this->assertSame( '99', $this->matcher->resolve( 1, 'CS-BOWL-02', 501 )?->id );
+	}
+
 	public function test_status_reads_only_what_is_stored(): void {
 		$this->assertSame( 'unmatched', $this->matcher->status( 1, 501, 'CS-BOWL-02' ) );
 		$this->assertSame( 'no_sku', $this->matcher->status( 1, 501, ' ' ) );

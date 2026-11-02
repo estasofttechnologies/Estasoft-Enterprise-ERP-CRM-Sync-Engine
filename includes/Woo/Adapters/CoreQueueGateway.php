@@ -28,9 +28,9 @@ defined( 'ABSPATH' ) || exit;
 final class CoreQueueGateway implements QueueGateway {
 
 	/**
-	 * Most items read when looking for the newest item of one order.
+	 * Most items read when looking for the newest item of one order (the fallback search, and the list of connections).
 	 */
-	private const LOOKUP_LIMIT = 25;
+	private const LOOKUP_LIMIT = 100;
 
 	/**
 	 * Keep the lookup of core services.
@@ -54,15 +54,16 @@ final class CoreQueueGateway implements QueueGateway {
 	}
 
 	/**
-	 * Send an order again with its latest data: forget the last-synced hash so the send is not skipped as "nothing changed", then queue an update.
+	 * Send an order again with its latest data: forget the last-synced hash on every connection that has the order, so the send is not
+	 * skipped as "nothing changed", then queue an update.
 	 *
 	 * @param int $orderId Order id.
 	 * @return int|null
 	 */
 	public function syncAgain( int $orderId ): ?int {
 		$latest = $this->latestForOrder( $orderId );
-		if ( null !== $latest ) {
-			$this->state()->forget( (int) $latest['connection_id'], EntityType::Order, (string) $orderId );
+		foreach ( $this->connectionIds( $orderId, $latest ) as $connectionId ) {
+			$this->state()->forget( $connectionId, EntityType::Order, (string) $orderId );
 		}
 		return $this->enqueuer()->enqueue( EntityType::Order, (string) $orderId, 'updated', null !== $latest ? (int) $latest['connection_id'] : null );
 	}
@@ -74,15 +75,51 @@ final class CoreQueueGateway implements QueueGateway {
 	 * @return array<string,mixed>|null
 	 */
 	public function latestForOrder( int $orderId ): ?array {
-		$page   = $this->queue()->query( new QueueQuery( 'all', EntityType::Order->value, null, (string) $orderId, null, null, null, 1, self::LOOKUP_LIMIT ) );
-		$wanted = (string) $orderId;
+		return $this->latestForEntity( EntityType::Order, (string) $orderId );
+	}
+
+	/**
+	 * The newest queue item of one WooCommerce object. Core answers this from the entity index (QueueRepository::latestForEntity);
+	 * where that method is not there yet, the queue is searched and the result checked for an exact match on type and id.
+	 *
+	 * @param EntityType $type     Entity type.
+	 * @param string     $entityId WooCommerce id.
+	 * @return array<string,mixed>|null A row in the QueueItem shape of types.ts.
+	 */
+	private function latestForEntity( EntityType $type, string $entityId ): ?array {
+		$queue = $this->queue();
+		if ( is_callable( array( $queue, 'latestForEntity' ) ) ) {
+			$row = call_user_func( array( $queue, 'latestForEntity' ), $type, $entityId );
+			return is_array( $row ) ? $row : null;
+		}
+		$page = $queue->query( new QueueQuery( 'all', $type->value, null, $entityId, null, null, null, 1, self::LOOKUP_LIMIT ) );
 		foreach ( $page->items as $row ) {
-			$entity = is_array( $row ) ? (string) ( $row['entity_id'] ?? '' ) : '';
-			if ( is_array( $row ) && $entity === $wanted ) {
+			if ( is_array( $row ) && (string) ( $row['entity_id'] ?? '' ) === $entityId && (string) ( $row['entity_type'] ?? '' ) === $type->value ) {
 				return $this->queue()->findRow( (int) $row['id'] );
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * Connections that hold a queue item for the order: the latest item's, plus the others when Core can list them.
+	 *
+	 * @param int                      $orderId Order id.
+	 * @param array<string,mixed>|null $latest  The newest item.
+	 * @return array<int,int>
+	 */
+	private function connectionIds( int $orderId, ?array $latest ): array {
+		$ids   = null === $latest ? array() : array( (int) $latest['connection_id'] );
+		$queue = $this->queue();
+		if ( is_callable( array( $queue, 'forEntity' ) ) ) {
+			$rows = call_user_func( array( $queue, 'forEntity' ), EntityType::Order, (string) $orderId, self::LOOKUP_LIMIT );
+			foreach ( is_array( $rows ) ? $rows : array() as $row ) {
+				if ( is_array( $row ) && isset( $row['connection_id'] ) ) {
+					$ids[] = (int) $row['connection_id'];
+				}
+			}
+		}
+		return array_values( array_unique( array_filter( $ids ) ) );
 	}
 
 	/**

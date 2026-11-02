@@ -46,6 +46,35 @@ final class WooModuleTest extends IntegrationTestCase {
 		);
 	}
 
+	public function test_the_order_saved_hook_gets_the_order_woocommerce_passes(): void {
+		$accepted = 0;
+		foreach ( $GLOBALS['wp_filter']['woocommerce_update_order']->callbacks ?? array() as $callbacks ) {
+			foreach ( $callbacks as $callback ) {
+				$function = $callback['function'];
+				if ( is_array( $function ) && $function[0] === Plugin::instance()->container()->get( 'woo.order_hooks' ) && 'onOrderUpdated' === $function[1] ) {
+					$accepted = (int) $callback['accepted_args'];
+				}
+			}
+		}
+		$this->assertSame( 2, $accepted );
+	}
+
+	public function test_the_go_live_time_comes_from_the_stored_onboarding_state(): void {
+		$onboarding = Plugin::instance()->container()->get( \Estasoft\SyncEngine\Core\Services::ONBOARDING );
+		$info       = new \Estasoft\SyncEngine\Woo\Adapters\CoreGoLiveInfo( $onboarding );
+		$this->assertNull( $info->wentLiveAt(), 'Setup is not finished on a fresh site.' );
+
+		$onboarding->save( array( 'completed' => true, 'answers' => array( 'went_live_at' => '2026-11-01T08:00:00Z' ) ) );
+		$fresh = new \Estasoft\SyncEngine\Woo\Adapters\CoreGoLiveInfo( $onboarding );
+		$this->assertSame( '2026-11-01T08:00:00Z', $fresh->wentLiveAt()?->format( 'Y-m-d\TH:i:s\Z' ) );
+
+		$onboarding->save( array( 'completed' => false ) );
+		$this->assertNull( ( new \Estasoft\SyncEngine\Woo\Adapters\CoreGoLiveInfo( $onboarding ) )->wentLiveAt(), 'A time without a finished setup does not count.' );
+
+		$onboarding->save( array( 'completed' => true, 'answers' => array( 'went_live_at' => 'not a date' ) ) );
+		$this->assertNull( ( new \Estasoft\SyncEngine\Woo\Adapters\CoreGoLiveInfo( $onboarding ) )->wentLiveAt() );
+	}
+
 	/**
 	 * @dataProvider frontHooks
 	 */
@@ -79,7 +108,9 @@ final class WooModuleTest extends IntegrationTestCase {
 	public function test_the_product_match_key_is_added_to_the_keys_removed_on_uninstall(): void {
 		$this->assertContains( '_estasoft_sync_match', MetaKeys::product() );
 		$this->assertNotContains( '_estasoft_sync_match', MetaKeys::order() );
-		$this->assertSame( array( 'a' ), apply_filters( 'estasoft_sync_meta_keys', array( 'a' ), 'order' ), 'Other lists are untouched.' );
+		$this->assertContains( 'a', apply_filters( 'estasoft_sync_meta_keys', array( 'a' ), 'order' ), 'Keys already in the list stay.' );
+		$this->assertNotContains( '_estasoft_sync_match', apply_filters( 'estasoft_sync_meta_keys', array( 'a' ), 'order' ), 'The product match key is not added to the order list.' );
+		$this->assertNotContains( '_estasoft_sync_match', apply_filters( 'estasoft_sync_meta_keys', array( 'a' ), 'user' ), 'Nor to the user list.' );
 	}
 
 	public function test_the_queue_display_and_state_filters_are_registered(): void {
@@ -125,7 +156,8 @@ final class WooModuleTest extends IntegrationTestCase {
 		$box   = new OrderBox(
 			$queue,
 			new OrderMeta(),
-			new ProductMeta(),
+			Plugin::instance()->container()->get( 'woo.eligibility' ),
+			Plugin::instance()->container()->get( 'woo.go_live' ),
 			Plugin::instance()->container()->get( 'woo.order_actions' ),
 			Plugin::instance()->container()->get( 'woo.connection_info' ),
 			Plugin::instance()->container()->get( 'woo.chips' ),
@@ -147,11 +179,9 @@ final class WooModuleTest extends IntegrationTestCase {
 
 	public function test_the_column_is_only_added_for_people_who_may_manage_syncing(): void {
 		$list = new OrdersList(
-			new WooRecordingQueue(),
 			new OrderMeta(),
 			Plugin::instance()->container()->get( 'woo.order_actions' ),
 			Plugin::instance()->container()->get( 'woo.chips' ),
-			Plugin::instance()->container()->get( 'woo.times' ),
 			Capabilities::MANAGE
 		);
 		wp_set_current_user( $this->userWithRole( 'subscriber' ) );

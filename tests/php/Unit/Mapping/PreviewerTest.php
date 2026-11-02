@@ -137,6 +137,18 @@ final class PreviewerTest extends TestCase {
 		$this->assertArrayHasKey( 'reference', $preview['target'], 'The rest of the payload is still shown.' );
 	}
 
+	public function test_an_order_with_no_product_lines_is_reported_in_the_preview_too(): void {
+		$data                              = Orders::dubai();
+		$data['lines']                     = array();
+		$this->source->data['order:10491'] = $data;
+		$preview                           = $this->previewer->preview( 1, 'orders', 10491 );
+		$codes                             = array_column( $preview['errors'], 'code' );
+		$this->assertContains( 'SYNC-VAL-002', $codes );
+		$this->assertContains( 'SYNC-MAP-001', $codes, 'The required line rule fails as well, and both are shown together.' );
+		$message = implode( ' ', array_column( $preview['errors'], 'message' ) );
+		$this->assertStringContainsString( 'The order has no products to send.', $message );
+	}
+
 	public function test_a_preview_that_cannot_be_built_says_why_with_prv_001(): void {
 		$missing = $this->previewer->preview( 1, 'orders', 999 );
 		$this->assertSame( 'SYNC-PRV-001', $missing['errors'][0]['code'] );

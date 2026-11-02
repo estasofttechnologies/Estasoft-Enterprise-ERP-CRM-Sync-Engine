@@ -59,7 +59,7 @@ final class ActionNotices {
 		}
 		printf(
 			'<div class="notice notice-%1$s is-dismissible"><p>%2$s</p></div>',
-			esc_attr( in_array( $key, array( 'failed', 'error' ), true ) ? 'error' : 'success' ),
+			esc_attr( $this->level( $key ) ),
 			esc_html( $message )
 		);
 	}
@@ -85,10 +85,26 @@ final class ActionNotices {
 				return _n( 'The order was restored.', 'The orders were restored.', $count, 'estasoft-erp-crm-sync-engine' );
 			case 'nothing':
 				return __( 'There was nothing to do for that order.', 'estasoft-erp-crm-sync-engine' );
+			case 'unsaved':
+				return __( 'That order has not been saved yet, so it was not added to the queue.', 'estasoft-erp-crm-sync-engine' );
+			case 'excluded':
+				return __( 'Every product on that order is marked Exclude from syncing, so it was not added to the queue.', 'estasoft-erp-crm-sync-engine' );
 			case 'failed':
 				return __( 'That could not be done. Open the log to see why.', 'estasoft-erp-crm-sync-engine' );
 			default:
 				return '';
 		}
+	}
+
+	/**
+	 * The notice style for a result key.
+	 *
+	 * @param string $key Result key.
+	 */
+	private function level( string $key ): string {
+		if ( in_array( $key, array( 'failed', 'error' ), true ) ) {
+			return 'error';
+		}
+		return in_array( $key, array( 'unsaved', 'excluded' ), true ) ? 'warning' : 'success';
 	}
 }

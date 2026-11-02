@@ -59,20 +59,22 @@ final class OrderBox {
 	/**
 	 * Set up with what it depends on.
 	 *
-	 * @param QueueGateway   $queue      Queue.
-	 * @param OrderMeta      $orders     Order meta.
-	 * @param ProductMeta    $products   Product meta.
-	 * @param OrderActions   $actions    What the buttons do.
-	 * @param ConnectionInfo $connection Connection facts.
-	 * @param StateChip      $chips      State labels.
-	 * @param TimeLabel      $times      Time labels.
-	 * @param string         $capability Capability needed to see and use the box.
-	 * @param string         $pageUrl    URL of the app page (admin.php?page=estasoft-sync).
+	 * @param QueueGateway     $queue       Queue.
+	 * @param OrderMeta        $orders      Order meta.
+	 * @param OrderEligibility $eligibility Drafts and excluded products.
+	 * @param GoLive           $goLive      Whether an order was placed after go-live.
+	 * @param OrderActions     $actions     What the buttons do.
+	 * @param ConnectionInfo   $connection  Connection facts.
+	 * @param StateChip        $chips       State labels.
+	 * @param TimeLabel        $times       Time labels.
+	 * @param string           $capability  Capability needed to see and use the box.
+	 * @param string           $pageUrl     URL of the app page (admin.php?page=estasoft-sync).
 	 */
 	public function __construct(
 		private readonly QueueGateway $queue,
 		private readonly OrderMeta $orders,
-		private readonly ProductMeta $products,
+		private readonly OrderEligibility $eligibility,
+		private readonly GoLive $goLive,
 		private readonly OrderActions $actions,
 		private readonly ConnectionInfo $connection,
 		private readonly StateChip $chips,
@@ -148,7 +150,8 @@ final class OrderBox {
 			'skipped'  => $this->skipped( $info, $system ),
 			'shadow'   => $this->shadow( $item, $system ),
 			'excluded' => $this->excluded(),
-			default    => $this->notSent( $system ),
+			'unsaved'  => $this->unsaved(),
+			default    => $this->notSent( $order, $system ),
 		};
 
 		$actions = $this->actions( $order, $state, $item );
@@ -176,6 +179,7 @@ final class OrderBox {
 		}
 		$order  = function_exists( 'wc_get_order' ) ? wc_get_order( $orderId ) : false;
 		$result = $order instanceof \WC_Order ? $this->actions->perform( $todo, $order, $this->currentUserName() ) : 'failed';
+		delete_transient( OrdersList::COUNT_TRANSIENT );
 		wp_safe_redirect( add_query_arg( ActionNotices::QUERY, $result, $this->orderUrl( $orderId ) ) );
 	}
 
@@ -196,7 +200,7 @@ final class OrderBox {
 	}
 
 	/**
-	 * The state to show: the stored one, or "excluded" for an order whose products are all excluded, or "none".
+	 * The state to show: the stored one, "unsaved" for a draft (the empty order of the Add order screen), "excluded" for an order whose products are all excluded, or "none".
 	 *
 	 * @param \WC_Order $order Order.
 	 * @param string    $state Stored state.
@@ -205,8 +209,10 @@ final class OrderBox {
 		if ( '' !== $state ) {
 			return $state;
 		}
-		$names = $this->excludedNames( $order );
-		return array() !== $names && count( $names ) === $this->lineCount( $order ) ? 'excluded' : 'none';
+		if ( $this->eligibility->isDraft( $order ) ) {
+			return 'unsaved';
+		}
+		return $this->eligibility->hasOnlyExcludedProducts( $order ) ? 'excluded' : 'none';
 	}
 
 	/**
@@ -284,10 +290,10 @@ final class OrderBox {
 		if ( '' !== $code ) {
 			$rows[ __( 'Code', 'estasoft-erp-crm-sync-engine' ) ] = esc_html( $code );
 		}
-		if ( null !== $item ) {
-			$rows[ __( 'What happened', 'estasoft-erp-crm-sync-engine' ) ] = esc_html( (string) ( $item['error_message'] ?? '' ) );
-		}
-		$rows[ __( 'Order', 'estasoft-erp-crm-sync-engine' ) ] = esc_html__( 'Waits. Later steps for this order wait too.', 'estasoft-erp-crm-sync-engine' );
+		$what = null === $item ? '' : (string) ( $item['error_message'] ?? '' );
+		// The error text is the queue's own words; when the queue item cannot be found the box still says where to look.
+		$rows[ __( 'What happened', 'estasoft-erp-crm-sync-engine' ) ] = esc_html( '' === $what ? __( 'The details are in the log.', 'estasoft-erp-crm-sync-engine' ) : $what );
+		$rows[ __( 'Order', 'estasoft-erp-crm-sync-engine' ) ]         = esc_html__( 'Waits. Later steps for this order wait too.', 'estasoft-erp-crm-sync-engine' );
 		$remedy = ErrorCode::tryFrom( $code )?->remedy() ?? '';
 		return $this->facts( $rows ) . ( '' === $remedy ? '' : $this->note( $remedy . '.' ) );
 	}
@@ -339,11 +345,24 @@ final class OrderBox {
 	}
 
 	/**
-	 * Never queued.
-	 *
-	 * @param string $system System name.
+	 * A draft that has not been saved: nothing to send yet.
 	 */
-	private function notSent( string $system ): string {
+	private function unsaved(): string {
+		return $this->note( __( 'Save the order first. An order that has not been saved is never added to the queue.', 'estasoft-erp-crm-sync-engine' ) );
+	}
+
+	/**
+	 * Never queued: either placed before go-live (a person can send it), or placed after it and not queued yet.
+	 *
+	 * @param \WC_Order $order  Order.
+	 * @param string    $system System name.
+	 */
+	private function notSent( \WC_Order $order, string $system ): string {
+		if ( $this->goLive->placedAfter( $order ) ) {
+			$rows = array( __( 'Why', 'estasoft-erp-crm-sync-engine' ) => esc_html__( 'Not added to the queue yet', 'estasoft-erp-crm-sync-engine' ) );
+			/* translators: %s: name of the connected system. */
+			return $this->facts( $rows ) . $this->note( sprintf( __( 'It is added when its status moves to Processing, On hold or Completed. You can send it to %s now.', 'estasoft-erp-crm-sync-engine' ), $system ) );
+		}
 		$rows = array( __( 'Why', 'estasoft-erp-crm-sync-engine' ) => esc_html__( 'Placed before syncing went live', 'estasoft-erp-crm-sync-engine' ) );
 		/* translators: %s: name of the connected system. */
 		return $this->facts( $rows ) . $this->note( sprintf( __( 'Orders from before go-live are not sent to %s. You can send one by hand.', 'estasoft-erp-crm-sync-engine' ), $system ) );
@@ -356,7 +375,7 @@ final class OrderBox {
 	 * @param string    $state State being shown.
 	 */
 	private function excludedNote( \WC_Order $order, string $state ): string {
-		$names = $this->excludedNames( $order );
+		$names = $this->eligibility->excludedNames( $order );
 		if ( array() === $names || 'excluded' === $state ) {
 			return '';
 		}
@@ -512,39 +531,5 @@ final class OrderBox {
 			return '';
 		}
 		return '' === $url ? esc_html( $label ) : sprintf( '<a href="%1$s" rel="noopener noreferrer">%2$s</a>', esc_url( $url ), esc_html( $label ) );
-	}
-
-	/**
-	 * Names of the excluded products on an order.
-	 *
-	 * @param \WC_Order $order Order.
-	 * @return array<int,string>
-	 */
-	private function excludedNames( \WC_Order $order ): array {
-		$names = array();
-		foreach ( $order->get_items( 'line_item' ) as $item ) {
-			if ( $item instanceof \WC_Order_Item_Product ) {
-				$product = $item->get_product();
-				if ( $product instanceof \WC_Product && $this->products->isExcluded( $product ) ) {
-					$names[] = (string) $item->get_name();
-				}
-			}
-		}
-		return $names;
-	}
-
-	/**
-	 * Number of product lines on an order.
-	 *
-	 * @param \WC_Order $order Order.
-	 */
-	private function lineCount( \WC_Order $order ): int {
-		$count = 0;
-		foreach ( $order->get_items( 'line_item' ) as $item ) {
-			if ( $item instanceof \WC_Order_Item_Product ) {
-				++$count;
-			}
-		}
-		return $count;
 	}
 }

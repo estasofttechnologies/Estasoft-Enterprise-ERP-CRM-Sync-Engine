@@ -20,7 +20,8 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * Order of attempts: a match a person set by hand (id map, is_override) for the variation and then the product; a stored match for
- * the same SKU; a read-only lookup in the connected system by SKU (lookup_product), which is then remembered. Nothing is created in
+ * this product or variation with the same SKU; a stored match for the same SKU on another id (never a hand-made match that belongs to a
+ * different product); a read-only lookup in the connected system by SKU (lookup_product), which is then remembered. Nothing is created in
  * the connected system. No match gives null, which the sku_match transform turns into SYNC-MAP-001.
  */
 final class SkuMatcher implements ProductResolver {
@@ -156,11 +157,18 @@ final class SkuMatcher implements ProductResolver {
 			return array( null, false );
 		}
 
-		$link = array() === $ids ? null : $this->idMap->get( $connectionId, self::ENTITY, (string) $ids[0] );
-		if ( null === $link || 0 !== strcasecmp( (string) $link['sku'], $sku ) ) {
-			$link = $this->idMap->findBySku( $connectionId, $sku );
+		// A stored match for this very product or variation whose SKU is still the SKU on the line.
+		foreach ( $ids as $id ) {
+			$link = $this->idMap->get( $connectionId, self::ENTITY, (string) $id );
+			if ( null !== $link && 0 === strcasecmp( (string) $link['sku'], $sku ) ) {
+				return array( new ExternalRef( $link['external_id'], (string) $link['external_ref'], $link['external_url'] ), false );
+			}
 		}
-		if ( null !== $link ) {
+
+		// A stored match for the SKU on another WooCommerce id (the product was re-created). A match a person chose belongs to the product
+		// they chose it for, so it counts only when that is this product or variation.
+		$link = $this->idMap->findBySku( $connectionId, $sku );
+		if ( null !== $link && ( ! $link['is_override'] || in_array( (int) $link['wc_id'], $ids, true ) ) ) {
 			return array( new ExternalRef( $link['external_id'], (string) $link['external_ref'], $link['external_url'] ), false );
 		}
 		return $ask ? array( $this->lookup( $connectionId, $sku ), true ) : array( null, false );

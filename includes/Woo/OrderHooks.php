@@ -9,7 +9,6 @@ declare(strict_types=1);
 
 namespace Estasoft\SyncEngine\Woo;
 
-use Estasoft\SyncEngine\Core\Support\Clock;
 use Estasoft\SyncEngine\Domain\EntityType;
 use Estasoft\SyncEngine\Mapping\Ports\EventLog;
 use Estasoft\SyncEngine\Woo\Ports\QueueGateway;
@@ -21,11 +20,14 @@ defined( 'ABSPATH' ) || exit;
  *
  * - woocommerce_checkout_order_processed (classic checkout) and woocommerce_store_api_checkout_order_processed (Cart and Checkout blocks):
  *   event "created". The two never both fire for one checkout; a repeat in one request is ignored anyway.
- * - woocommerce_payment_complete: event "paid", for orders already in the queue's history.
+ * - woocommerce_payment_complete: event "paid" for an order already in the queue's history; "created" for an order with no history that
+ *   was placed after go-live.
  * - woocommerce_order_status_changed: "cancelled" when the order is cancelled; "updated" for other changes of an order already known;
- *   "created" for an order with no history that was created in the last fifteen minutes (admin, REST and programmatic orders do not pass
- *   through checkout). Older orders with no history are "not sent" and stay that way until a person sends them.
- * - woocommerce_update_order: remembers the order, and at shutdown queues one "updated" for each (any save of an order already synced).
+ *   "created" for an order with no history that was placed after go-live and reaches processing, on hold or completed (admin, REST and
+ *   programmatic orders do not pass through checkout). Go-live is the time stored when setup was finished (see GoLive), not a rolling
+ *   window. Orders placed before it are "not sent" and stay that way until a person sends them.
+ * - woocommerce_update_order: remembers the order (the object WooCommerce passes), and at shutdown queues one "updated" for each (any
+ *   save of an order already synced).
  * - woocommerce_refund_created: event "refunded" for the refund, when the parent order is in the queue's history. This hook fires once
  *   per refund and after it is saved; woocommerce_order_refunded is not used because it would fire a second time for the same refund.
  * - woocommerce_created_customer: event "created" for the customer.
@@ -44,19 +46,14 @@ final class OrderHooks {
 	public const CANCELLED = 'cancelled';
 
 	/**
-	 * How long after creation an order with no history still counts as new (seconds).
-	 */
-	private const NEW_ORDER_WINDOW = 900;
-
-	/**
 	 * Sync states in which a later change to the order needs a new update sent. A waiting item is built at send time and needs none.
 	 */
 	private const UPDATABLE_STATES = array( 'synced', 'shadow', 'syncing' );
 
 	/**
-	 * Statuses that are never synced.
+	 * Statuses that make an order with no history a real order the first time it reaches one of them.
 	 */
-	private const IGNORED_STATUSES = array( 'auto-draft', 'checkout-draft', 'trash' );
+	private const FIRST_EVENT_STATUSES = array( 'processing', 'on-hold', 'completed' );
 
 	/**
 	 * Events already queued in this request, to ignore repeated hook calls.
@@ -75,20 +72,20 @@ final class OrderHooks {
 	/**
 	 * Set up with what it depends on.
 	 *
-	 * @param QueueGateway $queue    Queue.
-	 * @param OrderMeta    $orders   Order meta.
-	 * @param ProductMeta  $products Product meta.
-	 * @param StateMirror  $mirror   Copies queue state to the order.
-	 * @param EventLog     $log      Event log.
-	 * @param Clock        $clock    Clock.
+	 * @param QueueGateway     $queue       Queue.
+	 * @param OrderMeta        $orders      Order meta.
+	 * @param OrderEligibility $eligibility Drafts and excluded products.
+	 * @param StateMirror      $mirror      Copies queue state to the order.
+	 * @param EventLog         $log         Event log.
+	 * @param GoLive           $goLive      Whether an order was placed after go-live.
 	 */
 	public function __construct(
 		private readonly QueueGateway $queue,
 		private readonly OrderMeta $orders,
-		private readonly ProductMeta $products,
+		private readonly OrderEligibility $eligibility,
 		private readonly StateMirror $mirror,
 		private readonly EventLog $log,
-		private readonly Clock $clock
+		private readonly GoLive $goLive
 	) {
 	}
 
@@ -100,7 +97,7 @@ final class OrderHooks {
 		add_action( 'woocommerce_store_api_checkout_order_processed', array( $this, 'onBlocksCheckout' ), 20, 1 );
 		add_action( 'woocommerce_payment_complete', array( $this, 'onPaymentComplete' ), 20, 1 );
 		add_action( 'woocommerce_order_status_changed', array( $this, 'onStatusChanged' ), 20, 4 );
-		add_action( 'woocommerce_update_order', array( $this, 'onOrderUpdated' ), 20, 1 );
+		add_action( 'woocommerce_update_order', array( $this, 'onOrderUpdated' ), 20, 2 );
 		add_action( 'woocommerce_refund_created', array( $this, 'onRefundCreated' ), 20, 1 );
 		add_action( 'woocommerce_created_customer', array( $this, 'onCustomerCreated' ), 20, 1 );
 		add_action( 'shutdown', array( $this, 'flushUpdates' ), 5 );
@@ -145,8 +142,14 @@ final class OrderHooks {
 		$this->guard(
 			function () use ( $orderId ): void {
 				$order = $this->load( (int) $orderId );
-				if ( null !== $order && '' !== $this->orders->state( $order ) ) {
+				if ( null === $order ) {
+					return;
+				}
+				if ( '' !== $this->orders->state( $order ) ) {
 					$this->queueOrder( (int) $orderId, self::PAID, $order );
+				} elseif ( $this->goLive->placedAfter( $order ) ) {
+					// Paid, never seen, placed after go-live: this is the order's first event, so it is sent as a new order.
+					$this->queueOrder( (int) $orderId, self::CREATED, $order );
 				}
 			}
 		);
@@ -170,7 +173,7 @@ final class OrderHooks {
 				$status = (string) $to;
 				$state  = $this->orders->state( $order );
 				$known  = '' !== $state;
-				if ( ! $known && $this->isNew( $order ) && in_array( $status, array( 'processing', 'on-hold', 'completed' ), true ) ) {
+				if ( ! $known && in_array( $status, self::FIRST_EVENT_STATUSES, true ) && $this->goLive->placedAfter( $order ) ) {
 					$this->queueOrder( (int) $orderId, self::CREATED, $order );
 					return;
 				}
@@ -192,11 +195,12 @@ final class OrderHooks {
 	 * An order was saved: remember it if it has already been synced.
 	 *
 	 * @param mixed $orderId Order id.
+	 * @param mixed $order   The order, as WooCommerce passes it; loaded only when it is not.
 	 */
-	public function onOrderUpdated( mixed $orderId = 0 ): void {
+	public function onOrderUpdated( mixed $orderId = 0, mixed $order = null ): void {
 		$this->guard(
-			function () use ( $orderId ): void {
-				$order = $this->load( (int) $orderId );
+			function () use ( $orderId, $order ): void {
+				$order = $order instanceof \WC_Order ? $order : $this->load( (int) $orderId );
 				if ( null !== $order && in_array( $this->orders->state( $order ), self::UPDATABLE_STATES, true ) ) {
 					$this->touched[ (int) $orderId ] = true;
 				}
@@ -235,6 +239,10 @@ final class OrderHooks {
 				}
 				$refund = wc_get_order( (int) $refundId );
 				if ( ! $refund instanceof \WC_Order_Refund ) {
+					return;
+				}
+				if ( $this->eligibility->refundHasOnlyExcludedProducts( $refund ) ) {
+					$this->log->info( __( 'A refund was not queued because it only covers products that are marked Exclude from syncing.', 'estasoft-erp-crm-sync-engine' ), array( 'refund_id' => (int) $refundId ) );
 					return;
 				}
 				$parent = $this->load( (int) $refund->get_parent_id() );
@@ -280,10 +288,10 @@ final class OrderHooks {
 			return;
 		}
 		$order = $order ?? $this->load( $orderId );
-		if ( null === $order || in_array( $order->get_status(), self::IGNORED_STATUSES, true ) ) {
+		if ( null === $order || $this->eligibility->isDraft( $order ) ) {
 			return;
 		}
-		if ( $this->hasOnlyExcludedProducts( $order ) ) {
+		if ( $this->eligibility->hasOnlyExcludedProducts( $order ) ) {
 			$this->log->info( __( 'An order was not queued because all of its products are marked Exclude from syncing.', 'estasoft-erp-crm-sync-engine' ), array( 'order_id' => $orderId ) );
 			return;
 		}
@@ -291,36 +299,6 @@ final class OrderHooks {
 		if ( null !== $queueId ) {
 			$this->mirror->mirrorById( $queueId );
 		}
-	}
-
-	/**
-	 * Whether the order has product lines and every one is an excluded product.
-	 *
-	 * @param \WC_Order $order Order.
-	 */
-	private function hasOnlyExcludedProducts( \WC_Order $order ): bool {
-		$lines = 0;
-		foreach ( $order->get_items( 'line_item' ) as $item ) {
-			if ( ! $item instanceof \WC_Order_Item_Product ) {
-				continue;
-			}
-			++$lines;
-			$product = $item->get_product();
-			if ( ! $product instanceof \WC_Product || ! $this->products->isExcluded( $product ) ) {
-				return false;
-			}
-		}
-		return $lines > 0;
-	}
-
-	/**
-	 * Whether the order was created in the last fifteen minutes.
-	 *
-	 * @param \WC_Order $order Order.
-	 */
-	private function isNew( \WC_Order $order ): bool {
-		$created = $order->get_date_created();
-		return null !== $created && ( $this->clock->now()->getTimestamp() - $created->getTimestamp() ) <= self::NEW_ORDER_WINDOW;
 	}
 
 	/**

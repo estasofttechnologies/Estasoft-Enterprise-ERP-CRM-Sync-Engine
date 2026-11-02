@@ -28,12 +28,14 @@ final class OrderActions {
 	/**
 	 * Set up with what it depends on.
 	 *
-	 * @param QueueGateway $queue  Queue.
-	 * @param StateMirror  $mirror Copies queue state to the order.
+	 * @param QueueGateway     $queue       Queue.
+	 * @param StateMirror      $mirror      Copies queue state to the order.
+	 * @param OrderEligibility $eligibility Drafts and excluded products.
 	 */
 	public function __construct(
 		private readonly QueueGateway $queue,
-		private readonly StateMirror $mirror
+		private readonly StateMirror $mirror,
+		private readonly OrderEligibility $eligibility
 	) {
 	}
 
@@ -43,12 +45,21 @@ final class OrderActions {
 	 * @param string    $todo  sync_again, send, retry, skip or restore.
 	 * @param \WC_Order $order Order.
 	 * @param string    $by    Display name of the person, for "Skipped by".
-	 * @return string Result key for ActionNotices: queued, retried, skipped, restored, nothing or failed.
+	 * @return string Result key for ActionNotices: queued, retried, skipped, restored, nothing, unsaved, excluded or failed.
 	 */
 	public function perform( string $todo, \WC_Order $order, string $by = '' ): string {
 		$orderId = (int) $order->get_id();
 		if ( ! in_array( $todo, self::ACTIONS, true ) ) {
 			return 'failed';
+		}
+		if ( in_array( $todo, array( 'sync_again', 'send' ), true ) ) {
+			// The same checks as the hooks: a draft or unsaved order is not queued, and neither is an order of nothing but excluded products.
+			if ( $this->eligibility->isDraft( $order ) ) {
+				return 'unsaved';
+			}
+			if ( $this->eligibility->hasOnlyExcludedProducts( $order ) ) {
+				return 'excluded';
+			}
 		}
 		if ( 'sync_again' === $todo ) {
 			return null === $this->queue->syncAgain( $orderId ) ? 'nothing' : 'queued';
