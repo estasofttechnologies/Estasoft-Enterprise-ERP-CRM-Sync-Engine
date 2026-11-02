@@ -31,6 +31,7 @@ use Estasoft\SyncEngine\Domain\Capability;
 use Estasoft\SyncEngine\Domain\Connection;
 use Estasoft\SyncEngine\Domain\EntityType;
 use Estasoft\SyncEngine\Domain\ErrorCode;
+use Estasoft\SyncEngine\Domain\ItemState;
 use Estasoft\SyncEngine\Jobs\Ports\ShopOrders;
 use Estasoft\SyncEngine\Jobs\Support\ConnectorGateway;
 
@@ -43,7 +44,9 @@ use Estasoft\SyncEngine\Jobs\Support\ConnectorGateway;
  * `estasoft_sync_invoice_updated( $order, array $invoice )`.
  *
  * Polling: only orders synced in the last 30 days whose invoice is not final (reported, or not required for a posted invoice).
- * The ones checked longest ago go first; the call stops when its time is up and continues next time.
+ * All of those orders are looked at, not only the newest few hundred. The ones checked longest ago go first; the call stops when
+ * its time is up and continues next time. A rejection is noted once: it is logged and failed again only when its status or reason
+ * changes, or when the queue item is no longer failed.
  *
  * Time left: an invoice that waits to be reported is due at the time it was issued plus a window (default 24 hours, editable;
  * the filter `estasoft_sync_invoice_window_hours` overrides it). The screen colours the time left; this class returns `due_at` and
@@ -73,9 +76,9 @@ final class InvoiceService {
 	private const PAGE = 100;
 
 	/**
-	 * Most pages of candidates read per connection.
+	 * Most pages of candidates read per connection (a safety cap: 10,000 synced orders of the last 30 days).
 	 */
-	private const MAX_PAGES = 3;
+	private const MAX_PAGES = 100;
 
 	/**
 	 * Seconds before an order is asked about again.
@@ -96,6 +99,7 @@ final class InvoiceService {
 	 * @param OptionStore      $options  Options (settings).
 	 * @param Clock            $clock    Time source.
 	 * @param int              $budget   Seconds one call may spend.
+	 * @param int              $pageSize Synced orders read per page when looking for open invoices.
 	 */
 	public function __construct(
 		private readonly ShopOrders $orders,
@@ -108,7 +112,8 @@ final class InvoiceService {
 		private readonly Logger $logger,
 		private readonly OptionStore $options,
 		private readonly Clock $clock,
-		private readonly int $budget = self::BUDGET_SECONDS
+		private readonly int $budget = self::BUDGET_SECONDS,
+		private readonly int $pageSize = self::PAGE
 	) {
 	}
 
@@ -211,7 +216,7 @@ final class InvoiceService {
 	 */
 	private function poll( Connection $connection, ConnectorInterface $connector, \DateTimeImmutable $started, array &$summary ): void {
 		$now = $this->clock->now();
-		foreach ( $this->candidates( $connection->id, $now ) as $candidate ) {
+		foreach ( $this->candidates( $connection->id, $now, $started, $summary ) as $candidate ) {
 			if ( $this->elapsed( $started ) >= $this->budget ) {
 				$summary['complete'] = false;
 				return;
@@ -228,23 +233,30 @@ final class InvoiceService {
 	}
 
 	/**
-	 * Synced orders of the last 30 days whose invoice is not final, the longest unchecked first.
+	 * Synced orders of the last 30 days whose invoice is not final, the longest unchecked first. Every page of synced orders is read
+	 * (newest first) so an old order whose invoice is still open is not left out behind newer ones; reading stops early only when
+	 * half of the call's time is gone, and then the summary says the call was not complete.
 	 *
-	 * @param int                $connectionId Connection.
-	 * @param \DateTimeImmutable $now          Current moment.
+	 * @param int                 $connectionId Connection.
+	 * @param \DateTimeImmutable  $now          Current moment.
+	 * @param \DateTimeImmutable  $started      Start of the call.
+	 * @param array<string,mixed> $summary      Summary (updated).
 	 * @return array<int,array{order_id:int,external_id:string,external_ref:string,external_url:?string}>
 	 */
-	private function candidates( int $connectionId, \DateTimeImmutable $now ): array {
+	private function candidates( int $connectionId, \DateTimeImmutable $now, \DateTimeImmutable $started, array &$summary ): array {
 		$found = array();
 		for ( $page = 1; $page <= self::MAX_PAGES; ++$page ) {
-			$result = $this->queue->query( new QueueQuery( 'synced', EntityType::Order->value, '30d', null, null, $connectionId, 'live', $page, self::PAGE ) );
+			if ( $this->elapsed( $started ) >= $this->budget / 2 ) {
+				$summary['complete'] = false;
+				break;
+			}
+			$result = $this->queue->query( new QueueQuery( 'synced', EntityType::Order->value, '30d', null, null, $connectionId, 'live', $page, $this->pageSize ) );
 			foreach ( $result->items as $item ) {
 				$orderId  = (int) ( $item['entity_id'] ?? 0 );
 				$external = (string) ( $item['external_id'] ?? '' );
 				if ( $orderId <= 0 || '' === $external || isset( $found[ $orderId ] ) ) {
 					continue;
 				}
-				$link  = $this->idMap->get( $connectionId, EntityType::Order, (string) $orderId );
 				$extra = $this->state->get( $connectionId, EntityType::Order, (string) $orderId )['extra'] ?? array();
 				if ( ! empty( $extra['invoice_final'] ) ) {
 					continue;
@@ -253,6 +265,7 @@ final class InvoiceService {
 				if ( $checked > 0 && ( $now->getTimestamp() - $checked ) < self::RECHECK_SECONDS ) {
 					continue;
 				}
+				$link              = $this->idMap->get( $connectionId, EntityType::Order, (string) $orderId );
 				$found[ $orderId ] = array(
 					'order_id'     => $orderId,
 					'external_id'  => null !== $link ? $link['external_id'] : $external,
@@ -263,6 +276,9 @@ final class InvoiceService {
 			}
 			if ( $page >= $result->totalPages() ) {
 				break;
+			}
+			if ( self::MAX_PAGES === $page ) {
+				$summary['complete'] = false;
 			}
 		}
 		usort( $found, static fn( array $a, array $b ): int => $a['checked'] <=> $b['checked'] );
@@ -317,7 +333,7 @@ final class InvoiceService {
 			'invoice_status'     => $status,
 			'invoice_final'      => InvoiceStatus::isFinal( $status, $number ),
 			'invoice_checked_at' => $nowIso,
-			'invoice_queue_id'   => $this->settleRejection( $connectionId, $orderId, $facts, $stored['invoice_queue_id'] ?? null, $summary ),
+			'invoice_queue_id'   => $this->settleRejection( $connectionId, $orderId, $facts, $stored['invoice_queue_id'] ?? null, $changed, $summary ),
 		);
 		$this->state->mergeExtra( $connectionId, EntityType::Order, (string) $orderId, $extra );
 	}
@@ -329,16 +345,26 @@ final class InvoiceService {
 	 * @param int                 $orderId      Order id.
 	 * @param array<string,mixed> $facts        Invoice facts.
 	 * @param mixed               $queueId      Id of the item made earlier, if any.
+	 * @param bool                $changed      Whether the status, the reason or any other fact differs from what was saved before.
 	 * @param array<string,mixed> $summary      Summary (updated).
 	 * @return int|null The item id to remember.
 	 */
-	private function settleRejection( int $connectionId, int $orderId, array $facts, mixed $queueId, array &$summary ): ?int {
+	private function settleRejection( int $connectionId, int $orderId, array $facts, mixed $queueId, bool $changed, array &$summary ): ?int {
 		$queueId = is_numeric( $queueId ) ? (int) $queueId : null;
 		if ( InvoiceStatus::REJECTED !== $facts['status'] ) {
 			if ( null !== $queueId && InvoiceStatus::WAITING !== $facts['status'] ) {
 				$this->queue->markSynced( $queueId, $facts['number'], $facts['number'], null, null, null, false );
 			}
 			return $queueId;
+		}
+		if ( null !== $queueId ) {
+			$existing = $this->queue->find( $queueId );
+			if ( null === $existing ) {
+				$queueId = null;
+			} elseif ( ! $changed && ItemState::Failed === $existing->state ) {
+				// The same rejection, already shown under Needs attention: say nothing more, log nothing more.
+				return $queueId;
+			}
 		}
 		$order  = $this->orders->find( $orderId ) ?? array();
 		$reason = '' !== $facts['reject_reason'] ? $facts['reject_reason'] : __( 'no reason was given', 'estasoft-erp-crm-sync-engine' );

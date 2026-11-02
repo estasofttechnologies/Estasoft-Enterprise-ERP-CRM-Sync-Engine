@@ -50,6 +50,12 @@ use Estasoft\SyncEngine\Jobs\Support\StoreTime;
  * budget (15 seconds), keeping its place in the option `estasoft_sync_recon_progress`. `run()` returns the progress; the same
  * run continues from the single event `estasoft_sync_recon_continue` and from the hourly tick, so no request exceeds the budget.
  * The system's answer for the run is kept in the option `estasoft_sync_recon_system` until the run ends.
+ *
+ * Only one request advances a run at a time: the tick, the continue event and a manual run take a short lock (the option
+ * `estasoft_sync_recon_lock`, which expires), and a request that finds it taken returns the run as it stands. Each difference
+ * remembers the connection it was found in (`estasoft_sync_recon_diff_conn`), and a repair goes there, never to "the first
+ * connection". No repair, manual or automatic, happens while a shadow window is open on that connection. Copying a cancellation
+ * into WooCommerce first checks that the order still has the status the check saw.
  */
 final class ReconService {
 
@@ -62,6 +68,22 @@ final class ReconService {
 	 * Option: the system's answer for the run in progress.
 	 */
 	public const SYSTEM = 'estasoft_sync_recon_system';
+
+	/**
+	 * Option: which connection each difference belongs to (difference id to connection id). The repository's difference shape does
+	 * not carry it, and a repair must go to the system the difference was found in.
+	 */
+	public const DIFF_CONNECTIONS = 'estasoft_sync_recon_diff_conn';
+
+	/**
+	 * Option: the run lock (a token and the time it expires).
+	 */
+	public const LOCK = 'estasoft_sync_recon_lock';
+
+	/**
+	 * Most differences whose connection is remembered.
+	 */
+	private const DIFF_CONNECTIONS_CAP = 3000;
 
 	/**
 	 * Orders compared per chunk.
@@ -189,22 +211,36 @@ final class ReconService {
 	 * @throws JobException With status 409 when no connected system can be compared.
 	 */
 	public function run( int $windowDays, ?int $connectionId = null, string $trigger = 'manual' ): array {
-		$progress = $this->progress();
-		if ( null !== $progress && $this->stale( $progress ) ) {
-			$this->giveUp( $progress );
-			$progress = null;
-		}
-		if ( null === $progress ) {
-			$progress = $this->start( max( ReconSettings::WINDOW[0], min( ReconSettings::WINDOW[1], $windowDays ) ), $connectionId, $trigger );
-			if ( 'failed' === ( $progress['status'] ?? '' ) ) {
-				return (array) $this->recon->findRun( (int) $progress['run_id'] );
+		$token = $this->lock();
+		if ( null === $token ) {
+			// Another request is working on the check right now (the tick, the continue event or a person). It carries on by itself.
+			$running = $this->progress();
+			if ( null !== $running ) {
+				return $this->runShape( $running, 'running' );
 			}
+			throw new JobException( __( 'A check is starting right now. Wait a minute and open this page again.', 'estasoft-erp-crm-sync-engine' ), 409 );
 		}
-		return $this->advance( $progress );
+		try {
+			$progress = $this->progress();
+			if ( null !== $progress && $this->stale( $progress ) ) {
+				$this->giveUp( $progress );
+				$progress = null;
+			}
+			if ( null === $progress ) {
+				$progress = $this->start( max( ReconSettings::WINDOW[0], min( ReconSettings::WINDOW[1], $windowDays ) ), $connectionId, $trigger );
+				if ( 'failed' === ( $progress['status'] ?? '' ) ) {
+					return (array) $this->recon->findRun( (int) $progress['run_id'] );
+				}
+			}
+			return $this->advance( $progress );
+		} finally {
+			$this->unlock( $token );
+		}
 	}
 
 	/**
-	 * Carry on with the run in progress (what the single event and the tick call).
+	 * Carry on with the run in progress (what the single event and the tick call). Only one request advances a run at a time: when
+	 * another holds the run lock this returns the run as it stands.
 	 *
 	 * @return array<string,mixed>|null The run, or null when nothing is in progress.
 	 */
@@ -213,11 +249,24 @@ final class ReconService {
 		if ( null === $progress ) {
 			return null;
 		}
-		if ( $this->stale( $progress ) ) {
-			$this->giveUp( $progress );
-			return null;
+		$token = $this->lock();
+		if ( null === $token ) {
+			return $this->runShape( $progress, 'running' );
 		}
-		return $this->advance( $progress );
+		try {
+			// Read again under the lock: the request that held it may have finished the run.
+			$progress = $this->progress();
+			if ( null === $progress ) {
+				return null;
+			}
+			if ( $this->stale( $progress ) ) {
+				$this->giveUp( $progress );
+				return null;
+			}
+			return $this->advance( $progress );
+		} finally {
+			$this->unlock( $token );
+		}
 	}
 
 	/**
@@ -279,8 +328,11 @@ final class ReconService {
 		if ( ! in_array( $direction, array( 'wc_to_system', 'system_to_wc' ), true ) ) {
 			throw new ValidationException( array( 'direction' => __( 'Choose wc_to_system or system_to_wc.', 'estasoft-erp-crm-sync-engine' ) ) );
 		}
-		$connectionId = $this->primaryConnection();
-		$orderId      = (int) $diff['order_id'];
+		$connectionId = $this->diffConnection( $diff );
+		if ( $this->shadowOpen( $connectionId ) ) {
+			throw new JobException( __( 'Shadow mode is on for this connection, so nothing is repaired. End shadow mode first.', 'estasoft-erp-crm-sync-engine' ), 409 );
+		}
+		$orderId = (int) $diff['order_id'];
 		if ( 'system_to_wc' === $direction ) {
 			$this->copyStatus( $diff, $orderId );
 		} else {
@@ -427,6 +479,8 @@ final class ReconService {
 		$tolerance = (int) $settings['tolerance_minor'];
 		$wentLive  = $this->wentLiveAt();
 		$total     = min( (int) $progress['total'], count( $orderIds ) );
+		// Automatic repair queues orders; while a shadow window is open on the connection nothing may be queued for real.
+		$autoRepair = (bool) $settings['auto_repair_missing'] && ! $this->shadowOpen( (int) $progress['connection_id'] );
 
 		while ( (int) $progress['cursor'] < $total && $this->elapsed( $started ) < $this->budget ) {
 			$ids = array_slice( $orderIds, (int) $progress['cursor'], self::CHUNK );
@@ -441,7 +495,7 @@ final class ReconService {
 					continue;
 				}
 				foreach ( $found as $difference ) {
-					$this->record( $progress, $order, $difference, (bool) $settings['auto_repair_missing'] );
+					$this->record( $progress, $order, $difference, $autoRepair );
 				}
 			}
 			$progress['cursor'] = (int) $progress['cursor'] + count( $ids );
@@ -470,6 +524,7 @@ final class ReconService {
 		if ( null === $id ) {
 			$id                      = $this->recon->addDiff( (int) $progress['run_id'], (int) $progress['connection_id'], (int) $order['id'], (string) $order['label'], $difference['type'], $difference['wc_value'], $difference['system_value'] );
 			$progress['known'][ $key ] = $id;
+			$this->rememberDiffConnection( $id, (int) $progress['connection_id'] );
 		}
 		if ( $autoRepair && 'missing_in_system' === $difference['type'] && $id > 0 ) {
 			try {
@@ -643,6 +698,24 @@ final class ReconService {
 		if ( 'status_differs' !== $diff['type'] || 'cancel' !== strtolower( (string) $diff['system_value'] ) ) {
 			throw new ValidationException( array( 'direction' => __( 'Only a cancellation in the system can be copied into WooCommerce. Amounts and refunds are never copied.', 'estasoft-erp-crm-sync-engine' ) ) );
 		}
+		// The check may be hours old. Cancel only an order that still has the status the check saw.
+		$order = $this->orders->find( $orderId );
+		if ( null === $order ) {
+			throw new JobException( __( 'That order no longer exists in WooCommerce.', 'estasoft-erp-crm-sync-engine' ), 404 );
+		}
+		$now = strtolower( (string) preg_replace( '/^wc-/', '', (string) $order['status'] ) );
+		$was = strtolower( (string) preg_replace( '/^wc-/', '', (string) $diff['wc_value'] ) );
+		if ( $now !== $was ) {
+			throw new JobException(
+				sprintf(
+					/* translators: 1: status of the order now, 2: status the check saw. */
+					__( 'The order is "%1$s" in WooCommerce now, not "%2$s" as when the check ran, so it was not cancelled. Run the check again.', 'estasoft-erp-crm-sync-engine' ),
+					$now,
+					$was
+				),
+				409
+			);
+		}
 		if ( ! $this->orders->updateStatus( $orderId, 'cancelled', __( 'Cancelled to match the connected system (reconciliation).', 'estasoft-erp-crm-sync-engine' ) ) ) {
 			throw new JobException( __( 'The order could not be cancelled. It may already be cancelled.', 'estasoft-erp-crm-sync-engine' ), 409 );
 		}
@@ -668,15 +741,97 @@ final class ReconService {
 	}
 
 	/**
-	 * The connection repairs go to: the first one that is not disconnected.
+	 * The connection a difference was found in, which is where its repair goes. Differences found before this was recorded fall back
+	 * to the only connected system, and are refused when there are several.
+	 *
+	 * @param array<string,mixed> $diff The difference.
+	 *
+	 * @throws JobException 409 when the system is gone, or cannot be told.
 	 */
-	private function primaryConnection(): int {
-		foreach ( $this->connections->allWithoutSecrets() as $connection ) {
-			if ( ConnectionStatus::Disconnected !== $connection->status ) {
-				return $connection->id;
+	private function diffConnection( array $diff ): int {
+		$map    = $this->options->get( self::DIFF_CONNECTIONS, array() );
+		$stored = is_array( $map ) ? (int) ( $map[ (string) $diff['id'] ] ?? 0 ) : 0;
+		if ( $stored > 0 ) {
+			$connection = $this->connections->findWithoutSecrets( $stored );
+			if ( null === $connection || ConnectionStatus::Disconnected === $connection->status ) {
+				throw new JobException( __( 'The system this difference was found in is no longer connected.', 'estasoft-erp-crm-sync-engine' ), 409 );
 			}
+			return $stored;
 		}
-		throw new JobException( __( 'There is no connected system to send to.', 'estasoft-erp-crm-sync-engine' ), 409 );
+		$connected = array_values( array_filter( $this->connections->allWithoutSecrets(), static fn( $connection ): bool => ConnectionStatus::Disconnected !== $connection->status ) );
+		if ( 1 === count( $connected ) ) {
+			return $connected[0]->id;
+		}
+		throw new JobException( __( 'It is not known which system this difference belongs to. Run the check again, then repair the new difference.', 'estasoft-erp-crm-sync-engine' ), 409 );
+	}
+
+	/**
+	 * Remember which connection a difference belongs to.
+	 *
+	 * @param int $diffId       Difference id.
+	 * @param int $connectionId Connection id.
+	 */
+	private function rememberDiffConnection( int $diffId, int $connectionId ): void {
+		if ( $diffId <= 0 || $connectionId <= 0 ) {
+			return;
+		}
+		$map = $this->options->get( self::DIFF_CONNECTIONS, array() );
+		$map = is_array( $map ) ? $map : array();
+		$map[ (string) $diffId ] = $connectionId;
+		if ( count( $map ) > self::DIFF_CONNECTIONS_CAP ) {
+			$map = array_slice( $map, -self::DIFF_CONNECTIONS_CAP, null, true );
+		}
+		$this->options->set( self::DIFF_CONNECTIONS, $map );
+	}
+
+	/**
+	 * Whether a shadow window is open on a connection. The window is the plugin's one shadow window; it belongs to the connection
+	 * chosen when it was opened (any connection when none was recorded).
+	 *
+	 * @param int $connectionId Connection.
+	 */
+	private function shadowOpen( int $connectionId ): bool {
+		if ( ! $this->onboarding->isShadowActive( $this->clock->now() ) ) {
+			return false;
+		}
+		$chosen = (int) ( $this->onboarding->get()['answers']['shadow_connection'] ?? 0 );
+		return 0 === $chosen || $chosen === $connectionId;
+	}
+
+	/**
+	 * Take the run lock.
+	 *
+	 * @return string|null A token to hand back to unlock(), or null when another request holds the lock.
+	 */
+	private function lock(): ?string {
+		$now    = $this->clock->now()->getTimestamp();
+		$stored = $this->options->get( self::LOCK, null );
+		if ( is_array( $stored ) && (int) ( $stored['until'] ?? 0 ) > $now ) {
+			return null;
+		}
+		$token = bin2hex( random_bytes( 8 ) );
+		$this->options->set(
+			self::LOCK,
+			array(
+				'token' => $token,
+				'until' => $now + $this->budget + 60,
+			)
+		);
+		// Read it back: if another request wrote at the same moment, only the one whose token is stored goes on.
+		$check = $this->options->get( self::LOCK, null );
+		return is_array( $check ) && ( $check['token'] ?? '' ) === $token ? $token : null;
+	}
+
+	/**
+	 * Release the run lock, if it is still ours.
+	 *
+	 * @param string $token Token from lock().
+	 */
+	private function unlock( string $token ): void {
+		$stored = $this->options->get( self::LOCK, null );
+		if ( is_array( $stored ) && ( $stored['token'] ?? '' ) === $token ) {
+			$this->options->delete( self::LOCK );
+		}
 	}
 
 	/**

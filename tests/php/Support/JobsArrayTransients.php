@@ -56,6 +56,19 @@ final class JobsArrayTransients implements Transients {
 	}
 
 	/**
+	 * Add one to a counter.
+	 *
+	 * @param string $key     Name.
+	 * @param int    $seconds Lifetime.
+	 * @return int
+	 */
+	public function increment( string $key, int $seconds ): int {
+		$count = (int) $this->get( $key ) + 1;
+		$this->set( $key, $count, $seconds );
+		return $count;
+	}
+
+	/**
 	 * Remove.
 	 *
 	 * @param string $key Name.

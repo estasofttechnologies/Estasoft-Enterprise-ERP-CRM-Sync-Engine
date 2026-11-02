@@ -88,9 +88,88 @@ final class WooShopStockTest extends JobsAdapterTestCase {
 		$this->assertSame( array( 'queued', 'syncing', 'retrying', 'failed' ), $query['meta_query'][0]['value'] );
 	}
 
+	/**
+	 * An order with one line.
+	 *
+	 * @param int $id       Order id.
+	 * @param int $product  Product id.
+	 * @param int $quantity Units.
+	 */
+	private function lineOrder( int $id, int $product, int $quantity ): \WC_Order {
+		$order        = $this->order( $id );
+		$order->items = array( 'line_item' => array( new \WC_Order_Item_Product( array( 'product_id' => $product, 'variation_id' => 0, 'quantity' => $quantity ) ) ) );
+		return $order;
+	}
+
+	public function test_every_unsynced_order_is_counted_by_paging_not_just_the_first_five_hundred(): void {
+		$pages = array();
+		foreach ( range( 1, 7 ) as $page ) {
+			$orders = array();
+			foreach ( range( 1, 100 ) as $n ) {
+				$orders[] = $this->lineOrder( ( $page * 1000 ) + $n, 10, 1 );
+			}
+			$pages[ $page ] = (object) array( 'orders' => $orders, 'max_num_pages' => 8, 'total' => 750 );
+		}
+		$last = array();
+		foreach ( range( 1, 50 ) as $n ) {
+			$last[] = $this->lineOrder( 8000 + $n, 10, 1 );
+		}
+		$pages[8] = (object) array( 'orders' => $last, 'max_num_pages' => 8, 'total' => 750 );
+		$asked    = array();
+		$shop     = new WooShopStock(
+			function ( array $args ) use ( $pages, &$asked ) {
+				$asked[] = $args['paged'];
+				return $pages[ $args['paged'] ];
+			}
+		);
+
+		$counted = $shop->countUnsyncedSoldUnits();
+
+		$this->assertTrue( $counted['complete'] );
+		$this->assertSame( array( 10 => 750 ), $counted['units'], 'all 750 orders, not 500' );
+		$this->assertSame( range( 1, 8 ), $asked );
+		$this->assertSame( array( 10 => 750 ), $shop->unsyncedSoldUnits() );
+	}
+
+	public function test_a_plain_array_result_pages_until_a_short_page(): void {
+		$full = array();
+		foreach ( range( 1, 100 ) as $n ) {
+			$full[] = $this->lineOrder( $n, 10, 2 );
+		}
+		$short = array( $this->lineOrder( 500, 10, 3 ) );
+		$shop  = new WooShopStock( static fn( array $args ) => 1 === $args['paged'] ? $full : $short );
+
+		$counted = $shop->countUnsyncedSoldUnits();
+
+		$this->assertTrue( $counted['complete'] );
+		$this->assertSame( array( 10 => 203 ), $counted['units'] );
+	}
+
+	public function test_a_count_that_hits_the_safety_cap_says_it_is_incomplete(): void {
+		$full = array();
+		foreach ( range( 1, 100 ) as $n ) {
+			$full[] = $this->lineOrder( $n, 10, 1 );
+		}
+		$calls = 0;
+		$shop  = new WooShopStock(
+			function () use ( $full, &$calls ) {
+				++$calls;
+				return $full;
+			}
+		);
+
+		$counted = $shop->countUnsyncedSoldUnits();
+
+		$this->assertFalse( $counted['complete'] );
+		$this->assertSame( 100, $calls, 'a hundred pages, then it stops asking' );
+		$this->assertSame( 10000, $counted['units'][10], 'what was read is returned, but flagged' );
+	}
+
 	public function test_a_product_has_a_name_and_a_quantity(): void {
 		$this->product( 1, array( 'name' => 'Cedar lamp' ) );
-		$this->assertSame( array( 'id' => 1, 'sku' => 'SKU-1', 'name' => 'Cedar lamp', 'quantity' => 5 ), ( new WooShopStock() )->product( 1 ) );
+		$this->assertSame( array( 'id' => 1, 'sku' => 'SKU-1', 'name' => 'Cedar lamp', 'quantity' => 5, 'buffer' => null ), ( new WooShopStock() )->product( 1 ) );
+		$this->product( 2, array(), array( '_estasoft_sync_stock_buffer' => '4' ) );
+		$this->assertSame( 4, ( new WooShopStock() )->product( 2 )['buffer'] );
 		$this->assertNull( ( new WooShopStock() )->product( 404 ) );
 	}
 }

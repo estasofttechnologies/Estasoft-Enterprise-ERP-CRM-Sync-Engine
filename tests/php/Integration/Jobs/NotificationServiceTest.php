@@ -12,6 +12,7 @@ namespace Estasoft\SyncEngine\Tests\Integration\Jobs;
 require_once __DIR__ . '/JobsTestCase.php';
 
 use Estasoft\SyncEngine\Core\Support\ValidationException;
+use Estasoft\SyncEngine\Jobs\Notifications\NotificationService;
 
 final class NotificationServiceTest extends JobsTestCase {
 
@@ -55,6 +56,12 @@ final class NotificationServiceTest extends JobsTestCase {
 		$this->j->notifications->onResumed( $this->connection );
 		$this->assertTrue( $this->j->notifications->onPaused( $this->connection, 'circuit' ), 'a new incident' );
 		$this->assertCount( 2, $this->j->mailer->sent );
+	}
+
+	public function test_a_pause_for_a_missing_encryption_key_says_so(): void {
+		$this->assertTrue( $this->j->notifications->onPaused( $this->connection, 'key_missing' ) );
+		$this->assertStringContainsString( 'wp-config.php', $this->j->mailer->sent[0]['text'] );
+		$this->assertStringNotContainsString( 'did not answer', $this->j->mailer->sent[0]['text'] );
 	}
 
 	public function test_a_pause_by_a_person_and_switched_off_triggers_send_nothing(): void {
@@ -138,5 +145,71 @@ final class NotificationServiceTest extends JobsTestCase {
 		}
 		$this->assertSame( 'off', $this->j->notifications->checkBacklog()['reason'] );
 		$this->assertSame( array(), $this->j->mailer->sent );
+	}
+
+	public function test_a_pause_alert_the_mail_system_refused_is_tried_again_at_the_next_pause_event(): void {
+		$this->j->mailer->accepts = false;
+		$this->assertFalse( $this->j->notifications->onPaused( $this->connection, 'circuit' ) );
+		$this->assertFalse( $this->j->transients->get( NotificationService::PAUSED_KEY . $this->connection ), 'not marked as told' );
+
+		$this->j->mailer->accepts = true;
+		$this->assertTrue( $this->j->notifications->onPaused( $this->connection, 'circuit' ), 'told now' );
+		$this->assertNotFalse( $this->j->transients->get( NotificationService::PAUSED_KEY . $this->connection ) );
+		$this->assertFalse( $this->j->notifications->onPaused( $this->connection, 'circuit' ), 'and only once' );
+		$this->assertCount( 2, $this->j->mailer->sent, 'one refused attempt, one accepted' );
+	}
+
+	public function test_a_daily_list_the_mail_system_refused_is_tried_again_later_the_same_day_not_lost(): void {
+		$id = $this->h->item( $this->connection, '10490', 'created', null, \Estasoft\SyncEngine\Domain\ItemMode::Live, array( 'label' => '10490' ) );
+		$this->h->queue->markFailed( $id, 'SYNC-MAP-001', 'Product CS-LAMP-07 was not found in Fakesystem.', 'SKU CS-LAMP-07' );
+		$this->h->clock->set( '2026-11-02 05:00:00' );
+		$this->j->mailer->accepts = false;
+
+		$first = $this->j->notifications->digest();
+		$this->assertFalse( $first['sent'] );
+		$this->assertSame( 'mail_failed', $first['reason'] );
+
+		$this->h->clock->advance( 900 );
+		$this->assertSame( 'retry_later', $this->j->notifications->digest()['reason'], 'not at every 15 minute tick' );
+		$this->assertCount( 1, $this->j->mailer->sent );
+
+		$this->h->clock->advance( 3600 );
+		$this->j->mailer->accepts = true;
+		$second = $this->j->notifications->digest();
+		$this->assertTrue( $second['sent'], 'the day was not marked as done by the failed attempt' );
+		$this->assertSame( 'already', $this->j->notifications->digest()['reason'] );
+		$this->assertCount( 2, $this->j->mailer->sent );
+	}
+
+	public function test_a_backlog_alert_that_was_switched_off_is_sent_when_it_is_switched_on_while_the_queue_is_still_backed_up(): void {
+		$this->h->settings->update( array( 'backlog_threshold' => 10, 'notifications' => array( 'on_backlog' => false ) ) );
+		for ( $i = 1; $i <= 11; ++$i ) {
+			$this->h->item( $this->connection, (string) $i );
+		}
+		$this->assertSame( 'off', $this->j->notifications->checkBacklog()['reason'] );
+		$this->assertSame( 'off', $this->j->notifications->checkBacklog()['reason'], 'still not marked as told' );
+
+		$this->h->settings->update( array( 'notifications' => array( 'on_backlog' => true ) ) );
+		$on = $this->j->notifications->checkBacklog();
+
+		$this->assertTrue( $on['sent'] );
+		$this->assertCount( 1, $this->j->mailer->sent );
+	}
+
+	public function test_a_backlog_alert_the_mail_system_refused_is_tried_again_at_the_next_check(): void {
+		$this->h->settings->update( array( 'backlog_threshold' => 10 ) );
+		for ( $i = 1; $i <= 11; ++$i ) {
+			$this->h->item( $this->connection, (string) $i );
+		}
+		$this->j->mailer->accepts = false;
+		$failed = $this->j->notifications->checkBacklog();
+		$this->assertSame( 'mail_failed', $failed['reason'] );
+
+		$this->j->mailer->accepts = true;
+		$again = $this->j->notifications->checkBacklog();
+
+		$this->assertTrue( $again['sent'], 'a refused alert is not "already told"' );
+		$this->assertSame( 'already', $this->j->notifications->checkBacklog()['reason'] );
+		$this->assertCount( 2, $this->j->mailer->sent );
 	}
 }

@@ -14,6 +14,7 @@ require_once __DIR__ . '/JobsTestCase.php';
 use Estasoft\SyncEngine\Contract\ConnectorError;
 use Estasoft\SyncEngine\Core\Support\ValidationException;
 use Estasoft\SyncEngine\Domain\ErrorCode;
+use Estasoft\SyncEngine\Jobs\Tracking\TrackingService;
 
 final class TrackingServiceTest extends JobsTestCase {
 
@@ -155,5 +156,100 @@ final class TrackingServiceTest extends JobsTestCase {
 		$this->assertSame( 'on-hold', $saved['delivered_becomes'] );
 		$this->assertTrue( $saved['cod_payment_on_delivery'] );
 		$this->assertTrue( $saved['tracking_enabled'], 'fields not sent keep their value' );
+	}
+
+	public function test_none_leaves_the_order_status_alone_but_still_saves_the_number_and_the_note(): void {
+		$saved = $this->j->trackingService->saveSettings( $this->connection, array( 'delivered_becomes' => 'none' ) );
+		$this->assertSame( 'none', $saved['delivered_becomes'] );
+		$this->assertSame( 'none', $this->j->trackingService->settings( $this->connection )['delivered_becomes'] );
+
+		$summary = $this->j->trackingService->run();
+
+		$this->assertSame( 'processing', $this->j->orders->orders[501]['status'], 'the status was not touched' );
+		$this->assertSame( 0, $summary['moved'] );
+		$this->assertSame( array(), $this->j->orders->statusChanges );
+		$this->assertSame( 1, $summary['saved'] );
+		$this->assertSame( 'AR123', $this->j->orders->tracking[501][0]['number'] );
+		$this->assertStringContainsString( 'AR123', $this->j->orders->notes[0][1] );
+	}
+
+	/**
+	 * Values the setting must refuse: the plugin never moves an order into these.
+	 *
+	 * @return array<string,array<int,mixed>>
+	 */
+	public static function refusedTargets(): array {
+		return array(
+			'cancelled'     => array( 'cancelled' ),
+			'refunded'      => array( 'wc-refunded' ),
+			'failed'        => array( 'failed' ),
+			'draft'         => array( 'draft' ),
+			'a custom one'  => array( 'shipped-ish' ),
+			'empty'         => array( '' ),
+			'not text'      => array( 5 ),
+			'none with s'   => array( 'nones' ),
+		);
+	}
+
+	/**
+	 * @dataProvider refusedTargets
+	 *
+	 * @param mixed $value The status sent.
+	 */
+	public function test_a_status_an_order_cannot_be_moved_to_is_refused_with_a_clear_message(mixed $value): void {
+		try {
+			$this->j->trackingService->saveSettings( $this->connection, array( 'delivered_becomes' => $value ) );
+			$this->fail( 'expected a validation error' );
+		} catch ( ValidationException $e ) {
+			$message = $e->errors()['delivered_becomes'];
+			$this->assertStringContainsString( 'none', $message );
+			$this->assertStringContainsString( 'processing, completed', $message, 'the message lists what can be chosen, in the order of the ladder' );
+		}
+		$this->assertSame( 'completed', $this->j->trackingService->settings( $this->connection )['delivered_becomes'], 'the setting did not change' );
+	}
+
+	public function test_the_statuses_an_order_can_be_moved_up_to_are_accepted(): void {
+		foreach ( array( 'processing', 'wc-completed', 'on-hold', 'pending', 'NONE', ' Completed ' ) as $value ) {
+			$saved = $this->j->trackingService->saveSettings( $this->connection, array( 'delivered_becomes' => $value ) );
+			$this->assertSame( strtolower( trim( (string) preg_replace( '/^wc-/', '', $value ) ) ), $saved['delivered_becomes'] );
+		}
+	}
+
+	public function test_a_delivery_without_a_completion_time_is_skipped_and_does_not_move_the_cursor(): void {
+		$this->j->trackingService->run();
+		$cursor = $this->h->options->get( TrackingService::CURSOR );
+		$this->assertSame( '2026-11-02T09:00:00Z', $cursor[ (string) $this->connection ] );
+		$this->j->orders->add( 502, array( 'status' => 'processing', 'payment_method' => 'bacs' ) );
+		$this->j->connector->deliveries = array(
+			array( 'order_ref' => 'WC-502', 'status' => 'done', 'carrier' => 'DHL', 'tracking' => 'DH77', 'done_at' => '' ),
+			array( 'order_ref' => 'WC-501', 'status' => 'done', 'carrier' => 'Aramex', 'tracking' => 'AR999', 'done_at' => '2026-11-02T10:00:00Z' ),
+		);
+		$this->h->clock->advance( 3600 );
+
+		$summary = $this->j->trackingService->run();
+
+		$this->assertSame( 1, $summary['skipped'] );
+		$this->assertSame( 'processing', $this->j->orders->orders[502]['status'], 'the delivery with no time was not applied' );
+		$this->assertArrayNotHasKey( 502, $this->j->orders->tracking );
+		$this->assertSame( $cursor, $this->h->options->get( TrackingService::CURSOR ), 'the cursor stayed where it was, so the delivery is read again' );
+		$messages = implode( ' ', array_column( $this->h->logs->latest( 5 ), 'message' ) );
+		$this->assertStringContainsString( 'no completion time', $messages );
+
+		// Once the system gives the time, the same delivery is picked up from the old cursor.
+		$this->j->connector->deliveries[0]['done_at'] = '2026-11-02T09:30:00Z';
+		$again = $this->j->trackingService->run();
+		$this->assertSame( 0, $again['skipped'] );
+		$this->assertSame( 'completed', $this->j->orders->orders[502]['status'] );
+		$this->assertSame( '2026-11-02T10:00:00Z', $this->h->options->get( TrackingService::CURSOR )[ (string) $this->connection ] );
+	}
+
+	public function test_a_time_that_is_not_a_time_is_skipped_too(): void {
+		$this->j->connector->deliveries[0]['done_at'] = 'whenever';
+
+		$summary = $this->j->trackingService->run();
+
+		$this->assertSame( 1, $summary['skipped'] );
+		$this->assertSame( 0, $summary['deliveries'] );
+		$this->assertNull( $this->h->options->get( TrackingService::CURSOR ) );
 	}
 }

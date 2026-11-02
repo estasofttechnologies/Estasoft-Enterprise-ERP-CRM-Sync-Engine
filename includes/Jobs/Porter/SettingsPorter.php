@@ -36,9 +36,10 @@ use Estasoft\SyncEngine\Jobs\Tracking\TrackingSettings;
  *       "connection_settings": { "<connector>": { "reliability": {...}, "stock": {...}, "tracking": {...} } } }
  *
  * It holds no credential, no address, no order data and no log. Import rejects bad JSON, any other schema version, a file over
- * 1 MB and any key it does not know. The preview lists the changes in words and changes nothing. Applying updates the settings
- * and the limits, and saves each mapping as a DRAFT of the connection that has the same connector (never a live version); a
- * mapping for a system that is not connected here is skipped and said so.
+ * 1 MB and any key it does not know. The preview lists the changes in words and changes nothing. Applying is all or nothing: every
+ * value of every group (settings, reliability, stock, tracking, and the rules of each mapping) is checked before the first write.
+ * It then updates the settings and the limits, and saves each mapping as a DRAFT of the connection that has the same connector
+ * (never a live version); a mapping for a system that is not connected here is skipped and said so.
  */
 final class SettingsPorter {
 
@@ -82,6 +83,14 @@ final class SettingsPorter {
 	private \Closure $userName;
 
 	/**
+	 * Checks mapping rules: function( int $connectionId, string $type, array $rules ): array of problems, each with a `message` (a
+	 * RuleError from the mapping service) or a string. Empty means the rules are acceptable. Null skips the check.
+	 *
+	 * @var \Closure|null
+	 */
+	private ?\Closure $validateRules;
+
+	/**
 	 * Set up with what it depends on.
 	 *
 	 * @param Settings             $settings    Plugin settings.
@@ -95,6 +104,7 @@ final class SettingsPorter {
 	 * @param Clock                $clock       Time source.
 	 * @param \Closure             $saveDraft   Saves a mapping draft (the mapping service, which validates the rules).
 	 * @param \Closure|null        $userName    Names a user; WordPress by default.
+	 * @param \Closure|null        $validateRules Checks mapping rules before anything is written (the mapping service's validator).
 	 */
 	public function __construct(
 		private readonly Settings $settings,
@@ -107,9 +117,11 @@ final class SettingsPorter {
 		private readonly Logger $logger,
 		private readonly Clock $clock,
 		\Closure $saveDraft,
-		?\Closure $userName = null
+		?\Closure $userName = null,
+		?\Closure $validateRules = null
 	) {
-		$this->saveDraft = $saveDraft;
+		$this->saveDraft     = $saveDraft;
+		$this->validateRules = $validateRules;
 		$this->userName  = $userName ?? static function ( int $userId ): string {
 			$user = get_userdata( $userId );
 			/* translators: %d: user id. */
@@ -273,22 +285,8 @@ final class SettingsPorter {
 	public function apply( string $json, int $userId ): array {
 		$file = $this->read( $json );
 
-		// Check every value before anything is written.
-		$problems = $this->settings->validate( $file['settings'] );
-		foreach ( $file['connection_settings'] as $groups ) {
-			$problems += $this->limits->validate( (array) ( $groups['reliability'] ?? array() ) );
-		}
-		if ( array() !== $problems ) {
-			throw new ValidationException(
-				array(
-					'json' => sprintf(
-						/* translators: %s: name of the setting that is not valid. */
-						__( 'The file has a value that is not allowed (%s). Nothing was imported.', 'estasoft-erp-crm-sync-engine' ),
-						$this->label( (string) array_key_first( $problems ) )
-					),
-				)
-			);
-		}
+		// All or nothing: every group is checked before the first write, so a bad file changes nothing.
+		$this->assertAcceptable( $file );
 
 		$skipped = array();
 		$drafts  = 0;
@@ -342,6 +340,69 @@ final class SettingsPorter {
 			'drafts'  => $drafts,
 			'skipped' => array_values( array_unique( $skipped ) ),
 		);
+	}
+
+	/**
+	 * Check every value of a parsed file: the plugin settings, each connection's reliability, stock and tracking fields, and the
+	 * rules of every mapping that would become a draft. Writes nothing.
+	 *
+	 * @param array{settings:array<string,mixed>,mappings:array<string,array<string,array<int,array<string,mixed>>>>,connection_settings:array<string,array<string,array<string,mixed>>>} $file Parsed file.
+	 *
+	 * @throws ValidationException With the message under `json` naming the first problem.
+	 */
+	private function assertAcceptable( array $file ): void {
+		$problems = $this->settings->validate( $file['settings'] );
+		foreach ( $file['connection_settings'] as $connector => $groups ) {
+			$problems += $this->limits->validate( (array) ( $groups['reliability'] ?? array() ) );
+			$connection = $this->connectionFor( (string) $connector );
+			if ( null !== $connection ) {
+				$extra = array_merge( (array) ( $groups['stock'] ?? array() ), (array) ( $groups['tracking'] ?? array() ) );
+				if ( array() !== $extra ) {
+					$problems += $this->stock->validateRules( (int) $connection['id'], $extra );
+				}
+			}
+		}
+		if ( array() !== $problems ) {
+			throw new ValidationException(
+				array(
+					'json' => sprintf(
+						/* translators: %s: name of the setting that is not valid. */
+						__( 'The file has a value that is not allowed (%s). Nothing was imported.', 'estasoft-erp-crm-sync-engine' ),
+						$this->label( (string) array_key_first( $problems ) )
+					),
+				)
+			);
+		}
+		if ( null === $this->validateRules ) {
+			return;
+		}
+		foreach ( $file['mappings'] as $connector => $types ) {
+			$connection = $this->connectionFor( (string) $connector );
+			if ( null === $connection ) {
+				continue;
+			}
+			foreach ( $types as $type => $rules ) {
+				if ( $this->sameAsLive( (int) $connection['id'], (string) $type, $rules ) ) {
+					continue;
+				}
+				$found = ( $this->validateRules )( (int) $connection['id'], (string) $type, $rules );
+				if ( array() !== $found ) {
+					$first   = reset( $found );
+					$message = is_object( $first ) && isset( $first->message ) ? (string) $first->message : ( is_array( $first ) ? (string) ( $first['message'] ?? '' ) : (string) $first );
+					throw new ValidationException(
+						array(
+							'json' => sprintf(
+								/* translators: 1: mapping type, 2: connector id, 3: what is wrong. */
+								__( 'The %1$s mapping for %2$s has a problem: %3$s Nothing was imported.', 'estasoft-erp-crm-sync-engine' ),
+								$this->plain( (string) $type ),
+								$this->plain( (string) $connector ),
+								'' === $message ? __( 'its rules are not valid.', 'estasoft-erp-crm-sync-engine' ) : rtrim( mb_substr( $message, 0, 200 ), '.' ) . '.'
+							),
+						)
+					);
+				}
+			}
+		}
 	}
 
 	/**

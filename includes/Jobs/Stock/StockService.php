@@ -144,6 +144,43 @@ final class StockService {
 	 * @throws JobException        With status 404 when the connection does not exist.
 	 */
 	public function saveRules( int $connectionId, array $rules ): array {
+		$checked = $this->checkRules( $connectionId, $rules );
+		if ( array() !== $checked['errors'] ) {
+			throw new ValidationException( $checked['errors'] );
+		}
+		$current = $this->rules( $connectionId );
+		$this->config->save( $connectionId, self::AREA, array_replace( array_intersect_key( $current, self::DEFAULTS ), $checked['values'] ) );
+		if ( array() !== $checked['tracking'] ) {
+			$this->tracking->save( $connectionId, $checked['tracking'] );
+		}
+		if ( null !== $checked['warehouses'] ) {
+			$this->connections->update( $connectionId, array( 'config' => array( 'warehouses' => $checked['warehouses'] ) ) );
+		}
+		return $this->rules( $connectionId );
+	}
+
+	/**
+	 * Check stock rules (and the tracking fields that travel with them) without saving anything. The settings file import uses it
+	 * to refuse a bad file before it writes a thing.
+	 *
+	 * @param int                 $connectionId Connection.
+	 * @param array<string,mixed> $rules        Fields to change.
+	 * @return array<string,string> One message per bad field; empty when everything is acceptable.
+	 *
+	 * @throws JobException With status 404 when the connection does not exist.
+	 */
+	public function validateRules( int $connectionId, array $rules ): array {
+		return $this->checkRules( $connectionId, $rules )['errors'];
+	}
+
+	/**
+	 * Clean and check stock rules. Writes nothing.
+	 *
+	 * @param int                 $connectionId Connection.
+	 * @param array<string,mixed> $rules        Fields to change.
+	 * @return array{values:array<string,mixed>,tracking:array<string,mixed>,warehouses:?array<int,array<string,mixed>>,errors:array<string,string>}
+	 */
+	private function checkRules( int $connectionId, array $rules ): array {
 		$current = $this->rules( $connectionId );
 		$errors  = array();
 		$values  = array();
@@ -187,19 +224,12 @@ final class StockService {
 			}
 		}
 		$tracking = $this->tracking->check( array_intersect_key( $rules, TrackingSettings::DEFAULTS ) );
-		$errors  += $tracking['errors'];
-		if ( array() !== $errors ) {
-			throw new ValidationException( $errors );
-		}
-
-		$this->config->save( $connectionId, self::AREA, array_replace( array_intersect_key( $current, self::DEFAULTS ), $values ) );
-		if ( array() !== $tracking['values'] ) {
-			$this->tracking->save( $connectionId, $tracking['values'] );
-		}
-		if ( null !== $warehouses ) {
-			$this->connections->update( $connectionId, array( 'config' => array( 'warehouses' => $warehouses ) ) );
-		}
-		return $this->rules( $connectionId );
+		return array(
+			'values'     => $values,
+			'tracking'   => $tracking['values'],
+			'warehouses' => $warehouses,
+			'errors'     => $errors + $tracking['errors'],
+		);
 	}
 
 	/**
@@ -278,7 +308,9 @@ final class StockService {
 		}
 		$rules   = $this->rules( $connectionId );
 		$system  = (int) $conflict['system_quantity'];
-		$after   = $this->target( $rules, $productId, $system, 0, null, 0 );
+		// The same sum as a normal pass: the product's own buffer when it has one, the units the system held back when the conflict
+		// was found, the units WooCommerce holds, and none sold-but-unsynced (accepting means the system's number is the truth).
+		$after   = $this->target( $rules, $productId, $system, max( 0, (int) ( $conflict['system_held'] ?? 0 ) ), isset( $product['buffer'] ) ? (int) $product['buffer'] : null, 0 );
 		$nowSql  = Time::sql( $this->clock->now() );
 		$before  = (int) ( $product['quantity'] ?? 0 );
 		if ( $this->shop->setQuantity( $productId, $after, $system, $nowSql ) && $before !== $after ) {
@@ -313,7 +345,7 @@ final class StockService {
 	 * Run the pass now for one connection or for every connection that can.
 	 *
 	 * @param int|null $connectionId One connection, or null for all.
-	 * @return array<string,mixed> Summary: connections, products, matched, unmatched, changed, conflicts, skipped, errors, shadow, complete, seconds.
+	 * @return array<string,mixed> Summary: connections, products, matched, unmatched, changed, conflicts, skipped, errors, shadow, complete, seconds, unsynced_unknown (true when a pass was skipped because the waiting orders could not all be counted).
 	 */
 	public function run( ?int $connectionId = null ): array {
 		return $this->runTargets( $connectionId, false );
@@ -338,17 +370,18 @@ final class StockService {
 	private function runTargets( ?int $connectionId, bool $onlyDue ): array {
 		$started = $this->clock->now();
 		$summary = array(
-			'connections' => 0,
-			'products'    => 0,
-			'matched'     => 0,
-			'unmatched'   => 0,
-			'changed'     => 0,
-			'conflicts'   => 0,
-			'skipped'     => 0,
-			'errors'      => 0,
-			'shadow'      => $this->onboarding->isShadowActive( $started ),
-			'complete'    => true,
-			'seconds'     => 0.0,
+			'connections'      => 0,
+			'products'         => 0,
+			'matched'          => 0,
+			'unmatched'        => 0,
+			'changed'          => 0,
+			'conflicts'        => 0,
+			'skipped'          => 0,
+			'errors'           => 0,
+			'shadow'           => $this->onboarding->isShadowActive( $started ),
+			'complete'         => true,
+			'seconds'          => 0.0,
+			'unsynced_unknown' => false,
 		);
 		foreach ( $this->gateway->targets( Capability::StockIn, $connectionId ) as $target ) {
 			$connection = $target['connection'];
@@ -390,7 +423,20 @@ final class StockService {
 			is_array( $state['partial'] ?? null ) ? $state['partial'] : array()
 		);
 		$before     = $partial;
-		$unsynced   = $this->shop->unsyncedSoldUnits();
+		$counted    = $this->shop->countUnsyncedSoldUnits();
+		if ( ! $counted['complete'] ) {
+			// Too many orders are waiting to be read in full. A shop quantity set from a short count could be too high, so this pass
+			// writes nothing; it is tried again a little later.
+			$summary['complete']         = false;
+			$summary['unsynced_unknown'] = true;
+			$this->store->saveLast( $connection->id, array_replace( $state, array( 'unsynced_warned_at' => (string) Time::iso( Time::sql( $this->clock->now() ) ) ) ) );
+			$this->logger->warning(
+				__( 'Stock sync was skipped this time because too many orders are still waiting to reach your system to count them all. Shop quantities were not changed. It tries again soon; clearing the queue fixes it.', 'estasoft-erp-crm-sync-engine' ),
+				array( 'connection_id' => $connection->id )
+			);
+			return;
+		}
+		$unsynced   = $counted['units'];
 		$warehouses = $this->countingWarehouses( $rules['warehouses'] );
 		$complete   = false;
 
@@ -492,7 +538,7 @@ final class StockService {
 				if ( null === $decision || (int) $decision['quantity'] !== $system ) {
 					++$partial['conflicts'];
 					if ( ! $shadow ) {
-						$this->store->openConflict( $connection->id, $id, (string) $item['sku'], (string) $item['name'], $system, $sold, (string) Time::iso( $nowSql ) );
+						$this->store->openConflict( $connection->id, $id, (string) $item['sku'], (string) $item['name'], $system, $sold, (string) Time::iso( $nowSql ), $held );
 					}
 					continue;
 				}
@@ -585,6 +631,12 @@ final class StockService {
 	 */
 	private function isDue( int $connectionId, int $minutes ): bool {
 		$state = $this->store->last( $connectionId );
+		if ( ! empty( $state['unsynced_warned_at'] ) ) {
+			$warned = date_create_immutable( (string) $state['unsynced_warned_at'] );
+			if ( false !== $warned && ( $this->clock->now()->getTimestamp() - $warned->getTimestamp() ) < 900 ) {
+				return false;
+			}
+		}
 		if ( (int) ( $state['next_page'] ?? 1 ) > 1 || empty( $state['at'] ) ) {
 			return true;
 		}

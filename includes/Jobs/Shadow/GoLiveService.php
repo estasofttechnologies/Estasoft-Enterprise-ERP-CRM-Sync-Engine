@@ -26,10 +26,11 @@ use Estasoft\SyncEngine\Jobs\Onboarding\OnboardingView;
 /**
  * ONB-9 and SHD-3.
  *
- * Going live marks the setup complete and records the moment. Every item that is still waiting in the queue is skipped with the
- * reason "Placed before go-live": orders that arrived while the person was still setting up are never sent, and nothing is
- * back-filled. Mode `shadow` then opens a shadow window (7 days, owner decides at the end); mode `live` closes any open window.
- * Only orders placed after this moment are sent.
+ * Going live marks the setup complete and records the moment. Every item created before that moment and still waiting in the
+ * queue is skipped with the reason "Placed before go-live": orders that arrived while the person was still setting up are never
+ * sent, and nothing is back-filled. Mode `shadow` then opens a shadow window (7 days, owner decides at the end); mode `live` closes
+ * any open window (`OnboardingState::endShadow()`, reason `go_live`). Only orders placed after this moment are sent. A second call
+ * changes nothing.
  */
 final class GoLiveService {
 
@@ -64,7 +65,8 @@ final class GoLiveService {
 	}
 
 	/**
-	 * Go live.
+	 * Go live. Safe to call twice: once the setup is complete and the moment is recorded, a second call returns the state as it is and
+	 * does not touch the queue (orders placed after the first call are real and must not be skipped).
 	 *
 	 * @param string $mode   `shadow` (a 7-day shadow run first) or `live`.
 	 * @param int    $userId Who does it.
@@ -77,16 +79,20 @@ final class GoLiveService {
 		if ( ! in_array( $mode, array( 'shadow', 'live' ), true ) ) {
 			throw new ValidationException( array( 'mode' => __( 'Choose shadow or live.', 'estasoft-erp-crm-sync-engine' ) ) );
 		}
+		// Before anything else: an order created after this moment is a real order, whatever happens below.
+		$now   = $this->clock->now();
+		$state = $this->onboarding->get();
+		if ( ! empty( $state['completed'] ) && ! empty( $state['answers']['went_live_at'] ) ) {
+			return OnboardingView::present( $state );
+		}
 		$connectionId = $this->connectionId();
-		$skipped      = $this->skipWaiting();
-		$now          = $this->clock->now();
-		$state        = $this->onboarding->get();
+		$skipped      = $this->skipWaiting( $now->getTimestamp() );
 		$this->onboarding->save(
 			array(
 				'step'      => 5,
 				'completed' => true,
 				'answers'   => array_replace(
-					$state['answers'],
+					$this->onboarding->get()['answers'],
 					array(
 						'went_live_at' => $now->format( Time::ISO ),
 						'live_mode'    => $mode,
@@ -97,7 +103,7 @@ final class GoLiveService {
 		if ( 'shadow' === $mode ) {
 			$this->shadow->start( $connectionId, 7 );
 		} else {
-			$this->shadow->end( $userId );
+			$this->shadow->end( $userId, 'go_live' );
 		}
 		$this->logger->info(
 			sprintf(
@@ -112,29 +118,41 @@ final class GoLiveService {
 	}
 
 	/**
-	 * Skip every item that is waiting.
+	 * Skip the items that were waiting when go-live began. An item created after that moment is a real order and is left alone.
+	 * The ids are collected first and skipped afterwards, and the pass repeats until it finds nothing new (an item that left the
+	 * queue while the pages were read can move the others).
 	 *
+	 * @param int $before Unix time captured when go-live began; items created at or before it are skipped.
 	 * @return int How many were skipped.
 	 */
-	private function skipWaiting(): int {
+	private function skipWaiting( int $before ): int {
 		$skipped = 0;
-		foreach ( array( 'queued', 'retrying' ) as $state ) {
-			while ( $skipped < self::MAX_ITEMS ) {
-				$page = $this->queue->query( new QueueQuery( $state, null, null, null, null, null, null, 1, 100 ) );
-				if ( array() === $page->items ) {
-					break;
-				}
-				$progress = 0;
-				foreach ( $page->items as $item ) {
-					if ( $this->queue->skip( (int) $item['id'], self::SKIP_REASON ) ) {
-						++$skipped;
-						++$progress;
+		for ( $pass = 0; $pass < 5 && $skipped < self::MAX_ITEMS; ++$pass ) {
+			$ids = array();
+			foreach ( array( 'queued', 'retrying' ) as $state ) {
+				for ( $page = 1; count( $ids ) + $skipped < self::MAX_ITEMS; ++$page ) {
+					$result = $this->queue->query( new QueueQuery( $state, null, null, null, null, null, null, $page, 100 ) );
+					foreach ( $result->items as $item ) {
+						$created = strtotime( (string) ( $item['created_at'] ?? '' ) );
+						if ( false !== $created && $created <= $before ) {
+							$ids[ (int) $item['id'] ] = true;
+						}
+					}
+					if ( $page >= $result->totalPages() ) {
+						break;
 					}
 				}
-				if ( 0 === $progress ) {
-					break;
+			}
+			$progress = 0;
+			foreach ( array_keys( $ids ) as $id ) {
+				if ( $this->queue->skip( $id, self::SKIP_REASON ) ) {
+					++$progress;
 				}
 			}
+			if ( 0 === $progress ) {
+				break;
+			}
+			$skipped += $progress;
 		}
 		return $skipped;
 	}

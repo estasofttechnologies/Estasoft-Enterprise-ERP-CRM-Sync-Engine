@@ -13,6 +13,7 @@ require_once __DIR__ . '/JobsTestCase.php';
 
 use Estasoft\SyncEngine\Core\Crypto\SecretBox;
 use Estasoft\SyncEngine\Domain\ErrorCode;
+use Estasoft\SyncEngine\Jobs\Adapters\WpTransients;
 use Estasoft\SyncEngine\Jobs\Inbound\InboundHandler;
 use Estasoft\SyncEngine\Jobs\Inbound\InboundRefused;
 use Estasoft\SyncEngine\Jobs\JobException;
@@ -181,6 +182,167 @@ final class InboundHandlerTest extends JobsTestCase {
 		}
 		$this->h->clock->advance( 61 );
 		$this->assertSame( array( 'accepted' => true ), $this->j->inbound->handle( $this->connection, $body, $this->headers( $secret, $body ) ) );
+	}
+
+	/**
+	 * Texts that are not a time, however well they are signed.
+	 *
+	 * @return array<string,array<int,string>>
+	 */
+	public static function notATime(): array {
+		return array(
+			'now'                  => array( 'now' ),
+			'relative plus'        => array( '+1 minute' ),
+			'relative word'        => array( 'tomorrow' ),
+			'at sign'              => array( '@1793620800' ),
+			'space not T'          => array( '2026-11-02 12:00:00' ),
+			'a date only'          => array( '2026-11-02' ),
+			'no zone'              => array( '2026-11-02T12:00:00' ),
+			'a day that is not'    => array( '2026-02-30T12:00:00Z' ),
+			'a month that is not'  => array( '2026-13-02T12:00:00Z' ),
+			'digits too short'     => array( '12345' ),
+			'digits with a dot'    => array( '1793620800.5' ),
+			'trailing text'        => array( '2026-11-02T12:00:00Z next week' ),
+			'empty'                => array( '' ),
+		);
+	}
+
+	/**
+	 * @dataProvider notATime
+	 *
+	 * @param string $stamp The header value.
+	 */
+	public function test_a_timestamp_that_is_not_digits_or_strict_iso_is_refused_even_when_signed(string $stamp): void {
+		$secret = $this->j->inbound->enable( $this->connection );
+		$body   = '{}';
+		try {
+			$this->j->inbound->handle( $this->connection, $body, $this->headers( $secret, $body, 0, $stamp ) );
+			$this->fail( 'expected a refusal' );
+		} catch ( InboundRefused $e ) {
+			$this->assertSame( 401, $e->httpStatus() );
+		}
+		$this->assertSame( array(), $this->j->scheduled );
+	}
+
+	/**
+	 * Times that are accepted.
+	 *
+	 * @return array<string,array<int,string>>
+	 */
+	public static function goodTimes(): array {
+		return array(
+			'zulu'          => array( '2026-11-02T12:00:00Z' ),
+			'offset'        => array( '2026-11-02T16:00:00+04:00' ),
+			'negative zone' => array( '2026-11-02T07:00:00-05:00' ),
+			'fractions'     => array( '2026-11-02T12:00:00.250Z' ),
+			'micro'         => array( '2026-11-02T12:00:00.123456+00:00' ),
+		);
+	}
+
+	/**
+	 * @dataProvider goodTimes
+	 *
+	 * @param string $stamp The header value (all name 12:00:00 UTC, the harness clock).
+	 */
+	public function test_strict_iso_times_are_accepted_and_signed_as_sent(string $stamp): void {
+		$secret = $this->j->inbound->enable( $this->connection );
+		$body   = '{"entity":"stock"}';
+
+		$this->assertSame( array( 'accepted' => true ), $this->j->inbound->handle( $this->connection, $body, $this->headers( $secret, $body, 0, $stamp ) ) );
+	}
+
+	public function test_an_iso_time_outside_the_window_is_refused(): void {
+		$secret = $this->j->inbound->enable( $this->connection );
+		$body   = '{}';
+		$this->expectException( InboundRefused::class );
+		$this->j->inbound->handle( $this->connection, $body, $this->headers( $secret, $body, 0, '2026-11-02T11:00:00Z' ) );
+	}
+
+	public function test_the_limit_is_per_source_address_so_one_noisy_address_cannot_lock_the_sender_out(): void {
+		$secret = $this->j->inbound->enable( $this->connection );
+		$body   = '{}';
+		$noisy  = '198.51.100.9';
+		$status = 0;
+		for ( $i = 1; $i <= 400; ++$i ) {
+			try {
+				$this->j->inbound->handle( $this->connection, $body, $this->headers( 'guess-' . $i, $body ), $noisy );
+			} catch ( InboundRefused $e ) {
+				$status = $e->httpStatus();
+			}
+		}
+		$this->assertSame( 429, $status, 'the noisy address is limited' );
+
+		$this->assertSame( array( 'accepted' => true ), $this->j->inbound->handle( $this->connection, $body, $this->headers( $secret, $body ), '203.0.113.7' ), 'another address is not' );
+		$this->assertSame( array( 'accepted' => true ), $this->j->inbound->handle( $this->connection, '{"entity":"stock"}', $this->headers( $secret, '{"entity":"stock"}' ) ), 'nor is the default address of the request' );
+	}
+
+	public function test_all_addresses_together_are_limited_per_connection(): void {
+		$this->j->inbound->enable( $this->connection );
+		$body   = '{}';
+		$status = array();
+		for ( $source = 1; $source <= 11; ++$source ) {
+			for ( $i = 1; $i <= 28; ++$i ) {
+				try {
+					$this->j->inbound->handle( $this->connection, $body, $this->headers( 'guess', $body ), '192.0.2.' . $source );
+				} catch ( InboundRefused $e ) {
+					$status[ $e->httpStatus() ] = ( $status[ $e->httpStatus() ] ?? 0 ) + 1;
+				}
+			}
+		}
+		$this->assertSame( InboundHandler::CONNECTION_RATE_LIMIT, 11 * 28 - $status[429], '300 got an answer, the rest were told to wait' );
+		$this->assertSame( 8, $status[429] );
+	}
+
+	public function test_not_found_and_too_many_requests_are_logged_but_not_on_every_repeat(): void {
+		$logs = fn(): int => count( array_filter( $this->h->logs->latest( 100 ), static fn( array $entry ): bool => 'SYNC-INB-001' === $entry['code'] ) );
+		foreach ( range( 1, 6 ) as $guess ) {
+			try {
+				$this->j->inbound->handle( 90000 + $guess, '{}', array() );
+			} catch ( InboundRefused $e ) {
+				$this->assertSame( 404, $e->httpStatus() );
+			}
+		}
+		$this->assertSame( 1, $logs(), 'six unknown connections in a minute: one line' );
+		$this->h->clock->advance( 61 );
+		try {
+			$this->j->inbound->handle( 90100, '{}', array() );
+		} catch ( InboundRefused $e ) {
+			unset( $e );
+		}
+		$this->assertSame( 2, $logs(), 'and another a minute later' );
+
+		$secret = $this->j->inbound->enable( $this->connection );
+		$before = $logs();
+		for ( $i = 1; $i <= InboundHandler::RATE_LIMIT + 5; ++$i ) {
+			$body = '{"n":' . $i . '}';
+			try {
+				$this->j->inbound->handle( $this->connection, $body, $this->headers( $secret, $body ) );
+			} catch ( InboundRefused $e ) {
+				$this->assertSame( 429, $e->httpStatus() );
+			}
+		}
+		$this->assertSame( $before + 1, $logs(), 'five refusals with 429, one log line; the 30 accepted ones logged nothing' );
+	}
+
+	public function test_the_counter_is_atomic_with_an_object_cache_and_still_counts_without_one(): void {
+		$transients = new WpTransients();
+		delete_transient( 'estasoft_sync_test_counter' );
+		$this->assertSame( 1, $transients->increment( 'estasoft_sync_test_counter', 60 ) );
+		$this->assertSame( 2, $transients->increment( 'estasoft_sync_test_counter', 60 ) );
+		$this->assertSame( 3, $transients->increment( 'estasoft_sync_test_counter', 60 ) );
+		delete_transient( 'estasoft_sync_test_counter' );
+
+		// With an external object cache the count goes through wp_cache_incr.
+		$was = wp_using_ext_object_cache();
+		wp_using_ext_object_cache( true );
+		try {
+			$this->assertSame( 1, $transients->increment( 'estasoft_sync_test_atomic', 60 ) );
+			$this->assertSame( 2, $transients->increment( 'estasoft_sync_test_atomic', 60 ) );
+			$this->assertSame( 2, (int) wp_cache_get( 'estasoft_sync_test_atomic', 'estasoft_sync' ) );
+		} finally {
+			wp_cache_delete( 'estasoft_sync_test_atomic', 'estasoft_sync' );
+			wp_using_ext_object_cache( $was );
+		}
 	}
 
 	public function test_a_large_body_a_disabled_connection_and_an_unknown_connection_are_refused(): void {

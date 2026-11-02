@@ -36,6 +36,24 @@ final class StatusRank {
 	}
 
 	/**
+	 * The statuses an order can be moved up to, lowest first.
+	 *
+	 * @return array<int,string>
+	 */
+	public static function targets(): array {
+		return self::LADDER;
+	}
+
+	/**
+	 * Whether an order can be moved up to this status (it is on the ladder).
+	 *
+	 * @param string $status Status slug (with or without wc-).
+	 */
+	public static function canMoveTo( string $status ): bool {
+		return null !== self::position( $status );
+	}
+
+	/**
 	 * Place on the ladder.
 	 *
 	 * @param string $status Status slug.

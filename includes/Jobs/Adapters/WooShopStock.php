@@ -45,9 +45,35 @@ final class WooShopStock implements ShopStock {
 	private const ORDER_STATE = '_estasoft_sync_state';
 
 	/**
-	 * Most orders looked at when counting units sold but not yet synced.
+	 * Orders read per page when counting units sold but not yet synced.
 	 */
-	private const ORDER_LIMIT = 500;
+	private const ORDER_PAGE = 100;
+
+	/**
+	 * Most pages read (a safety cap: 10,000 orders). Past it the count is reported as incomplete.
+	 */
+	private const ORDER_MAX_PAGES = 100;
+
+	/**
+	 * Most seconds spent reading those pages (a safety cap).
+	 */
+	private const ORDER_SECONDS = 10.0;
+
+	/**
+	 * Reads one page of orders: function( array $args ): mixed. wc_get_orders() by default; a test passes its own.
+	 *
+	 * @var \Closure|null
+	 */
+	private ?\Closure $orderQuery;
+
+	/**
+	 * Set up.
+	 *
+	 * @param \Closure|null $orderQuery Reads one page of orders; wc_get_orders() when null.
+	 */
+	public function __construct( ?\Closure $orderQuery = null ) {
+		$this->orderQuery = $orderQuery;
+	}
 
 	/**
 	 * One page of products and variations that carry a SKU.
@@ -144,60 +170,96 @@ final class WooShopStock implements ShopStock {
 	 * @return array<int,int>
 	 */
 	public function unsyncedSoldUnits(): array {
-		if ( ! function_exists( 'wc_get_orders' ) ) {
-			return array();
-		}
-		$orders = wc_get_orders(
-			array(
-				'status'     => array( 'wc-processing', 'wc-on-hold' ),
-				'limit'      => self::ORDER_LIMIT,
-				'orderby'    => 'date',
-				'order'      => 'DESC',
-				'return'     => 'objects',
-				'meta_query' => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
-					array(
-						'key'     => self::ORDER_STATE,
-						'value'   => array( 'queued', 'syncing', 'retrying', 'failed' ),
-						'compare' => 'IN',
-					),
-				),
-			)
-		);
-		$units = array();
-		foreach ( (array) $orders as $order ) {
-			if ( ! $order instanceof \WC_Order ) {
-				continue;
-			}
-			foreach ( $order->get_items() as $line ) {
-				if ( ! $line instanceof \WC_Order_Item_Product ) {
-					continue;
-				}
-				$id = (int) $line->get_variation_id() > 0 ? (int) $line->get_variation_id() : (int) $line->get_product_id();
-				if ( $id > 0 ) {
-					$units[ $id ] = ( $units[ $id ] ?? 0 ) + max( 0, (int) $line->get_quantity() );
-				}
-			}
-		}
-		return $units;
+		return $this->countUnsyncedSoldUnits()['units'];
 	}
 
 	/**
-	 * Name and quantity of a product.
+	 * Units in paid orders the system does not know yet, from every such order (paged), and whether all of them were read.
+	 *
+	 * @return array{units:array<int,int>,complete:bool}
+	 */
+	public function countUnsyncedSoldUnits(): array {
+		$query = $this->orderQuery;
+		if ( null === $query ) {
+			if ( ! function_exists( 'wc_get_orders' ) ) {
+				return array(
+					'units'    => array(),
+					'complete' => true,
+				);
+			}
+			$query = static fn( array $args ): mixed => wc_get_orders( $args );
+		}
+		$units    = array();
+		$complete = true;
+		$deadline = microtime( true ) + self::ORDER_SECONDS;
+		for ( $page = 1; ; ++$page ) {
+			if ( $page > self::ORDER_MAX_PAGES || microtime( true ) > $deadline ) {
+				$complete = false;
+				break;
+			}
+			$result = $query(
+				array(
+					'status'     => array( 'wc-processing', 'wc-on-hold' ),
+					'limit'      => self::ORDER_PAGE,
+					'paged'      => $page,
+					'orderby'    => 'ID',
+					'order'      => 'ASC',
+					'return'     => 'objects',
+					'paginate'   => true,
+					'meta_query' => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
+						array(
+							'key'     => self::ORDER_STATE,
+							'value'   => array( 'queued', 'syncing', 'retrying', 'failed' ),
+							'compare' => 'IN',
+						),
+					),
+				)
+			);
+			$orders = is_object( $result ) && isset( $result->orders ) ? (array) $result->orders : ( is_array( $result ) ? $result : array() );
+			$pages  = is_object( $result ) && isset( $result->max_num_pages ) ? (int) $result->max_num_pages : null;
+			foreach ( $orders as $order ) {
+				if ( ! $order instanceof \WC_Order ) {
+					continue;
+				}
+				foreach ( $order->get_items() as $line ) {
+					if ( ! $line instanceof \WC_Order_Item_Product ) {
+						continue;
+					}
+					$id = (int) $line->get_variation_id() > 0 ? (int) $line->get_variation_id() : (int) $line->get_product_id();
+					if ( $id > 0 ) {
+						$units[ $id ] = ( $units[ $id ] ?? 0 ) + max( 0, (int) $line->get_quantity() );
+					}
+				}
+			}
+			if ( count( $orders ) < self::ORDER_PAGE || ( null !== $pages && $page >= $pages ) ) {
+				break;
+			}
+		}
+		return array(
+			'units'    => $units,
+			'complete' => $complete,
+		);
+	}
+
+	/**
+	 * Name, quantity and own safety buffer of a product.
 	 *
 	 * @param int $productId Product or variation id.
-	 * @return array{id:int,sku:string,name:string,quantity:?int}|null
+	 * @return array{id:int,sku:string,name:string,quantity:?int,buffer:?int}|null
 	 */
 	public function product( int $productId ): ?array {
 		$product = function_exists( 'wc_get_product' ) ? wc_get_product( $productId ) : false;
 		if ( ! $product instanceof \WC_Product ) {
 			return null;
 		}
-		$stock = $product->get_stock_quantity();
+		$stock  = $product->get_stock_quantity();
+		$buffer = $product->get_meta( self::BUFFER, true );
 		return array(
 			'id'       => (int) $product->get_id(),
 			'sku'      => (string) $product->get_sku(),
 			'name'     => (string) $product->get_name(),
 			'quantity' => null === $stock ? null : (int) $stock,
+			'buffer'   => is_numeric( $buffer ) ? max( 0, (int) $buffer ) : null,
 		);
 	}
 

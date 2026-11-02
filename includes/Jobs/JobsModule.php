@@ -74,6 +74,11 @@ final class JobsModule implements ModuleInterface {
 	public const HOOK_INBOUND   = 'estasoft_sync_inbound_refresh';
 
 	/**
+	 * When the hourly reconcile tick began (microtime), or null.
+	 */
+	private ?float $tickStartedAt = null;
+
+	/**
 	 * Order meta keys the Jobs module writes (tracking and invoice facts).
 	 */
 	public const ORDER_KEYS_WRITTEN = array(
@@ -144,13 +149,25 @@ final class JobsModule implements ModuleInterface {
 				);
 			}
 		);
+		// The shadow comparison shares the hourly tick with reconciliation. It starts after it and gets only what is left of one
+		// time budget, so a long reconciliation run is never followed by a long run of shadow reads in the same request.
+		add_action(
+			self::HOOK_RECONCILE,
+			function (): void {
+				$this->tickStartedAt = microtime( true );
+			},
+			1
+		);
 		add_action(
 			self::HOOK_RECONCILE,
 			function () use ( $container ): void {
 				$this->guard(
 					$container,
-					static function () use ( $container ): void {
-						$container->get( JobServices::SHADOW )->compare( null, 100 );
+					function () use ( $container ): void {
+						$left = self::budgetLeft( ShadowService::BUDGET_SECONDS, $this->tickStartedAt, microtime( true ) );
+						if ( $left >= 1.0 ) {
+							$container->get( JobServices::SHADOW )->compare( null, 100, $left );
+						}
 					}
 				);
 			},
@@ -230,6 +247,17 @@ final class JobsModule implements ModuleInterface {
 			array_push( $keys, ...self::PRODUCT_KEYS_OWNED );
 		}
 		return $keys;
+	}
+
+	/**
+	 * What is left of a time budget.
+	 *
+	 * @param float      $total     The whole budget in seconds.
+	 * @param float|null $startedAt When the work began (microtime), or null when it is not known.
+	 * @param float      $now       The current microtime.
+	 */
+	public static function budgetLeft( float $total, ?float $startedAt, float $now ): float {
+		return null === $startedAt ? $total : max( 0.0, $total - max( 0.0, $now - $startedAt ) );
 	}
 
 	/**
@@ -438,7 +466,9 @@ final class JobsModule implements ModuleInterface {
 				$c->get( JobServices::ENVIRONMENT ),
 				$c->get( Services::LOGGER ),
 				$c->get( Services::CLOCK ),
-				static fn( int $connectionId, string $type, array $rules, string $note, string $by ): mixed => $c->get( 'mapping.service' )->saveDraft( $connectionId, $type, $rules, $note, $by )
+				static fn( int $connectionId, string $type, array $rules, string $note, string $by ): mixed => $c->get( 'mapping.service' )->saveDraft( $connectionId, $type, $rules, $note, $by ),
+				null,
+				static fn( int $connectionId, string $type, array $rules ): array => $c->get( 'mapping.service' )->validate( $connectionId, $type, $rules )
 			)
 		);
 		$this->add(

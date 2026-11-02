@@ -19,6 +19,11 @@ use Estasoft\SyncEngine\Jobs\Ports\Transients;
 final class WpTransients implements Transients {
 
 	/**
+	 * Object cache group of the atomic counters.
+	 */
+	private const GROUP = 'estasoft_sync';
+
+	/**
 	 * Read a value.
 	 *
 	 * @param string $key Name.
@@ -37,6 +42,27 @@ final class WpTransients implements Transients {
 	 */
 	public function set( string $key, mixed $value, int $seconds ): void {
 		set_transient( $key, $value, max( 1, $seconds ) );
+	}
+
+	/**
+	 * Add one to a counter. With an external object cache the step is atomic (`wp_cache_incr`); otherwise it is a read and a write
+	 * of a transient.
+	 *
+	 * @param string $key     Name.
+	 * @param int    $seconds Lifetime in seconds.
+	 * @return int The count after adding one.
+	 */
+	public function increment( string $key, int $seconds ): int {
+		if ( function_exists( 'wp_using_ext_object_cache' ) && wp_using_ext_object_cache() ) {
+			wp_cache_add( $key, 0, self::GROUP, max( 1, $seconds ) );
+			$count = wp_cache_incr( $key, 1, self::GROUP );
+			if ( false !== $count ) {
+				return (int) $count;
+			}
+		}
+		$count = (int) get_transient( $key ) + 1;
+		set_transient( $key, $count, max( 1, $seconds ) );
+		return $count;
 	}
 
 	/**

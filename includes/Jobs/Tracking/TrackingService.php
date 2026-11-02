@@ -103,7 +103,7 @@ final class TrackingService {
 	 * Read deliveries and apply them.
 	 *
 	 * @param int|null $connectionId One connection, or null for all.
-	 * @return array<string,mixed> Summary: connections, deliveries, saved, moved, cod_events, unknown_orders, errors, shadow.
+	 * @return array<string,mixed> Summary: connections, deliveries, saved, moved, cod_events, unknown_orders, skipped (deliveries with no usable time), errors, shadow.
 	 */
 	public function run( ?int $connectionId = null ): array {
 		$now     = $this->clock->now();
@@ -115,6 +115,7 @@ final class TrackingService {
 			'moved'          => 0,
 			'cod_events'     => 0,
 			'unknown_orders' => 0,
+			'skipped'        => 0,
 			'errors'         => 0,
 			'shadow'         => $shadow,
 		);
@@ -131,16 +132,36 @@ final class TrackingService {
 				++$summary['errors'];
 				continue;
 			}
-			$latest = null;
+			$latest  = null;
+			$skipped = 0;
 			foreach ( $rows as $row ) {
 				if ( ! is_array( $row ) ) {
 					continue;
 				}
-				$doneAt = date_create_immutable( (string) ( $row['done_at'] ?? '' ) );
-				if ( false !== $doneAt && ( null === $latest || $doneAt > $latest ) ) {
+				$text   = trim( (string) ( $row['done_at'] ?? '' ) );
+				$doneAt = '' === $text ? false : date_create_immutable( $text );
+				if ( false === $doneAt ) {
+					// A delivery without a time cannot be placed: it is not applied, and it is not allowed to move the cursor
+					// (an empty time would otherwise read as "now" and push the cursor past deliveries not yet read).
+					++$skipped;
+					++$summary['skipped'];
+					continue;
+				}
+				if ( null === $latest || $doneAt > $latest ) {
 					$latest = $doneAt;
 				}
 				$this->deliver( $connection->id, $target['connector']->label(), $settings, $row, $shadow, $summary );
+			}
+			if ( $skipped > 0 ) {
+				$this->logger->warning(
+					sprintf(
+						/* translators: %d: number of deliveries. */
+						_n( '%d delivery from your system has no completion time, so it was not applied. It is read again next time.', '%d deliveries from your system have no completion time, so they were not applied. They are read again next time.', $skipped, 'estasoft-erp-crm-sync-engine' ),
+						$skipped
+					),
+					array( 'connection_id' => $connection->id )
+				);
+				continue;
 			}
 			$this->saveCursor( $connection->id, null === $latest ? Time::plus( $now, -3600 ) : $latest );
 		}
@@ -174,16 +195,16 @@ final class TrackingService {
 		$carrier = trim( (string) ( $row['carrier'] ?? '' ) );
 		$number  = trim( (string) ( $row['tracking'] ?? '' ) );
 		$status  = strtolower( trim( (string) ( $row['status'] ?? 'done' ) ) );
-		$at      = (string) ( $row['done_at'] ?? '' );
+		$at      = trim( (string) ( $row['done_at'] ?? '' ) );
 
-		if ( '' !== $number && $this->saveNumber( $connectionId, $system, $order, $carrier, $number, '' !== $at ? $at : (string) Time::iso( Time::sql( $this->clock->now() ) ) ) ) {
+		if ( '' !== $number && $this->saveNumber( $connectionId, $system, $order, $carrier, $number, $at ) ) {
 			++$summary['saved'];
 		}
 		if ( ! in_array( $status, array( 'done', 'delivered' ), true ) ) {
 			return;
 		}
 		$target = (string) $settings['delivered_becomes'];
-		if ( StatusRank::isForward( (string) $order['status'], $target ) ) {
+		if ( TrackingSettings::NONE !== $target && StatusRank::isForward( (string) $order['status'], $target ) ) {
 			$note = sprintf(
 				/* translators: %s: name of the connected system, for example Odoo. */
 				__( 'Delivery completed in %s. The order was moved forward.', 'estasoft-erp-crm-sync-engine' ),

@@ -161,6 +161,65 @@ final class StockServiceTest extends JobsTestCase {
 		$this->assertSame( 1, $this->j->stock->products[1]['quantity'] );
 	}
 
+	public function test_accepting_a_conflict_uses_the_products_own_buffer_and_the_held_units_like_a_normal_pass(): void {
+		$id = $this->j->connect();
+		$this->enableStock( $id, array( 'safety_buffer' => 0, 'subtract_held' => true ) );
+		$this->j->stock->add( 1, 'LOW', 20, array( 'buffer' => 2 ) );
+		$this->j->stock->held[1]     = 1;
+		$this->j->stock->unsynced[1] = 10;
+		$this->j->connector->stock   = array( 'LOW' => array( 'quantity' => 6, 'held' => 1 ) );
+		$this->j->stockService->run();
+		$conflict = $this->j->stockService->overview()['conflicts'][0];
+
+		$this->j->stockService->acceptConflict( (string) $conflict['id'] );
+
+		// 6 in the system, minus the product's buffer of 2, minus 1 held by the system and 1 held by WooCommerce.
+		$this->assertSame( 2, $this->j->stock->products[1]['quantity'] );
+		$again = $this->j->stockService->run();
+		$this->assertSame( 0, $again['changed'], 'the next normal pass agrees with what accepting set' );
+		$this->assertSame( 2, $this->j->stock->products[1]['quantity'] );
+	}
+
+	public function test_accepting_a_conflict_without_own_buffer_uses_the_connections_buffer(): void {
+		$id = $this->j->connect();
+		$this->enableStock( $id, array( 'safety_buffer' => 3, 'subtract_held' => false ) );
+		$this->j->stock->add( 1, 'LOW', 20 );
+		$this->j->stock->unsynced[1] = 10;
+		$this->j->connector->stock   = array( 'LOW' => array( 'quantity' => 6, 'held' => 4 ) );
+		$this->j->stockService->run();
+
+		$this->j->stockService->acceptConflict( (string) $this->j->stockService->overview()['conflicts'][0]['id'] );
+
+		$this->assertSame( 3, $this->j->stock->products[1]['quantity'] );
+	}
+
+	public function test_a_pass_that_could_not_count_every_waiting_order_writes_nothing_and_warns(): void {
+		$id = $this->j->connect();
+		$this->enableStock( $id, array( 'safety_buffer' => 0 ) );
+		$this->j->stock->add( 1, 'A', 1 );
+		$this->j->connector->stock       = array( 'A' => array( 'quantity' => 50, 'held' => 0 ) );
+		$this->j->stock->unsyncedComplete = false;
+
+		$summary = $this->j->stockService->run();
+
+		$this->assertSame( array(), $this->j->stock->writes, 'a quantity set from a short count could be too high' );
+		$this->assertSame( 1, $this->j->stock->products[1]['quantity'] );
+		$this->assertFalse( $summary['complete'] );
+		$this->assertTrue( $summary['unsynced_unknown'] );
+		$this->assertSame( 0, $this->j->connector->count( 'fetchStock' ), 'the system was not even asked' );
+		$messages = array_filter( $this->h->logs->latest( 5 ), static fn( array $entry ): bool => 'warning' === $entry['level'] );
+		$this->assertStringContainsString( 'too many orders are still waiting', implode( ' ', array_column( $messages, 'message' ) ) );
+
+		// Not tried again on every five-minute tick, but within a quarter of an hour.
+		$this->assertSame( 0, $this->j->stockService->runDue()['connections'] );
+		$this->h->clock->advance( 16 * 60 );
+		$this->j->stock->unsyncedComplete = true;
+		$later = $this->j->stockService->runDue();
+		$this->assertSame( 1, $later['connections'] );
+		$this->assertSame( 50, $this->j->stock->products[1]['quantity'] );
+		$this->assertFalse( $later['unsynced_unknown'] );
+	}
+
 	public function test_hold_keeps_the_shop_quantity_until_the_system_quantity_changes(): void {
 		$id = $this->j->connect();
 		$this->enableStock( $id, array( 'safety_buffer' => 0 ) );

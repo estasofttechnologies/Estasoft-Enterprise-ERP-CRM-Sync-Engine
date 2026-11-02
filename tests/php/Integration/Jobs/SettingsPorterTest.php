@@ -181,4 +181,100 @@ final class SettingsPorterTest extends JobsTestCase {
 		}
 		$this->assertTrue( $this->h->settings->adminBar(), 'nothing was imported' );
 	}
+
+	/**
+	 * Files with one bad value in the group named, and good changes everywhere else.
+	 *
+	 * @return array<string,array<int,mixed>>
+	 */
+	public static function oneBadGroup(): array {
+		return array(
+			'stock interval'      => array( 'stock', 'interval_minutes', 2 ),
+			'stock buffer'        => array( 'stock', 'safety_buffer', -5 ),
+			'stock flag'          => array( 'stock', 'enabled', 'perhaps' ),
+			'tracking status'     => array( 'tracking', 'delivered_becomes', 'no-such-status' ),
+			'tracking flag'       => array( 'tracking', 'tracking_enabled', 'sometimes' ),
+			'reliability'         => array( 'reliability', 'requests_per_second', 9999 ),
+			'plugin setting'      => array( 'settings', 'log_retention_days', 100000 ),
+		);
+	}
+
+	/**
+	 * @dataProvider oneBadGroup
+	 *
+	 * @param string $group Group of the bad value.
+	 * @param string $key   Field.
+	 * @param mixed  $value The bad value.
+	 */
+	public function test_one_bad_value_in_any_group_writes_nothing_at_all(string $group, string $key, mixed $value): void {
+		$data = json_decode( $this->j->porter->export()['json'], true );
+		// Good changes everywhere, so a half-applied import would show.
+		$data['settings']['admin_bar']                                      = false;
+		$data['connection_settings']['fake']['reliability']['concurrency'] = 1;
+		$data['connection_settings']['fake']['stock']['safety_buffer']     = 3;
+		$data['connection_settings']['fake']['tracking']['tracking_enabled'] = false;
+		$data['mappings']['fake']['orders'][0]['target']                   = 'partner.display_name';
+		if ( 'settings' === $group ) {
+			$data['settings'][ $key ] = $value;
+		} else {
+			$data['connection_settings']['fake'][ $group ][ $key ] = $value;
+		}
+		$before = array(
+			'settings' => $this->h->settings->get(),
+			'limits'   => $this->h->connections->findPublic( $this->connection )['settings'],
+			'rules'    => $this->j->stockService->rules( $this->connection ),
+		);
+
+		try {
+			$this->j->porter->apply( (string) json_encode( $data ), 1 );
+			$this->fail( 'expected a refusal' );
+		} catch ( ValidationException $e ) {
+			$this->assertArrayHasKey( 'json', $e->errors() );
+			$this->assertStringContainsString( 'Nothing was imported', $e->errors()['json'] );
+		}
+
+		$this->assertSame( $before['settings'], $this->h->settings->get() );
+		$this->assertSame( $before['limits'], $this->h->connections->findPublic( $this->connection )['settings'] );
+		$this->assertSame( $before['rules'], $this->j->stockService->rules( $this->connection ) );
+		$this->assertNull( $this->h->mappings->draft( $this->connection, 'orders' ), 'no draft was created' );
+		$this->assertSame( array(), $this->j->drafts );
+	}
+
+	public function test_mapping_rules_the_validator_refuses_stop_the_whole_import(): void {
+		$data = json_decode( $this->j->porter->export()['json'], true );
+		$data['settings']['admin_bar']                                   = false;
+		$data['connection_settings']['fake']['stock']['safety_buffer']  = 3;
+		$data['mappings']['fake']['orders'][0]['target']                = 'partner.nowhere';
+		$this->j->ruleProblems = array( new \Estasoft\SyncEngine\Mapping\RuleError( 'r1', 'target', 'target_unknown', 'The target partner.nowhere does not exist in the system.' ) );
+
+		try {
+			$this->j->porter->apply( (string) json_encode( $data ), 1 );
+			$this->fail( 'expected a refusal' );
+		} catch ( ValidationException $e ) {
+			$this->assertStringContainsString( 'orders mapping for fake has a problem: The target partner.nowhere does not exist in the system.', $e->errors()['json'] );
+			$this->assertStringContainsString( 'Nothing was imported', $e->errors()['json'] );
+		}
+
+		$this->assertTrue( $this->h->settings->adminBar(), 'the settings were not written' );
+		$this->assertSame( 7, $this->j->stockService->rules( $this->connection )['safety_buffer'], 'the limits were not written' );
+		$this->assertNull( $this->h->mappings->draft( $this->connection, 'orders' ) );
+
+		// The same file with rules the validator accepts imports in full.
+		$this->j->ruleProblems = array();
+		$result = $this->j->porter->apply( (string) json_encode( $data ), 1 );
+		$this->assertSame( 1, $result['drafts'] );
+		$this->assertFalse( $this->h->settings->adminBar() );
+		$this->assertSame( 3, $this->j->stockService->rules( $this->connection )['safety_buffer'] );
+	}
+
+	public function test_mappings_that_would_change_nothing_or_that_have_no_connection_are_not_validated(): void {
+		$data = json_decode( $this->j->porter->export()['json'], true );
+		$data['mappings']['ghost']['orders'] = $this->rules();
+		$this->j->ruleProblems = array( new \Estasoft\SyncEngine\Mapping\RuleError( '', 'rules', 'broken', 'This would be refused.' ) );
+
+		$result = $this->j->porter->apply( (string) json_encode( $data ), 1 );
+
+		$this->assertTrue( $result['applied'], 'the live rules are unchanged and the ghost connector is skipped, so nothing needed checking' );
+		$this->assertSame( array( 'ghost' ), $result['skipped'] );
+	}
 }

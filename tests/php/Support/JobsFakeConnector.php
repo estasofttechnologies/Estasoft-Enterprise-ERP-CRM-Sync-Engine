@@ -72,6 +72,13 @@ final class JobsFakeConnector implements ConnectorInterface {
 	public ?TestResult $testResult = null;
 
 	/**
+	 * What each test() call was given: address and the api key.
+	 *
+	 * @var array<int,array{address:mixed,api_key:string}>
+	 */
+	public array $testedWith = array();
+
+	/**
 	 * Default mapping rules by type.
 	 *
 	 * @var array<string,array<int,array<string,mixed>>>
@@ -84,6 +91,11 @@ final class JobsFakeConnector implements ConnectorInterface {
 	 * @var array<string,ConnectorError|\Throwable>
 	 */
 	public array $fail = array();
+
+	/**
+	 * Called with the method name on every call that can fail (the tests use it to let time pass or to change the shop).
+	 */
+	public ?\Closure $afterCall = null;
 
 	/**
 	 * Whether a failure in `$fail` is used once and then forgotten.
@@ -149,6 +161,10 @@ final class JobsFakeConnector implements ConnectorInterface {
 
 	public function test( Connection $connection ): TestResult {
 		$this->calls[] = array( 'test', $connection->config( 'address' ) );
+		$this->testedWith[] = array(
+			'address' => $connection->config( 'address' ),
+			'api_key' => $connection->secret( 'api_key' ),
+		);
 		$failure = $this->failure( 'test' );
 		if ( null !== $failure ) {
 			return new TestResult( false, '', '', array(), array(), $failure );
@@ -276,6 +292,9 @@ final class JobsFakeConnector implements ConnectorInterface {
 	 * @throws \Throwable The failure, when it is an exception.
 	 */
 	private function failure( string $method ): ?ConnectorError {
+		if ( null !== $this->afterCall ) {
+			( $this->afterCall )( $method );
+		}
 		$failure = $this->fail[ $method ] ?? null;
 		if ( $this->failOnce ) {
 			unset( $this->fail[ $method ] );
