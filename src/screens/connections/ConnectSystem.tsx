@@ -3,7 +3,7 @@ import type { SystemEntry } from '../../api/local-types';
 import { Callout } from '../../components/Callout';
 import { Card } from '../../components/Card';
 import { StatusBadge } from '../../components/StatusBadge';
-import { isSelectable, shapeOf } from '../../lib/connect';
+import { isSelectable, shapeOfEntry } from '../../lib/connect';
 import { methodExplanation, methodLabel } from '../../lib/catalog';
 import { fieldsOf } from '../connect/copy';
 import { DirectConnect } from '../connect/DirectConnect';
@@ -29,7 +29,7 @@ export function ConnectSystem( {
 	onConnected,
 	existing,
 }: ConnectProps ) {
-	const shape = shapeOf( entry.connection_method );
+	const shape = shapeOfEntry( entry );
 	if ( ! shape || ! entry.connector || ! isSelectable( entry ) ) {
 		return <MethodExplainer entry={ entry } />;
 	}
@@ -60,6 +60,11 @@ export function ConnectSystem( {
 					shape={ shape }
 					onConnected={ onConnected }
 					existing={ existing }
+					note={
+						entry.connection_method === 'unknown'
+							? methodExplanation( entry.connection_method )
+							: undefined
+					}
 				/>
 			);
 	}

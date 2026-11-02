@@ -171,7 +171,9 @@ final class OdooConnector implements ConnectorInterface {
 				__( 'API key', 'estasoft-erp-crm-sync-engine' ),
 				true,
 				true,
-				__( 'Saved encrypted. It is never shown again.', 'estasoft-erp-crm-sync-engine' )
+				__( 'Saved encrypted. It is never shown again.', 'estasoft-erp-crm-sync-engine' ),
+				'',
+				'password'
 			),
 			new CredentialField(
 				'company',

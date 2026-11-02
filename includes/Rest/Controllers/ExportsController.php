@@ -15,6 +15,7 @@ use Estasoft\SyncEngine\Connectors\ConnectorsModule;
 use Estasoft\SyncEngine\Connectors\Support\Export\ExportException;
 use Estasoft\SyncEngine\Connectors\Support\Export\ExportFile;
 use Estasoft\SyncEngine\Connectors\Support\Export\ExportService;
+use Estasoft\SyncEngine\Domain\ErrorClass;
 use Estasoft\SyncEngine\Domain\ErrorCode;
 use Estasoft\SyncEngine\Rest\ApiException;
 use Estasoft\SyncEngine\Rest\BaseController;
@@ -180,6 +181,11 @@ final class ExportsController extends BaseController {
 			if ( is_scalar( $value ) ) {
 				$context[ (string) $name ] = (string) $value;
 			}
+		}
+		// A refusal about the export itself (nothing waits, the connection makes no files) is not "a system rejected a field": the catalog
+		// sentence would start with an empty system name. Say the reason as it is.
+		if ( ErrorCode::Val002 === $failure->code && 'export' === ( $context['field'] ?? '' ) && '' !== trim( $context['reason'] ?? '' ) ) {
+			return new ApiException( $failure->code->value, esc_html( $context['reason'] ), $status, ErrorClass::NeedsPerson->value, $context );
 		}
 		return ApiException::fromCatalog( $failure->code, $context, $status );
 	}

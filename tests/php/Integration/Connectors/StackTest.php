@@ -434,6 +434,7 @@ final class StackTest extends RestIntegrationCase {
 		$empty = $this->call( 'POST', '/exports', array( 'connection_id' => $connection ) );
 		$this->assertSame( 409, $empty->get_status() );
 		$this->assertSame( 'SYNC-VAL-002', $empty->get_data()['code'] );
+		$this->assertSame( 'No orders are waiting for an export file.', $empty->get_data()['message'], 'The reason as it is, not "<system> rejected a field: export".' );
 
 		$this->exportOrder( $connection, '5003', '' );
 		$none = $this->call( 'POST', '/exports', array( 'connection_id' => $connection ) );
@@ -441,7 +442,9 @@ final class StackTest extends RestIntegrationCase {
 		$this->assertSame( 'SYNC-EXP-002', $none->get_data()['code'] );
 
 		$odoo = $this->container->get( Services::CONNECTION_REPOSITORY )->create( array( 'connector' => 'odoo', 'type' => 'erp', 'label' => 'Odoo' ), array(), array() );
-		$this->assertSame( 409, $this->call( 'POST', '/exports', array( 'connection_id' => $odoo ) )->get_status(), 'Odoo does not make export files.' );
+		$refused = $this->call( 'POST', '/exports', array( 'connection_id' => $odoo ) );
+		$this->assertSame( 409, $refused->get_status(), 'Odoo does not make export files.' );
+		$this->assertSame( 'This connection does not make export files.', $refused->get_data()['message'] );
 	}
 
 	public function test_a_file_id_is_not_a_path(): void {

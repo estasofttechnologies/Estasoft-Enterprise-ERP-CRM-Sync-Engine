@@ -26,9 +26,8 @@ Everything else is in the repository and checked by a script. The full ordered l
 7. **Confirm the rights to the artwork:** Estasoft holds the rights to the icon and banner in `.wordpress-org/`
    (they are not in the zip). Real vendor logos are used **only with each vendor's written permission**; the plugin
    ships none.
-8. **Retake screenshot 3** (Choose a system) from the final build: it still shows an earlier wording ("The connector
-   for this system is not in this release yet"). Look at the other five against the final screens as well
-   ([ASSETS.md](ASSETS.md)).
+8. **Look at the screenshots again** against the final screens (screenshot 3, Choose a system, was retaken on
+   3 Nov 2026; [ASSETS.md](ASSETS.md)).
 9. **Test on a real shop**, because the install test used a WooCommerce stand-in: WordPress 6.4 and the latest 7.x,
    PHP 8.1 and 8.4, HPOS on and off, classic and block checkout, every admin screen on 6.4 (older
    `@wordpress/*` packages), a screen reader, 200% zoom and a phone.

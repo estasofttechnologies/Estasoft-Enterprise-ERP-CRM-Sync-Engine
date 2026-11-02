@@ -4,6 +4,7 @@ import { __, sprintf } from '@wordpress/i18n';
 import type { ReactNode } from 'react';
 import type { SystemEntry } from '../../api/local-types';
 import { Card } from '../../components/Card';
+import { CodeBlock } from '../../components/CodeBlock';
 import { CopyButton } from '../../components/CopyButton';
 import { ExternalLink } from '../../components/ExternalLink';
 import type { ConnectShape } from '../../lib/connect';
@@ -34,6 +35,43 @@ export function renderStep( text: string ): ReactNode[] {
  */
 export function plainStep( text: string ): string {
 	return text.replace( /`([^`]+)`/g, '$1' );
+}
+
+/**
+ * The two OpenSSL commands that make the key pair a NetSuite administrator needs (step 4 of its guide says "the command shown here").
+ * They run on the administrator's own computer; the private key never needs to leave it except into the form below.
+ *
+ * @return The explanation, the commands and a button that copies them.
+ */
+export function KeyPairCommands() {
+	const commands =
+		'openssl ecparam -name prime256v1 -genkey -noout -out private.pem\nopenssl req -new -x509 -key private.pem -out public.pem -days 365';
+	return (
+		<>
+			<p className="estasoft-sync-muted">
+				{ __(
+					'Make the key pair on your own computer with OpenSSL. These two commands make an ES256 key, the default below. Upload public.pem to NetSuite and paste the contents of private.pem into the form. Choose PS256 only if you made an RSA key.',
+					'estasoft-erp-crm-sync-engine'
+				) }
+			</p>
+			<CodeBlock
+				label={ __(
+					'Commands that make the key pair',
+					'estasoft-erp-crm-sync-engine'
+				) }
+			>
+				{ commands }
+			</CodeBlock>
+			<CopyButton
+				small
+				text={ commands }
+				label={ __(
+					'Copy the commands',
+					'estasoft-erp-crm-sync-engine'
+				) }
+			/>
+		</>
+	);
 }
 
 export interface ConnectGuideProps {

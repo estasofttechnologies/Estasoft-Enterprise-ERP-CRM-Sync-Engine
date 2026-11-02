@@ -489,6 +489,12 @@ export function withConnector( row: CatalogEntry ): SystemEntry {
 		} ) ),
 		...( available
 			? extra
-			: { ...extra, steps: [], credential_fields: [] } ),
+			: {
+					...extra,
+					steps: [],
+					credential_fields: [],
+					unavailable_reason:
+						'SMACC has not published an API reference, so there is nothing for the plugin to connect to yet.',
+				} ),
 	};
 }

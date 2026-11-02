@@ -322,6 +322,22 @@ export interface CatalogVariant {
 	available?: boolean;
 	/** Only when the variant's document says why it cannot be chosen yet. */
 	unavailable_reason?: string;
+	/** How this product connects; it can differ from its family row (Sage 50 writes a file, Sage 300 signs in on the merchant's own server). Sent when the product's document says. */
+	connection_method?:
+		| 'key'
+		| 'own_app'
+		| 'cloud_app'
+		| 'server_login'
+		| 'export_file'
+		| 'none'
+		| 'unknown';
+	/** The hosts this product contacts (empty for a product that only talks to the address the person types). Sent when the product's document says. */
+	hosts?: string[];
+	terms_url?: string;
+	privacy_url?: string;
+	developer_url?: string;
+	/** This product's own steps; the family row holds the first product's. Sent when the product's document says. */
+	steps?: string[];
 	/** Empty when the variant is not available. Always sent by the server. */
 	credential_fields?: CredentialFieldDef[];
 	/** Always sent by the server. */

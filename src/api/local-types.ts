@@ -145,6 +145,8 @@ export interface CatalogVariant {
 	privacy_url?: string;
 	developer_url?: string;
 	credential_fields?: ConnectorField[];
+	auth_style?: CatalogEntry[ 'auth_style' ];
+	can_sign_in?: boolean;
 }
 
 /** What the connect screens read on top of a catalog row. */

@@ -67,7 +67,7 @@ The code is in `includes/Rest/`: `RestModule` registers the routes on `rest_api_
 | `POST /exports` | configure | `connection_id` (required) | `ExportFileInfo`; SYNC-EXP-001 when the file cannot be written, SYNC-EXP-002 when orders were left out (listed in `left_out`) |
 | `GET /exports/{id}/download` | manage | | The file as an attachment (`Content-Disposition: attachment`, `X-Content-Type-Options: nosniff`); only through this signed-in request, never by a web address |
 | `DELETE /exports/{id}` | configure | | `{ deleted: true }` |
-| `GET /catalog` | manage | | `CatalogEntry[]` |
+| `GET /catalog` | manage | | `CatalogEntry[]`; each row holds its form (`credential_fields`, `can_sign_in`, `auth_style`), and each entry of `variants` holds its own form and, when its document says, its own `connection_method`, `hosts`, `terms_url`, `privacy_url`, `developer_url` and `steps`. A secret field is always sent as type `password` (or `textarea` for a pasted key), never `text`. |
 | `GET /mappings/{type}` | manage | `connection_id?`; type is orders, customers, products, refunds, stock or tracking | `MappingSet` |
 | `PUT /mappings/{type}` | configure | `rules` (required, up to 500), `note?`, `connection_id?` | `MappingSet` (saves the draft) |
 | `GET /mappings/{type}/versions/{version}` | manage | `connection_id?` | `MappingVersion` with its rules; 404 |

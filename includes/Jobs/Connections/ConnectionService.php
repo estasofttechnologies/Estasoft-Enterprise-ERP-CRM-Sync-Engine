@@ -583,7 +583,7 @@ final class ConnectionService {
 						'id'        => $variant['id'],
 						'label'     => (string) ( $variant['label'] ?? $variant['id'] ),
 						'available' => $registry->has( $variant['id'] ),
-					) + ( isset( $variant['unavailable_reason'] ) && '' !== (string) $variant['unavailable_reason'] ? array( 'unavailable_reason' => (string) $variant['unavailable_reason'] ) : array() );
+					) + ( isset( $variant['unavailable_reason'] ) && '' !== (string) $variant['unavailable_reason'] ? array( 'unavailable_reason' => (string) $variant['unavailable_reason'] ) : array() ) + self::variantDetails( $variant );
 				}
 			}
 			$available = null !== $connector && $registry->has( $connector );
@@ -604,7 +604,7 @@ final class ConnectionService {
 		foreach ( $prepared as list( $row, $connector, $variants, $available, $selectable ) ) {
 			$method = (string) ( $row['connection_method'] ?? 'unknown' );
 			foreach ( $variants as $index => $variant ) {
-				$variants[ $index ] += self::formOf( $selectable && $variant['available'] ? $forms[ $variant['id'] ] ?? null : null, $method );
+				$variants[ $index ] += self::formOf( $selectable && $variant['available'] ? $forms[ $variant['id'] ] ?? null : null, (string) ( $variant['connection_method'] ?? $method ) );
 			}
 			$out[] = array(
 				'name'               => (string) $row['name'],
@@ -624,6 +624,29 @@ final class ConnectionService {
 				'steps'              => array_values( array_map( 'strval', is_array( $row['steps'] ?? null ) ? $row['steps'] : array() ) ),
 				'wave'               => (int) ( $row['wave'] ?? 0 ),
 			) + self::formOf( $selectable && null !== $connector ? $forms[ $connector ] ?? null : null, $method );
+		}
+		return $out;
+	}
+
+	/**
+	 * What a product of a family row says about itself: how it connects, the addresses it talks to, its legal and developer links and
+	 * its steps. A family row (Sage) holds the first product's text, so without these the screen of another product would show the
+	 * wrong steps and the wrong addresses. Only what the product's document gives is sent.
+	 *
+	 * @param array<string,mixed> $variant The variant as the catalog row holds it.
+	 * @return array<string,mixed>
+	 */
+	private static function variantDetails( array $variant ): array {
+		$out = array();
+		foreach ( array( 'connection_method', 'terms_url', 'privacy_url', 'developer_url' ) as $key ) {
+			if ( isset( $variant[ $key ] ) && is_string( $variant[ $key ] ) ) {
+				$out[ $key ] = $variant[ $key ];
+			}
+		}
+		foreach ( array( 'hosts', 'steps' ) as $key ) {
+			if ( isset( $variant[ $key ] ) && is_array( $variant[ $key ] ) ) {
+				$out[ $key ] = array_values( array_map( 'strval', array_filter( $variant[ $key ], 'is_scalar' ) ) );
+			}
 		}
 		return $out;
 	}

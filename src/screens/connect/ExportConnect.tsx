@@ -10,6 +10,7 @@ import { Callout } from '../../components/Callout';
 import { Card } from '../../components/Card';
 import { ErrorDetails } from '../../components/ErrorDetails';
 import { useAsyncAction } from '../../hooks/useAsyncAction';
+import { useKeepFocus } from '../../hooks/useKeepFocus';
 import {
 	defaultValues,
 	hasRequired,
@@ -92,6 +93,9 @@ export function ExportConnect( {
 		await reload();
 		onConnected( connection );
 	} );
+
+	// The form is switched off while it is saved; the keyboard stays where it was.
+	useKeepFocus( save.busy );
 
 	return (
 		<div className="estasoft-sync-stack">

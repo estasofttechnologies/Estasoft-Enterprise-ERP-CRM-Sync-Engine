@@ -54,7 +54,7 @@ or authority has to do it. **Done** = already true on the day this file was last
 | # | Step | Who | Status |
 | --- | --- | --- | --- |
 | D1 | Icon 128 and 256 px, banner 772 x 250 and 1544 x 500 px are in `.wordpress-org/`. | Tooling | **Done** |
-| D2 | Screenshots 1 to 6 are in `.wordpress-org/` (1280 x 960 PNG, sample shop). **Retake screenshot 3** from the final build (it shows an earlier wording of the Choose a system text) and look at the others once more ([ASSETS.md](ASSETS.md)). | Owner | Done, one to retake |
+| D2 | Screenshots 1 to 6 are in `.wordpress-org/` (1280 wide PNG, sample shop; screenshot 3 retaken on 3 Nov 2026). Look at them once more against the final build ([ASSETS.md](ASSETS.md)). | Owner | Done |
 | D3 | `php bin/check-readme.php --strict-assets` passes (it fails while any captioned screenshot is missing). | Tooling | **Done** |
 
 ## E. Version, tag and zip

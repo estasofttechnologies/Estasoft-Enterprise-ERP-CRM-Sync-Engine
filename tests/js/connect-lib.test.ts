@@ -5,6 +5,7 @@ import type { ConnectionTestResult } from '../../src/api/types';
 import {
 	defaultValues,
 	entryForConnector,
+	fieldKind,
 	hasRequired,
 	isConnectedNow,
 	isSelectable,
@@ -118,6 +119,24 @@ describe( 'redirect address', () => {
 		).toBe(
 			'https://x.example/?rest_route=/estasoft-sync/v1/oauth/callback'
 		);
+	} );
+} );
+
+describe( 'kind of input', () => {
+	it( 'draws a secret as a password box even when the connector says text', () => {
+		expect( fieldKind( field( { secret: true, type: 'text' } ) ) ).toBe(
+			'password'
+		);
+		expect( fieldKind( field( { secret: true } ) ) ).toBe( 'password' );
+	} );
+
+	it( 'keeps every other type', () => {
+		expect( fieldKind( field( { type: 'text' } ) ) ).toBe( 'text' );
+		expect( fieldKind( field( { secret: true, type: 'textarea' } ) ) ).toBe(
+			'textarea'
+		);
+		expect( fieldKind( field( { type: 'url' } ) ) ).toBe( 'url' );
+		expect( fieldKind( field( {} ) ) ).toBe( 'text' );
 	} );
 } );
 

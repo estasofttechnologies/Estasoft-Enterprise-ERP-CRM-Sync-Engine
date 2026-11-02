@@ -301,7 +301,7 @@ export function ChooseSystem( {
 				{ sprintf(
 					/* translators: %d: number of systems */
 					__(
-						'All %d systems are official connectors, and every feature is free. Each row says how you connect and what you need first, because that differs: some need only a key, some need an app that you create, and a few use a file. Every connector is built from the vendor’s public documentation and checked with recorded examples, and none has been tried with a live account yet, so use Shadow mode to check the results before anything is sent. SMACC is listed but cannot be selected, because SMACC publishes no way to connect yet. You can add more than one system later. Is yours missing? See',
+						'All %d systems are official connectors, and every feature is free. Each row says how you connect and what you need first, because that differs: some need only a key, some need an app that you create, and a few use a file. Every connector is built from the vendor’s public documentation and checked with recorded examples, and none has been tried with a live account yet, so use Shadow mode to check the results before anything is sent. A system that cannot be selected yet says why in its row. You can add more than one system later. Is yours missing? See',
 						'estasoft-erp-crm-sync-engine'
 					),
 					entries.length
@@ -391,6 +391,7 @@ export function ChooseSystem( {
 
 			{ visible.length === 0 ? (
 				<EmptyState
+					as="h2"
 					title={ __(
 						'No system matches',
 						'estasoft-erp-crm-sync-engine'
@@ -524,6 +525,19 @@ export function ChooseSystem( {
 												<span className="estasoft-sync-muted estasoft-sync-block">
 													{ entry.needs }
 												</span>
+												{ ! isSelectable( entry ) &&
+												entry.unavailable_reason ? (
+													<span className="estasoft-sync-muted estasoft-sync-block">
+														{ sprintf(
+															/* translators: %s: why the system cannot be chosen yet */
+															__(
+																'Cannot be selected yet: %s',
+																'estasoft-erp-crm-sync-engine'
+															),
+															entry.unavailable_reason
+														) }
+													</span>
+												) : null }
 												{ ! entry.connector &&
 												variantsOf( entry ).length ===
 													0 &&

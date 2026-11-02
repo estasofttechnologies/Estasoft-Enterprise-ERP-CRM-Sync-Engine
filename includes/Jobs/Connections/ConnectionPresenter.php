@@ -136,7 +136,8 @@ final class ConnectionPresenter {
 			'required' => $field->required,
 			'hint'     => $field->hint,
 			'default'  => $secret ? '' : $field->default,
-			'type'     => $field->type,
+			// A secret is never drawn as a plain text box, whatever the connector declared: the browser would show it while it is typed.
+			'type'     => $field->secret && 'text' === $field->type ? 'password' : $field->type,
 			'options'  => $field->options,
 			'group'    => $field->group,
 		);

@@ -563,6 +563,47 @@ final class ConnectionServiceTest extends JobsTestCase {
 		$this->assertSame( 'export_file', $catalog[1]['auth_style'] );
 	}
 
+	public function test_a_variant_carries_its_own_way_to_connect_steps_hosts_and_links(): void {
+		$service = $this->serviceWith(
+			array(
+				array(
+					'name'              => 'Family',
+					'type'              => 'erp',
+					'connector'         => null,
+					'connection_method' => 'own_app',
+					'hosts'             => array( 'first.example' ),
+					'steps'             => array( 'Sign in at the first product.' ),
+					'variants'          => array(
+						array(
+							'id'                => 'fake',
+							'label'             => 'Second product',
+							'connection_method' => 'server_login',
+							'hosts'             => array(),
+							'terms_url'         => '',
+							'privacy_url'       => 'https://example.test/privacy',
+							'developer_url'     => 'https://example.test/dev',
+							'steps'             => array( 'Ask for the address.', 'Enter the user.' ),
+						),
+						array( 'id' => 'nope', 'label' => 'Bare' ),
+					),
+				),
+			)
+		);
+		$variants = $service->catalog()[0]['variants'];
+
+		$this->assertSame( 'server_login', $variants[0]['connection_method'] );
+		$this->assertSame( array(), $variants[0]['hosts'], 'An empty list stays empty: the product talks only to the address the person types.' );
+		$this->assertSame( array( 'Ask for the address.', 'Enter the user.' ), $variants[0]['steps'] );
+		$this->assertSame( '', $variants[0]['terms_url'] );
+		$this->assertSame( 'https://example.test/privacy', $variants[0]['privacy_url'] );
+		$this->assertSame( 'https://example.test/dev', $variants[0]['developer_url'] );
+		$this->assertSame( 'server_login', $variants[0]['auth_style'], 'The style follows the product, not the family row.' );
+
+		foreach ( array( 'connection_method', 'hosts', 'steps', 'terms_url', 'privacy_url', 'developer_url' ) as $key ) {
+			$this->assertArrayNotHasKey( $key, $variants[1], 'Nothing is made up for a product whose document says nothing.' );
+		}
+	}
+
 	public function test_the_forms_are_kept_in_a_transient_for_ten_minutes_and_never_hold_a_secret(): void {
 		global $wpdb;
 		$like = $wpdb->esc_like( '_transient_estasoft_sync_catalog_forms_' ) . '%';

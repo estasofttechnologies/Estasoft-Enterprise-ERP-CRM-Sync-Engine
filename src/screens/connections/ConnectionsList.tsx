@@ -21,7 +21,7 @@ import { StateChip } from '../../components/StateChip';
 import { StatusBadge } from '../../components/StatusBadge';
 import { useResource } from '../../hooks/useResource';
 import type { SystemEntry } from '../../api/local-types';
-import { entryForConnector, readSignIn, shapeOf } from '../../lib/connect';
+import { entryForConnector, readSignIn, shapeOfEntry } from '../../lib/connect';
 import { formatDay } from '../../lib/format';
 import { systemName } from '../../lib/text';
 import { typeLabel } from '../../lib/catalog';
@@ -514,7 +514,7 @@ function ExpiryNotice( {
 	const days = daysUntil( connection.credential_expires_at ?? now, now );
 	const date = formatDay( connection.credential_expires_at, cfg );
 	const expired = days < 0;
-	const shape = shapeOf( entry?.connection_method );
+	const shape = shapeOfEntry( entry );
 	const word =
 		shape === 'own_app'
 			? __( 'sign-in', 'estasoft-erp-crm-sync-engine' )

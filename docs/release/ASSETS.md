@@ -34,7 +34,7 @@ Rules that WordPress.org enforces or reviewers check:
 | --- | --- |
 | `icon-128x128.png`, `icon-256x256.png` | A white "E" with a notch on a navy rounded square (the Estasoft mark). PNG with transparent corners. |
 | `banner-1544x500.png`, `banner-772x250.png` | Sand background on the left with the full official name in navy, the line "Keep WooCommerce in step with your ERP, accounting system or CRM. Checkout never waits.", and "Orders, customers, stock, tracking"; a navy panel on the right with an illustrative dashboard card (312 synced today, 14 waiting, 5 need a person, and a short list of orders with their states). The orders are invented (#10494 and so on): it is artwork, not a claim about real results. No vendor logo, no price. |
-| `screenshot-1.png` to `screenshot-6.png` | 1280 x 960 PNG, 98 to 131 KB each. Taken in a browser from the plugin inside WordPress 6.4.3 with the sample shop "Cedar & Stone Supply" (design board S03), default admin colours, the admin menu visible. The Connection card on screenshot 1 shows a sample address. |
+| `screenshot-1.png` to `screenshot-6.png` | 1280 wide PNG (screenshot 3 is 1280 x 1160, 225 KB; the others 1280 x 960, 98 to 131 KB). Taken in a browser from the plugin inside WordPress 6.4.3 with the sample shop "Cedar & Stone Supply" (design board S03), default admin colours, the admin menu visible. The Connection card on screenshot 1 shows a sample address. |
 
 Rights to the artwork: the icon is the Estasoft E from the owner's own brand file; the owner confirms that Estasoft
 holds the rights to the icon and banner before submission ([OWNER-ACTIONS.md](OWNER-ACTIONS.md), item 7).
@@ -47,22 +47,20 @@ The captions in `readme.txt` match these files (looked at on 2 Nov 2026).
 | --- | --- | --- |
 | 1 | The dashboard: what synced, what is waiting, what needs a person. | Dashboard with the four numbers (312 synced today, 14 waiting, 5 need attention, oldest waiting 46 minutes), the Needs attention list with five entries, the Connection card (Odoo) and the queue bars. |
 | 2 | Needs attention: failed orders grouped by cause, fixed in one step. | Queue, Needs attention: "Product not found in Odoo" with three orders and the buttons Map, Retry 3 orders and Skip 3 orders; the next group begins below. |
-| 3 | Choose your system from 34, in one list. | Choose a system: the filter tabs (All 34, ERP 11, Accounting 17, CRM 6, In the UAE 11), the search field, three suggestions for the UAE with Odoo selected, and the start of the accounting list. |
+| 3 | Choose from 34 systems: how you connect, what you need first. | Choose a system with the filter "In the UAE" (All 34, ERP 11, Accounting 17, CRM 6, In the UAE 11), the search field, the explanation, and the five accounting systems of the UAE: each row says how you connect (your own app then sign in, paste a key, export file) and what you need first, carries the tag "Not yet tested with a live account", and Xero is selected. |
 | 4 | Preview exactly what your system will receive before anything is sent. | Mapping with the "Preview with a real order" dialog open: "What Odoo will receive. Preview only. Nothing is sent." and the JSON of the order. |
 | 5 | Reconciliation: a nightly check lists every order that differs between WooCommerce and your system, ready to repair. | Reconciliation: last check, compared, match and differences, and three differences with Repair and Ignore buttons. |
 | 6 | Settings: email notifications, performance, access and a readiness check, with no usage tracking. | Settings, Notifications tab, with the line "This plugin has no usage tracking and talks only to the system you connect, and only after you set it up." |
 
-**Retake screenshot 3 before submission.** It still shows the wording of an earlier build ("Systems marked as not in
-this release can be read about but not connected yet", and "The connector for this system is not in this release
-yet" on the first row), which is no longer true: 35 connectors can be selected. Take it again from the final build,
-at about 1440 px browser width, in the default admin colour scheme, with Odoo selected, and keep the file name and
-caption. The others still match the screens; look at them once more against the final build.
+Screenshot 3 was retaken on 3 Nov 2026 from the build with the 34-system Choose a system screen (the method line, the
+"Not yet tested" tag and the reason on a system that cannot be selected). The others still match the screens; look at
+them once more against the final build.
 
 If a final screen differs from its caption, change the caption in `readme.txt` (keep the numbering) rather than the
 other way round, then run `php bin/check-readme.php --strict-assets`.
 
 ## Before submission
 
-1. Retake screenshot 3 as above and compress it (for example `oxipng -o4`), keeping each file under about 1 MB.
+1. Look at screenshots 1, 2, 4, 5 and 6 once more against the final build; compress any new file (for example `oxipng -o4`), keeping each under about 1 MB.
 2. Run `php bin/check-readme.php --strict-assets`. It fails while any captioned screenshot is missing.
 3. Open the plugin page preview after the first deploy and check the banner crops cleanly at both sizes.

@@ -38,7 +38,7 @@ import {
 	entryForConnector,
 	readSignIn,
 	secretWord,
-	shapeOf,
+	shapeOfEntry,
 } from '../../lib/connect';
 import { formatDay, formatDuration } from '../../lib/format';
 import { catalogMessage, errorText, systemName } from '../../lib/text';
@@ -123,7 +123,7 @@ export function ConnectionDetail( { id }: { id: number } ) {
 		catalog.data,
 		connection?.connector ?? ''
 	);
-	const shape = shapeOf( entry?.connection_method );
+	const shape = shapeOfEntry( entry );
 	const signIn = readSignIn( route.params, route.segments );
 	const onboarding = useResource(
 		( signal ) => api.onboarding.get( signal ),

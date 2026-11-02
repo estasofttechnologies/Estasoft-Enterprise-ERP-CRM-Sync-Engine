@@ -1,4 +1,6 @@
 import { act, render, screen } from '@testing-library/react';
+import { useRef } from '@wordpress/element';
+import { useKeepFocus } from '../../src/hooks/useKeepFocus';
 import { useResource } from '../../src/hooks/useResource';
 
 function Probe( {
@@ -142,5 +144,69 @@ describe( 'useResource', () => {
 			resolvers[ 0 ]( 1 );
 		} );
 		expect( screen.getByTestId( 'state' ) ).toHaveTextContent( '2' );
+	} );
+} );
+
+/** What a browser does with a control that is switched off while it has focus: the focus falls to the page. */
+function dropFocus() {
+	document.body.setAttribute( 'tabindex', '-1' );
+	document.body.focus();
+	document.body.removeAttribute( 'tabindex' );
+}
+
+function KeepProbe( { busy, gone }: { busy: boolean; gone?: boolean } ) {
+	const result = useRef< HTMLDivElement >( null );
+	useKeepFocus( busy, result );
+	return (
+		<div>
+			{ gone ? null : (
+				<button type="button" disabled={ busy }>
+					Test connection
+				</button>
+			) }
+			<div ref={ result } tabIndex={ -1 } data-testid="result">
+				Result
+			</div>
+		</div>
+	);
+}
+
+describe( 'useKeepFocus', () => {
+	it( 'puts the focus back on the button when the request is over', () => {
+		const { rerender } = render( <KeepProbe busy={ false } /> );
+		const button = screen.getByRole( 'button', {
+			name: 'Test connection',
+		} );
+		button.focus();
+		rerender( <KeepProbe busy /> );
+		dropFocus();
+		expect( document.body ).toHaveFocus();
+		rerender( <KeepProbe busy={ false } /> );
+		expect( button ).toHaveFocus();
+	} );
+
+	it( 'goes to the fallback when the control is gone', () => {
+		const { rerender } = render( <KeepProbe busy={ false } /> );
+		screen.getByRole( 'button', { name: 'Test connection' } ).focus();
+		rerender( <KeepProbe busy /> );
+		dropFocus();
+		rerender( <KeepProbe busy={ false } gone /> );
+		expect( screen.getByTestId( 'result' ) ).toHaveFocus();
+	} );
+
+	it( 'leaves focus alone when the person moved it on purpose, or nothing was running', () => {
+		const { rerender } = render( <KeepProbe busy={ false } /> );
+		const button = screen.getByRole( 'button', {
+			name: 'Test connection',
+		} );
+		button.focus();
+		rerender( <KeepProbe busy /> );
+		screen.getByTestId( 'result' ).focus();
+		rerender( <KeepProbe busy={ false } /> );
+		expect( screen.getByTestId( 'result' ) ).toHaveFocus();
+
+		dropFocus();
+		rerender( <KeepProbe busy={ false } /> );
+		expect( document.body ).toHaveFocus();
 	} );
 } );

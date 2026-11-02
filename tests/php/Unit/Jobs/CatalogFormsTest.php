@@ -126,6 +126,14 @@ final class CatalogFormsTest extends TestCase {
 		$this->assertStringNotContainsString( 'password-default', (string) json_encode( $fields ) );
 	}
 
+	public function test_a_secret_that_says_text_is_sent_as_a_password_field(): void {
+		$fields = ( new CatalogForms( fn() => $this->registry() ) )->forConnectors( array( 'odd-fields' ) )['odd-fields']['credential_fields'];
+		$by     = array_column( $fields, 'type', 'name' );
+		$this->assertSame( 'password', $by['token'], 'A secret declared as text would be shown in clear while it is typed.' );
+		$this->assertSame( 'password', $by['pass'] );
+		$this->assertSame( 'select', $by['region'], 'Other types stay as they are.' );
+	}
+
 	public function test_only_the_connectors_asked_for_are_built_and_a_broken_or_unknown_one_is_left_out(): void {
 		$forms = ( new CatalogForms( fn() => $this->registry() ) )->forConnectors( array( 'reference-books', 'broken', 'nobody', '' ) );
 		$this->assertSame( array( 'reference-books' ), array_keys( $forms ) );

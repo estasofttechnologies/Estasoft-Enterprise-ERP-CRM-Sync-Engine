@@ -277,7 +277,7 @@ In this plugin's support forum on WordPress.org. Bug reports and connector reque
 
 1. The dashboard: what synced, what is waiting, what needs a person.
 2. Needs attention: failed orders grouped by cause, fixed in one step.
-3. Choose your system from 34, in one list.
+3. Choose from 34 systems: how you connect, what you need first.
 4. Preview exactly what your system will receive before anything is sent.
 5. Reconciliation: a nightly check lists every order that differs between WooCommerce and your system, ready to repair.
 6. Settings: email notifications, performance, access and a readiness check, with no usage tracking.

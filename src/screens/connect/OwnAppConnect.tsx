@@ -11,6 +11,7 @@ import { Card } from '../../components/Card';
 import { Busy } from '../../components/EmptyState';
 import { ErrorDetails } from '../../components/ErrorDetails';
 import { useAsyncAction } from '../../hooks/useAsyncAction';
+import { useKeepFocus } from '../../hooks/useKeepFocus';
 import {
 	defaultValues,
 	hasRequired,
@@ -224,6 +225,9 @@ export function OwnAppConnect( {
 		await signIn.run( target.id );
 	} );
 	const busy = start.busy || signIn.busy;
+	const summary = useRef< HTMLDivElement >( null );
+	// The form is switched off while the app is saved; the keyboard stays where it was, or goes to the result.
+	useKeepFocus( busy, summary );
 	const missing = ! hasRequired(
 		inputs.map( ( field ) =>
 			field.secret && held.has( field.name )
@@ -236,11 +240,13 @@ export function OwnAppConnect( {
 	if ( connection && connection.status === 'active' ) {
 		return (
 			<div className="estasoft-sync-stack">
-				<ConnectedSummary
-					connection={ connection }
-					fields={ allFields }
-					system={ system }
-				/>
+				<div ref={ summary } tabIndex={ -1 }>
+					<ConnectedSummary
+						connection={ connection }
+						fields={ allFields }
+						system={ system }
+					/>
+				</div>
 			</div>
 		);
 	}

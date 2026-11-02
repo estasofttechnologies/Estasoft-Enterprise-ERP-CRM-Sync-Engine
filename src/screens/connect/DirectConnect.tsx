@@ -12,6 +12,7 @@ import { Card } from '../../components/Card';
 import { Busy } from '../../components/EmptyState';
 import { KeyLineBlock } from '../../components/ErrorDetails';
 import { useFormat } from '../../components/FormatContext';
+import { useKeepFocus } from '../../hooks/useKeepFocus';
 import { formatDay } from '../../lib/format';
 import type { ConnectShape } from '../../lib/connect';
 import {
@@ -23,7 +24,7 @@ import {
 } from '../../lib/connect';
 import { catalogMessage } from '../../lib/text';
 import { ConnectOutcome, errorCodeOf, shownTestOf } from './ConnectOutcome';
-import { ConnectGuide, DataDisclosure } from './ConnectParts';
+import { ConnectGuide, DataDisclosure, KeyPairCommands } from './ConnectParts';
 import { CredentialForm } from './CredentialForm';
 import { OrganisationStep } from './OrganisationStep';
 import {
@@ -40,6 +41,8 @@ export interface ConnectProps {
 	onConnected: ( connection: Connection ) => void;
 	/** The connection that already exists for this system, if setup was resumed. */
 	existing?: Connection | null;
+	/** A calm line above the form, for a system whose way to connect is still to be confirmed. */
+	note?: string;
 }
 
 /**
@@ -361,6 +364,7 @@ type Phase = 'form' | 'testing' | 'result';
  * @param props.shape
  * @param props.onConnected
  * @param props.existing
+ * @param props.note
  * @return The screen.
  */
 export function DirectConnect( {
@@ -368,6 +372,7 @@ export function DirectConnect( {
 	shape,
 	onConnected,
 	existing,
+	note,
 }: ConnectProps & { shape: 'key' | 'cloud_app' | 'server_login' } ) {
 	const { canConfigure, boot } = useApp();
 	const { status, reload } = useStatus();
@@ -395,6 +400,9 @@ export function DirectConnect( {
 	}, [ existing ] );
 	const abort = useRef< AbortController | null >( null );
 	const form = useRef< HTMLFormElement >( null );
+	const summary = useRef< HTMLDivElement >( null );
+	// The form is switched off while the test runs; the keyboard stays where it was, or goes to the result.
+	useKeepFocus( phase === 'testing', summary );
 	const keyMissing = Boolean( status?.encryption_key_missing );
 
 	const set = ( name: string, value: string ) => {
@@ -497,11 +505,13 @@ export function DirectConnect( {
 	if ( saved ) {
 		return (
 			<div className="estasoft-sync-stack">
-				<ConnectedSummary
-					connection={ saved }
-					fields={ fields }
-					system={ system }
-				/>
+				<div ref={ summary } tabIndex={ -1 }>
+					<ConnectedSummary
+						connection={ saved }
+						fields={ fields }
+						system={ system }
+					/>
+				</div>
 				{ shape === 'cloud_app' && ! existing ? (
 					<OrganisationStep
 						connection={ saved }
@@ -540,6 +550,7 @@ export function DirectConnect( {
 					) : null }
 				</Callout>
 			) : null }
+			{ note ? <Callout tone="info">{ note }</Callout> : null }
 			{ shape === 'server_login' ? (
 				<Callout tone="warning">
 					<p className="estasoft-sync-strong">
@@ -584,6 +595,8 @@ export function DirectConnect( {
 									'estasoft-erp-crm-sync-engine'
 								) }
 							</p>
+						) : entry.connector === 'netsuite' ? (
+							<KeyPairCommands />
 						) : null
 					}
 				/>

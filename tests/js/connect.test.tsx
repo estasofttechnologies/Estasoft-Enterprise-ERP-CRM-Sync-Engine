@@ -113,8 +113,60 @@ describe( 'Choose a system', () => {
 			within( row ).getByText( /SMACC publishes no API yet/ )
 		).toBeInTheDocument();
 		expect(
+			within( row ).getByText(
+				/Cannot be selected yet: SMACC has not published an API reference/
+			)
+		).toBeInTheDocument();
+		expect(
 			within( row ).queryByText( 'Not yet tested with a live account' )
 		).not.toBeInTheDocument();
+	} );
+
+	it( 'says why any system the catalog marks as not available cannot be selected', async () => {
+		await renderApp( {
+			route: '/connections/add',
+			wrap: patchJson(
+				( req ) => req.route === '/catalog' && req.method === 'GET',
+				( data ) =>
+					( data as unknown as Record< string, unknown >[] ).map(
+						( entry ) =>
+							entry.name === 'Pennylane'
+								? {
+										...entry,
+										available: false,
+										unavailable_reason:
+											'Pennylane requires OAuth for production integrations.',
+									}
+								: entry
+					) as unknown as Record< string, unknown >
+			),
+		} );
+		const row = await screen.findByRole( 'row', { name: /Pennylane/ } );
+		expect(
+			within( row ).getByRole( 'button', {
+				name: 'Pennylane is not available yet',
+			} )
+		).toBeDisabled();
+		expect(
+			within( row ).getByText(
+				'Cannot be selected yet: Pennylane requires OAuth for production integrations.'
+			)
+		).toBeInTheDocument();
+	} );
+
+	it( 'keeps the heading order when a search finds nothing', async () => {
+		const { user } = await renderApp( { route: '/connections/add' } );
+		await user.type(
+			await screen.findByRole( 'searchbox', { name: 'Find a system' } ),
+			'zzzz'
+		);
+		expect(
+			await screen.findByRole( 'heading', {
+				level: 2,
+				name: 'No system matches',
+			} )
+		).toBeInTheDocument();
+		await expectNoA11yViolations();
 	} );
 
 	it( 'asks which product a row holds and goes on with the product chosen', async () => {
@@ -306,6 +358,107 @@ describe( 'Connect with a key', () => {
 		expect(
 			screen.queryByRole( 'button', { name: 'Test connection' } )
 		).not.toBeInTheDocument();
+	} );
+} );
+
+describe( 'A product whose way to connect is still to be confirmed', () => {
+	it( 'draws the form of its connector, from the sign-in style the server sends, with a calm note above', async () => {
+		const field = ( name: string, label: string, over = {} ) => ( {
+			name,
+			label,
+			secret: false,
+			required: true,
+			hint: '',
+			default: '',
+			type: 'text',
+			options: [],
+			group: 'connection',
+			...over,
+		} );
+		const { user } = await renderApp( {
+			route: '/connections/add',
+			wrap: patchJson(
+				( req ) => req.route === '/catalog' && req.method === 'GET',
+				( data ) =>
+					( data as unknown as Record< string, unknown >[] ).map(
+						( entry ) =>
+							entry.name === 'Sage 200, Sage 300 and Sage X3'
+								? {
+										...entry,
+										variants: (
+											entry.variants as Record<
+												string,
+												unknown
+											>[]
+										 ).map( ( variant ) =>
+											variant.id === 'sagex3'
+												? {
+														...variant,
+														auth_style: 'basic',
+														can_sign_in: false,
+														credential_fields: [
+															field(
+																'address',
+																'Web service address',
+																{ type: 'url' }
+															),
+															field(
+																'username',
+																'Syracuse user'
+															),
+															field(
+																'password',
+																'Password',
+																{
+																	secret: true,
+																	type: 'password',
+																}
+															),
+														],
+													}
+												: variant
+										),
+									}
+								: entry
+					) as unknown as Record< string, unknown >
+			),
+		} );
+		await connect( user, 'Sage 200, Sage 300 and Sage X3', 'Sage X3' );
+		expect(
+			await screen.findByLabelText( 'Web service address' )
+		).toBeInTheDocument();
+		expect( screen.getByLabelText( 'Password' ) ).toHaveAttribute(
+			'type',
+			'password'
+		);
+		expect(
+			screen.getByText( /depends on the version you run/ )
+		).toBeInTheDocument();
+		expect(
+			screen.getByText( /must be reachable from this website/ )
+		).toBeInTheDocument();
+		expect(
+			screen.getByRole( 'button', { name: 'Test connection' } )
+		).toBeDisabled();
+	} );
+} );
+
+describe( 'Connect to NetSuite', () => {
+	it( 'shows the commands that step 4 points to, with a button that copies them', async () => {
+		const { user } = await renderApp( { route: '/connections/add' } );
+		await connect( user, 'NetSuite' );
+		expect(
+			await screen.findByRole( 'region', {
+				name: 'Commands that make the key pair',
+			} )
+		).toHaveTextContent( /openssl ecparam -name prime256v1 -genkey/ );
+		expect(
+			screen.getByRole( 'button', { name: 'Copy the commands' } )
+		).toBeInTheDocument();
+		expect(
+			screen.getByText( /Choose PS256 only if you made an RSA key/ )
+		).toBeInTheDocument();
+		await expectNoA11yViolations();
 	} );
 } );
 

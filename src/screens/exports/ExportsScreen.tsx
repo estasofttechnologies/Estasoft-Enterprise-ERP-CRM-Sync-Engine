@@ -1,5 +1,5 @@
 import { speak } from '@wordpress/a11y';
-import { useState } from '@wordpress/element';
+import { useRef, useState } from '@wordpress/element';
 import { __, _n, sprintf } from '@wordpress/i18n';
 import { ApiError } from '../../api/client';
 import { ERROR_CATALOG } from '../../api/errors';
@@ -23,6 +23,7 @@ import { PageHeader } from '../../components/PageHeader';
 import { ResponsiveTable } from '../../components/ResponsiveTable';
 import { StateChip } from '../../components/StateChip';
 import { useAsyncAction } from '../../hooks/useAsyncAction';
+import { useKeepFocus } from '../../hooks/useKeepFocus';
 import { useResource } from '../../hooks/useResource';
 import { entryForConnector } from '../../lib/connect';
 import { downloadBlob } from '../../lib/download';
@@ -97,6 +98,9 @@ export function ExportsScreen( { id }: { id: number } ) {
 		} );
 		await list.reload();
 	} );
+	// The button is switched off while the file is made, and again when no order is left to put in one: the keyboard goes to the result.
+	const madeBox = useRef< HTMLDivElement >( null );
+	useKeepFocus( create.busy, madeBox );
 	const download = useAsyncAction(
 		async ( file: ExportFileInfo, part?: number ) => {
 			const name = part
@@ -301,33 +305,35 @@ export function ExportsScreen( { id }: { id: number } ) {
 					</Callout>
 				) : null }
 				{ made && ! createFailure ? (
-					<Callout tone="success" role="status">
-						<p className="estasoft-sync-strong">
-							{ sprintf(
-								/* translators: 1: file name, 2: number of orders */
-								_n(
-									'%1$s is ready, with %2$d order.',
-									'%1$s is ready, with %2$d orders.',
-									made.orders,
-									'estasoft-erp-crm-sync-engine'
-								),
-								made.filename,
-								made.orders
-							) }
-						</p>
-						<p>
-							<Btn
-								small
-								icon="download"
-								onClick={ () => void download.run( made ) }
-							>
-								{ __(
-									'Download',
-									'estasoft-erp-crm-sync-engine'
+					<div ref={ madeBox } tabIndex={ -1 }>
+						<Callout tone="success" role="status">
+							<p className="estasoft-sync-strong">
+								{ sprintf(
+									/* translators: 1: file name, 2: number of orders */
+									_n(
+										'%1$s is ready, with %2$d order.',
+										'%1$s is ready, with %2$d orders.',
+										made.orders,
+										'estasoft-erp-crm-sync-engine'
+									),
+									made.filename,
+									made.orders
 								) }
-							</Btn>
-						</p>
-					</Callout>
+							</p>
+							<p>
+								<Btn
+									small
+									icon="download"
+									onClick={ () => void download.run( made ) }
+								>
+									{ __(
+										'Download',
+										'estasoft-erp-crm-sync-engine'
+									) }
+								</Btn>
+							</p>
+						</Callout>
+					</div>
 				) : null }
 				{ madeLeftOut.length > 0 ? (
 					<Callout tone="warning" role="status">

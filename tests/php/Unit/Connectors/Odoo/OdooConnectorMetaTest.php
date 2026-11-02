@@ -71,6 +71,7 @@ final class OdooConnectorMetaTest extends OdooTestCase {
 		}
 		$this->assertSame( array( 'address', 'database', 'user', 'api_key', 'company' ), array_keys( $byName ) );
 		$this->assertTrue( $byName['api_key']->secret );
+		$this->assertSame( 'password', $byName['api_key']->type, 'The key is drawn as a password box, so the browser does not show it while it is typed.' );
 		$this->assertTrue( $byName['api_key']->required );
 		foreach ( array( 'address', 'database', 'user', 'company' ) as $plain ) {
 			$this->assertFalse( $byName[ $plain ]->secret, $plain );

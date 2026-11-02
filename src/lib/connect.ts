@@ -40,6 +40,45 @@ export function shapeOf( method: string | undefined ): ConnectShape | null {
 }
 
 /**
+ * Which connect screen a catalog row (with its product chosen) uses. A way to connect that is still "to be confirmed" has no screen of
+ * its own, but a system whose connector is installed and sends its own form (Sage X3) is drawn from the sign-in style of that
+ * connector, so the person is not left at a dead end.
+ *
+ * @param entry Catalog row as it reads once the product is chosen, or undefined.
+ * @return The shape, or null when there is nothing to draw (no way to connect, or no form).
+ */
+export function shapeOfEntry(
+	entry: SystemEntry | undefined
+): ConnectShape | null {
+	const byMethod = shapeOf( entry?.connection_method );
+	if (
+		byMethod ||
+		! entry ||
+		entry.connection_method !== 'unknown' ||
+		! entry.connector ||
+		inputFields( entry.credential_fields ?? [] ).length === 0
+	) {
+		return byMethod;
+	}
+	switch ( entry.auth_style ) {
+		case 'key':
+			return 'key';
+		case 'basic':
+		case 'server_login':
+			return 'server_login';
+		case 'oauth_authorization_code':
+			return 'own_app';
+		case 'oauth_client_credentials':
+		case 'oauth_jwt_bearer':
+			return 'cloud_app';
+		case 'export_file':
+			return 'export_file';
+		default:
+			return null;
+	}
+}
+
+/**
  * The way to connect of a product that holds several, when the catalog row does not say. These two
  * follow the connection-methods spec (Sage 50 is a desktop program, Sage 300 signs in on the
  * merchant's own web server); the catalog answer wins over this table.
@@ -102,6 +141,8 @@ export function resolveSystem(
 		privacy_url: chosen.privacy_url ?? entry.privacy_url,
 		developer_url: chosen.developer_url ?? entry.developer_url,
 		credential_fields: chosen.credential_fields ?? entry.credential_fields,
+		auth_style: chosen.auth_style ?? entry.auth_style,
+		can_sign_in: chosen.can_sign_in ?? entry.can_sign_in,
 	};
 }
 
@@ -152,7 +193,8 @@ export function isDisplayField( field: ConnectorField ): boolean {
  * @return The input kind; `password` for a secret that does not say.
  */
 export function fieldKind( field: ConnectorField ): CredentialFieldType {
-	if ( field.type ) {
+	// A secret is never drawn as a plain text box, whatever the connector says: the browser would show it as it is typed.
+	if ( field.type && ! ( field.secret && field.type === 'text' ) ) {
 		return field.type;
 	}
 	return field.secret ? 'password' : 'text';
