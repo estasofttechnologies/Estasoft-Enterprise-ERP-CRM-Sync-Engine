@@ -56,7 +56,7 @@ A **module** implements `ModuleInterface`: `services(Container)` registers lazil
 | `Core\Installer::activate/deactivate/uninstall` | `Core/` | `Core` | `Lifecycle`, `uninstall.php` |
 | Hooks `estasoft_sync_*` | spec section 8 | | add-ons |
 
-Repository and service method names are listed in `docs/ARCHITECTURE.md` section "Core services" below, and are the contract for the modules built later.
+Repository and service method names are listed in the section "Core services" below; `docs/core-services.md` is the full reference (container keys, every public method, hooks) and is the contract for the modules built later.
 
 ## Core services (names the other modules call)
 
@@ -69,10 +69,12 @@ All in `Estasoft\SyncEngine\Core\...`. Methods return domain objects or plain ar
 - `Repositories\IdMapRepository`, `StateRepository`, `IdempotencyRepository`, `ReconRepository`.
 - `Settings`: typed getters with defaults and validation (`Settings::get()` returns the shape of `Settings` in `types.ts`), `update(array)`.
 - `Capabilities`: `MANAGE = 'estasoft_sync_manage'`, `CONFIGURE = 'estasoft_sync_configure'`; `grant()`, `revoke()`.
-- `Queue\Enqueuer::enqueue(EntityType, string $entityId, string $event, ?int $connectionId = null): ?int`. Never throws; failure is logged.
+- `Queue\Enqueuer::enqueue(EntityType, string $entityId, string $event, ?int $connectionId = null, array $meta = []): ?int`. Never throws; failure is logged. `$meta` keys: `partition` (a refund passes `order:{parent id}`), `label`, `customer`, `total_minor`, `currency`, `search`.
 - `Queue\Worker::run(int $maxSeconds = 20, int $concurrency = 2): WorkerReport`.
-- `Queue\ItemProcessor::process(Item): void` (build payload, find existing, send, classify, write result).
+- `Queue\ItemProcessor::process(Item): Outcome` (build payload, find existing, send, classify, write result; `Outcome` says what happened so the worker can count it).
 - `Logging\Logger`: `info/warning/error(string $message, array $context)` with redaction.
+
+Modules add recurring background tasks through the filter `estasoft_sync_scheduled_tasks` (a map of hook name to interval in seconds, 60 or more; the module also adds the handler for that hook). Modules that write order, product or user meta add the keys through the filter `estasoft_sync_meta_keys( array $keys, string $kind )` so uninstall can remove them.
 
 ## Mapping rule model
 
