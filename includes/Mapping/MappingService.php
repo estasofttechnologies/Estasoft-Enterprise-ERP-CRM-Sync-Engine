@@ -432,17 +432,26 @@ final class MappingService {
 	}
 
 	/**
-	 * A rule reduced to its model keys with defaults filled in, so that a missing "required" and a false one compare equal.
+	 * A rule reduced to its model keys with defaults filled in, so that a missing "required" and a false one compare equal,
+	 * and so do a step without "args" and one with an empty list (a connector's starting rules leave "args" out; a saved
+	 * draft has been cleaned to carry it).
 	 *
 	 * @param array<string,mixed> $rule Rule.
 	 * @return array<string,mixed>
 	 */
 	private function normal( array $rule ): array {
+		$steps = array();
+		foreach ( is_array( $rule['transforms'] ?? null ) ? $rule['transforms'] : array() as $step ) {
+			if ( is_array( $step ) && array() === ( $step['args'] ?? array() ) ) {
+				unset( $step['args'] );
+			}
+			$steps[] = $step;
+		}
 		return array(
 			'id'         => (string) ( $rule['id'] ?? '' ),
 			'target'     => (string) ( $rule['target'] ?? '' ),
 			'source'     => $rule['source'] ?? '',
-			'transforms' => $rule['transforms'] ?? array(),
+			'transforms' => $steps,
 			'required'   => ! empty( $rule['required'] ),
 			'error_code' => (string) ( $rule['error_code'] ?? '' ),
 			'when'       => $rule['when'] ?? null,

@@ -182,7 +182,7 @@ export function rowMenuItems(
  */
 export function QueueList() {
 	const route = useRoute();
-	const { canManage } = useApp();
+	const { canManage, boot } = useApp();
 	const { status, reload: reloadStatus } = useStatus();
 	const { notify } = useNotices();
 	const cfg = useFormat();
@@ -239,7 +239,11 @@ export function QueueList() {
 		day,
 		search: urlSearch || undefined,
 		page,
-		per_page: 25,
+		// The rows per page the person chose under Screen Options (the server snaps it to 25, 50 or 100).
+		per_page:
+			( [ 25, 50, 100 ] as const ).find(
+				( size ) => size === boot.perPage
+			) ?? 25,
 	};
 	const list = useResource(
 		( signal ) => api.queue.list( query, signal ),

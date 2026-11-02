@@ -36,6 +36,10 @@ import { SupportReportDialog } from './SupportReportDialog';
 type LevelFilter = 'all' | LogLevel;
 type Range = NonNullable< LogQuery[ 'range' ] >;
 
+/** The ranges the REST route knows. Anything else in the address falls back to the default. */
+const RANGES: Range[] = [ '1h', '24h', '7d', '30d', 'all' ];
+const DEFAULT_RANGE: Range = 'all';
+
 function LevelBadge( { level }: { level: LogLevel } ) {
 	if ( level === 'error' ) {
 		return (
@@ -84,7 +88,10 @@ export function Logs() {
 			? route.params.get( 'level' )
 			: 'all'
 	) as LevelFilter;
-	const range = ( route.params.get( 'range' ) ?? '14d' ) as Range;
+	const rangeParam = route.params.get( 'range' ) ?? '';
+	const range: Range = RANGES.includes( rangeParam as Range )
+		? ( rangeParam as Range )
+		: DEFAULT_RANGE;
 	const connection = route.params.get( 'connection' ) ?? '';
 	const urlSearch = route.params.get( 'search' ) ?? '';
 	const page = Math.max( 1, Number( route.params.get( 'page' ) ?? 1 ) || 1 );
@@ -100,7 +107,7 @@ export function Logs() {
 		navigate(
 			routeTo( '/logs', {
 				level: level === 'all' ? undefined : level,
-				range: range === '14d' ? undefined : range,
+				range: range === DEFAULT_RANGE ? undefined : range,
 				connection: connection || undefined,
 				search: urlSearch || undefined,
 				page: page > 1 ? page : undefined,
@@ -113,7 +120,7 @@ export function Logs() {
 			navigate(
 				routeTo( '/logs', {
 					level: level === 'all' ? undefined : level,
-					range: range === '14d' ? undefined : range,
+					range: range === DEFAULT_RANGE ? undefined : range,
 					connection: connection || undefined,
 					search: settled || undefined,
 				} ),
@@ -262,22 +269,22 @@ export function Logs() {
 					value={ range }
 					onChange={ ( value ) =>
 						go( {
-							range: value === '14d' ? undefined : value,
+							range: value === DEFAULT_RANGE ? undefined : value,
 							page: undefined,
 						} )
 					}
 					options={ [
 						{
-							value: 'hour',
+							value: '1h',
 							label: __(
 								'Last hour',
 								'estasoft-erp-crm-sync-engine'
 							),
 						},
 						{
-							value: 'today',
+							value: '24h',
 							label: __(
-								'Today',
+								'Last 24 hours',
 								'estasoft-erp-crm-sync-engine'
 							),
 						},
@@ -289,9 +296,16 @@ export function Logs() {
 							),
 						},
 						{
-							value: '14d',
+							value: '30d',
 							label: __(
-								'Last 14 days',
+								'Last 30 days',
+								'estasoft-erp-crm-sync-engine'
+							),
+						},
+						{
+							value: 'all',
+							label: __(
+								'Everything kept',
 								'estasoft-erp-crm-sync-engine'
 							),
 						},

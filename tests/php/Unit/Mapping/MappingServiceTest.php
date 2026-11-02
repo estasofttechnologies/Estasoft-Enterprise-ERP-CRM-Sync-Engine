@@ -238,6 +238,38 @@ final class MappingServiceTest extends TestCase {
 		$this->assertSame( 'order.total', array_column( $set['source_fields'], 'path' )[8] );
 	}
 
+	public function test_a_step_without_arguments_is_the_same_step_after_the_draft_has_been_cleaned(): void {
+		// A connector's starting rules leave `args` out of a step that has none. Saving a draft cleans every step to
+		// `args: []`. The two are the same rule: only the phone rule that was really edited may be called changed.
+		$this->store->seedLive(
+			1,
+			'orders',
+			array(
+				array( 'id' => 'name', 'target' => 'partner.name', 'source' => array( 'billing.first_name', 'billing.last_name' ), 'transforms' => array( array( 'type' => 'join' ), array( 'type' => 'trim' ) ), 'required' => true, 'error_code' => 'SYNC-VAL-002' ),
+				array( 'id' => 'phone', 'target' => 'partner.phone', 'source' => 'billing.phone', 'transforms' => array( array( 'type' => 'phone_e164', 'args' => array( 'default_country' => 'AE' ) ) ), 'required' => false ),
+				array( 'id' => 'ref', 'target' => 'client_order_ref', 'source' => 'order.client_ref', 'transforms' => array(), 'required' => false ),
+			)
+		);
+		$this->service->saveDraft(
+			1,
+			'orders',
+			array(
+				array( 'id' => 'name', 'target' => 'partner.name', 'source' => array( 'billing.first_name', 'billing.last_name' ), 'transforms' => array( array( 'type' => 'join' ), array( 'type' => 'trim' ) ), 'required' => true, 'error_code' => 'SYNC-VAL-002' ),
+				array( 'id' => 'phone', 'target' => 'partner.phone', 'source' => 'billing.phone', 'transforms' => array( array( 'type' => 'phone_e164', 'args' => array( 'default_country' => 'SA' ) ) ), 'required' => false ),
+				array( 'id' => 'ref', 'target' => 'client_order_ref', 'source' => 'order.client_ref', 'transforms' => array(), 'required' => false ),
+			),
+			null,
+			'x'
+		);
+
+		$this->assertSame( array( 'phone' ), array_column( $this->service->changes( 1, 'orders' ), 'rule_id' ) );
+		$flags = array();
+		foreach ( $this->service->set( 1, 'orders' )['draft']['rules'] as $rule ) {
+			$flags[ $rule['id'] ] = (bool) ( $rule['changed'] ?? false );
+		}
+		$this->assertSame( array( 'name' => false, 'phone' => true, 'ref' => false ), $flags );
+	}
+
 	public function test_a_set_without_versions_has_no_live_and_no_draft(): void {
 		$set = $this->service->set( 1, 'orders' );
 		$this->assertNull( $set['live'] );

@@ -3,6 +3,7 @@ import { api } from '../../api/endpoints';
 import { navigate, routeTo, useRoute } from '../../app/router';
 import { useStatus, useSystemName } from '../../app/StatusProvider';
 import { SelectField } from '../../components/Fields';
+import { NotConnected } from '../../components/NotConnected';
 import { PageHeader } from '../../components/PageHeader';
 import { TabNav } from '../../components/TabNav';
 import { useResource } from '../../hooks/useResource';
@@ -23,6 +24,25 @@ const TABS: MappingTab[] = [
 ];
 
 /**
+ * Name of a connection in the picker: the system and the label, without saying the same word twice.
+ *
+ * @param connection           Connection with its connector id and label.
+ * @param connection.connector
+ * @param connection.label
+ * @return Text such as "Odoo, Cedar & Stone" or just "Odoo".
+ */
+function connectionName( connection: {
+	connector: string;
+	label: string;
+} ): string {
+	const system =
+		connection.connector === 'odoo' ? 'Odoo' : connection.connector;
+	return connection.label === system || connection.label === ''
+		? system
+		: `${ system }, ${ connection.label }`;
+}
+
+/**
  * Mapping: a tab for each type of data. Orders, customers and refunds have versions and a draft;
  * Products (SKU matching) and Tax apply when saved.
  *
@@ -33,12 +53,15 @@ const TABS: MappingTab[] = [
 export function MappingPage( { tab }: { tab: MappingTab } ) {
 	const route = useRoute();
 	const system = useSystemName();
-	const { status } = useStatus();
+	const { status, loading: statusLoading } = useStatus();
 	const connections = useResource(
 		( signal ) => api.connections.list( signal ),
 		[]
 	);
 	const list = connections.data ?? [];
+	const notConnected = status?.mode === 'not_connected';
+	// Nothing is asked of the server until the status says a system is connected: its routes answer 409 otherwise.
+	const hold = notConnected || ( status === undefined && statusLoading );
 	const chosen = Number(
 		route.params.get( 'connection' ) ??
 			status?.connection?.id ??
@@ -115,7 +138,7 @@ export function MappingPage( { tab }: { tab: MappingTab } ) {
 						list.length > 0
 							? list.map( ( connection ) => ( {
 									value: String( connection.id ),
-									label: `${ connection.connector === 'odoo' ? 'Odoo' : connection.connector }, ${ connection.label }`,
+									label: connectionName( connection ),
 								} ) )
 							: [
 									{
@@ -143,7 +166,8 @@ export function MappingPage( { tab }: { tab: MappingTab } ) {
 					current: id === tab,
 				} ) ) }
 			/>
-			{ tab === 'orders' ? (
+			{ notConnected ? <NotConnected /> : null }
+			{ ! hold && tab === 'orders' ? (
 				<RuleSetEditor
 					key="orders"
 					type="orders"
@@ -151,7 +175,7 @@ export function MappingPage( { tab }: { tab: MappingTab } ) {
 					description={ subtitles.orders }
 				/>
 			) : null }
-			{ tab === 'customers' ? (
+			{ ! hold && tab === 'customers' ? (
 				<RuleSetEditor
 					key="customers"
 					type="customers"
@@ -159,7 +183,7 @@ export function MappingPage( { tab }: { tab: MappingTab } ) {
 					description={ subtitles.customers }
 				/>
 			) : null }
-			{ tab === 'refunds' ? (
+			{ ! hold && tab === 'refunds' ? (
 				<RuleSetEditor
 					key="refunds"
 					type="refunds"
@@ -167,7 +191,7 @@ export function MappingPage( { tab }: { tab: MappingTab } ) {
 					description={ subtitles.refunds }
 				/>
 			) : null }
-			{ tab === 'stock' ? (
+			{ ! hold && tab === 'stock' ? (
 				<div className="estasoft-sync-stack">
 					<p className="estasoft-sync-muted">
 						{ sprintf(
@@ -206,8 +230,8 @@ export function MappingPage( { tab }: { tab: MappingTab } ) {
 					/>
 				</div>
 			) : null }
-			{ tab === 'products' ? <ProductsPanel /> : null }
-			{ tab === 'tax' ? <TaxMapEditor /> : null }
+			{ ! hold && tab === 'products' ? <ProductsPanel /> : null }
+			{ ! hold && tab === 'tax' ? <TaxMapEditor /> : null }
 		</>
 	);
 }

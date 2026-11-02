@@ -1,3 +1,4 @@
+import { useEffect, useRef } from '@wordpress/element';
 import { __, _n, sprintf } from '@wordpress/i18n';
 import { api } from '../../api/endpoints';
 import type { Readiness } from '../../api/types';
@@ -10,6 +11,7 @@ import type { Resource } from '../../hooks/useResource';
 import { errorText } from '../../lib/text';
 import {
 	checkSummary,
+	neverRan,
 	ReadinessList,
 	ReadinessVerdict,
 } from '../settings/ReadinessChecks';
@@ -34,6 +36,18 @@ export function CheckStep( {
 		readiness.setData( await api.readiness.run() );
 	} );
 	const data = readiness.data;
+	// The server only remembers the last run. The first time this step opens there is none, so run the checks
+	// now: an empty list must not read as "everything passed".
+	const autoRan = useRef( false );
+	useEffect( () => {
+		if ( neverRan( data ) && ! autoRan.current ) {
+			autoRan.current = true;
+			void rerun.run();
+		}
+		// Only the arrival of the first result matters.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [ data ] );
+	const waiting = readiness.loading || ( rerun.busy && neverRan( data ) );
 	const worth = data
 		? data.checks.filter( ( check ) => check.status === 'worth_fixing' )
 				.length
@@ -78,7 +92,7 @@ export function CheckStep( {
 			}
 			flush
 		>
-			{ readiness.loading ? (
+			{ waiting ? (
 				<LoadingState
 					rows={ 4 }
 					label={ __(
@@ -124,7 +138,7 @@ export function CheckStep( {
 					{ errorText( rerun.error ) }
 				</Callout>
 			) : null }
-			{ data ? (
+			{ data && ! waiting ? (
 				<>
 					<ReadinessList readiness={ data } />
 					<div className="estasoft-sync-pad">

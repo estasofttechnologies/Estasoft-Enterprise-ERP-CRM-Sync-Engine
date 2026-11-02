@@ -124,8 +124,16 @@ final class Previewer {
 		} catch ( LookupFailedException $e ) {
 			return $this->failed( $order->toArray(), array_merge( $errors, array( self::apiError( $e->error->code, $e->error->context ) ) ) );
 		}
+		// A rate that is not mapped fails every rule that uses it (each line, the shipping line). Say it once.
+		$told = array();
 		foreach ( $output->errors as $failure ) {
-			$errors[] = self::apiError( $failure->errorCode, $failure->context );
+			$error = self::apiError( $failure->errorCode, $failure->context );
+			$same  = $error['code'] . '|' . $error['message'];
+			if ( isset( $told[ $same ] ) ) {
+				continue;
+			}
+			$told[ $same ] = true;
+			$errors[]      = $error;
 		}
 
 		$notes = array();

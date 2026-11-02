@@ -94,7 +94,8 @@ function Frame( { boot, wrap }: { boot: BootData; wrap: boolean } ) {
 					/>
 					<div className="estasoft-sync-body">
 						<NoticeArea />
-						<main
+						{ /* WordPress already wraps every admin screen in its own main landmark (#wpbody), and a page may have only one: a named section is a region inside it. */ }
+						<section
 							id="estasoft-sync-main"
 							className="estasoft-sync-main"
 							ref={ main }
@@ -107,7 +108,7 @@ function Frame( { boot, wrap }: { boot: BootData; wrap: boolean } ) {
 							<ErrorBoundary resetKey={ route.path }>
 								<Routes route={ route } />
 							</ErrorBoundary>
-						</main>
+						</section>
 					</div>
 				</div>
 			</FormatContext.Provider>

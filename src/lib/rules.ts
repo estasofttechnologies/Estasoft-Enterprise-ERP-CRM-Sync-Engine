@@ -512,8 +512,18 @@ export function diffRules(
 	live: MappingRule[],
 	working: MappingRule[]
 ): { added: string[]; changed: string[]; removed: string[] } {
+	// A step with no arguments is `{ type }` in a connector's starting rules and `{ type, args: [] }` once the server
+	// has cleaned a saved draft. That is the same step, not a change.
 	const strip = ( rule: MappingRule ) =>
-		JSON.stringify( { ...rule, changed: undefined, added: undefined } );
+		JSON.stringify( {
+			...rule,
+			changed: undefined,
+			added: undefined,
+			transforms: rule.transforms.map( ( step ) => {
+				const { args, ...bare } = step;
+				return args && Object.keys( args ).length > 0 ? step : bare;
+			} ),
+		} );
 	const liveById = new Map( live.map( ( rule ) => [ rule.id, rule ] ) );
 	const added: string[] = [];
 	const changed: string[] = [];

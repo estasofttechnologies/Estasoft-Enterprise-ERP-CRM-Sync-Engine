@@ -100,12 +100,29 @@ export function NoticeProvider( {
  */
 export function NoticeArea() {
 	const { notices, dismiss } = useNotices();
+	const area = useRef< HTMLDivElement >( null );
+	// The dismiss button has focus when it is pressed, and it leaves the page with its notice. Without this, a
+	// keyboard user would start again from the top of the whole admin page. Focus goes to the page heading.
+	const close = ( id: string ) => {
+		const doc = area.current?.ownerDocument;
+		const hadFocus = Boolean(
+			doc?.activeElement && area.current?.contains( doc.activeElement )
+		);
+		dismiss( id );
+		if ( hadFocus ) {
+			const main = doc?.getElementById( 'estasoft-sync-main' );
+			const target =
+				main?.querySelector< HTMLElement >( '[data-page-heading]' ) ??
+				main;
+			target?.focus();
+		}
+	};
 	const render = ( notice: AppNotice ) => (
 		<Notice
 			key={ notice.id }
 			status={ notice.kind }
 			isDismissible={ notice.dismissible !== false }
-			onRemove={ () => dismiss( notice.id ) }
+			onRemove={ () => close( notice.id ) }
 			className={ `estasoft-sync-notice estasoft-sync-notice--${ notice.kind }` }
 			politeness={ notice.kind === 'error' ? 'assertive' : 'polite' }
 			spokenMessage={ null }
@@ -132,7 +149,7 @@ export function NoticeArea() {
 		</Notice>
 	);
 	return (
-		<div className="estasoft-sync-notices">
+		<div className="estasoft-sync-notices" ref={ area }>
 			<div role="alert">
 				{ notices.filter( ( n ) => n.kind === 'error' ).map( render ) }
 			</div>

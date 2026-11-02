@@ -12,7 +12,7 @@ import type {
 	QueueItem,
 } from '../api/types';
 import type { FormatConfig } from './format';
-import { formatTime } from './format';
+import { formatNumber, formatTime } from './format';
 
 /**
  * Display name for a queue state.
@@ -392,13 +392,14 @@ export function notesPhrase( count: number ): string {
 /**
  * Plural-safe "n orders" phrase.
  *
- * @param count Number of orders.
+ * @param count  Number of orders.
+ * @param locale WordPress locale, to group digits (`2,104 orders`); plain digits when left out.
  * @return Text such as "3 orders".
  */
-export function ordersPhrase( count: number ): string {
+export function ordersPhrase( count: number, locale?: string ): string {
 	return sprintf(
-		/* translators: %d: number of orders */
-		_n( '%d order', '%d orders', count, 'estasoft-erp-crm-sync-engine' ),
-		count
+		/* translators: %s: number of orders */
+		_n( '%s order', '%s orders', count, 'estasoft-erp-crm-sync-engine' ),
+		locale ? formatNumber( count, locale ) : String( count )
 	);
 }

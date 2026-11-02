@@ -361,6 +361,50 @@ describe( 'Mapping', () => {
 		).not.toBeInTheDocument();
 	} );
 
+	it( 'does not ask the preview route (configure only) for sample values, and offers no preview, to a manager', async () => {
+		// The preview route answers 403 without the configure capability: a manager would see an empty sample
+		// column, failed requests in the console and a dialog that cannot load.
+		const asked: string[] = [];
+		await renderApp( {
+			route: '/mapping/orders',
+			boot: { capabilities: { manage: true, configure: false } },
+			wrap: ( inner ) => async ( req ) => {
+				asked.push( `${ req.method } ${ req.route }` );
+				return inner( req );
+			},
+		} );
+		const table = await screen.findByRole( 'table', {
+			name: /Rules: Orders/,
+		} );
+		expect(
+			within( table ).queryByRole( 'columnheader', { name: /^Sample/ } )
+		).not.toBeInTheDocument();
+		expect(
+			screen.queryByRole( 'button', {
+				name: 'Preview with a real order',
+			} )
+		).not.toBeInTheDocument();
+		expect( asked ).not.toContain( 'POST /mappings/preview' );
+	} );
+
+	it( 'still shows the sample column and the preview to someone who may configure', async () => {
+		const { user } = await renderApp( { route: '/mapping/orders' } );
+		const table = await screen.findByRole( 'table', {
+			name: /Rules: Orders/,
+		} );
+		expect(
+			within( table ).getByRole( 'columnheader', { name: /^Sample/ } )
+		).toBeInTheDocument();
+		await user.click(
+			screen.getByRole( 'button', { name: 'Preview with a real order' } )
+		);
+		expect(
+			await screen.findByRole( 'dialog', {
+				name: 'Preview with a real order',
+			} )
+		).toBeInTheDocument();
+	} );
+
 	it( 'shows the stock and tracking rules as two sets with their own versions', async () => {
 		await renderApp( { route: '/mapping/stock' } );
 		expect(

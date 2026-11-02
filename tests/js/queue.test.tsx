@@ -100,6 +100,41 @@ describe( 'Queue', () => {
 		).toBeEnabled();
 	} );
 
+	it( 'asks for the rows per page the person chose under Screen Options', async () => {
+		// PHP hands the saved size to the app as `perPage`; the list used to ask for 25 whatever it said.
+		const asked: string[] = [];
+		await renderApp( {
+			route: '/queue',
+			boot: { perPage: 50 },
+			wrap: ( inner ) => async ( req ) => {
+				if ( req.method === 'GET' && req.route === '/queue' ) {
+					asked.push( req.query.per_page ?? '' );
+				}
+				return inner( req );
+			},
+		} );
+		await expectHeading( 'Queue' );
+		await screen.findByRole( 'row', { name: /#10491/ } );
+		expect( asked.length ).toBeGreaterThan( 0 );
+		expect( new Set( asked ) ).toEqual( new Set( [ '50' ] ) );
+	} );
+
+	it( 'asks for 25 rows when no size was saved', async () => {
+		const asked: string[] = [];
+		await renderApp( {
+			route: '/queue',
+			wrap: ( inner ) => async ( req ) => {
+				if ( req.method === 'GET' && req.route === '/queue' ) {
+					asked.push( req.query.per_page ?? '' );
+				}
+				return inner( req );
+			},
+		} );
+		await expectHeading( 'Queue' );
+		await screen.findByRole( 'row', { name: /#10491/ } );
+		expect( new Set( asked ) ).toEqual( new Set( [ '25' ] ) );
+	} );
+
 	it( 'retries the selected failed orders after a confirmation and says what happened', async () => {
 		const { user, server } = await renderApp( {
 			route: '/queue?state=failed',
