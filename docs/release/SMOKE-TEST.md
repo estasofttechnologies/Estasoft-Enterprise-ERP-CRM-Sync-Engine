@@ -4,13 +4,13 @@ Written by `bin/smoke-install.sh --report`; do not edit by hand. Run it again af
 
 | | |
 |---|---|
-| Date (UTC) | 2026-11-02 20:44 |
+| Date (UTC) | 2026-11-02 22:04 |
 | Result | passed: 98 checks, 0 failed |
 | Plugin version | 0.1.0 |
 | Zip | `estasoft-erp-crm-sync-engine-0.1.0.zip` |
 | Files in the zip | 930 |
-| Size | 1.93 MiB zipped, 5.90 MiB unpacked |
-| SHA-256 | `9efb9823de53b76561022ef9046afd6e249f824036af7fd515a2f2fb49027a2e` |
+| Size | 1.93 MiB zipped, 5.91 MiB unpacked |
+| SHA-256 | `f61c568552bd753339e15bb24513cf73abe18702f395086ddcccd623fafa6dcf` |
 | WordPress | 6.4.3 (fresh install, WP_DEBUG on, debug.log) |
 | PHP | 8.3.6 |
 | Database | 10.11.14-MariaDB-0ubuntu0.24.04.1 (fresh database, utf8mb4) |
@@ -93,7 +93,7 @@ The plugin under test is the unpacked release zip in `wp-content/plugins/`, neve
 - the namespace is listed by the REST index
 - docs/rest-api.md lists its routes
 - every route in docs/rest-api.md is registered
-- Note: registered but not in docs/rest-api.md: GET /estasoft-sync/v1; POST /estasoft-sync/v1/connections/(?P<connection>\d+)/oauth/organisation; GET /estasoft-sync/v1/oauth/callback; GET /estasoft-sync/v1/exports; POST /estasoft-sync/v1/exports; GET /estasoft-sync/v1/exports/(?P<file>[a-f0-9]{1,32})/download; DELETE /estasoft-sync/v1/exports/(?P<file>[a-f0-9]{1,32})
+- Note: registered but not in docs/rest-api.md: GET /estasoft-sync/v1
 - an anonymous request to each of 76 routes is refused (401 or 403; a 4xx for the signed inbound route)
 - GET /catalog answers 200 for an administrator
 - the catalog route lists all 34 systems
