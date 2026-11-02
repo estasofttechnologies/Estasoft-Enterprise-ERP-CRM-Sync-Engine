@@ -103,6 +103,41 @@ describe( 'app frame', () => {
 		).not.toBeInTheDocument();
 	} );
 
+	it( 'does not repeat a notice on the page its button leads to', async () => {
+		await renderApp( {
+			route: '/connections',
+			boot: {
+				notices: [
+					{
+						id: 'encryption_key',
+						kind: 'error',
+						text: 'The encryption key is missing from wp-config.php.',
+						action_label: 'Show me how',
+						action_route: '/connections',
+						dismissible: false,
+					},
+					{
+						id: 'other',
+						kind: 'warning',
+						text: 'Something else needs a look.',
+						action_label: 'Open the queue',
+						action_route: '/queue',
+						dismissible: false,
+					},
+				],
+			},
+		} );
+		await expectHeading( 'Connections' );
+		expect(
+			await screen.findByText( 'Something else needs a look.' )
+		).toBeInTheDocument();
+		expect(
+			screen.queryByText(
+				'The encryption key is missing from wp-config.php.'
+			)
+		).not.toBeInTheDocument();
+	} );
+
 	it( 'moves focus to the page heading when a notice is dismissed from the keyboard', async () => {
 		// The dismiss button leaves the page with its notice; focus must not fall back to the top of the document.
 		const { user } = await renderApp( {

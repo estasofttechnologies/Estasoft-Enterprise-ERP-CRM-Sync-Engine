@@ -52,13 +52,13 @@
 		box-shadow: none;
 	}
 
+	// The app moves focus to the page heading (and to the main region) after a route change, so keyboard and screen reader
+	// users start at the top. Nobody can type into either, and a ring around a heading only looks like a mistake.
 	.estasoft-sync-main:focus,
-	[data-page-heading]:focus {
-		outline: none;
-	}
-
+	.estasoft-sync-main:focus-visible,
+	[data-page-heading]:focus,
 	[data-page-heading]:focus-visible {
-		outline: var(--estasoft-sync-focus);
+		outline: none;
 	}
 
 	input[type="checkbox"],

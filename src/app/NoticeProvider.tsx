@@ -12,7 +12,7 @@ import {
 } from '@wordpress/element';
 import type { ReactNode } from 'react';
 import { Notice } from '@wordpress/components';
-import { navigate } from './router';
+import { navigate, useRoute } from './router';
 
 export type NoticeKind = 'info' | 'success' | 'warning' | 'error';
 
@@ -99,7 +99,15 @@ export function NoticeProvider( {
  * @return The notice area.
  */
 export function NoticeArea() {
-	const { notices, dismiss } = useNotices();
+	const { notices: all, dismiss } = useNotices();
+	const route = useRoute();
+	// A notice whose button leads to the page the person is already on says what the page says (the missing-key notice on
+	// Connections, where the line to add is shown).
+	const notices = all.filter(
+		( notice ) =>
+			notice.actionRoute === undefined ||
+			notice.actionRoute !== route.path
+	);
 	const area = useRef< HTMLDivElement >( null );
 	// The dismiss button has focus when it is pressed, and it leaves the page with its notice. Without this, a
 	// keyboard user would start again from the top of the whole admin page. Focus goes to the page heading.

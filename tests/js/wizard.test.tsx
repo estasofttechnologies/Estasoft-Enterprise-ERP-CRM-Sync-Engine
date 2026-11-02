@@ -103,16 +103,55 @@ describe( 'Setup wizard', () => {
 		await waitFor( () => expect( server.onboarding.step ).toBe( 2 ) );
 	} );
 
-	it( 'keeps Continue off while a check needs fixing', async () => {
+	it( 'keeps Continue off while a check needs fixing, and the summary says so', async () => {
 		const { server } = await renderApp( {
 			scenario: 'first_run',
 			route: '/setup',
+			wrap: ( inner ) => {
+				const key = patchJson(
+					( req ) =>
+						req.method === 'GET' && req.route === '/readiness',
+					( data ) => {
+						const readiness = data as unknown as {
+							checks: unknown[];
+						};
+						return {
+							...readiness,
+							blocked: true,
+							checks: [
+								{
+									id: 'encryption_key',
+									title: 'The encryption key is missing from wp-config.php',
+									detail: 'Credentials cannot be saved without it.',
+									status: 'needs_fixing',
+									link: '/connections',
+									link_label: 'Show the line to add',
+								},
+								...readiness.checks.slice( 0, 2 ),
+							],
+						} as unknown as typeof data;
+					}
+				);
+				return key( inner );
+			},
 		} );
-		await screen.findByText( 'Is your store ready?' );
-		// The mock readiness never blocks; this asserts the enabled state it reports.
+		// One check needs fixing, so the summary must not claim that nothing stops the person from continuing.
+		expect(
+			await screen.findByText(
+				/1 thing needs fixing before you can continue; \d+ worth fixing, \d+ passed\./
+			)
+		).toBeInTheDocument();
+		expect(
+			screen.queryByText( /None of them stops you from continuing\./ )
+		).not.toBeInTheDocument();
+		expect(
+			screen.getByText(
+				'1 thing needs fixing. Continue stays off until it is fixed.'
+			)
+		).toBeInTheDocument();
 		expect(
 			screen.getByRole( 'button', { name: 'Continue' } )
-		).toBeEnabled();
+		).toBeDisabled();
 		expect( server.onboarding.step ).toBe( 1 );
 	} );
 

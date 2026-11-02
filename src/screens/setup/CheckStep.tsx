@@ -52,6 +52,10 @@ export function CheckStep( {
 		? data.checks.filter( ( check ) => check.status === 'worth_fixing' )
 				.length
 		: 0;
+	const needs = data
+		? data.checks.filter( ( check ) => check.status === 'needs_fixing' )
+				.length
+		: 0;
 	const passed = data
 		? data.checks.filter( ( check ) => check.status === 'passed' ).length
 		: 0;
@@ -63,19 +67,32 @@ export function CheckStep( {
 			) }
 			description={
 				data
-					? worth > 0
+					? needs > 0
 						? sprintf(
-								/* translators: 1: number worth fixing, 2: number passed */
+								/* translators: 1: number that need fixing, 2: number worth fixing, 3: number passed */
 								_n(
-									'%1$d thing is worth fixing, %2$d passed. None of them stops you from continuing.',
-									'%1$d things are worth fixing, %2$d passed. None of them stops you from continuing.',
-									worth,
+									'%1$d thing needs fixing before you can continue; %2$d worth fixing, %3$d passed.',
+									'%1$d things need fixing before you can continue; %2$d worth fixing, %3$d passed.',
+									needs,
 									'estasoft-erp-crm-sync-engine'
 								),
+								needs,
 								worth,
 								passed
 							)
-						: checkSummary( data )
+						: worth > 0
+							? sprintf(
+									/* translators: 1: number worth fixing, 2: number passed */
+									_n(
+										'%1$d thing is worth fixing, %2$d passed. None of them stops you from continuing.',
+										'%1$d things are worth fixing, %2$d passed. None of them stops you from continuing.',
+										worth,
+										'estasoft-erp-crm-sync-engine'
+									),
+									worth,
+									passed
+								)
+							: checkSummary( data )
 					: undefined
 			}
 			actions={
