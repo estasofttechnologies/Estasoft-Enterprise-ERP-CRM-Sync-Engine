@@ -23,6 +23,16 @@ final class Sanitize {
 	public const MAX_TEXT = 4096;
 
 	/**
+	 * A true or false flag the way WordPress reads one: true, 1, "1", "true" and "on" are true; false, 0, "0", "false", "off",
+	 * an empty string, null and anything that is not a plain value are false.
+	 *
+	 * @param mixed $value Candidate.
+	 */
+	public static function flag( mixed $value ): bool {
+		return is_scalar( $value ) && rest_sanitize_boolean( (string) $value );
+	}
+
+	/**
 	 * A name to text map, for example the non-secret connection fields. Keys are reduced to letters, digits, dash and underscore;
 	 * values are plain text with no tags.
 	 *

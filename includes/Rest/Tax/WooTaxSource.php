@@ -91,6 +91,11 @@ final class WooTaxSource implements TaxSource {
 			foreach ( is_array( $orders ) ? $orders : array() as $order ) {
 				$seen = array();
 				foreach ( $order->get_items( 'tax' ) as $line ) {
+					/**
+					 * A line of the tax type.
+					 *
+					 * @var \WC_Order_Item_Tax $line
+					 */
 					$rate    = \WC_Tax::_get_tax_rate( (int) $line->get_rate_id() );
 					$country = strtoupper( (string) ( $rate['tax_rate_country'] ?? '' ) );
 					$number  = MinorUnits::rateKey( $rate['tax_rate'] ?? null );

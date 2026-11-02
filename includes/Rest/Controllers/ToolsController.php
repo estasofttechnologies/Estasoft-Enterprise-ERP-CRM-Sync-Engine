@@ -93,7 +93,7 @@ final class ToolsController extends BaseController {
 	public function import( \WP_REST_Request $request ): array {
 		$porter = $this->serviceAs( JobServices::PORTER, SettingsPorter::class );
 		$json   = Sanitize::document( $request->get_param( 'json' ) );
-		if ( rest_sanitize_boolean( $request->get_param( 'confirm' ) ) ) {
+		if ( Sanitize::flag( $request->get_param( 'confirm' ) ) ) {
 			$done = $porter->apply( $json, $this->actorId() );
 			return array(
 				'applied' => true,

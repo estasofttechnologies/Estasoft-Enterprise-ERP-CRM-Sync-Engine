@@ -27,7 +27,15 @@
     <exclude name="Universal.Files.SeparateFunctionsFromOO"/>
     <exclude name="Squiz.Commenting.FileComment.Missing"/>
   </rule>
-  <rule ref="PHPCompatibilityWP"/>
+  <rule ref="PHPCompatibilityWP">
+    <!--
+      PHPCompatibility 9.x was written before PHP 8.1 enums and reads "$this" and "self" inside an
+      enum method as code outside a class. Both are real errors in PHP itself, so the unit tests catch
+      them, and CI lints every file with php -l on PHP 8.1.
+    -->
+    <exclude name="PHPCompatibility.Variables.ForbiddenThisUseContexts.OutsideObjectContext"/>
+    <exclude name="PHPCompatibility.FunctionDeclarations.NewParamTypeDeclarations.SelfOutsideClassScopeFound"/>
+  </rule>
 
   <rule ref="WordPress.WP.I18n">
     <properties>

@@ -1,6 +1,4 @@
-includes:
-  - vendor/szepeviktor/phpstan-wordpress/extension.neon
-
+# The WordPress extension (szepeviktor/phpstan-wordpress) is registered by phpstan/extension-installer; do not include it here.
 parameters:
   level: 6
   paths:
@@ -8,6 +6,7 @@ parameters:
     - estasoft-erp-crm-sync-engine.php
   scanFiles:
     - vendor/php-stubs/woocommerce-stubs/woocommerce-stubs.php
+    - tests/phpstan-stubs.php
   bootstrapFiles:
     - tests/phpstan-bootstrap.php
   treatPhpDocTypesAsCertain: false

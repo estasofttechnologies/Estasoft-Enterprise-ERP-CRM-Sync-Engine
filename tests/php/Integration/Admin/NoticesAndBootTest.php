@@ -389,7 +389,9 @@ final class NoticesAndBootTest extends RestIntegrationCase {
 		$this->assertContains( '/queue', $boot['routes'] );
 		$this->assertContains( '/setup', $boot['routes'] );
 		$this->assertIsString( $boot['locale'] );
-		$this->assertSame( 'fresh', $boot['wpAdminColorScheme'] );
+		// The user's own colour scheme; WordPress 7 gives new users 'modern', older versions 'fresh'.
+		$scheme = (string) get_user_option( 'admin_color' );
+		$this->assertSame( '' === $scheme ? 'fresh' : $scheme, $boot['wpAdminColorScheme'] );
 		$this->assertNull( $boot['encryptionKeyLine'], 'the key constant is defined' );
 		$this->assertSame( 25, $boot['perPage'] );
 	}

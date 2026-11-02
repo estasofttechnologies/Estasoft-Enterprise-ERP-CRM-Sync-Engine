@@ -14,6 +14,7 @@ defined( 'ABSPATH' ) || exit;
 use Estasoft\SyncEngine\Jobs\JobServices;
 use Estasoft\SyncEngine\Jobs\Support\SupportReportBuilder;
 use Estasoft\SyncEngine\Rest\BaseController;
+use Estasoft\SyncEngine\Rest\Support\Sanitize;
 
 /**
  * `GET /support-report?order_numbers=0|1`: versions, runtime, the connection summary without secrets, queue counts, the readiness
@@ -36,6 +37,6 @@ final class SupportReportController extends BaseController {
 	 */
 	public function show( \WP_REST_Request $request ): array {
 		$report = $this->serviceAs( JobServices::SUPPORT_REPORT, SupportReportBuilder::class );
-		return $report->build( rest_sanitize_boolean( $request->get_param( 'order_numbers' ) ) );
+		return $report->build( Sanitize::flag( $request->get_param( 'order_numbers' ) ) );
 	}
 }

@@ -53,7 +53,8 @@ final class WpCliOutput implements CliOutput {
 	 */
 	public function fail( string $message, int $code = 1 ): never {
 		\WP_CLI::error( $message, $code );
-		throw new \RuntimeException( esc_html( $message ) ); // WP_CLI::error() exits; this line only satisfies the return type.
+		// WP_CLI::error() exits; this line only satisfies the return type if it ever returned.
+		throw new \RuntimeException( esc_html( $message ) ); // @phpstan-ignore deadCode.unreachable
 	}
 
 	/**

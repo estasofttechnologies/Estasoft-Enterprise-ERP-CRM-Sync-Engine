@@ -225,11 +225,11 @@ final class MappingsController extends BaseController {
 		$connection = $this->connectionId( $request );
 		$type       = (string) $request->get_param( 'type' );
 		$draftRules = null;
-		if ( rest_sanitize_boolean( $request->get_param( 'use_draft' ) ) ) {
+		if ( Sanitize::flag( $request->get_param( 'use_draft' ) ) ) {
 			$draft      = $this->mapping()->set( $connection, $type )['draft'] ?? null;
 			$draftRules = is_array( $draft ) && is_array( $draft['rules'] ?? null ) ? $draft['rules'] : null;
 		}
-		return $previewer->preview( $connection, $type, (int) $request->get_param( 'order_id' ), $draftRules, rest_sanitize_boolean( $request->get_param( 'lookups' ) ) );
+		return $previewer->preview( $connection, $type, (int) $request->get_param( 'order_id' ), $draftRules, Sanitize::flag( $request->get_param( 'lookups' ) ) );
 	}
 
 	/**

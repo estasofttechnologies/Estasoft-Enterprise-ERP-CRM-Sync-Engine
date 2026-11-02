@@ -76,6 +76,11 @@ final class DataEraser {
 			if ( ! function_exists( 'wc_get_orders' ) ) {
 				return array();
 			}
+			/**
+			 * Order ids, because 'return' is 'ids'.
+			 *
+			 * @var mixed $ids
+			 */
 			$ids = wc_get_orders(
 				array(
 					'limit'      => $limit,
@@ -91,7 +96,7 @@ final class DataEraser {
 					),
 				)
 			);
-			return is_array( $ids ) ? array_map( 'intval', $ids ) : array();
+			return is_array( $ids ) ? array_map( static fn( $id ): int => (int) $id, $ids ) : array();
 		};
 		$this->loadOrder = $loadOrder ?? static function ( int $id ): ?object {
 			if ( ! function_exists( 'wc_get_order' ) ) {

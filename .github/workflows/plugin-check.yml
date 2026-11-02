@@ -1,7 +1,7 @@
 name: Plugin Check
 
 # Runs the official WordPress.org Plugin Check against the release zip (not against the working tree), so it
-# sees exactly the files a reviewer will receive. WooCommerce is installed on the test site because this
+# sees exactly the files a reviewer will receive. The action installs WooCommerce on the test site because this
 # plugin declares "Requires Plugins: woocommerce", and WordPress 6.5+ will not activate it without it.
 #
 # Read the job summary, not only the pass or fail mark: warnings do not fail the job. To make them fail,
@@ -53,22 +53,11 @@ jobs:
           unzip -q "$RUNNER_TEMP"/zip/*.zip -d plugin-build
           ls -la plugin-build
 
-      # The action starts a wp-env site and reads .wp-env.override.json after its own settings. The list below
-      # is complete on purpose (WooCommerce first, then Plugin Check, then this plugin), so it is correct
-      # whether the action replaces or merges the plugin list. Not testable outside GitHub: watch the first run
-      # (docs/release/CHECKLIST.md).
-      - name: Put WooCommerce on the test site
-        run: |
-          cat > .wp-env.override.json <<'JSON'
-          {
-            "plugins": [
-              "https://downloads.wordpress.org/plugin/woocommerce.latest-stable.zip",
-              "https://downloads.wordpress.org/plugin/plugin-check.latest-stable.zip",
-              "./plugin-build/estasoft-erp-crm-sync-engine"
-            ]
-          }
-          JSON
-
+      # The action starts a wp-env site, installs Plugin Check itself and installs what the plugin lists under
+      # "Requires Plugins" (WooCommerce) before it activates the plugin. Do not add Plugin Check or WooCommerce through
+      # .wp-env.override.json: wp-env then keeps them in folders named plugin-check.latest-stable and
+      # woocommerce.latest-stable, the action does not find them by slug and installs a second copy, and
+      # activating the two copies stops with "Cannot redeclare wp_plugin_check_load()".
       - name: Run Plugin Check
         uses: WordPress/plugin-check-action@v1
         with:

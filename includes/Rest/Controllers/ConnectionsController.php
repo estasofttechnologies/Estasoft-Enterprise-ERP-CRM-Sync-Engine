@@ -189,7 +189,7 @@ final class ConnectionsController extends BaseController {
 	public function inbound( \WP_REST_Request $request ): array {
 		$inbound = $this->serviceAs( JobServices::INBOUND, InboundHandler::class );
 		$id      = (int) $request['id'];
-		if ( ! rest_sanitize_boolean( $request->get_param( 'enabled' ) ) ) {
+		if ( ! Sanitize::flag( $request->get_param( 'enabled' ) ) ) {
 			$inbound->disable( $id );
 			return array( 'enabled' => false );
 		}

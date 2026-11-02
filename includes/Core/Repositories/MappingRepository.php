@@ -283,7 +283,6 @@ final class MappingRepository extends Repository {
 	 * deadlock with another request, for example) the whole transaction is rolled back, and it is tried again up to three
 	 * times when the failure was a deadlock or a lock timeout.
 	 *
-	 * @template T
 	 * @param int      $connectionId Connection.
 	 * @param string   $type         Mapping type.
 	 * @param callable $work         Work to do; its return value is returned.
@@ -303,8 +302,8 @@ final class MappingRepository extends Repository {
 					"SELECT id FROM {$this->tables->mappings()} WHERE connection_id = %d AND type = %s FOR UPDATE",
 					array( $connectionId, $type )
 				);
-				$result = $this->queryFailed ? null : $work();
-				if ( ! $this->queryFailed ) {
+				$result = $this->hasFailed() ? null : $work();
+				if ( ! $this->hasFailed() ) {
 					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- transaction control has no WordPress API.
 					$this->wpdb->query( 'COMMIT' );
 					return $result;

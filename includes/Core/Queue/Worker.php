@@ -72,7 +72,7 @@ final class Worker {
 	 */
 	public function __construct(
 		private readonly QueueRepository $queue,
-		private readonly ConnectionRepository $connections,
+		ConnectionRepository $connections,
 		private readonly ItemProcessor $processor,
 		private readonly RateLimiter $limiter,
 		private readonly Reaper $reaper,

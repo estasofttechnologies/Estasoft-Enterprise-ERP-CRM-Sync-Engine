@@ -50,6 +50,15 @@ abstract class Repository {
 	}
 
 	/**
+	 * Whether a query through this class has failed since the flag was last cleared.
+	 *
+	 * Read this after running work that goes through `query()`, `results()` and the like; the flag changes inside those calls.
+	 */
+	protected function hasFailed(): bool {
+		return $this->queryFailed;
+	}
+
+	/**
 	 * The current time as a MySQL datetime (UTC).
 	 */
 	protected function now(): string {

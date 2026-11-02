@@ -18,6 +18,7 @@ use Estasoft\SyncEngine\Core\Database\Tables;
 use Estasoft\SyncEngine\Core\Support\Clock;
 use Estasoft\SyncEngine\Core\Support\Json;
 use Estasoft\SyncEngine\Core\Support\Time;
+use Estasoft\SyncEngine\Core\Support\ValidationException;
 use Estasoft\SyncEngine\Domain\Connection;
 use Estasoft\SyncEngine\Domain\ConnectionStatus;
 use Estasoft\SyncEngine\Domain\ConnectorType;
@@ -207,6 +208,7 @@ final class ConnectionRepository extends Repository {
 		return $id;
 	}
 
+	// phpcs:disable Squiz.Commenting.FunctionCommentThrowTag.WrongNumber -- CryptoException and ValidationException come from the calls update() makes, not from a throw in its own body.
 	/**
 	 * Change a connection. Supported keys: `label`, `config` (merged; a null value removes a key), `secrets`
 	 * (merged; an empty string keeps the saved value, null removes it), `settings` (merged and validated),
@@ -223,6 +225,8 @@ final class ConnectionRepository extends Repository {
 	 * @param array<string,mixed> $changes Changes.
 	 *
 	 * @throws \OutOfBoundsException When the connection does not exist.
+	 * @throws CryptoException       When secrets are changed and cannot be encrypted or merged (see above).
+	 * @throws ValidationException   When a setting is out of range.
 	 */
 	public function update( int $id, array $changes ): void {
 		$row = $this->rowById( $id );
@@ -266,6 +270,7 @@ final class ConnectionRepository extends Repository {
 		}
 		$this->updateById( $this->tables->connections(), $data, $id );
 	}
+	// phpcs:enable Squiz.Commenting.FunctionCommentThrowTag.WrongNumber
 
 	/**
 	 * Set the status. Becoming active clears the pause and the failure count.

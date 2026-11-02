@@ -55,7 +55,8 @@ final class TransformRegistry {
 				new DefaultValue(),
 				new Required(),
 				new Join(),
-				new Split(),
+				// The Split transform class, not the removed split() function.
+				new Split(), // phpcs:ignore PHPCompatibility.FunctionUse.RemovedFunctions.splitDeprecatedRemoved
 				new TaxLookup(),
 				new SkuMatch(),
 			)

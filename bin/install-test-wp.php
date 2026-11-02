@@ -26,7 +26,8 @@ $link->query( "DROP DATABASE IF EXISTS `{$dbName}`" );
 $link->query( "CREATE DATABASE `{$dbName}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_520_ci" );
 $link->close();
 
-foreach ( array( '', '/plugins', '/mu-plugins', '/uploads', '/languages' ) as $dir ) {
+// A themes folder, so WordPress 6.8 and later find a registered theme directory (without one it logs a notice for every call).
+foreach ( array( '', '/plugins', '/mu-plugins', '/themes', '/uploads', '/languages' ) as $dir ) {
 	if ( ! is_dir( $content . $dir ) ) {
 		mkdir( $content . $dir, 0775, true );
 	}

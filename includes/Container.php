@@ -63,9 +63,8 @@ final class Container {
 	/**
 	 * Get a service.
 	 *
-	 * @template T of object
-	 * @param class-string<T>|string $id Class name or id.
-	 * @return T|mixed
+	 * @param string $id Class name or id.
+	 * @return mixed
 	 *
 	 * @throws \LogicException When the service is not registered.
 	 */

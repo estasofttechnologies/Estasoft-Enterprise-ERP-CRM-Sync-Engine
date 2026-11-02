@@ -93,9 +93,9 @@ final class SchemaTest extends CoreIntegrationTestCase {
 
 	public function test_the_columns_of_spec_5_2_and_5_3_exist(): void {
 		$queue = $this->columns( $this->h->tables->queue() );
-		$this->assertSame( 'tinyint(3) unsigned', $queue['priority']['Type'] );
+		$this->assertSame( 'tinyint unsigned', $this->withoutDisplayWidth( $queue['priority']['Type'] ) );
 		$this->assertSame( '5', $queue['priority']['Default'] );
-		$this->assertSame( 'tinyint(3) unsigned', $queue['reaps']['Type'] );
+		$this->assertSame( 'tinyint unsigned', $this->withoutDisplayWidth( $queue['reaps']['Type'] ) );
 		$this->assertSame( '0', $queue['reaps']['Default'] );
 		$this->assertSame( 'varchar(500)', $queue['error_message']['Type'] );
 
@@ -224,6 +224,16 @@ final class SchemaTest extends CoreIntegrationTestCase {
 		( new Upgrades( $this->h->wpdb, $this->h->tables ) )->run();
 		$this->assertTrue( $this->migrator->migrate() );
 		$this->assertTrue( $this->migrator->allTablesExist() );
+	}
+
+	/**
+	 * An integer column type without its display width: MySQL 8.0.19 and later report `tinyint unsigned`, MariaDB and older
+	 * MySQL report `tinyint(3) unsigned`.
+	 *
+	 * @param string $type Type as SHOW COLUMNS gives it.
+	 */
+	private function withoutDisplayWidth( string $type ): string {
+		return (string) preg_replace( '/^((?:tiny|small|medium|big)?int)\(\d+\)/', '$1', $type );
 	}
 
 	/**

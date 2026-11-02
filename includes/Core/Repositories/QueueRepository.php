@@ -385,7 +385,9 @@ final class QueueRepository extends Repository {
 	 * the database name as well as the table name (at most 64 characters, the server's limit).
 	 */
 	public function claimLockName(): string {
-		return 'estasoft_sync_claim_' . substr( hash( 'sha256', (string) $this->wpdb->dbname . '|' . $this->tables->queue() ), 0, 16 );
+		// The stubs declare dbname protected; WordPress hands it out through wpdb::__get().
+		$database = (string) $this->wpdb->dbname; // @phpstan-ignore property.protected
+		return 'estasoft_sync_claim_' . substr( hash( 'sha256', $database . '|' . $this->tables->queue() ), 0, 16 );
 	}
 
 	/**
