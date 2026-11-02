@@ -155,7 +155,7 @@ abstract class BaseController {
 			if ( $idempotent ) {
 				$key = $this->idempotency->validKey( (string) $request->get_header( 'Idempotency-Key' ) );
 				if ( null !== $key ) {
-					$replay = $this->idempotency->replay( get_current_user_id(), $key, $request->get_method(), $request->get_route(), $request->get_body() );
+					$replay = $this->idempotency->replay( get_current_user_id(), $key, $request->get_method(), $request->get_route(), $request->get_body(), $this->queryOf( $request ), $this->routeParamsOf( $request ) );
 					if ( null !== $replay ) {
 						$replayed = new \WP_REST_Response( $replay['data'], $replay['status'] );
 						$replayed->header( 'Idempotent-Replayed', 'true' );
@@ -166,12 +166,32 @@ abstract class BaseController {
 			$result   = $handler( $request );
 			$response = $result instanceof \WP_REST_Response ? $result : new \WP_REST_Response( $result, 200 );
 			if ( null !== $key ) {
-				$this->idempotency->remember( get_current_user_id(), $key, $request->get_method(), $request->get_route(), $request->get_body(), $response->get_status(), $response->get_data() );
+				$this->idempotency->remember( get_current_user_id(), $key, $request->get_method(), $request->get_route(), $request->get_body(), $response->get_status(), $response->get_data(), $this->queryOf( $request ), $this->routeParamsOf( $request ) );
 			}
 			return $response;
 		} catch ( \Throwable $error ) {
 			return $this->error( $this->errors->map( $error ) );
 		}
+	}
+
+	/**
+	 * The query-string parameters of a request, for the idempotency fingerprint.
+	 *
+	 * @param \WP_REST_Request $request Request.
+	 * @return array<string,mixed>
+	 */
+	private function queryOf( \WP_REST_Request $request ): array {
+		return (array) $request->get_query_params();
+	}
+
+	/**
+	 * The parameters taken from the route (for example the id in `/queue/12/retry`), for the idempotency fingerprint.
+	 *
+	 * @param \WP_REST_Request $request Request.
+	 * @return array<string,mixed>
+	 */
+	private function routeParamsOf( \WP_REST_Request $request ): array {
+		return (array) $request->get_url_params();
 	}
 
 	/**

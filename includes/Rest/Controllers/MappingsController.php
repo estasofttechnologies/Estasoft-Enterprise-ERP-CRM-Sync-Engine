@@ -157,27 +157,28 @@ final class MappingsController extends BaseController {
 	/**
 	 * `POST /mappings/{type}/publish`: make the draft live. A note given here is kept with the version.
 	 *
+	 * Whether there is a draft is asked first, so that "no draft" is the only thing that answers 409. Any other failure (a draft with
+	 * rule problems, a broken service) is left to the error mapper: rule problems become a 422 with every problem, the rest a logged
+	 * SYNC-REST-001.
+	 *
 	 * @param \WP_REST_Request $request Request.
 	 * @return array<string,mixed>
 	 *
-	 * @throws ApiException 409 when there is no draft; 422 with every rule problem when the draft is invalid.
+	 * @throws ApiException 409 when there is no draft.
 	 */
 	public function publish( \WP_REST_Request $request ): array {
 		$connection = $this->connectionId( $request );
 		$type       = (string) $request['type'];
 		$note       = Sanitize::line( $request->get_param( 'note' ), 500 );
 		$mapping    = $this->mapping();
-		try {
-			if ( '' !== $note ) {
-				$draft = $mapping->set( $connection, $type )['draft'] ?? null;
-				if ( is_array( $draft ) && is_array( $draft['rules'] ?? null ) ) {
-					$mapping->saveDraft( $connection, $type, $draft['rules'], $note, $this->actorName() );
-				}
-			}
-			$mapping->publish( $connection, $type, $this->actorName() );
-		} catch ( \LogicException $error ) {
+		$draft      = $mapping->set( $connection, $type )['draft'] ?? null;
+		if ( null === $draft ) {
 			throw ApiException::conflict( __( 'There is no draft to publish.', 'estasoft-erp-crm-sync-engine' ), 'SYNC-CFG-001' );
 		}
+		if ( '' !== $note && is_array( $draft['rules'] ?? null ) ) {
+			$mapping->saveDraft( $connection, $type, $draft['rules'], $note, $this->actorName() );
+		}
+		$mapping->publish( $connection, $type, $this->actorName() );
 		return $mapping->set( $connection, $type );
 	}
 
@@ -199,11 +200,17 @@ final class MappingsController extends BaseController {
 	 *
 	 * @param \WP_REST_Request $request Request.
 	 * @return array<string,mixed>
+	 *
+	 * @throws ApiException 404 when that version does not exist.
 	 */
 	public function rollback( \WP_REST_Request $request ): array {
 		$connection = $this->connectionId( $request );
 		$type       = (string) $request['type'];
-		$this->mapping()->rollback( $connection, $type, (int) $request->get_param( 'version' ), $this->actorName() );
+		$version    = (int) $request->get_param( 'version' );
+		if ( null === $this->mapping()->version( $connection, $type, $version ) ) {
+			throw ApiException::notFound( __( 'That version does not exist.', 'estasoft-erp-crm-sync-engine' ) );
+		}
+		$this->mapping()->rollback( $connection, $type, $version, $this->actorName() );
 		return $this->mapping()->set( $connection, $type );
 	}
 

@@ -34,6 +34,11 @@ final class NoticesAndBootTest extends RestIntegrationCase {
 	private Urls $urls;
 
 	/**
+	 * How many times the request would have been ended after a redirect.
+	 */
+	private int $terminated = 0;
+
+	/**
 	 * Filters this test added: name and callback, taken off again in tearDown().
 	 *
 	 * @var array<int,array{0:string,1:callable}>
@@ -70,7 +75,8 @@ final class NoticesAndBootTest extends RestIntegrationCase {
 
 	protected function setUp(): void {
 		parent::setUp();
-		$this->urls = new Urls( admin_url( 'admin.php?page=estasoft-sync' ) );
+		$this->urls       = new Urls( admin_url( 'admin.php?page=estasoft-sync' ) );
+		$this->terminated = 0;
 		delete_option( Settings::OPTION );
 		delete_option( OnboardingState::OPTION );
 		delete_transient( 'estasoft_sync_admin_snapshot' );
@@ -98,7 +104,16 @@ final class NoticesAndBootTest extends RestIntegrationCase {
 	 * @param bool $onPluginPage Whether the current screen is the plugin's own page.
 	 */
 	private function notices( bool $onPluginPage = false ): Notices {
-		return new Notices( $this->facts(), new NoticeRules(), $this->urls, static fn(): bool => $onPluginPage );
+		return new Notices( $this->facts(), new NoticeRules(), $this->urls, static fn(): bool => $onPluginPage, $this->terminator() );
+	}
+
+	/**
+	 * What replaces `exit` in these tests: it counts instead of ending the process.
+	 */
+	private function terminator(): \Closure {
+		return function (): void {
+			++$this->terminated;
+		};
 	}
 
 	private function facts(): NoticeFacts {
@@ -162,10 +177,13 @@ final class NoticesAndBootTest extends RestIntegrationCase {
 		}
 		$this->assertSame( array(), $this->facts()->dismissed( $this->userId( 'administrator' ) ) );
 
+		$this->assertSame( 0, $this->terminated, 'a refused request ends in wp_die, not in a redirect' );
+
 		$_REQUEST['_wpnonce'] = wp_create_nonce( Notices::DISMISS_ACTION . '_welcome' );
 		$notices->dismiss();
 		$this->assertSame( array( 'welcome' ), $this->facts()->dismissed( $this->userId( 'administrator' ) ) );
 		$this->assertCount( 1, $captured, 'the person is sent back' );
+		$this->assertSame( 1, $this->terminated, 'and the request ends right after the redirect, as core does' );
 		$this->assertStringNotContainsString( 'is active', $this->printed( $this->notices() ), 'gone for good' );
 	}
 
@@ -175,6 +193,7 @@ final class NoticesAndBootTest extends RestIntegrationCase {
 		$_GET['notice']       = 'encryption_key';
 		$_REQUEST['_wpnonce'] = wp_create_nonce( Notices::DISMISS_ACTION . '_encryption_key' );
 		$notices->dismiss();
+		$this->assertSame( 1, $this->terminated, 'the redirect happens, and the request ends after it' );
 		$this->assertSame( array(), $this->facts()->dismissed( $this->userId( 'administrator' ) ) );
 		foreach ( ( new NoticeRules() )->build( array( 'can_manage' => true, 'can_configure' => true, 'key_missing' => true, 'key_line' => 'x', 'reconnect' => array( array( 'id' => 1, 'label' => 'Odoo' ) ), 'failed' => 3, 'waiting' => 500, 'backlog_threshold' => 200, 'shadow_ends_soon' => true ) ) as $notice ) {
 			$this->assertFalse( $notice['dismissible'] && 'welcome' !== $notice['id'], $notice['id'] );
@@ -228,21 +247,24 @@ final class NoticesAndBootTest extends RestIntegrationCase {
 		$this->assertSame( '', $this->printed( $this->notices( true ) ) );
 	}
 
-	public function test_the_welcome_redirect_goes_to_the_setup_guide_once_for_an_administrator(): void {
-		$welcome  = new Welcome( $this->urls );
+	public function test_the_welcome_redirect_goes_to_the_setup_guide_once_for_an_administrator_and_the_request_ends_after_it(): void {
+		$welcome  = new Welcome( $this->urls, $this->terminator() );
 		$captured = $this->redirects();
 		$welcome->maybeRedirect();
 		$this->assertCount( 0, $captured, 'no flag, no redirect' );
+		$this->assertSame( 0, $this->terminated );
 
 		set_transient( Installer::WELCOME_TRANSIENT, 1, 60 );
 		$welcome->maybeRedirect();
 		$this->assertSame( array( $this->urls->setup() ), $captured->getArrayCopy() );
+		$this->assertSame( 1, $this->terminated, 'exit follows wp_safe_redirect()' );
 		$welcome->maybeRedirect();
 		$this->assertCount( 1, $captured, 'the flag is used up' );
+		$this->assertSame( 1, $this->terminated );
 	}
 
-	public function test_the_welcome_redirect_never_happens_for_bulk_ajax_cron_network_or_non_administrators(): void {
-		$welcome  = new Welcome( $this->urls );
+	public function test_the_welcome_redirect_never_happens_for_bulk_ajax_cron_network_form_handlers_or_non_administrators(): void {
+		$welcome  = new Welcome( $this->urls, $this->terminator() );
 		$captured = $this->redirects();
 
 		set_transient( Installer::WELCOME_TRANSIENT, 1, 60 );
@@ -258,12 +280,49 @@ final class NoticesAndBootTest extends RestIntegrationCase {
 		$welcome->maybeRedirect();
 		remove_filter( 'wp_doing_cron', '__return_true' );
 
-		$this->actAs( 'shop_manager' );
+		$before = $GLOBALS['pagenow'] ?? null;
+		foreach ( array( 'admin-post.php', 'admin-ajax.php' ) as $page ) {
+			$GLOBALS['pagenow'] = $page;
+			$welcome->maybeRedirect();
+		}
+		$GLOBALS['pagenow'] = $before;
+		$this->assertCount( 0, $captured, 'none of these redirected' );
+		$this->assertSame( 0, $this->terminated, 'and none ended the request' );
+		$this->assertNotFalse( get_transient( Installer::WELCOME_TRANSIENT ), 'the flag is still there for a real page load' );
+
+		$GLOBALS['pagenow'] = 'plugins.php';
 		$welcome->maybeRedirect();
-		$this->actAs( 'anonymous' );
+		$GLOBALS['pagenow'] = $before;
+		$this->assertCount( 1, $captured, 'an ordinary admin page is where it happens' );
+	}
+
+	public function test_a_person_who_cannot_configure_does_not_use_up_the_welcome_flag_of_the_administrator(): void {
+		$welcome  = new Welcome( $this->urls, $this->terminator() );
+		$captured = $this->redirects();
 		set_transient( Installer::WELCOME_TRANSIENT, 1, 60 );
-		$welcome->maybeRedirect();
+
+		foreach ( array( 'shop_manager', 'subscriber', 'anonymous' ) as $kind ) {
+			$this->actAs( $kind );
+			$welcome->maybeRedirect();
+			$this->assertNotFalse( get_transient( Installer::WELCOME_TRANSIENT ), "$kind leaves the flag" );
+		}
 		$this->assertCount( 0, $captured );
+		$this->assertSame( 0, $this->terminated );
+
+		$this->actAs( 'administrator' );
+		$welcome->maybeRedirect();
+		$this->assertSame( array( $this->urls->setup() ), $captured->getArrayCopy(), 'the administrator who comes next is sent to setup' );
+		$this->assertSame( 1, $this->terminated );
+		$this->assertFalse( get_transient( Installer::WELCOME_TRANSIENT ) );
+	}
+
+	public function test_without_a_replacement_the_welcome_and_notices_end_the_request_with_a_closure(): void {
+		// The default ends the request with exit; calling it here would end the test run, so only its presence is checked.
+		foreach ( array( new Welcome( $this->urls ), new Notices( $this->facts(), new NoticeRules(), $this->urls, static fn(): bool => false ) ) as $object ) {
+			$property = new \ReflectionProperty( $object, 'terminate' );
+			$property->setAccessible( true );
+			$this->assertInstanceOf( \Closure::class, $property->getValue( $object ), get_class( $object ) );
+		}
 	}
 
 	public function test_help_has_five_tabs_and_a_sidebar_with_the_four_links(): void {

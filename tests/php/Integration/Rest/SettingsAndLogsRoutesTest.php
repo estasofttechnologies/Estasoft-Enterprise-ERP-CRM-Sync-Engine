@@ -11,9 +11,11 @@ namespace Estasoft\SyncEngine\Tests\Integration\Rest;
 
 require_once dirname( __DIR__, 2 ) . '/Support/RestIntegrationCase.php';
 
+use Estasoft\SyncEngine\Core\Repositories\LogQuery;
 use Estasoft\SyncEngine\Core\Services;
 use Estasoft\SyncEngine\Core\Settings;
 use Estasoft\SyncEngine\Rest\Controllers\LogsController;
+use Estasoft\SyncEngine\Tests\Support\RestFake;
 use Estasoft\SyncEngine\Tests\Support\RestIntegrationCase;
 
 final class SettingsAndLogsRoutesTest extends RestIntegrationCase {
@@ -142,5 +144,52 @@ final class SettingsAndLogsRoutesTest extends RestIntegrationCase {
 		$this->assertFalse( $controller->serveCsv( false, $json ), 'a JSON answer is left to WordPress' );
 		$this->assertSame( '', (string) ob_get_clean() );
 		$this->assertTrue( $controller->serveCsv( true, $json ), 'something else already sent the answer' );
+	}
+
+	public function test_range_takes_the_five_values_of_the_contract_and_nothing_else(): void {
+		foreach ( array( '1h', '24h', '7d', '30d', 'all' ) as $range ) {
+			$this->assertSame( 200, $this->call( 'GET', '/logs', array( 'range' => $range ) )->get_status(), $range );
+		}
+		foreach ( array( 'hour', 'today', '14d', 'week', '', '24H' ) as $range ) {
+			$this->assertSame( 400, $this->call( 'GET', '/logs', array( 'range' => $range ) )->get_status(), "'$range'" );
+		}
+		$this->assertSame( array( '1h', '24h', '7d', '30d', 'all' ), array_keys( LogQuery::RANGES ), 'the route offers what the query understands' );
+	}
+
+	/**
+	 * Replace the log repository with one that remembers the queries it is given.
+	 *
+	 * @return RestFake
+	 */
+	private function recordingLogs(): RestFake {
+		$logs = new RestFake(
+			array(
+				'query' => array( 'items' => array(), 'total' => 0, 'total_pages' => 0, 'page' => 1, 'per_page' => 25 ),
+				'csv'   => "time\n",
+			)
+		);
+		$this->replace( Services::LOG_REPOSITORY, $logs );
+		return $logs;
+	}
+
+	public function test_the_download_uses_the_same_query_as_the_screen(): void {
+		$logs   = $this->recordingLogs();
+		$params = array( 'level' => 'error', 'search' => 'order', 'connection_id' => 3, 'queue_id' => 12, 'code' => 'SYNC-VAL-002', 'range' => '24h', 'page' => 2, 'per_page' => 50 );
+		$this->call( 'GET', '/logs', $params );
+		$this->call( 'GET', '/logs', $params, array( 'Accept' => 'text/csv' ) );
+		$this->assertCount( 1, $logs->called( 'query' ) );
+		$this->assertCount( 1, $logs->called( 'csv' ) );
+		$onScreen = $logs->called( 'query' )[0][0];
+		$download = $logs->called( 'csv' )[0][0];
+		$this->assertEquals( $onScreen, $download, 'one query object means one set of filters' );
+		$this->assertSame( array( 'error', 'order', 3, 12, 'SYNC-VAL-002' ), array( $download->level, $download->search, $download->connectionId, $download->queueId, $download->code ) );
+	}
+
+	public function test_range_reaches_the_log_query_for_the_screen_and_for_the_download(): void {
+		$logs = $this->recordingLogs();
+		$this->call( 'GET', '/logs', array( 'range' => '7d' ) );
+		$this->call( 'GET', '/logs', array( 'range' => '7d' ), array( 'Accept' => 'text/csv' ) );
+		$this->assertSame( '7d', $logs->called( 'query' )[0][0]->range );
+		$this->assertSame( '7d', $logs->called( 'csv' )[0][0]->range );
 	}
 }

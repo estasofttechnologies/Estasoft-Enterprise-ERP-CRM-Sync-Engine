@@ -51,7 +51,7 @@ final class LogsController extends BaseController {
 					'type'    => 'string',
 					'pattern' => '^SYNC-[A-Z]+-[0-9]{3}$',
 				),
-				'range'         => self::enumArg( array( 'hour', 'today', '7d', '14d' ) ),
+				'range'         => self::enumArg( array_keys( LogQuery::RANGES ) ),
 				'page'          => self::pageArg(),
 				'per_page'      => array(
 					'type'    => 'integer',

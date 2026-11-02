@@ -11,14 +11,16 @@ namespace Estasoft\SyncEngine\Rest;
 
 defined( 'ABSPATH' ) || exit;
 
+use Estasoft\SyncEngine\Core\Support\Json;
 use Estasoft\SyncEngine\Rest\Support\KeyValueStore;
 
 /**
  * A mutating request may carry an `Idempotency-Key` header. The first successful answer is kept for ten minutes, per person,
- * method and route. The same key again with the same body gets the stored answer back with the header
- * `Idempotent-Replayed: true`; the same key with a different body is refused with 409, because it is a mistake in the client.
- * Failed answers are not kept, so a retry after an error runs again. The stored value holds only the answer, a status and a
- * keyed hash of the request body, never the body itself, because a body can carry a credential.
+ * method and route. The same key again with the same request (the body, the query string and the route parameters) gets the stored
+ * answer back with the header `Idempotent-Replayed: true`; the same key with anything different is refused with 409, because it is a
+ * mistake in the client and replaying would answer a question that was not asked. Failed answers are not kept, so a retry after an
+ * error runs again. The stored value holds only the answer, a status and a keyed hash of the request, never the request itself,
+ * because a body can carry a credential.
  */
 final class IdempotencyCache {
 
@@ -73,16 +75,18 @@ final class IdempotencyCache {
 	 * @param string $method HTTP method.
 	 * @param string $route  Route such as /queue/12/retry.
 	 * @param string $body   Raw request body.
+	 * @param array<string,mixed> $query       Query-string parameters.
+	 * @param array<string,mixed> $routeParams Parameters taken from the route, for example the id.
 	 * @return array{status:int,data:mixed}|null Null when the key is new.
 	 *
-	 * @throws ApiException With status 409 when the key was used for a different body.
+	 * @throws ApiException With status 409 when the key was used for a different request.
 	 */
-	public function replay( int $userId, string $key, string $method, string $route, string $body ): ?array {
+	public function replay( int $userId, string $key, string $method, string $route, string $body, array $query = array(), array $routeParams = array() ): ?array {
 		$stored = $this->store->get( $this->storageKey( $userId, $key, $method, $route ) );
 		if ( ! is_array( $stored ) || ! isset( $stored['fingerprint'], $stored['status'] ) ) {
 			return null;
 		}
-		if ( ! hash_equals( (string) $stored['fingerprint'], $this->fingerprint( $body ) ) ) {
+		if ( ! hash_equals( (string) $stored['fingerprint'], $this->fingerprint( $body, $query, $routeParams ) ) ) {
 			throw new ApiException(
 				'estasoft_sync_idempotency_conflict',
 				__( 'This Idempotency-Key was already used for a different request. Use a new key.', 'estasoft-erp-crm-sync-engine' ),
@@ -105,15 +109,17 @@ final class IdempotencyCache {
 	 * @param string $body   Raw request body.
 	 * @param int    $status HTTP status of the answer.
 	 * @param mixed  $data   Body of the answer.
+	 * @param array<string,mixed> $query       Query-string parameters.
+	 * @param array<string,mixed> $routeParams Parameters taken from the route.
 	 */
-	public function remember( int $userId, string $key, string $method, string $route, string $body, int $status, mixed $data ): void {
+	public function remember( int $userId, string $key, string $method, string $route, string $body, int $status, mixed $data, array $query = array(), array $routeParams = array() ): void {
 		if ( $status >= 400 ) {
 			return;
 		}
 		$this->store->set(
 			$this->storageKey( $userId, $key, $method, $route ),
 			array(
-				'fingerprint' => $this->fingerprint( $body ),
+				'fingerprint' => $this->fingerprint( $body, $query, $routeParams ),
 				'status'      => $status,
 				'data'        => $data,
 			),
@@ -134,11 +140,14 @@ final class IdempotencyCache {
 	}
 
 	/**
-	 * A keyed hash of the request body.
+	 * A keyed hash of the request: the raw body, the query-string parameters and the route parameters. The parameters are sorted,
+	 * so the order they were written in does not matter, and kept apart as JSON so that `a=1&b=2` and `a=12` cannot be confused.
 	 *
-	 * @param string $body Raw body.
+	 * @param string              $body        Raw body.
+	 * @param array<string,mixed> $query       Query-string parameters.
+	 * @param array<string,mixed> $routeParams Route parameters.
 	 */
-	private function fingerprint( string $body ): string {
-		return hash_hmac( 'sha256', $body, $this->secret );
+	private function fingerprint( string $body, array $query, array $routeParams ): string {
+		return hash_hmac( 'sha256', Json::canonical( array( 'body' => $body, 'query' => $query, 'route' => $routeParams ) ), $this->secret );
 	}
 }

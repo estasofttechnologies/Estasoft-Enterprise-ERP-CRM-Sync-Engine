@@ -26,6 +26,13 @@ final class RestFakeSignInConnector extends RestFakeConnector implements SignInC
 	public bool|ConnectorError $completes = true;
 
 	/**
+	 * Something to throw from completeSignIn(), to try a connector that breaks.
+	 *
+	 * @var \Throwable|null
+	 */
+	public ?\Throwable $throws = null;
+
+	/**
 	 * Organisations to offer.
 	 *
 	 * @var array<int,array{id:string,name:string}>
@@ -74,6 +81,9 @@ final class RestFakeSignInConnector extends RestFakeConnector implements SignInC
 	 */
 	public function completeSignIn( Connection $connection, string $code, string $redirectUri, string $codeVerifier ): bool|ConnectorError {
 		$this->completed = compact( 'code', 'redirectUri', 'codeVerifier' );
+		if ( null !== $this->throws ) {
+			throw $this->throws;
+		}
 		return $this->completes;
 	}
 

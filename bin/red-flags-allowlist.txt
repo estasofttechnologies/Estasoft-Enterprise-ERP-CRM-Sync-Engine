@@ -4,3 +4,10 @@
 # The only class that makes outbound requests. Every connector goes through it (HttpClientInterface), which
 # enforces the 30 second timeout, TLS verification and unsafe-URL rejection.
 includes/Core/Support/WpHttpClient.php:outbound HTTP outside WpHttpClient
+#
+# The two admin redirects end the request with exit right after wp_safe_redirect(), exactly as WordPress core does for its own
+# redirects (wp_safe_redirect( $url ); exit;). Without it the rest of the admin request runs after the Location header is sent and
+# WordPress.org reviewers flag the missing exit. Both are behind a closure only so a test can replace it; nothing else in either
+# file ends the request.
+includes/Admin/Welcome.php:die or exit
+includes/Admin/Notices.php:die or exit

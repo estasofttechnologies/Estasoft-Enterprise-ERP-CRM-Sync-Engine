@@ -86,7 +86,7 @@ final class Menu {
 			self::PARENT,
 			$title,
 			$title . $this->bubble(),
-			Capabilities::MANAGE,
+			$this->capability(),
 			Urls::PAGE,
 			array( $this, 'render' )
 		);
@@ -97,6 +97,16 @@ final class Menu {
 		foreach ( $this->onLoad as $callback ) {
 			add_action( 'load-' . $hook, $callback );
 		}
+	}
+
+	/**
+	 * The capability the menu entry is registered with. The rule is the one the REST routes use (Core\Capabilities::userCanManage()):
+	 * whoever may manage may open the page, and so may whoever may configure. WordPress takes one capability per menu entry, so
+	 * a person who holds only `estasoft_sync_configure` gets an entry registered with that one. The entry is built for the current
+	 * person on each admin request, which is also when WordPress checks access to the page.
+	 */
+	public function capability(): string {
+		return current_user_can( Capabilities::CONFIGURE ) && ! current_user_can( Capabilities::MANAGE ) ? Capabilities::CONFIGURE : Capabilities::MANAGE;
 	}
 
 	/**

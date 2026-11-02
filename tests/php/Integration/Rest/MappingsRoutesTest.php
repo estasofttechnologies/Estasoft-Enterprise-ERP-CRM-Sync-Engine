@@ -11,7 +11,9 @@ namespace Estasoft\SyncEngine\Tests\Integration\Rest;
 
 require_once dirname( __DIR__, 2 ) . '/Support/RestIntegrationCase.php';
 
+use Estasoft\SyncEngine\Core\Repositories\LogQuery;
 use Estasoft\SyncEngine\Core\Services;
+use Estasoft\SyncEngine\Core\Support\ValidationException;
 use Estasoft\SyncEngine\Tests\Support\RestFake;
 use Estasoft\SyncEngine\Tests\Support\RestIntegrationCase;
 
@@ -133,6 +135,60 @@ final class MappingsRoutesTest extends RestIntegrationCase {
 		$this->assertSame( 1, $this->call( 'GET', '/mappings/orders' )->get_data()['live']['version'], 'nothing was published' );
 	}
 
+	/**
+	 * The text of the error log, to check what an unexpected failure wrote.
+	 */
+	private function errorLog(): string {
+		return (string) wp_json_encode( $this->container->get( Services::LOG_REPOSITORY )->query( new LogQuery( 'error' ) )->toArray() );
+	}
+
+	public function test_a_logic_exception_from_the_service_is_not_reported_as_no_draft_it_is_a_logged_500(): void {
+		$set     = array( 'draft' => array( 'rules' => $this->rules ), 'live' => array( 'version' => 1 ) );
+		$service = new RestFake(
+			array( 'set' => $set ),
+			array( 'publish' => new \LogicException( 'Service mapping.store is not registered. token=hunter2' ) )
+		);
+		$this->replace( 'mapping.service', $service );
+		$response = $this->call( 'POST', '/mappings/orders/publish' );
+		$this->assertSame( 500, $response->get_status() );
+		$this->assertSame( 'SYNC-REST-001', $response->get_data()['code'] );
+		$this->assertStringNotContainsString( 'hunter2', wp_json_encode( $response->get_data() ) );
+		$this->assertStringContainsString( 'Unexpected failure in the REST API: LogicException', $this->errorLog() );
+		$this->assertStringNotContainsString( 'hunter2', $this->errorLog() );
+	}
+
+	public function test_rule_problems_found_while_publishing_are_a_422_and_never_a_409(): void {
+		$service = new RestFake(
+			array( 'set' => array( 'draft' => array( 'rules' => $this->rules ) ) ),
+			array( 'publish' => new ValidationException( array( 'rules' => 'Add at least one rule.' ) ) )
+		);
+		$this->replace( 'mapping.service', $service );
+		$response = $this->call( 'POST', '/mappings/orders/publish' );
+		$this->assertSame( 422, $response->get_status() );
+		$this->assertSame( 'rest_invalid_param', $response->get_data()['code'] );
+	}
+
+	public function test_only_a_missing_draft_asks_for_no_publish_and_it_is_checked_before_the_service_is_called(): void {
+		$service = new RestFake( array( 'set' => array( 'draft' => null, 'live' => array( 'version' => 1 ) ) ) );
+		$this->replace( 'mapping.service', $service );
+		$response = $this->call( 'POST', '/mappings/orders/publish', array( 'note' => 'x' ) );
+		$this->assertSame( array( 409, 'SYNC-CFG-001' ), array( $response->get_status(), $response->get_data()['code'] ) );
+		$this->assertSame( array(), $service->called( 'publish' ), 'publish() was never asked' );
+		$this->assertSame( array(), $service->called( 'saveDraft' ) );
+		$this->assertSame( 0, $this->container->get( Services::LOG_REPOSITORY )->query( new LogQuery( 'error' ) )->toArray()['total'], 'a missing draft is not an unexpected failure' );
+	}
+
+	public function test_a_plain_out_of_bounds_exception_from_a_rollback_is_not_a_404(): void {
+		$service = new RestFake(
+			array( 'version' => array( 'version' => 1, 'rules' => array() ) ),
+			array( 'rollback' => new \OutOfBoundsException( 'The row 7 is gone' ) )
+		);
+		$this->replace( 'mapping.service', $service );
+		$this->assertSame( 500, $this->call( 'POST', '/mappings/orders/rollback', array( 'version' => 1 ) )->get_status() );
+		$this->assertStringContainsString( 'OutOfBoundsException', $this->errorLog() );
+		$this->assertStringNotContainsString( 'row 7', $this->errorLog() );
+	}
+
 	public function test_discard_removes_the_draft(): void {
 		$this->call( 'PUT', '/mappings/orders', array( 'rules' => $this->edited() ) );
 		$this->assertNull( $this->call( 'POST', '/mappings/orders/discard' )->get_data()['draft'] );
@@ -149,7 +205,9 @@ final class MappingsRoutesTest extends RestIntegrationCase {
 	}
 
 	public function test_rollback_to_a_version_that_does_not_exist_is_a_404(): void {
-		$this->assertSame( 404, $this->call( 'POST', '/mappings/orders/rollback', array( 'version' => 99 ) )->get_status() );
+		$missing = $this->call( 'POST', '/mappings/orders/rollback', array( 'version' => 99 ) );
+		$this->assertSame( array( 404, 'rest_not_found' ), array( $missing->get_status(), $missing->get_data()['code'] ) );
+		$this->assertSame( 1, $this->call( 'GET', '/mappings/orders' )->get_data()['live']['version'], 'nothing was rolled back' );
 		$this->assertSame( 400, $this->call( 'POST', '/mappings/orders/rollback', array( 'version' => 0 ) )->get_status() );
 	}
 

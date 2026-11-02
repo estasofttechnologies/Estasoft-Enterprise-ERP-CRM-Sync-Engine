@@ -41,6 +41,20 @@ class RestFakeConnector implements ConnectorInterface {
 	public array|ConnectorError $taxes = array();
 
 	/**
+	 * Something listTaxes() throws, to try a connector that breaks.
+	 *
+	 * @var \Throwable|null
+	 */
+	public ?\Throwable $taxesThrow = null;
+
+	/**
+	 * What test() returns; a passing result without facts when null.
+	 *
+	 * @var TestResult|null
+	 */
+	public ?TestResult $testResult = null;
+
+	/**
 	 * Queries searchProducts() was called with.
 	 *
 	 * @var array<int,string>
@@ -105,7 +119,7 @@ class RestFakeConnector implements ConnectorInterface {
 	 * @param Connection $connection Connection.
 	 */
 	public function test( Connection $connection ): TestResult {
-		return new TestResult( true );
+		return $this->testResult ?? new TestResult( true );
 	}
 
 	/**
@@ -197,6 +211,9 @@ class RestFakeConnector implements ConnectorInterface {
 	 * @return array<int,array{code:string,label:string,rate_percent:float}>|ConnectorError
 	 */
 	public function listTaxes( Connection $connection ): array|ConnectorError {
+		if ( null !== $this->taxesThrow ) {
+			throw $this->taxesThrow;
+		}
 		return $this->taxes;
 	}
 

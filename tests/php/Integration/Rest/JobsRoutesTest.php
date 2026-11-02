@@ -163,14 +163,14 @@ final class JobsRoutesTest extends RestIntegrationCase {
 			array(
 				'export'  => array( 'filename' => 'estasoft-sync-settings.json', 'json' => '{}' ),
 				'preview' => array( 'preview' => array( 'Log retention: 14 days to 30 days' ) ),
-				'apply'   => array( 'applied' => true ),
+				'apply'   => array( 'applied' => true, 'drafts' => 2, 'skipped' => array( 'xero', 'odoo:orders' ), 'internal' => 'not part of the answer' ),
 			)
 		);
 		$this->assertSame( 'estasoft-sync-settings.json', $this->call( 'POST', '/tools/export' )->get_data()['filename'] );
 
 		$file = "{\n  \"estasoft_sync\": 1,\n  \"settings\": {\"redaction\": true}\n}";
 		$this->assertSame( array( 'preview' => array( 'Log retention: 14 days to 30 days' ) ), $this->call( 'POST', '/tools/import', array( 'json' => $file ) )->get_data() );
-		$this->assertSame( array( 'applied' => true ), $this->call( 'POST', '/tools/import', array( 'json' => $file, 'confirm' => true ) )->get_data() );
+		$this->assertSame( array( 'applied' => true, 'drafts' => 2, 'skipped' => array( 'xero', 'odoo:orders' ) ), $this->call( 'POST', '/tools/import', array( 'json' => $file, 'confirm' => true ) )->get_data(), 'exactly the keys of the type' );
 		$this->assertSame( array( array( $file ) ), $porter->called( 'preview' ), 'the file reaches the porter exactly as sent' );
 		$this->assertSame( array( array( $file, $this->userId( 'administrator' ) ) ), $porter->called( 'apply' ) );
 		$this->assertSame( 400, $this->call( 'POST', '/tools/import', array() )->get_status() );

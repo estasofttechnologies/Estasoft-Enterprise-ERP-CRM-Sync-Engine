@@ -22,13 +22,25 @@ use Estasoft\SyncEngine\Core\Repositories\ConnectionRepository;
 final class ConnectorTaxCodes {
 
 	/**
+	 * Called with the class of an exception that stopped the list.
+	 *
+	 * @var \Closure(string):void
+	 */
+	private \Closure $report;
+
+	/**
 	 * @param ConnectionRepository $connections Connections.
 	 * @param ConnectorRegistry    $registry    Installed connectors.
+	 * @param \Closure|null        $report      Receives the class name of an unexpected exception (and nothing else of it); ignores it by default.
 	 */
 	public function __construct(
 		private readonly ConnectionRepository $connections,
-		private readonly ConnectorRegistry $registry
+		private readonly ConnectorRegistry $registry,
+		?\Closure $report = null
 	) {
+		$this->report = $report ?? static function ( string $class ): void {
+			unset( $class );
+		};
 	}
 
 	/**
@@ -46,6 +58,7 @@ final class ConnectorTaxCodes {
 			}
 			$taxes = $connector->listTaxes( $connection );
 		} catch ( \Throwable $error ) {
+			( $this->report )( get_class( $error ) ); // The screen still opens without the list; the log says what stopped it.
 			return array();
 		}
 		if ( $taxes instanceof ConnectorError || ! is_array( $taxes ) ) {

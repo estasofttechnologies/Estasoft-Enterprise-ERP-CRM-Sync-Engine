@@ -153,7 +153,7 @@ final class ConnectionsController extends BaseController {
 	public function test( \WP_REST_Request $request ): array {
 		/** @var ConnectionService $connections */
 		$connections = $this->service( JobServices::CONNECTIONS );
-		return $connections->test( array(), (int) $request['id'] );
+		return $this->testResult( $connections->test( array(), (int) $request['id'] ) );
 	}
 
 	/**
@@ -166,7 +166,19 @@ final class ConnectionsController extends BaseController {
 		/** @var ConnectionService $connections */
 		$connections = $this->service( JobServices::CONNECTIONS );
 		$existing    = $request->get_param( 'connection_id' );
-		return $connections->test( $this->connectionInput( $request ), is_numeric( $existing ) ? (int) $existing : null );
+		return $this->testResult( $connections->test( $this->connectionInput( $request ), is_numeric( $existing ) ? (int) $existing : null ) );
+	}
+
+	/**
+	 * The `ConnectionTestResult` of types.ts. The service also returns what the connector detected (its own free-form facts, which
+	 * are kept in the saved connection); that is not part of the contract and may hold values a connector chose, so it is left out.
+	 *
+	 * @param array<string,mixed> $result The service's answer.
+	 * @return array<string,mixed>
+	 */
+	private function testResult( array $result ): array {
+		unset( $result['detected'] );
+		return $result;
 	}
 
 	/**

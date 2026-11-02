@@ -80,6 +80,30 @@ final class CliCommandsTest extends RestIntegrationCase {
 		$this->assertCount( 1, $this->lines( 'error' ) );
 	}
 
+	public function test_options_written_without_a_value_change_nothing_in_the_database(): void {
+		$item = $this->h->item( $this->conn, '1' );
+		$this->h->queue->markFailed( $item, 'SYNC-MAP-001', 'x', 'SKU A' );
+
+		foreach (
+			array(
+				fn() => $this->commands()->retry( array(), array( 'ids' => true ) ),
+				fn() => $this->commands()->retry( array(), array( 'code' => true ) ),
+				fn() => $this->commands()->pause( array(), array( 'minutes' => true ) ),
+				fn() => $this->commands()->pause( array(), array( 'connection' => true ) ),
+			) as $command
+		) {
+			try {
+				$command();
+				$this->fail( 'the command must stop' );
+			} catch ( \RuntimeException $stopped ) {
+				$this->assertSame( 2, $stopped->getCode() );
+			}
+		}
+		$this->assertSame( 'failed', $this->h->row( $item )['state'] );
+		$this->assertSame( 'active', $this->h->connectionRow( $this->conn )['status'] );
+		$this->assertCount( 4, $this->lines( 'error' ) );
+	}
+
 	public function test_pause_and_resume_change_the_connection_in_the_database(): void {
 		$this->commands()->pause( array(), array( 'minutes' => '30' ) );
 		$this->assertSame( 'paused', $this->h->connectionRow( $this->conn )['status'] );

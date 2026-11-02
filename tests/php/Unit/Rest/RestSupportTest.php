@@ -94,6 +94,35 @@ final class RestSupportTest extends TestCase {
 		}
 	}
 
+	public function test_the_same_key_with_another_query_or_route_parameter_is_a_409_and_the_order_of_parameters_does_not_matter(): void {
+		$cache = $this->cache();
+		$cache->remember( 7, 'k1', 'POST', '/r', '', 200, 'first', array( 'connection_id' => '1', 'tags' => array( 'b' => '2', 'a' => '1' ) ), array( 'id' => '5' ) );
+
+		$same = $cache->replay( 7, 'k1', 'POST', '/r', '', array( 'tags' => array( 'a' => '1', 'b' => '2' ), 'connection_id' => '1' ), array( 'id' => '5' ) );
+		$this->assertSame( 'first', $same['data'] );
+
+		foreach (
+			array(
+				'another value'   => array( array( 'connection_id' => '2', 'tags' => array( 'b' => '2', 'a' => '1' ) ), array( 'id' => '5' ) ),
+				'a missing query' => array( array(), array( 'id' => '5' ) ),
+				'a nested value'  => array( array( 'connection_id' => '1', 'tags' => array( 'b' => '3', 'a' => '1' ) ), array( 'id' => '5' ) ),
+				'a route value'   => array( array( 'connection_id' => '1', 'tags' => array( 'b' => '2', 'a' => '1' ) ), array( 'id' => '6' ) ),
+			) as $label => $other
+		) {
+			try {
+				$cache->replay( 7, 'k1', 'POST', '/r', '', $other[0], $other[1] );
+				$this->fail( 'expected a conflict for ' . $label );
+			} catch ( ApiException $error ) {
+				$this->assertSame( array( 409, 'estasoft_sync_idempotency_conflict' ), array( $error->status, $error->apiCode ), $label );
+			}
+		}
+	}
+
+	public function test_the_store_holds_no_query_value_in_the_clear(): void {
+		$this->cache()->remember( 7, 'k1', 'POST', '/r', '', 200, array( 'ok' => true ), array( 'token' => 'TOPSECRET-IN-QUERY' ), array( 'id' => '5' ) );
+		$this->assertStringNotContainsString( 'TOPSECRET-IN-QUERY', (string) json_encode( array( $this->store->values, array_keys( $this->store->values ) ) ) );
+	}
+
 	public function test_failed_answers_are_not_kept(): void {
 		$cache = $this->cache();
 		$cache->remember( 7, 'k1', 'POST', '/r', '', 409, array( 'code' => 'x' ) );
@@ -180,6 +209,17 @@ final class RestSupportTest extends TestCase {
 			$this->assertNull( $state->peek( $bad, 3 ), $bad );
 		}
 		$this->assertStringNotContainsString( $begin['state'], (string) json_encode( array_keys( $this->store->values ) ), 'only a hash is a key' );
+	}
+
+	public function test_well_formed_only_says_the_text_has_the_shape_of_a_state(): void {
+		$state = new OAuthState( $this->store );
+		$begin = $state->begin( 7, 3 );
+		$this->assertTrue( OAuthState::wellFormed( $begin['state'] ) );
+		$this->assertTrue( OAuthState::wellFormed( str_repeat( 'a', 43 ) ), 'a made-up one has the shape too; it is refused later by consume()' );
+		$this->assertNull( $state->consume( str_repeat( 'a', 43 ), 3 ) );
+		foreach ( array( null, 12, array( 'a' ), true, '', 'short', str_repeat( 'a', 19 ), str_repeat( 'a', 129 ), $begin['state'] . '!', $begin['state'] . "\n", "a\nb" . str_repeat( 'a', 30 ) ) as $bad ) {
+			$this->assertFalse( OAuthState::wellFormed( $bad ), var_export( $bad, true ) );
+		}
 	}
 
 	public function test_the_pkce_challenge_matches_the_example_in_rfc_7636(): void {

@@ -28,17 +28,30 @@ final class Notices {
 	public const DISMISS_ACTION = 'estasoft_sync_dismiss_notice';
 
 	/**
-	 * @param NoticeFacts   $facts        Facts the notices depend on.
-	 * @param NoticeRules   $rules        When each notice shows.
-	 * @param Urls          $urls         Addresses of the app.
-	 * @param \Closure():bool $onPluginPage Whether the current screen is the plugin's own page.
+	 * Ends the request after the dismiss redirect.
+	 *
+	 * @var \Closure():void
+	 */
+	private \Closure $terminate;
+
+	/**
+	 * @param NoticeFacts      $facts        Facts the notices depend on.
+	 * @param NoticeRules      $rules        When each notice shows.
+	 * @param Urls             $urls         Addresses of the app.
+	 * @param \Closure():bool  $onPluginPage Whether the current screen is the plugin's own page.
+	 * @param \Closure|null    $terminate    Ends the request after a redirect; `exit` by default (allowed for this file in
+	 *                                       bin/red-flags-allowlist.txt, as core ends its own redirects). Tests pass their own.
 	 */
 	public function __construct(
 		private readonly NoticeFacts $facts,
 		private readonly NoticeRules $rules,
 		private readonly Urls $urls,
-		private readonly \Closure $onPluginPage
+		private readonly \Closure $onPluginPage,
+		?\Closure $terminate = null
 	) {
+		$this->terminate = $terminate ?? static function (): void {
+			exit;
+		};
 	}
 
 	/**
@@ -72,6 +85,7 @@ final class Notices {
 		}
 		$back = wp_get_referer();
 		wp_safe_redirect( false === $back ? admin_url() : $back );
+		( $this->terminate )();
 	}
 
 	/**
