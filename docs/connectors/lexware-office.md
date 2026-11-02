@@ -6,8 +6,8 @@ connection_method: key
 available: true
 verified: false
 hosts: [api.lexware.io]
-terms_url: https://agb.lexware.de/lexware-office/public-api-lizenz--und-nutzungsbedingungen   # linked from developers.lexware.io/docs; the page itself was not reachable from the build session
-privacy_url: https://datenschutz.lexware.de/lexware-office                                    # linked from developers.lexware.io/docs; not fetched
+terms_url: https://agb.lexware.de/lexware-office/public-api-lizenz--und-nutzungsbedingungen   # named "API Lizenz- und Nutzungsbedingungen" on https://www.lexware.de/partner/public-api/ (fetched 2026-11-02); the licence page itself is not on the fetch allowlist, its text is unread
+privacy_url: https://datenschutz.lexware.de/                                                  # named "Datenschutz" on https://www.lexware.de/partner/public-api/ (fetched 2026-11-02); the target page itself is not on the fetch allowlist
 developer_url: https://app.lexware.de/addons/public-api                                       # named by the official help article and the API documentation; a login page, not fetched
 variants: []
 ---
@@ -120,22 +120,22 @@ Replays: create-invoice is never repeated blindly. `send()` always starts with t
 
 1. Read the payload; refuse a currency other than EUR; refuse an order without lines.
 2. Resolve the customer (section 8), then every line's article (unknown SKU: SYNC-MAP-001 or, with `unknown_sku = custom`, a free-text line).
-3. Taxes. Lexware's tax treatment is document-level (`taxConditions.taxType`), the rate is per line. The tax mapping (rows `country + rate -> system code`) yields per line either a percentage (`19`, `7`, `0`, any decimal Lexware accepts) or a special type: `vatfree`, `intraCommunitySupply`, `constructionService13b`, `externalService13b`, `thirdPartyCountryService`, `thirdPartyCountryDelivery`, `photovoltaicEquipment` [documented enum]. All lines (goods, shipping, fees) must resolve to percentages, or all to the same special type. A mix stops the order with SYNC-VAL-002 naming the two codes (never silently re-tax). Percentages use `taxType = net` when the payload prices are tax-exclusive and `gross` when `prices_include_tax` is true; `grossAmount` is then the unit price. A special type forces `taxRatePercentage = 0`. A rate Lexware does not support (the supported list is an FAQ page that could not be read, section 16) comes back as a 406 and is mapped to SYNC-MAP-002 when the `IssueList` entry names the tax rate, else SYNC-VAL-002.
+3. Taxes. Lexware's tax treatment is document-level (`taxConditions.taxType`), the rate is per line. The tax mapping (rows `country + rate -> system code`) yields per line either a percentage (`19`, `7`, `0`, any decimal Lexware accepts) or a special type: `vatfree`, `intraCommunitySupply`, `constructionService13b`, `externalService13b`, `thirdPartyCountryService`, `thirdPartyCountryDelivery`, `photovoltaicEquipment` [documented enum]. All lines (goods, shipping, fees) must resolve to percentages, or all to the same special type. A mix stops the order with SYNC-VAL-002 naming the two codes (never silently re-tax). Percentages use `taxType = net` when the payload prices are tax-exclusive and `gross` when `prices_include_tax` is true; `grossAmount` is then the unit price. A special type forces `taxRatePercentage = 0`. A rate Lexware does not support (the supported list is an FAQ page that could not be read, section 16) comes back as a 406 and is mapped to SYNC-MAP-002 only when an `IssueList` entry names `taxRatePercentage`; any other 406, including one whose field path merely contains "tax" such as `taxConditions.taxType`, is SYNC-VAL-002 with the short reason.
 4. Discounts. WooCommerce coupons reduce the line totals; the connector prices every line from the line total after discount (net or gross as above), divided by the quantity to four decimals, so the invoice total equals the shop's without a negative line. The coupon codes are appended to `remark`.
 5. Create `POST /v1/invoices` as a draft, or with `?finalize=true` when `invoice_state = open`. `finalize` is a query parameter of the create call [documented]; no endpoint that finalises an existing draft was found (section 16). A finalised invoice cannot be edited, is numbered, and is the document that is legally issued [documented].
-6. Read it back (`GET /v1/invoices/{id}`): number, status, `totalPrice` (`totalNetAmount`, `totalGrossAmount`, `totalTaxAmount`) and `taxAmounts`. Compare `totalGrossAmount` with `total - excluded_total` in minor units. One minor unit of difference is rounding.
+6. Read it back (`GET /v1/invoices/{id}`): number, status, `totalPrice` (`totalNetAmount`, `totalGrossAmount`, `totalTaxAmount`) and `taxAmounts`. Compare `totalGrossAmount` with `total - excluded_total` in minor units. WooCommerce rounds the tax of each line and Lexware the tax of each rate group, so a few cents of difference are rounding: the default tolerance is one minor unit per document row (lines, shipping, fees), at most 10 (ten lines of 0.99 EUR at 19 % differ by 2 cents). The option `total_tolerance` (0 to 50 minor units; empty means the default) replaces it.
 7. A larger difference (option `total_mismatch`):
    - `fail` (default): the item fails with SYNC-VAL-002 naming both totals. In `draft` mode the draft stays in Lexware (no delete endpoint was found) and the person deletes it there; the next pass finds that draft by its marker, checks it again and never creates a second one. In `open` mode the invoice is already issued and cannot be corrected: the item fails with the invoice number in the message, the person cancels it in Lexware with a credit note and skips the queue item. Nothing is corrected automatically.
    - `warn`: the order goes on and the result carries a warning.
    This is why the default is `draft`: `open` should be switched on only after a sample order of every tax situation matched to the cent.
 
-Dates: `voucherDate` is the order date and Lexware keeps it on finalise [inferred, not documented]; read back and warn if it differs. `shippingDate` is the order date.
+Dates: `voucherDate` is the order date (local calendar day, Europe/Berlin) and Lexware keeps it on finalise [inferred, not documented]. The read-back `voucherDate` is compared with the day sent (its UTC offset is honoured); if it is another day the result carries the warning `date_differs`. The date is never written back (no call to change a finalised document). `shippingDate` is the order date.
 
 Resumability: every pass starts from the search in section 6. Steps after creation (read-back, check) are reads, so they are safe to repeat.
 
 ## 8. Customers
 
-`lookupCustomer( email )`: `GET /v1/contacts?email=<email>&customer=true` [documented: `email` is a case-insensitive substring match over contact emails and contact-person emails, minimum 3 characters, `_` and `%` act as wildcards unless escaped with a backslash]. The connector escapes `\`, `_` and `%`, then keeps only contacts with an email equal (case-insensitive) to the wanted one in `emailAddresses.*` or `company.contactPersons[].emailAddress`, paging with `page` until `last`. Several matches: option `duplicate_customer` `oldest` (default; lowest customer number) or `fail`. None: create (option `customer_policy` `match_or_create`, `match_only`, `always_create`).
+`lookupCustomer( email )`: `GET /v1/contacts?email=<email>&customer=true` [documented: `email` is a case-insensitive substring match over contact emails and contact-person emails, minimum 3 characters, `_` and `%` act as wildcards unless escaped with a backslash]. The connector escapes `\`, `_` and `%`, then keeps only contacts with an email equal (case-insensitive) to the wanted one in `emailAddresses.*` or `company.contactPersons[].emailAddress`, paging with `page` until `last`. Several matches: option `duplicate_customer` `oldest` (default; lowest customer number) or `fail`. None: create (option `customer_policy` `match_or_create` or `match_only`). There is no "always create" choice: the invoice search is scoped by contact, and a new contact for every pass would hide an invoice whose read-back was lost (a retry would make a second one); a stored value `always_create` is read as `match_or_create`.
 
 An existing contact keeps its stored billing address; the invoice prints the contact's address [inferred]. When the order's billing address differs from the contact's, the result carries a warning `address_differs`; the contact is never changed [Lexware updates need the contact's `version` and replace whole lists, so an automatic update could erase data]. Whether address fields next to `contactId` override the contact's address is not documented in the part read (section 16), so the connector does not send both.
 
@@ -169,17 +169,18 @@ None. The Payments endpoint is read-only (`GET /v1/payments/{voucherId}`) [docum
 | --- | --- | --- |
 | `invoice_state` | `draft`, `open` | `draft` |
 | `refund_state` | `draft`, `open` | follows `invoice_state` |
-| `customer_policy` | `match_or_create`, `match_only`, `always_create` | `match_or_create` |
+| `customer_policy` | `match_or_create`, `match_only` | `match_or_create` |
 | `duplicate_customer` | `oldest`, `fail` | `oldest` |
 | `unknown_sku` | `refuse`, `custom` | `refuse` |
 | `total_mismatch` | `fail`, `warn` | `fail` |
+| `total_tolerance` | 0 to 50 minor units, or empty | empty: one per document row, at most 10 |
 | `shipping_type` | `delivery`, `service`, `none` | `delivery` |
 | `unit_name` | text | `Stück` |
 | `timezone` | PHP time zone name | `Europe/Berlin` |
 
 ## 13. Rate limits and pacing
 
-2 requests per second per client across all endpoints, a token bucket; over the limit the call is **not performed** and answers 429 without `Retry-After` [documented]. The authorization server has separate, undocumented limits and blocks a client for seconds to minutes [documented]. `rateLimitHints()` returns 1.7 requests per second (interval 600 ms, a safety margin under 2) and concurrency 1. 429 maps to SYNC-RATE-001; Lexware sends no `Retry-After`, so the wait is the base default of 30 seconds and the engine's retry delays grow from there. There is no daily cap.
+2 requests per second per client across all endpoints, a token bucket; over the limit the call is **not performed** and answers 429 without `Retry-After` [documented]. The authorization server has separate, undocumented limits and blocks a client for seconds to minutes [documented]. `rateLimitHints()` returns 1.7 requests per second (an interval of about 600 ms, a safety margin under 2) and concurrency 1. `ping()` is one call, `GET /v1/profile` (no request at all when the key is past its end date). 429 maps to SYNC-RATE-001; Lexware sends no `Retry-After`, so the wait is the base default of 30 seconds and the engine's retry delays grow from there. There is no daily cap.
 
 ## 14. Error mapping
 
@@ -190,7 +191,7 @@ None. The Payments endpoint is read-only (`GET /v1/payments/{voucherId}`) [docum
 | 401 | SYNC-AUTH-001 | key wrong, revoked, or (after `key_expires_on`) SYNC-AUTH-005 |
 | 403 | SYNC-AUTH-004 | the key lacks a permission; the message names the area (contacts, invoices, ...) from the path |
 | 404 on a resource id | SYNC-VAL-002 | record deleted between two steps (retried once) |
-| 406 with an `IssueList` | SYNC-VAL-002 | `i18nKey` and a short sanitised reason; unknown tax rate: SYNC-MAP-002; draft invoice referenced by a credit note: handled before the call |
+| 406 with an `IssueList` | SYNC-VAL-002 | `i18nKey` and a short sanitised reason; an entry naming `taxRatePercentage` (an unsupported rate): SYNC-MAP-002; draft invoice referenced by a credit note: handled before the call |
 | 400, 405, 415 | SYNC-VAL-002 | |
 | 402 | SYNC-AUTH-006 | plan does not include API access [inferred; see below] |
 | 409 (`version` conflict) | SYNC-NET-002 | retry after a fresh read |
@@ -220,7 +221,7 @@ Capability record (connection-methods spec section 4): `order_document` `invoice
 
 - The Invoices chapter, Paging of Resources, Error Codes (regular and legacy bodies), the FAQ (valid tax rates, datetime format, text formatting and length limits of `title`, `introduction`, `remark`, `name`) and the Voucherlist, Profile and Payments chapters of https://developers.lexware.io/docs/ could not be read on 2026-11-02 (the page is cut off in the middle of Credit Notes for the fetch tool). Everything about invoices is taken from the Credit Notes chapter (same shape) and from the third-party mirror of the create schema.
 - The Voucherlist filter names `voucherType`, `voucherStatus`, `contactId`, `voucherDateFrom`, `voucherDateTo`, `size`, `page`: response fields are documented by the Microsoft connector page, the filters are recalled from the reference [third-party]. If `contactId` is not a filter the search degrades to the day window alone (more `GET /v1/invoices/{id}` calls, still correct).
-- The 406 `IssueList` entry shape (`i18nKey`, `source`, `type`) is [third-party] (Chift). The regular error body (`timestamp`, `status`, `error`, `message`, `path`, `details`) is not confirmed; the connector reads whichever of these keys is present.
+- The 406 `IssueList` entry shape (`i18nKey`, `source`, `type`) is [third-party] (Chift). That `source` (or the `field` of a `details` entry) carries the path `...taxRatePercentage` for an unsupported rate is [inferred]; if Lexware words it differently the rate problem is reported as SYNC-VAL-002 with the short reason instead of SYNC-MAP-002. The regular error body (`timestamp`, `status`, `error`, `message`, `path`, `details`) is not confirmed; the connector reads whichever of these keys is present.
 - Page size: `size` up to 250 [third-party]; the connector asks for 250 and accepts whatever the answer's `size` says.
 - Supported `taxRatePercentage` values (an FAQ page). Articles accept 0, 7, 19 since March 2024 [documented]; vouchers historically also 5 and 16. `listTaxCodes` offers 19, 7, 0 and the special types and allows the merchant to type another percentage in the tax mapping.
 - Whether `finalize` can be applied to an existing draft (no such endpoint found), whether invoices can be deleted (not found), whether an invoice's `voucherDate` survives finalising.
@@ -229,7 +230,7 @@ Capability record (connection-methods spec section 4): `order_document` `invoice
 - Who may create keys (role) and whether a key shows its end date in the list (the connector asks the merchant to type it).
 - `shippingConditions` being required on invoices (the third-party schema marks `shippingType` required). If Lexware does not require it, the extra object is harmless.
 - The invoice deeplink path `/permalink/invoices/view/{id}`.
-- Terms of the API licence (`terms_url`) were not read; check them for use by a free plugin distributed to many merchants before publishing.
+- Terms of the API licence (`terms_url`): the page is named on https://www.lexware.de/partner/public-api/ (fetched 2026-11-02, which also says the API causes no extra cost from Version XL), but the licence page itself could not be fetched; its text is unread. Check it for use by a free plugin distributed to many merchants before publishing.
 
 ## 17. Manual smoke test (real organisation, no secrets in the repository)
 

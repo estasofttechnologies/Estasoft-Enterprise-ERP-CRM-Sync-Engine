@@ -60,6 +60,7 @@ abstract class Sage300TestCase extends TestCase {
 				'company'         => FakeSage300Server::COMPANY,
 				'username'        => FakeSage300Server::USER,
 				'customer_number' => '1200',
+				'refund_total_property' => 'NoteTotal',
 			),
 			array( 'password' => $password )
 		);

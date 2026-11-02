@@ -17,7 +17,11 @@ use Estasoft\SyncEngine\Contract\ConnectorError;
  * Pure: it takes the checked payload, the contact id, the products and the tax rates found, and returns the body or the reason the document cannot be built
  * (SYNC-MAP-001 for a product Sage does not have, SYNC-VAL-002 for a line without a tax code). Sage does not work tax out: every line carries a tax_amount that
  * the caller calculates, so it is worked out here in whole minor units, half away from zero, per line and for the shipping. A zero rate sends no tax_amount
- * [documented]. Amounts are decimal strings.
+ * [documented], and a Spanish business sends none at all [documented]. Amounts are decimal strings.
+ *
+ * Prices that include tax: in the UK, Ireland and France a line carries `unit_price_includes_tax` true and no tax_amount, and Sage works the tax out [Sage community,
+ * Sage's API description]. In Canada and Spain the flag does not apply, so the line is converted to net here (SageAmounts::netFromGross) and, in Canada, the tax is
+ * calculated as for prices without tax. Shipping has no such flag and is always converted.
  */
 final class SageBuilder {
 
@@ -26,8 +30,9 @@ final class SageBuilder {
 	 *
 	 * @param SageOptions $options Connection options.
 	 * @param SageAmounts $amounts Conversion helper.
+	 * @param string      $country Country of the business (lower-case ISO code).
 	 */
-	public function __construct( private readonly SageOptions $options, private readonly SageAmounts $amounts ) {
+	public function __construct( private readonly SageOptions $options, private readonly SageAmounts $amounts, private readonly string $country = 'gb' ) {
 	}
 
 	/**
@@ -59,14 +64,14 @@ final class SageBuilder {
 			if ( '' === $name ) {
 				$name = __( 'Item', 'estasoft-erp-crm-sync-engine' );
 			}
-			$lines[] = $this->line( $product, (string) $ledgers['sales'], $name, (string) $line['quantity'], (int) $line['price_minor'], (float) $line['discount'], $rate, $currency, $cut );
+			$lines[] = $this->line( $product, (string) $ledgers['sales'], $name, (string) $line['quantity'], (int) $line['price_minor'], (float) $line['discount'], $rate, $currency, $payload->pricesIncludeTax, $cut );
 		}
 		foreach ( $payload->extras as $extra ) {
 			$rate = $this->rate( $extra['tax'], $rates, 0 );
 			if ( $rate instanceof ConnectorError ) {
 				return $rate;
 			}
-			$lines[] = $this->line( null, (string) $ledgers[ (string) $extra['kind'] ], (string) $extra['name'], '1', (int) $extra['price_minor'], 0.0, $rate, $currency, $cut );
+			$lines[] = $this->line( null, (string) $ledgers[ (string) $extra['kind'] ], (string) $extra['name'], '1', (int) $extra['price_minor'], 0.0, $rate, $currency, $payload->pricesIncludeTax, $cut );
 		}
 		$invoice = array(
 			'contact_id'    => $contactId,
@@ -80,7 +85,7 @@ final class SageBuilder {
 			$invoice['notes'] = SagePayloadReader::limit( $payload->note, 2000, $cut );
 		}
 		if ( 0 !== $payload->shippingMinor ) {
-			$shipping = $this->shipping( $payload->shippingMinor, $payload->shippingTax, $rates, $currency );
+			$shipping = $this->shipping( $payload->shippingMinor, $payload->shippingTax, $rates, $currency, $payload->pricesIncludeTax );
 			if ( $shipping instanceof ConnectorError ) {
 				return $shipping;
 			}
@@ -110,7 +115,7 @@ final class SageBuilder {
 		$shipping = array();
 		foreach ( $payload->lines as $index => $line ) {
 			if ( 'shipping' === ( $line['kind'] ?? '' ) ) {
-				$built = $this->shipping( (int) $line['amount_minor'], $line['tax'], $rates, $currency );
+				$built = $this->shipping( (int) $line['amount_minor'], $line['tax'], $rates, $currency, $payload->pricesIncludeTax );
 				if ( $built instanceof ConnectorError ) {
 					return $built;
 				}
@@ -140,7 +145,7 @@ final class SageBuilder {
 				$unit  = $amount;
 				$text .= ' (' . $quantity . ')';
 			}
-			$lines[] = $this->line( $product, (string) $ledgers['sales'], $text, $qty, $unit, 0.0, $rate, $currency, $cut );
+			$lines[] = $this->line( $product, (string) $ledgers['sales'], $text, $qty, $unit, 0.0, $rate, $currency, $payload->pricesIncludeTax, $cut );
 		}
 		$note  = array(
 			'contact_id'        => SagePayloadReader::text( $invoice['contact']['id'] ?? '' ),
@@ -216,21 +221,21 @@ final class SageBuilder {
 	/**
 	 * One sales line.
 	 *
-	 * @param array<string,mixed>|null  $product  Sage product, or null for free text.
-	 * @param string                    $ledgerId Ledger account id.
-	 * @param string                    $name     Description.
-	 * @param string                    $quantity Quantity as decimal text.
-	 * @param int                       $unit     Unit price in minor units (negative for a discount).
-	 * @param float                     $discount Discount percent.
-	 * @param array{id:string,rate:int} $rate    Tax rate.
-	 * @param string                    $currency Currency.
-	 * @param bool                      $cut      Set to true when a description was shortened.
+	 * @param array<string,mixed>|null  $product     Sage product, or null for free text.
+	 * @param string                    $ledgerId    Ledger account id.
+	 * @param string                    $name        Description.
+	 * @param string                    $quantity    Quantity as decimal text.
+	 * @param int                       $unit        Unit price in minor units (negative for a discount); with tax in it when $includesTax.
+	 * @param float                     $discount    Discount percent.
+	 * @param array{id:string,rate:int} $rate        Tax rate.
+	 * @param string                    $currency    Currency.
+	 * @param bool                      $includesTax Whether the price includes tax.
+	 * @param bool                      $cut         Set to true when a description was shortened.
 	 * @return array<string,mixed>
 	 */
-	private function line( ?array $product, string $ledgerId, string $name, string $quantity, int $unit, float $discount, array $rate, string $currency, bool &$cut ): array {
+	private function line( ?array $product, string $ledgerId, string $name, string $quantity, int $unit, float $discount, array $rate, string $currency, bool $includesTax, bool &$cut ): array {
 		$gross = $this->amounts->lineTotal( $quantity, $unit );
 		$off   = $this->amounts->percentOf( $gross, $discount );
-		$net   = $gross - $off;
 		$line  = array(
 			'description'       => SagePayloadReader::limit( $name, 500, $cut ),
 			'ledger_account_id' => $ledgerId,
@@ -241,37 +246,83 @@ final class SageBuilder {
 		if ( null !== $product ) {
 			$line['product_id'] = SagePayloadReader::text( $product['id'] ?? '' );
 		}
-		if ( 0 !== $off ) {
+		if ( $includesTax && $this->sageWorksTaxOut() ) {
+			$line['unit_price_includes_tax'] = true;
+			if ( 0 !== $off ) {
+				$line['discount_amount'] = $this->amounts->text( $off, $currency );
+			}
+			return $line;
+		}
+		$net = $gross - $off;
+		if ( $includesTax ) {
+			$net                = $this->amounts->netFromGross( $net, $rate['rate'] );
+			$converted          = $this->quantityAndUnit( $quantity, $net );
+			$line['quantity']   = $converted[0];
+			$line['unit_price'] = $this->amounts->text( $converted[1], $currency );
+			if ( $converted[0] !== $quantity ) {
+				$line['description'] = SagePayloadReader::limit( $name . ' (' . $quantity . ')', 500, $cut );
+			}
+		} elseif ( 0 !== $off ) {
 			$line['discount_amount'] = $this->amounts->text( $off, $currency );
 		}
-		if ( 0 !== $rate['rate'] ) {
+		if ( 0 !== $rate['rate'] && ! $this->taxAmountForbidden() ) {
 			$line['tax_amount'] = $this->amounts->text( $this->amounts->taxOn( $net, $rate['rate'] ), $currency );
 		}
 		return $line;
 	}
 
 	/**
-	 * The shipping fields of a document.
+	 * A quantity and a unit price whose product is exactly the net of a line: the same quantity when the net divides by it, else a quantity of 1.
 	 *
-	 * @param int                                     $amount   Shipping net amount in minor units.
-	 * @param string|null                             $code     Tax code of the shipping, empty for none, null for not given.
-	 * @param array<string,array{id:string,rate:int}> $rates    Tax rates by lower-case id.
-	 * @param string                                  $currency Currency.
+	 * @param string $quantity Quantity as decimal text.
+	 * @param int    $net      Net amount of the line in minor units.
+	 * @return array{0:string,1:int}
+	 */
+	private function quantityAndUnit( string $quantity, int $net ): array {
+		if ( 1 === preg_match( '/^[1-9]\d{0,6}$/', $quantity ) && 0 === $net % (int) $quantity ) {
+			return array( $quantity, intdiv( $net, (int) $quantity ) );
+		}
+		return array( '1', $net );
+	}
+
+	/**
+	 * The shipping fields of a document. The shipping has no "includes tax" flag, so an amount with tax in it is converted to net.
+	 *
+	 * @param int                                     $amount      Shipping amount in minor units.
+	 * @param string|null                             $code        Tax code of the shipping, empty for none, null for not given.
+	 * @param array<string,array{id:string,rate:int}> $rates       Tax rates by lower-case id.
+	 * @param string                                  $currency    Currency.
+	 * @param bool                                    $includesTax Whether the amount includes tax.
 	 * @return array<string,string>|ConnectorError
 	 */
-	private function shipping( int $amount, ?string $code, array $rates, string $currency ): array|ConnectorError {
+	private function shipping( int $amount, ?string $code, array $rates, string $currency, bool $includesTax ): array|ConnectorError {
 		$rate = $this->rate( $code ?? '', $rates, 0 );
 		if ( $rate instanceof ConnectorError ) {
 			return $rate;
 		}
+		$net    = $includesTax ? $this->amounts->netFromGross( $amount, $rate['rate'] ) : $amount;
 		$fields = array(
-			'shipping_net_amount'  => $this->amounts->text( $amount, $currency ),
+			'shipping_net_amount'  => $this->amounts->text( $net, $currency ),
 			'shipping_tax_rate_id' => $rate['id'],
 		);
-		if ( 0 !== $rate['rate'] ) {
-			$fields['shipping_tax_amount'] = $this->amounts->text( $this->amounts->taxOn( $amount, $rate['rate'] ), $currency );
+		if ( 0 !== $rate['rate'] && ! $this->taxAmountForbidden() ) {
+			$fields['shipping_tax_amount'] = $this->amounts->text( $this->amounts->taxOn( $net, $rate['rate'] ), $currency );
 		}
 		return $fields;
+	}
+
+	/**
+	 * Whether Sage works the tax out of a price that includes it: the UK, Ireland and France.
+	 */
+	private function sageWorksTaxOut(): bool {
+		return in_array( $this->country, array( 'gb', 'ie', 'fr' ), true );
+	}
+
+	/**
+	 * Whether Sage refuses a tax_amount: a Spanish business works it out itself [documented].
+	 */
+	private function taxAmountForbidden(): bool {
+		return 'es' === $this->country;
 	}
 
 	/**

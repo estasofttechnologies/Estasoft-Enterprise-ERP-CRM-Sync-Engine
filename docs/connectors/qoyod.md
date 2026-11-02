@@ -5,9 +5,9 @@ catalog_row: Qoyod
 connection_method: key
 available: true
 verified: false
-hosts: [api.qoyod.com, www.qoyod.com]
+hosts: [api.qoyod.com]
 terms_url: https://www.qoyod.com/en/terms-and-conditions/
-privacy_url: https://www.qoyod.com/en/privacy-policy/    # fetched; the page title reads "Qoyod Surveys Privacy Policy", check it is the policy you want to cite
+privacy_url: https://www.qoyod.com/privacy-policy/    # fetched 2026-11-02: the general privacy and data protection policy of the Qoyod platform (the /en/ address carries a survey title)
 developer_url: https://www.qoyod.com/tenant/tenant_settings/general_settings
 variants: []
 ---
@@ -34,7 +34,7 @@ All fetched 2026-11-02.
 - Tech partnership page: https://www.qoyod.com/en/partnerships/tech-partnership/ [documented, conflicts: it speaks of OAuth 2.0, webhooks and a sandbox for approved partners; the API reference and the sandbox article say API key and no sandbox]
 - Zapier app actions: https://zapier.com/apps/qoyod/integrations/woocommerce/1621306/create-new-woocommerce-orders-for-new-qoyod-invoices [third-party] (labels of the create-invoice, create-credit-note, create-customer, find-product actions)
 - OpenAPI mirror pages (One / withone.ai knowledge base) [third-party]: list invoices, create customer, get customer, get product, create product, list inventories, create invoice payment, allocate to invoice, create simple bill (request shapes and response fields, host shown as `www.qoyod.com/2.0/`)
-- Terms: https://www.qoyod.com/en/terms-and-conditions/ [documented] (no separate API terms; general terms cover the services). Privacy: https://www.qoyod.com/en/privacy-policy/ [documented]
+- Terms: https://www.qoyod.com/en/terms-and-conditions/ [documented] (no separate API terms; general terms cover the services). Privacy: https://www.qoyod.com/privacy-policy/ [documented; the general platform policy. The `/en/privacy-policy/` address carries the browser title "Qoyod Surveys Privacy Policy" and is not cited]
 - Repo research: `docs/research/integration-research-vendors-2.md` section 6.2
 
 ## 2. How the merchant connects
@@ -50,13 +50,13 @@ Plan gate: Pro or Advanced [documented in the repo research; Qoyod's page says "
 
 ## 3. Authentication
 
-Header `API-KEY: <key>` on every request [documented]. One secret (`api_key`, encrypted, redacted). The key is tied to the business that generated it and to the permissions of the user [documented: "limited by the user's accounting permissions"]. Base address `https://api.qoyod.com/2.0/` [documented]. The OpenAPI mirror shows `https://www.qoyod.com/2.0/` [third-party]; the connector offers both through the advanced field `endpoint` (default `api.qoyod.com`). HostPolicy allows exactly these two hosts.
+Header `API-KEY: <key>` on every request [documented]. One secret (`api_key`, encrypted, redacted). The key is tied to the business that generated it and to the permissions of the user [documented: "limited by the user's accounting permissions"]. Base address `https://api.qoyod.com/2.0/` [documented; the overview page names no other host, and `www.qoyod.com` appears there only as a link to the settings page]. The OpenAPI mirror shows `https://www.qoyod.com/2.0/` [third-party], which the connector does not use. HostPolicy allows `api.qoyod.com` only.
 
-Credential fields: `api_key` (secret). Advanced: `endpoint`, `inventory_id`, `currency`, `approval`, `record_payment`, `payment_account_id`, `line_tax_field`, `total_mismatch` (section 12).
+Credential fields: `api_key` (secret). Advanced: `inventory_id`, `currency`, `approval`, `untaxed_rows`, `record_payment`, `payment_account_id`, `line_tax_field`, `shipping_product_sku`, `fee_product_sku`, `total_mismatch` (section 12).
 
 ## 4. Data sent and when (WordPress.org "External services")
 
-Host: `api.qoyod.com` (or `www.qoyod.com` when chosen), only after the merchant connected a key.
+Host: `api.qoyod.com`, only after the merchant connected a key.
 
 | Action | Request | Data sent |
 | --- | --- | --- |
@@ -95,7 +95,7 @@ Invoice (`POST /2.0/invoices`) `[inferred]` from the documented list-invoices re
 | `note` | `invoice.description` | First line `WC-{order id} (unchecked)` while the document has not passed its checks (the unfinished-record mark, section 9), then the order note. The same `PATCH` that approves the invoice rewrites the description without the mark |
 | `lines[]` | `invoice.line_items_attributes[]` | `product_id`, `description`, `unit_price`, `quantity`, tax, `is_inclusive`, `inventory_id` |
 
-The line tax is sent as `tax_id` (the code from the tax mapping: "1", "2", "3" or a custom id [documented for products and simple bills]); the advanced field `line_tax_field = tax_percent` sends `tax_percent` instead, which is the field name of the invoice answer. A row with no tax code is sent with the standard zero-rate code `2` explicitly, so a product's default tax cannot add tax the shop did not charge. `is_inclusive` is `false` unless the payload says its prices include tax.
+The line tax is sent as `tax_id` (the code from the tax mapping: "1", "2", "3" or a custom id [documented for products and simple bills]); the advanced field `line_tax_field = tax_percent` sends `tax_percent` instead, which is the field name of the invoice answer. A row with no tax code is **refused** (SYNC-VAL-002 naming `lines[].tax_code`) unless the merchant chose, under `untaxed_rows`, to send such rows as zero-rated (code `2`) or exempt (code `3`). Zero-rated and exempt sales are different in tax law and in the e-invoice that Qoyod sends to the authority, and Qoyod approves the invoice without any read-back of the authority's verdict, so the connector does not choose for the merchant. An explicit code is always sent, so a product's default tax in Qoyod cannot add tax the shop did not charge. `is_inclusive` is `false` unless the payload says its prices include tax.
 
 Credit note (`POST /2.0/credit_notes`) `[inferred]`: same structure as the invoice with `credit_note` as the wrapper, `reference` `WC-R-{refund id}`, `description` `WC-R-{refund id} (unchecked)` until the credit note is approved and allocated, then the order and the reason. Allocation (`POST /2.0/invoices/{id}/allocations`) [third-party, documented request]: `{"invoice":{"allocations_attributes":[{"amount":"…","date":"YYYY-MM-DD","source_id":<credit note id>,"source_type":"CreditNote"}]}}`.
 
@@ -128,7 +128,7 @@ ZATCA: Qoyod submits approved invoices itself (certified phase 2) [documented]. 
 
 ## 8. Taxes
 
-Qoyod has no tax resource among its 19 [documented], so `listTaxCodes()` returns the three standard codes [third-party: "1" VAT 15 percent, "2" VAT 0 percent, "3" tax exempt] and the mapping screen accepts a custom code typed by the merchant. Exempt and zero-rated sales may need a reason code in Qoyod (`special_tax_reason_id` on products) that the connector does not send. Tax-inclusive prices: the line flag `is_inclusive` follows the payload; nothing is converted.
+Qoyod has no tax resource among its 19 [documented], so `listTaxCodes()` returns the three standard codes [third-party: "1" VAT 15 percent, "2" VAT 0 percent, "3" tax exempt] and the mapping screen accepts a custom code typed by the merchant. A shop line that arrives with no tax code is refused unless the connection says whether such lines are zero-rated (code 2) or exempt (code 3), because the two are different in tax law and Qoyod approves the invoice without any read-back of the authority's verdict. Exempt and zero-rated sales may need a reason code in Qoyod (`special_tax_reason_id` on products) that the connector does not send. Tax-inclusive prices: the line flag `is_inclusive` follows the payload; nothing is converted.
 
 ## 9. Duplicate protection
 
@@ -154,10 +154,10 @@ Qoyod has no tax resource among its 19 [documented], so `listTaxCodes()` returns
 
 | Key | Values | Default |
 | --- | --- | --- |
-| `endpoint` | `api.qoyod.com`, `www.qoyod.com` | `api.qoyod.com` |
 | `inventory_id` | the branch id | empty: the only branch, else the person must choose |
 | `currency` | ISO code of the Qoyod account | `SAR` |
 | `approval` | `after_check`, `draft` | `after_check` |
+| `untaxed_rows` | `refuse`, `zero_rated`, `exempt` | `refuse` |
 | `record_payment` | `no`, `yes` | `no` |
 | `payment_account_id` | account id of the bank or cash account | empty (required when `record_payment = yes`) |
 | `line_tax_field` | `tax_id`, `tax_percent` | `tax_id` |
@@ -166,7 +166,7 @@ Qoyod has no tax resource among its 19 [documented], so `listTaxCodes()` returns
 
 ## 13. Rate limits and pacing
 
-"Fair use", no numeric limit [documented]. The connector paces at one request per second, one at a time, and obeys `Retry-After` and 429 (SYNC-RATE-001; default wait 30 s). The list of branches is kept in memory for 10 minutes per connection; products and customers are looked up for each order. Large stock reads are batched at 50 SKUs per request.
+"Fair use", no numeric limit [documented]. The connector paces at one request per second, one at a time, and obeys `Retry-After` and 429 (SYNC-RATE-001; default wait 30 s). The list of branches is kept in memory for 10 minutes per connection; products and customers are looked up for each order. Large stock reads are batched at 50 SKUs per request. The health probe (`ping`) is one call, `GET /2.0/inventories?page=1`.
 
 ## 14. Error mapping
 
@@ -206,13 +206,13 @@ Entities: order, refund, customer. Regions: SA. Rate limit hints: 1 a second, 1 
 - The request bodies of invoices and credit notes (`line_items_attributes`, `tax_id` or `tax_percent`, `inventory_id` placement, `status` values) are inferred. The post-create total, line count and status check is the guard.
 - Whether `PATCH /2.0/invoices/{id}` approves a draft; the update verb and field.
 - Pagination parameters of list endpoints (the documentation says nothing); the connector asks for `page` and stops when a page adds no new id, with a cap of 100 pages.
-- Ransack predicates on the invoice, customer and credit note indexes (`reference_eq`, `email_cont`, `sku_in`) are assumed from the documented `sku_cont` example.
+- Ransack predicates on the invoice, customer and credit note indexes (`reference_eq`, `email_cont`, `sku_in`): the overview says "all index endpoints use ransack for searching and sorting by any parameter" [documented] and gives `sku_cont` as its only example, so the predicates are the standard Ransack ones. The connector checks that the rows it gets back satisfy the filter it sent; if one does not, the filter was not applied and the whole list is being read, and a list longer than 100 pages stops with "Qoyod did not apply the search filter" instead of a vague error.
 - Whether an invoice reference may carry `WC-…` while e-invoicing is active (the help article says the invoice number cannot be changed manually once e-invoicing is active; creation through the API was not described).
-- Host: `api.qoyod.com` versus `www.qoyod.com`.
+- Host: only `api.qoyod.com` is named by the overview page; the `www.qoyod.com/2.0/` address seen on a mirror is not used.
 - Plan gate (Pro/Advanced versus all paid plans) and whether a merchant's own key may be used by a third-party plugin without the partner programme.
 - Credit note allocation conditions beyond "invoice still unpaid".
 - Error body format.
-- Terms URL fetched; the privacy URL fetched is titled as the surveys policy.
+- The terms and privacy pages were fetched; the privacy page at `/privacy-policy/` is the general platform policy (section 1 says it covers "the Qoyod platform and all products and services"; section 16 is the part on surveys).
 
 ## 17. Manual smoke test (a real, non-production company; there is no sandbox)
 

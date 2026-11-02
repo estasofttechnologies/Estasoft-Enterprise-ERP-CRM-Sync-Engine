@@ -103,6 +103,11 @@ final class FakeAcumaticaServer {
 	public int $releaseDelay = 0;
 
 	/**
+	 * A Location the release action answers with, instead of its own status path (empty: its own); {token} stands for the running action.
+	 */
+	public string $releaseLocation = '';
+
+	/**
 	 * Token requests received: form fields.
 	 *
 	 * @var array<int,array<string,string>>
@@ -913,7 +918,7 @@ final class FakeAcumaticaServer {
 		}
 		$token                   = 'run' . ( ++$this->issued );
 		$this->actions[ $token ] = array( 'polls' => $this->releaseDelay, 'key' => $key );
-		return new HttpResponse( 202, '', array( 'location' => '/entity/Default/' . self::VERSION . '/SalesInvoice/ReleaseSalesInvoice/status/' . $token ) );
+		return new HttpResponse( 202, '', array( 'location' => '' !== $this->releaseLocation ? str_replace( '{token}', $token, $this->releaseLocation ) : '/entity/Default/' . self::VERSION . '/SalesInvoice/ReleaseSalesInvoice/status/' . $token ) );
 	}
 
 	/**

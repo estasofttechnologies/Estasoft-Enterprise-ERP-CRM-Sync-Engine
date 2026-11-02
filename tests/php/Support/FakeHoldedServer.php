@@ -70,6 +70,21 @@ final class FakeHoldedServer {
 	public int $skew = 0;
 
 	/**
+	 * Calls left in the quota; every request uses one and every answer reports what is left.
+	 */
+	public int $quotaLeft = 2000;
+
+	/**
+	 * Window the quota belongs to: month or minute.
+	 */
+	public string $quotaWindow = 'month';
+
+	/**
+	 * Value of the reset header, or an empty string for none.
+	 */
+	public string $quotaReset = '';
+
+	/**
 	 * Timeouts seen on requests.
 	 *
 	 * @var array<int,int>
@@ -208,6 +223,27 @@ final class FakeHoldedServer {
 	 * @param array{method:string,url:string,headers:array<string,string>,body:?string,timeout:int} $request Request.
 	 */
 	public function handle( array $request ): HttpResponse {
+		$answer = $this->answer( $request );
+		if ( 0 === $answer->status ) {
+			return $answer;
+		}
+		$this->quotaLeft = max( 0, $this->quotaLeft - 1 );
+		$headers         = $answer->headers + array(
+			'x-ratelimit-remaining' => (string) $this->quotaLeft,
+			'x-ratelimit-window'    => $this->quotaWindow,
+		);
+		if ( '' !== $this->quotaReset ) {
+			$headers['x-ratelimit-reset'] = $this->quotaReset;
+		}
+		return new HttpResponse( $answer->status, $answer->body, $headers, $answer->error, $answer->timedOut );
+	}
+
+	/**
+	 * Answer one request without the quota headers.
+	 *
+	 * @param array{method:string,url:string,headers:array<string,string>,body:?string,timeout:int} $request Request.
+	 */
+	private function answer( array $request ): HttpResponse {
 		$this->timeouts[] = $request['timeout'];
 		$parts            = parse_url( $request['url'] );
 		$path             = (string) ( $parts['path'] ?? '' );
@@ -344,7 +380,7 @@ final class FakeHoldedServer {
 		unset( $table );
 		$page = $this->ignorePage ? 1 : max( 1, (int) ( $query['page'] ?? 1 ) );
 		$out  = array_slice( $rows, ( $page - 1 ) * $this->pageSize, $this->pageSize );
-		return FakeHttpClient::json( $out, 200, array( 'x-ratelimit-remaining' => '1999', 'x-ratelimit-window' => 'month' ) );
+		return FakeHttpClient::json( $out );
 	}
 
 	/**

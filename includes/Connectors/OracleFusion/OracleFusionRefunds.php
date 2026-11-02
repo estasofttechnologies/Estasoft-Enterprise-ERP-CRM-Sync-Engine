@@ -14,8 +14,11 @@ defined( 'ABSPATH' ) || exit;
 use Estasoft\SyncEngine\Connectors\EnterpriseCommon\Amounts;
 use Estasoft\SyncEngine\Connectors\EnterpriseCommon\Problem;
 use Estasoft\SyncEngine\Connectors\EnterpriseCommon\RefundData;
+use Estasoft\SyncEngine\Connectors\EnterpriseCommon\ShopTotalMarker;
+use Estasoft\SyncEngine\Connectors\EnterpriseCommon\TotalCheck;
 use Estasoft\SyncEngine\Connectors\EnterpriseCommon\Warnings;
 use Estasoft\SyncEngine\Connectors\Support\ApiException;
+use Estasoft\SyncEngine\Contract\ConnectorError;
 use Estasoft\SyncEngine\Contract\ExternalRef;
 
 /**
@@ -40,6 +43,7 @@ final class OracleFusionRefunds {
 	 * @param OracleFusionOrders  $orders  Invoices.
 	 * @param OracleFusionOptions $options Options.
 	 * @param Amounts             $amounts Conversion helper.
+	 * @param ShopTotalMarker     $marker  Shop total in the comments.
 	 * @param string              $system  System name for messages.
 	 */
 	public function __construct(
@@ -47,6 +51,7 @@ final class OracleFusionRefunds {
 		private readonly OracleFusionOrders $orders,
 		private readonly OracleFusionOptions $options,
 		private readonly Amounts $amounts,
+		private readonly ShopTotalMarker $marker,
 		private readonly string $system
 	) {
 	}
@@ -93,12 +98,14 @@ final class OracleFusionRefunds {
 		if ( '' === $billTo ) {
 			$this->refuse( 'BillToCustomerNumber', __( 'Oracle Fusion did not show the customer account of the invoice.', 'estasoft-erp-crm-sync-engine' ) );
 		}
-		$comment = sprintf(
-			/* translators: 1: refund reference, 2: order reference, 3: reason. */
+		$expected = $this->expected( $refund );
+		$comment  = sprintf(
+			/* translators: 1: refund reference, 2: order reference. */
 			__( 'Refund %1$s of order %2$s', 'estasoft-erp-crm-sync-engine' ),
 			$refund->reference,
 			$refund->orderRef
 		) . ( '' === $refund->reason ? '' : ': ' . $refund->reason );
+		$last = $this->marker->append( '', $expected, $currency );
 		$body = array(
 			'BusinessUnit'                       => $this->options->businessUnit(),
 			'TransactionSource'                  => $source,
@@ -106,20 +113,136 @@ final class OracleFusionRefunds {
 			'BillToCustomerNumber'               => $billTo,
 			'InvoiceCurrencyCode'                => $currency,
 			$this->options->referenceAttribute() => $refund->reference,
-			'Comments'                           => $warnings->fit( 'Comments', $comment, OracleFusionOrders::COMMENTS_LENGTH ),
+			'InvoiceStatus'                      => 'Incomplete',
+			'Comments'                           => $this->marker->append( $warnings->fit( 'Comments', $comment, OracleFusionOrders::COMMENTS_LENGTH - ( '' === $last ? 0 : strlen( $last ) + 1 ) ), $expected, $currency ),
 			self::LINES                          => $this->lines( $refund, $currency, $warnings ),
 		);
 		if ( 1 === preg_match( '/^(\d{4}-\d{2}-\d{2})/', $refund->date, $match ) ) {
 			$body['TransactionDate'] = $match[1];
 		}
-		$created = $this->gateway->create( self::RESOURCE, $body );
-		if ( ! isset( $created['CustomerTransactionId'] ) ) {
-			$created = $this->find( $refund->reference );
+		$draft = $this->gateway->create( self::RESOURCE, $body );
+		if ( ! isset( $draft['CustomerTransactionId'] ) ) {
+			$draft = $this->find( $refund->reference );
 		}
-		if ( null === $created ) {
+		if ( null === $draft || ! isset( $draft['CustomerTransactionId'] ) ) {
 			$this->refuse( 'CustomerTransactionId', __( 'Oracle Fusion accepted the credit memo but it cannot be read back.', 'estasoft-erp-crm-sync-engine' ) );
 		}
-		return $created;
+		$id    = (string) $draft['CustomerTransactionId'];
+		$draft = ( $this->gateway->one( self::RESOURCE, $id ) ?? array() ) + $draft;
+		$bad   = $this->draftProblem( $draft, $currency );
+		if ( null !== $bad ) {
+			$this->discard( $id, $bad );
+		}
+		try {
+			$this->gateway->update( self::RESOURCE, $id, array( 'InvoiceStatus' => 'Complete' ) );
+		} catch ( ApiException $exception ) {
+			$this->discard( $id, $exception->error()->message() );
+		}
+		$done = ( $this->gateway->one( self::RESOURCE, $id ) ?? array() ) + $draft;
+		return $done + array( 'OrderCurrency' => $currency );
+	}
+
+	/**
+	 * What the credit memo should come to in minor units: the refund amount, else the sum of its lines.
+	 *
+	 * @param RefundData $refund Payload.
+	 */
+	public function expected( RefundData $refund ): ?int {
+		if ( null !== $refund->amountMinor && $refund->amountMinor > 0 ) {
+			return $refund->amountMinor;
+		}
+		$sum = 0;
+		foreach ( $refund->lines as $line ) {
+			$sum += $line->amountMinor;
+		}
+		return $sum > 0 ? $sum : null;
+	}
+
+	/**
+	 * Check a credit memo that is complete: not Incomplete, same currency, and a total that agrees with the refund (the sign does not
+	 * count here, it was checked on the draft).
+	 *
+	 * @param array<string,mixed> $memo     Credit memo from Fusion.
+	 * @param int|null            $expected Refund amount in minor units.
+	 * @param string              $currency ISO code of the order.
+	 * @param TotalCheck          $total    Total check.
+	 * @param Warnings            $warnings Receives accepted differences.
+	 */
+	public function check( array $memo, ?int $expected, string $currency, TotalCheck $total, Warnings $warnings ): ?ConnectorError {
+		$unfinished = $this->orders->unfinished( $memo );
+		if ( null !== $unfinished ) {
+			return $unfinished;
+		}
+		$actual = strtoupper( (string) ( $memo['InvoiceCurrencyCode'] ?? '' ) );
+		if ( '' !== $actual && '' !== $currency && $actual !== $currency ) {
+			return Problem::validation(
+				$this->system,
+				'InvoiceCurrencyCode',
+				sprintf(
+					/* translators: 1: currency of the credit memo, 2: currency of the order. */
+					__( 'Oracle Fusion holds the credit memo in %1$s but the invoice is in %2$s.', 'estasoft-erp-crm-sync-engine' ),
+					$actual,
+					$currency
+				)
+			);
+		}
+		$figure = $this->orders->totalOf( $memo, false );
+		$error  = $total->run( $expected, null === $figure ? null : abs( $figure['minor'] ), $currency, $warnings, __( 'credit memo total', 'estasoft-erp-crm-sync-engine' ) );
+		return null === $error ? null : Problem::validation( $this->system, 'credit memo total', (string) $error->context['reason'] . ' ' . __( 'The credit memo stays in Oracle Fusion; correct or reverse it there.', 'estasoft-erp-crm-sync-engine' ) );
+	}
+
+	/**
+	 * The check findExisting() can make without a payload: status, and the credit memo total against the refund total in its comments.
+	 *
+	 * @param array<string,mixed> $memo  Credit memo from Fusion.
+	 * @param TotalCheck          $total Total check.
+	 */
+	public function checkMarked( array $memo, TotalCheck $total ): ?ConnectorError {
+		$marked = $this->marker->read( (string) ( $memo['Comments'] ?? '' ) );
+		return $this->check( $memo, null === $marked ? null : $marked['minor'], null === $marked ? '' : $marked['currency'], $total, new Warnings() );
+	}
+
+	/**
+	 * What is wrong with a draft credit memo, or null. A credit memo that would post as a debit is the worst case: the sign convention of
+	 * the lines was inferred, not read from Oracle, so the total of the draft decides.
+	 *
+	 * @param array<string,mixed> $draft    Draft read back.
+	 * @param string              $currency ISO code of the invoice.
+	 */
+	private function draftProblem( array $draft, string $currency ): ?string {
+		$actual = strtoupper( (string) ( $draft['InvoiceCurrencyCode'] ?? '' ) );
+		if ( '' !== $actual && $actual !== $currency ) {
+			return sprintf(
+				/* translators: 1: currency of the draft, 2: currency of the invoice. */
+				__( 'Oracle Fusion holds the draft credit memo in %1$s but the invoice is in %2$s.', 'estasoft-erp-crm-sync-engine' ),
+				$actual,
+				$currency
+			);
+		}
+		$figure = $this->orders->totalOf( $draft, false );
+		if ( null === $figure ) {
+			return __( 'Oracle Fusion shows no total for the draft credit memo, so it cannot be checked that it credits the customer.', 'estasoft-erp-crm-sync-engine' );
+		}
+		if ( $figure['minor'] > 0 ) {
+			return __( 'Oracle Fusion would book this credit memo as a debit (its total is positive). If this pod wants negative credit memo lines, set the option credit_line_sign to negative.', 'estasoft-erp-crm-sync-engine' );
+		}
+		return null;
+	}
+
+	/**
+	 * Delete a draft and stop with the reason.
+	 *
+	 * @param string $id     CustomerTransactionId of the draft.
+	 * @param string $reason Why.
+	 *
+	 * @throws ApiException Always, with SYNC-VAL-002.
+	 */
+	private function discard( string $id, string $reason ): never {
+		$removed = $this->gateway->delete( self::RESOURCE, $id );
+		$this->refuse(
+			'credit memo',
+			$reason . ' ' . ( $removed ? __( 'The draft credit memo was deleted.', 'estasoft-erp-crm-sync-engine' ) : __( 'The draft credit memo could not be deleted and stays in Oracle Fusion as Incomplete; delete it there.', 'estasoft-erp-crm-sync-engine' ) )
+		);
 	}
 
 	/**
@@ -151,7 +274,7 @@ final class OracleFusionRefunds {
 			$row  = array(
 				'LineNumber'       => $index + 1,
 				'Description'      => $warnings->fit( 'Description', $text, OracleFusionOrders::DESCRIPTION_LENGTH ),
-				'Quantity'         => str_contains( $line->quantity, '.' ) ? (float) $line->quantity : (int) $line->quantity,
+				'Quantity'         => $this->signed( str_contains( $line->quantity, '.' ) ? (float) $line->quantity : (int) $line->quantity ),
 				'UnitSellingPrice' => $this->amounts->toNumber( $this->amounts->unitPrice( $line->amountMinor, $line->quantity ), $currency ),
 			);
 			if ( '' !== $line->taxCode() ) {
@@ -171,13 +294,23 @@ final class OracleFusionRefunds {
 		$row = array(
 			'LineNumber'       => 1,
 			'Description'      => $warnings->fit( 'Description', sprintf( /* translators: %s: order reference. */ __( 'Refund of order %s', 'estasoft-erp-crm-sync-engine' ), $refund->orderRef ), OracleFusionOrders::DESCRIPTION_LENGTH ),
-			'Quantity'         => 1,
+			'Quantity'         => $this->signed( 1 ),
 			'UnitSellingPrice' => $this->amounts->toNumber( $refund->amountMinor, $currency ),
 		);
 		if ( '' !== $this->options->memoLine() ) {
 			$row['MemoLine'] = $this->options->memoLine();
 		}
 		return array( $row );
+	}
+
+	/**
+	 * A quantity with the sign the option asks for.
+	 *
+	 * @param int|float $quantity Positive quantity.
+	 * @return int|float
+	 */
+	private function signed( int|float $quantity ): int|float {
+		return 'negative' === $this->options->creditLineSign() ? -$quantity : $quantity;
 	}
 
 	/**

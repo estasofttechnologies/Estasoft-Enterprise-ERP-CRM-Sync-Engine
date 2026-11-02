@@ -158,12 +158,12 @@ final class SageX3Connector extends AbstractApiConnector {
 			'fee_item'                => __( 'Item code for fees', 'estasoft-erp-crm-sync-engine' ),
 			'discount_item'           => __( 'Item code for discounts', 'estasoft-erp-crm-sync-engine' ),
 			'site'                    => __( 'Sales site', 'estasoft-erp-crm-sync-engine' ),
-			'total_property'          => __( 'Property that holds the order total', 'estasoft-erp-crm-sync-engine' ),
+			'total_property'          => __( 'Property that holds the order total (required)', 'estasoft-erp-crm-sync-engine' ),
 		);
 		foreach ( $labels as $name => $label ) {
 			$default  = SageX3Settings::DEFAULTS[ $name ];
 			$hint     = '' !== $default ? sprintf( /* translators: %s: default name. */ __( 'Empty: %s', 'estasoft-erp-crm-sync-engine' ), $default ) : '';
-			$fields[] = $advanced( $name, $label, 'item_class' === $name ? __( 'Empty: ITMMASTER. Enter none to skip the check.', 'estasoft-erp-crm-sync-engine' ) : $hint );
+			$fields[] = $advanced( $name, $label, $this->hintFor( $name, $hint ) );
 		}
 		$fields[] = new CredentialField(
 			'total_mismatch',
@@ -183,6 +183,20 @@ final class SageX3Connector extends AbstractApiConnector {
 	}
 
 	/**
+	 * The hint of a setting field: the special ones, else the default.
+	 *
+	 * @param string $name Setting name.
+	 * @param string $hint Hint made from the default.
+	 */
+	private function hintFor( string $name, string $hint ): string {
+		return match ( $name ) {
+			'item_class'     => __( 'Empty: ITMMASTER. Enter none to skip the check.', 'estasoft-erp-crm-sync-engine' ),
+			'total_property' => __( 'The property of the order that holds its total. Needed so the total can be compared with the shop, unless you choose to continue with a warning below.', 'estasoft-erp-crm-sync-engine' ),
+			default          => $hint,
+		};
+	}
+
+	/**
 	 * Test connection: the class and representation, the property names, the item and customer codes.
 	 *
 	 * @param Connection $connection Connection.
@@ -199,6 +213,10 @@ final class SageX3Connector extends AbstractApiConnector {
 		}
 		if ( '' === $settings->get( 'customer_code' ) ) {
 			return $failed( Problems::refused( self::LABEL, 'customer_code', __( 'Enter the customer code that should receive the web orders.', 'estasoft-erp-crm-sync-engine' ) ) );
+		}
+		$unchecked = ( new SageX3OrderSender( $this->client( $connection ), $settings, Options::of( $connection ), new Amounts(), self::LABEL ) )->totalUnchecked();
+		if ( $unchecked instanceof ConnectorError ) {
+			return $failed( $unchecked );
 		}
 		$client = $this->client( $connection );
 		$client->template( $settings->get( 'order_class' ), $settings->get( 'order_representation' ) );

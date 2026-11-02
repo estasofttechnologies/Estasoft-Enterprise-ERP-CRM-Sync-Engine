@@ -29,7 +29,7 @@ Fetched or read on 2026-11-02. Most of the online help (online-help.sagex3.com) 
 | https://online-help.sagex3.com/erp/12/en-us/Content/V7DEV/integration-guide_ws-create.html `[documented]` | `GET .../MYCLASS/$template?representation=MYREPR.$create`; `POST http://myserver:myport/api1/x3/erp/MYENDPOINT/MYCLASS?representation=MYREPR.$create` with a JSON body; success status 201 with a `Location` header; **a 201 only means the class and representation were found and the body accepted**; read the body for a `$diagnoses` list with `$severity` and `$message`; `$isMandatory` facet (the template marks `ORDDAT`); the answer can differ from the body because class and representation business rules run |
 | https://github.com/actouf/sage-x3-l4g, `plugins/sage-x3-l4g/references/web-services-rest.md` `[third-party]`, which cites the Sage pages `integration-guide_ws-overview`, `_ws-query`, `_ws-read-details`, `_ws-create`, `_ws-update`, `_ws-delete`, `_ws-basic-authentication`, `_ws-certificates-authentication`, `_ws-oauth2-authentication`, `_ws-sdata-differences`, `api-guide_api-requests` | URL `https://<server>:<port>/api1/x3/erp/<ENDPOINT>/<CLASS>?representation=<REP>.$<facet>`; facets `$query`, `$details`, `$edit`, `$create`; list: `count` (default 20), `where=<predicate>`, `orderBy`; the answer is `{"$itemsPerPage", "$resources", "$links"}` and paging follows `$links.$next.$url`; `GET .../$prototypes('<REP>.$edit')` for property metadata; update `PUT`; Basic and client certificate are on-premise only, OAuth 2 is the only mode of Sage X3 Online; every call carries the header, no session cookie; a 200 on a read does not prove the record exists (`$diagnoses` "721 : Record does not exist"); composite keys joined with `~`; ETag concurrency is not available |
 | docs/research/integration-research-vendors.md section 4.12b (official v12 help dated 8 Sep 2026, partner programme) | "Updates are limited to upgraded modules, classic modules use SOAP"; partner certification with 6 free support cases, acceptance discretionary; no public sandbox; KSA and UAE localisation not found |
-| Sage terms and privacy pages | **Not fetched**; addresses in the front matter are Sage's usual legal index and notice (unverified) |
+| https://www.sage.com/en-gb/legal/ | Fetched 2026-11-02: "Sage UK legal information", linking the terms and the privacy and cookies policy; the privacy page itself was not read |
 
 ## 2. How the merchant connects
 
@@ -37,7 +37,7 @@ The steps are provisional because the method is to be confirmed.
 
 1. Ask your Sage X3 partner for the https web service address, the folder name and a Syracuse user with Basic login.
 2. Ask them for a sales order class and representation that allow creating orders, and note both names.
-3. Paste the address, folder, user name, password and both names into the fields here.
+3. Paste the address, folder, user name, password, both names and the order total property here.
 4. Enter the customer code that should receive the web orders, then press Test connection.
 5. Sage X3 Online (OAuth 2 only) cannot connect with this connector yet.
 
@@ -45,7 +45,7 @@ Plan gate: Sage X3 web services must be enabled for the folder and the user must
 
 ## 3. Authentication
 
-HTTP Basic on every request (`BasicAuth`): `Authorization: Basic base64(user:password)`; the Syracuse user must use basic authentication and be mapped to an X3 user `[third-party]`. HTTPS is required. No session or cookie is stored. Stored: `address`, `folder`, `username` (config), `password` (secret).
+HTTP Basic on every request (`BasicAuth`): `Authorization: Basic base64(user:password)`; the Syracuse user must use basic authentication and be mapped to an X3 user `[third-party]`. HTTPS is required. No session or cookie is stored. A next-page link in an answer is followed only when it has the same scheme, host and port as the address the merchant typed (a bare path is read as being on it); a link to another server is refused with SYNC-VAL-002 (field `address`) and no request, with its password, is sent there. Stored: `address`, `folder`, `username` (config), `password` (secret).
 
 ## 4. Data sent and when (External services disclosure)
 
@@ -78,7 +78,7 @@ The names of the sales order class, representation and properties differ between
 | `shipping_item`, `fee_item`, `discount_item` | (empty) | Item codes of service items that carry shipping, fees and a discount as lines (quantity 1, negative price for a discount); an order with such an amount is refused naming the setting when it is empty |
 | `customer_code` | (required) | The customer that receives the web orders |
 | `site` | (optional) | Sales site, sent as `prop_site` (`SALFCY`) when set |
-| `total_property` | (optional) | Property that holds the order total, for the total check |
+| `total_property` | (required) | Property of the order that holds its total, for the total check. Prices from the folder's price lists can differ from the shop's unnoticed, so Test connection fails without it, and an order is refused before anything is sent, unless `total_mismatch` is set to continue with a warning |
 
 Payload to X3: `order_line[].product` (SKU = item code, `ITMREF`), `quantity`, `price_unit`; `date_order` (`YYYY-MM-DD`); `currency` (ISO code; must be the customer's currency or the order is refused); `note` is not sent. Shipping, fee and discount amounts: sent as lines with the service items of the settings above; refused (SYNC-VAL-002 naming the setting) when the setting is empty, because the standard way to carry them (additional charge lines or price lists) differs per folder and nothing read documents it. This keeps totals honest.
 
@@ -90,9 +90,9 @@ Customers: not created (`customers` is not flagged); `partner.*` is not sent. Al
 2. Find the order: `GET /api1/x3/erp/{folder}/{class}?representation={rep}.$query&where={prop_reference} eq 'WC-{id}'&count=20` and follow `$links.$next` to the end. A row in `$resources` means it exists; the pass stops there. A `$diagnoses` error in the answer is a failure, not "not found".
 3. Resolve each SKU, and each service item, with one `GET .../ITMMASTER?representation=ITMMASTER.$query&where=ITMREF eq 'SKU'` per code (the `where` grammar is documented with `eq` and quoted strings; an `or` chain is not documented). A missing item is SYNC-MAP-001.
 4. `POST ...?representation={rep}.$create` with the JSON body. Check the answer: any `$diagnoses` entry with `$severity` `error` is a failure (SYNC-VAL-002 with the first message), whatever the HTTP status is.
-5. Currency check: when the answer names a currency that is not the order's, the order stays in X3 and the item stops (SYNC-VAL-002 naming both; X3 takes the currency of the customer). Total check when `total_property` is set: the answer's value against `total - excluded_total` within one minor unit (`fail` or `warn` by `total_mismatch`); otherwise a warning that the total was not compared. An existing order is read back and checked again on every pass, so a wrong total is reported until the person deletes the order in X3.
+5. Currency check: when the answer names a currency that is not the order's, the order stays in X3 and the item stops (SYNC-VAL-002 naming both; X3 takes the currency of the customer). Total check: the answer's `total_property` value against `total - excluded_total` within one minor unit (`fail` or `warn` by `total_mismatch`). With `total_mismatch = fail` (the default) the check cannot be skipped: no `total_property` means nothing is sent (SYNC-VAL-002, field `total_property`), and an answer without the value means the item stops with the order left in X3 (checked again on every pass); only `warn` turns either into a warning. An existing order is read back and checked again on every pass, so a wrong total is reported until the person deletes the order in X3.
 
-The reference returned is the order number read from the answer (`prop_number`) or the `Location` header; `extra` has the currency (the order's) and `total_minor` when `total_property` is set. `findExisting()` returns it for an existing order (no later steps).
+The reference returned is the order number read from the answer (`prop_number`) or the `Location` header; `extra` has the currency (the order's) and `total_minor` (always, unless `warn` was chosen and the answer had no total). `findExisting()` returns it for an existing order (no later steps).
 
 ## 7. Duplicate protection
 
@@ -151,7 +151,7 @@ None stated (docs/research: "no rate limits found"). Page size is 20 by default 
 - The `where` grammar beyond `eq` and quoted strings; paging by `$links.$next`.
 - The form of `$diagnoses` in successful answers and the `Location` format.
 - Partner certification and whether a free plugin may use the web services.
-- The terms and privacy addresses were not fetched.
+- The terms address (the Sage legal index) was read on 2026-11-02; the privacy and cookies page is listed by web search but the fetch tool failed on it.
 
 ## 14. Manual smoke test against a real Sage X3
 

@@ -12,6 +12,7 @@ namespace Estasoft\SyncEngine\Connectors\Wafeq;
 defined( 'ABSPATH' ) || exit;
 
 use Estasoft\SyncEngine\Connectors\Support\ApiClient;
+use Estasoft\SyncEngine\Connectors\Support\ApiException;
 use Estasoft\SyncEngine\Contract\ConnectorError;
 use Estasoft\SyncEngine\Contract\ExternalRef;
 use Estasoft\SyncEngine\Contract\SendResult;
@@ -132,7 +133,9 @@ final class WafeqOrderSender {
 			return SendResult::failure( $paid );
 		}
 
-		$ref = $this->reference( $record, $warnings, $parsed->currency );
+		$authority = $this->report( $api, $options, $item, $record, $warnings );
+
+		$ref = $this->reference( $record, $warnings, $parsed->currency, $authority );
 		return $existed ? SendResult::existing( $ref ) : SendResult::created( $ref );
 	}
 
@@ -146,6 +149,8 @@ final class WafeqOrderSender {
 	 * @param WafeqOrderPayload $parsed    Payload.
 	 * @param string            $reference WC-{id}.
 	 * @return WafeqRecord|ConnectorError
+	 *
+	 * @throws ApiException On failure.
 	 */
 	private function create( ApiClient $api, Connection $connection, Item $item, WafeqOptions $options, WafeqOrderPayload $parsed, string $reference ): WafeqRecord|ConnectorError {
 		$rates   = $this->catalog->taxRates( $api, $connection->id );
@@ -186,7 +191,12 @@ final class WafeqOrderSender {
 		if ( '' !== $options->placeOfSupply() ) {
 			$body['place_of_supply'] = $options->placeOfSupply();
 		}
-		$created = $this->docs->createInvoice( $api, $body, $this->ids->idempotencyKey( $item, 'invoice' ) );
+		try {
+			$created = $this->docs->createInvoice( $api, $body, $this->ids->idempotencyKey( $item, 'invoice' ) );
+		} catch ( ApiException $exception ) {
+			$this->catalog->itemRefused( $exception, $connection->id );
+			throw $exception;
+		}
 		if ( $created instanceof ConnectorError ) {
 			return $created;
 		}
@@ -325,6 +335,61 @@ final class WafeqOrderSender {
 	}
 
 	/**
+	 * Ask Wafeq to report the finalized invoice to the tax authority, when the connection says so. A refusal of the request is a warning: the
+	 * invoice is done and can be reported in Wafeq. A failure that a retry can cure (network, rate limit, server) is raised so the item retries.
+	 *
+	 * @param ApiClient         $api      Client.
+	 * @param WafeqOptions      $options  Options.
+	 * @param Item              $item     Queue item.
+	 * @param WafeqRecord       $record   The invoice.
+	 * @param array<int,string> $warnings Warnings (added to).
+	 * @return string The status of the report, or an empty string when none was requested.
+	 *
+	 * @throws ApiException On a failure a retry can cure.
+	 */
+	private function report( ApiClient $api, WafeqOptions $options, Item $item, WafeqRecord $record, array &$warnings ): string {
+		if ( ! $options->reportsToAuthority() || ! $record->isFinalized() ) {
+			return '';
+		}
+		try {
+			return $this->docs->report( $api, $record->id(), $this->ids->idempotencyKey( $item, 'report' ) );
+		} catch ( ApiException $exception ) {
+			if ( ErrorCode::Val002 !== $exception->error()->code ) {
+				throw $exception;
+			}
+			$warnings[] = sprintf(
+				/* translators: %s: reason Wafeq gave. */
+				__( 'Wafeq did not accept the request to report the invoice to the tax authority: %s', 'estasoft-erp-crm-sync-engine' ),
+				(string) ( $exception->error()->context['reason'] ?? '' )
+			);
+			return 'refused';
+		}
+	}
+
+	/**
+	 * The facts of an invoice for the read-back: its number, its status as Wafeq reports it, and its date.
+	 *
+	 * @param ApiClient   $api Client.
+	 * @param ExternalRef $ref The synced order.
+	 * @return array{number:string,status:string,authority_status:string,pdf_url:string,qr:string,issued_at:string}
+	 *
+	 * @throws ApiException On failure.
+	 */
+	public function facts( ApiClient $api, ExternalRef $ref ): array {
+		$record = $this->docs->invoice( $api, $ref->id );
+		$status = strtoupper( $record->status() );
+		return array(
+			'number'           => $record->number(),
+			'status'           => strtolower( $status ),
+			// The report page says to read the invoice to learn the final status [documented]; the field is the document status, so any status beyond the plain lifecycle ones is shown as the authority's.
+			'authority_status' => in_array( $status, array( '', 'DRAFT', 'SENT', 'FINALIZED' ), true ) ? '' : strtolower( $status ),
+			'pdf_url'          => '',
+			'qr'               => '',
+			'issued_at'        => $record->date(),
+		);
+	}
+
+	/**
 	 * Whether the invoice needs nothing more from this connector.
 	 *
 	 * @param WafeqRecord  $record    Invoice.
@@ -343,9 +408,10 @@ final class WafeqOrderSender {
 	 *
 	 * @param WafeqRecord       $record   Invoice.
 	 * @param array<int,string> $warnings Warnings.
-	 * @param string            $currency Currency of the order, or empty.
+	 * @param string            $currency  Currency of the order, or empty.
+	 * @param string            $authority Status of the tax authority report, or empty when none was requested.
 	 */
-	private function reference( WafeqRecord $record, array $warnings, string $currency = '' ): ExternalRef {
+	private function reference( WafeqRecord $record, array $warnings, string $currency = '', string $authority = '' ): ExternalRef {
 		$currency = '' !== $currency ? $currency : $record->currency();
 		$extra    = array(
 			'currency' => $currency,
@@ -354,6 +420,9 @@ final class WafeqOrderSender {
 		$total    = $record->totalMinor( $this->amounts->exponent( $currency ) );
 		if ( null !== $total ) {
 			$extra['total_minor'] = $total;
+		}
+		if ( '' !== $authority ) {
+			$extra['tax_authority'] = $authority;
 		}
 		if ( array() !== $warnings ) {
 			$extra['warnings'] = $warnings;

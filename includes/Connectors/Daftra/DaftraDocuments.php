@@ -45,17 +45,31 @@ final class DaftraDocuments {
 	}
 
 	/**
-	 * The credit notes with a reference, among those created since a date (the credit note list has no reference filter).
+	 * The credit notes with a reference, among those of one client. The list page documents a `client_id` filter and no reference filter, so every
+	 * page of the client's credit notes is read and the reference is matched here; a credit note is found however long ago it was made.
 	 *
 	 * @param ApiClient $api       Client.
 	 * @param string    $reference Reference.
-	 * @param string    $since     Y-m-d: only credit notes created from that day are read.
+	 * @param string    $clientId  Daftra client id of the order's invoice.
 	 * @return array<int,DaftraRecord>
 	 *
 	 * @throws ApiException On failure.
 	 */
-	public function findCreditNotes( ApiClient $api, string $reference, string $since ): array {
-		return $this->matching( $this->pager->all( $api, 'credit_notes.json', array( 'created_from' => $since ), 'CreditNote' ), $reference );
+	public function findCreditNotes( ApiClient $api, string $reference, string $clientId ): array {
+		return $this->matching( $this->pager->all( $api, 'credit_notes.json', array( 'client_id' => $clientId ), 'CreditNote' ), $reference );
+	}
+
+	/**
+	 * One credit note, or null when Daftra does not have it.
+	 *
+	 * @param ApiClient $api Client.
+	 * @param string    $id  Credit note id.
+	 *
+	 * @throws ApiException On failure other than a missing credit note.
+	 */
+	public function creditNoteIfExists( ApiClient $api, string $id ): ?DaftraRecord {
+		$response = $api->get( 'credit_notes/' . rawurlencode( $id ) . '.json', array(), null, array( 'allow' => array( 404 ) ) );
+		return $response->isSuccess() ? DaftraRecord::fromAnswer( $response->json(), 'CreditNote' ) : null;
 	}
 
 	/**

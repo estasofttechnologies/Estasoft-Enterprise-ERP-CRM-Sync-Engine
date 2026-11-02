@@ -6,8 +6,8 @@ connection_method: key
 available: true
 verified: false
 hosts: []
-terms_url: ""                  # not verified by fetch (odoo.com is not reachable from the build session)
-privacy_url: ""                # not verified by fetch (odoo.com is not reachable from the build session)
+terms_url: https://www.odoo.com/legal          # fetched 2026-11-02: Odoo's legal page (Enterprise Agreement, Terms of Sale, Acceptable Use Policy); applies to Odoo Online and Odoo.sh, a self-hosted Odoo is your own server
+privacy_url: https://www.odoo.com/privacy      # fetched 2026-11-02: "How we protect your privacy", Odoo S.A.
 developer_url: https://www.odoo.com/documentation/19.0/developer/reference/external_api.html
 variants: []
 ---

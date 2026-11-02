@@ -209,15 +209,57 @@ final class DatevRoundTripTest extends DatevTestCase {
 	}
 
 	/**
-	 * Arabic text becomes question marks in Windows-1252, and the preview says how many.
+	 * Arabic text becomes question marks in Windows-1252. The preview names the orders and the characters, and the export carries a
+	 * notes file that lists every replaced character, so the loss is never silent.
 	 */
 	public function test_arabic_in_windows_1252_is_replaced_and_counted(): void {
 		$payload                     = $this->order( '1006' );
 		$payload['customer']['name'] = 'ليلى';
 		$this->send( $this->connection(), $payload );
-		$rows = $this->records( $this->file()['bytes'] );
+		$file = $this->file();
+		$rows = $this->records( $file['bytes'] );
 		$this->assertSame( 'WC 1006 ????', $rows[2][13] );
-		$this->assertStringContainsString( '4 characters cannot be written in Windows-1252 and become question marks.', $this->connector->previewText( $this->deps->exports->openBatch( 7 ) ) );
+		$preview = $this->connector->previewText( $this->deps->exports->openBatch( 7 ) );
+		$this->assertStringContainsString( '4 characters cannot be written in Windows-1252 and become question marks (1 orders).', $preview );
+		$this->assertStringContainsString( 'Order 1006: ل (2), ي, ى', $preview );
+		$this->assertArrayHasKey( 'Notes', $file['attachments'] );
+		$notes = $file['attachments']['Notes'];
+		$this->assertStringContainsString( 'These characters cannot be written in windows-1252', $notes );
+		$this->assertStringContainsString( 'Choose UTF-8 with byte order mark', $notes );
+		$this->assertStringContainsString( "Order 1006: ل (2), ي, ى\n", $notes );
+	}
+
+	/**
+	 * The notes name every order with replaced characters, not only the first ones the preview shows.
+	 */
+	public function test_notes_list_every_order_with_replaced_characters(): void {
+		$connection = $this->connection();
+		foreach ( array( 'ليلى', 'Jürgen', 'سارة', 'Ørsted', 'محمد', 'نور', 'علي' ) as $i => $name ) {
+			$payload                     = $this->order( (string) ( 2000 + $i ) );
+			$payload['customer']['name'] = $name;
+			$this->send( $connection, $payload );
+		}
+		$file  = $this->file();
+		$notes = $file['attachments']['Notes'];
+		foreach ( array( 2000, 2002, 2004, 2005, 2006 ) as $number ) {
+			$this->assertStringContainsString( 'Order ' . $number . ': ', $notes );
+		}
+		$this->assertStringNotContainsString( 'Order 2001: ', $notes, 'Latin letters are written exactly.' );
+		$this->assertStringNotContainsString( 'Order 2003: ', $notes );
+		$preview = $this->connector->previewText( $this->deps->exports->openBatch( 7 ) );
+		$this->assertStringContainsString( '(5 orders)', $preview );
+	}
+
+	/**
+	 * With UTF-8 nothing is replaced, so there is no notes file.
+	 */
+	public function test_no_notes_when_nothing_is_replaced(): void {
+		$payload                     = $this->order( '1008' );
+		$payload['customer']['name'] = 'ليلى';
+		$this->send( $this->connection( array( 'encoding' => 'utf-8-bom' ) ), $payload );
+		$file = $this->file();
+		$this->assertArrayNotHasKey( 'Notes', $file['attachments'] );
+		$this->assertStringNotContainsString( 'cannot be written', $this->connector->previewText( $this->deps->exports->openBatch( 7 ) ) );
 	}
 
 	/**

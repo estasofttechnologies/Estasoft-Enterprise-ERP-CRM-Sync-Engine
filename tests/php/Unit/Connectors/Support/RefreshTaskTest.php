@@ -12,6 +12,7 @@ namespace Estasoft\SyncEngine\Tests\Unit\Connectors\Support;
 require_once dirname( __DIR__, 3 ) . '/Support/ApiWpFunctions.php';
 
 use Estasoft\SyncEngine\Connectors\Support\GuardedConnector;
+use Estasoft\SyncEngine\Connectors\Support\OAuth\OAuthConfig;
 use Estasoft\SyncEngine\Connectors\Support\OAuth\OAuthResolver;
 use Estasoft\SyncEngine\Connectors\Support\OAuth\OAuthTokenManager;
 use Estasoft\SyncEngine\Connectors\Support\OAuth\RefreshTask;
@@ -122,5 +123,30 @@ final class RefreshTaskTest extends TestCase {
 		$this->assertSame( 0, $this->task()->run()['checked'], '400 seconds left of 300: not due.' );
 		$this->kit->storage->rows[1]['secrets'][ OAuthTokenManager::EXPIRES_AT ] = (string) ( $this->kit->clock->now()->getTimestamp() + 140 );
 		$this->assertSame( array( 'checked' => 1, 'refreshed' => 1, 'failed' => 0 ), $this->task()->run(), '140 seconds left, under half of 300.' );
+	}
+
+	public function test_the_task_does_not_refresh_a_token_the_vendor_would_refuse_for_being_too_young(): void {
+		$kit       = $this->kit;
+		$connector = GuardedConnector::wrap(
+			new class( $kit->deps ) extends ReferenceCrmConnector {
+				public function config( Connection $connection ): OAuthConfig {
+					return new OAuthConfig( authorizeUrl: 'https://login.acme-crm.test/authorize', tokenUrl: 'https://login.acme-crm.test/oauth/token', allowedHosts: array( 'login.acme-crm.test' ), minTokenAgeSeconds: 570 );
+				}
+			},
+			$kit->tokens
+		);
+		$registry = new ConnectorRegistry( array( 'reference-crm' => static fn() => $connector ) );
+		$resolver = new OAuthResolver( static fn(): ConnectorRegistry => $registry );
+		$tokens   = new OAuthTokenManager( $kit->http, $kit->clock, $kit->storage, $kit->lock, static fn( Connection $c ) => $resolver->providerFor( $c ), static function (): void {} );
+		$task     = new RefreshTask( $kit->storage, $tokens, $resolver, null, $kit->clock );
+		$kit->http->route( 'POST', '#/oauth/token$#', static fn() => FakeHttpClient::json( array( 'access_token' => 'n', 'expires_in' => 600 ) ) );
+
+		$this->connections( 1, 1, 200 ); // 200 seconds left of 600: inside the task's 300 second window, but only 400 seconds old.
+		$this->kit->storage->rows[1]['secrets'][ OAuthTokenManager::LIFETIME ] = '600';
+		$this->assertSame( array( 'checked' => 0, 'refreshed' => 0, 'failed' => 0 ), $task->run(), 'Too young for this vendor.' );
+		$this->assertSame( 0, $kit->http->count() );
+
+		$this->kit->storage->rows[1]['secrets'][ OAuthTokenManager::EXPIRES_AT ] = (string) ( $kit->clock->now()->getTimestamp() + 20 ); // Age 580.
+		$this->assertSame( array( 'checked' => 1, 'refreshed' => 1, 'failed' => 0 ), $task->run() );
 	}
 }

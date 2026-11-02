@@ -74,6 +74,18 @@ final class FakeSage300Server {
 	public bool $totalInAnswer = true;
 
 	/**
+	 * Whether the credit note answer holds the total, and in which property.
+	 */
+	public bool $noteTotalInAnswer = true;
+
+	public string $noteTotalProperty = 'NoteTotal';
+
+	/**
+	 * Tax added to the lines of a credit note, as a fraction.
+	 */
+	public float $noteVat = 0.0;
+
+	/**
 	 * Whether the server refuses `startswith` (InvalidParameters).
 	 */
 	public bool $rejectStartswith = false;
@@ -445,16 +457,25 @@ final class FakeSage300Server {
 		if ( 'CreditNote' !== ( $body['CreditDebitNoteType'] ?? '' ) ) {
 			return $this->error( 400, 'RecordInvalid', 'Credit/debit note type is not valid.' );
 		}
+		$net = 0.0;
 		foreach ( (array) ( $body['CreditDebitDetails'] ?? array() ) as $line ) {
 			$line = (array) $line;
-			if ( 'Item' === ( $line['LineType'] ?? '' ) && null === $this->find( 'IC/ICItems', 'ItemNumber', (string) ( $line['Item'] ?? '' ) ) ) {
-				return $this->error( 400, 'RecordInvalid', 'Item is not valid.' );
+			if ( 'Item' === ( $line['LineType'] ?? '' ) ) {
+				if ( null === $this->find( 'IC/ICItems', 'ItemNumber', (string) ( $line['Item'] ?? '' ) ) ) {
+					return $this->error( 400, 'RecordInvalid', 'Item is not valid.' );
+				}
+				$net += round( (float) $line['QuantityReturned'] * (float) ( $line['UnitPrice'] ?? 0 ), 2 );
+			} else {
+				$net += (float) ( $line['ExtendedAmountMiscellaneousCharge'] ?? 0 );
 			}
 		}
 		$record = array(
 			'CreditDebitNoteUniquifier' => (string) ( ++$this->next ),
 			'CreditDebitNoteNumber'     => 'CN' . str_pad( (string) ( count( $this->records['OE/OECreditDebitNotes'] ) + 1 ), 6, '0', STR_PAD_LEFT ),
 		) + $body;
+		if ( $this->noteTotalInAnswer ) {
+			$record[ $this->noteTotalProperty ] = round( $net * ( 1 + $this->noteVat ), 2 );
+		}
 		$this->records['OE/OECreditDebitNotes'][] = $record;
 		return FakeHttpClient::json( $record, 201 );
 	}

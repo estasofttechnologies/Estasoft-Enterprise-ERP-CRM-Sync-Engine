@@ -105,6 +105,55 @@ final class NetSuiteDocumentsTest extends NetSuiteTestCase {
 		$this->assertInstanceOf( ExternalRef::class, $this->connector->findExisting( $this->connection( $this->invoiceOptions() ), $refund ) );
 	}
 
+	public function test_a_credit_memo_that_adds_the_refund_to_the_copied_invoice_lines_is_caught_removed_and_never_reported_as_synced(): void {
+		$this->connector->send( $this->connection( $this->invoiceOptions() ), $this->item( '2005' ), $this->payload() );
+		$this->server->creditMemoLines = 'add';
+		$refund                        = $this->item( '510', EntityType::Refund );
+		$result                        = $this->connector->send( $this->connection( $this->invoiceOptions() ), $refund, $this->refundPayload() );
+		$this->assertFalse( $result->isSuccess() );
+		$this->assertSame( ErrorCode::Val002, $result->error->code );
+		$context = json_encode( $result->error->context );
+		$this->assertStringContainsString( '79.96', $context, 'What NetSuite shows: the 19.99 refund on top of the 59.97 invoice.' );
+		$this->assertStringContainsString( '19.99', $context, 'What the shop refunded.' );
+		$this->assertStringContainsString( 'was removed', $context );
+		$this->assertSame( array(), $this->server->all( 'creditMemo' ) );
+		$deletes = array_filter( $this->kit->http->requests, static fn( array $request ): bool => 'DELETE' === $request['method'] && str_contains( $request['url'], '/record/v1/creditMemo/' ) );
+		$this->assertCount( 1, $deletes );
+	}
+
+	public function test_a_credit_memo_that_cannot_be_removed_stays_and_findexisting_keeps_reporting_it(): void {
+		$this->connector->send( $this->connection( $this->invoiceOptions() ), $this->item( '2005' ), $this->payload() );
+		$this->server->creditMemoLines         = 'add';
+		$this->server->refuseCreditMemoDelete = true;
+		$refund                                = $this->item( '511', EntityType::Refund );
+		$result                                = $this->connector->send( $this->connection( $this->invoiceOptions() ), $refund, $this->refundPayload() );
+		$this->assertSame( ErrorCode::Val002, $result->error->code );
+		$this->assertStringContainsString( 'stays in NetSuite', json_encode( $result->error->context ) );
+		$this->assertCount( 1, $this->server->all( 'creditMemo' ) );
+		$found = $this->connector->findExisting( $this->connection( $this->invoiceOptions() ), $refund );
+		$this->assertInstanceOf( \Estasoft\SyncEngine\Contract\ConnectorError::class, $found, 'The engine would link a reference; it must get the error.' );
+		$again = $this->connector->send( $this->connection( $this->invoiceOptions() ), $refund, $this->refundPayload() );
+		$this->assertFalse( $again->isSuccess() );
+		$this->assertCount( 1, $this->server->all( 'creditMemo' ), 'No second credit memo, and the found one is not deleted by a pass that did not create it.' );
+	}
+
+	public function test_with_total_mismatch_warn_the_credit_memo_is_kept_with_a_warning(): void {
+		$this->connector->send( $this->connection( $this->invoiceOptions() ), $this->item( '2005' ), $this->payload() );
+		$this->server->creditMemoLines = 'add';
+		$options                       = $this->invoiceOptions() + array( 'total_mismatch' => 'warn' );
+		$result                        = $this->connector->send( $this->connection( $options ), $this->item( '512', EntityType::Refund ), $this->refundPayload() );
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$this->assertNotEmpty( $result->ref->extra['warnings'] );
+		$this->assertCount( 1, $this->server->all( 'creditMemo' ) );
+	}
+
+	public function test_the_refund_total_is_written_as_the_last_line_of_the_memo(): void {
+		$this->connector->send( $this->connection( $this->invoiceOptions() ), $this->item( '2005' ), $this->payload() );
+		$this->connector->send( $this->connection( $this->invoiceOptions() ), $this->item( '513', EntityType::Refund ), $this->refundPayload() );
+		$memo = array_values( $this->server->all( 'creditMemo' ) )[0];
+		$this->assertStringEndsWith( "\nShop total 19.99 AED", $memo['memo'] );
+	}
+
 	public function test_a_refund_without_an_invoice_is_refused_with_a_clear_message_and_creates_nothing(): void {
 		$this->connector->send( $this->connection(), $this->item( '2005' ), $this->payload() );
 		$result = $this->connector->send( $this->connection(), $this->item( '502', EntityType::Refund ), $this->refundPayload() );

@@ -38,8 +38,9 @@ final class HoldedDocuments {
 	 *
 	 * @param HoldedPager $pager Reads every page of a list.
 	 * @param HoldedIds   $ids   Markers.
+	 * @param HoldedQuota $quota Call quota.
 	 */
-	public function __construct( private readonly HoldedPager $pager, private readonly HoldedIds $ids ) {
+	public function __construct( private readonly HoldedPager $pager, private readonly HoldedIds $ids, private readonly HoldedQuota $quota ) {
 	}
 
 	/**
@@ -111,7 +112,9 @@ final class HoldedDocuments {
 	 * @throws ApiException On failure.
 	 */
 	public function get( ApiClient $api, string $type, string $id ): HoldedRecord {
-		$json = $api->get( $this->path( $type ) . '/' . rawurlencode( $id ) )->json();
+		$response = $api->get( $this->path( $type ) . '/' . rawurlencode( $id ) );
+		$this->quota->note( $api, $response );
+		$json = $response->json();
 		$this->pager->guard( $json );
 		return new HoldedRecord( ( array_is_list( $json ) ? array() : $json ) + array( 'id' => $id ) );
 	}
@@ -127,6 +130,7 @@ final class HoldedDocuments {
 	 */
 	public function getIfExists( ApiClient $api, string $type, string $id ): ?HoldedRecord {
 		$response = $api->get( $this->path( $type ) . '/' . rawurlencode( $id ), array(), null, array( 'allow' => array( 404 ) ) );
+		$this->quota->note( $api, $response );
 		if ( ! $response->isSuccess() ) {
 			return null;
 		}
@@ -146,7 +150,9 @@ final class HoldedDocuments {
 	 * @throws ApiException On failure.
 	 */
 	public function create( ApiClient $api, string $type, array $body ): string|ConnectorError {
-		$json = $api->post( $this->path( $type ), array(), $body )->json();
+		$response = $api->post( $this->path( $type ), array(), $body );
+		$this->quota->note( $api, $response );
+		$json = $response->json();
 		$this->pager->guard( $json );
 		$id = HoldedPayloadReader::text( $json['id'] ?? '' );
 		if ( '' === $id ) {
@@ -176,8 +182,9 @@ final class HoldedDocuments {
 	 * @throws ApiException On failure.
 	 */
 	public function delete( ApiClient $api, string $type, string $id ): void {
-		$json = $api->delete( $this->path( $type ) . '/' . rawurlencode( $id ) )->json();
-		$this->pager->guard( $json );
+		$response = $api->delete( $this->path( $type ) . '/' . rawurlencode( $id ) );
+		$this->quota->note( $api, $response );
+		$this->pager->guard( $response->json() );
 	}
 
 	/**

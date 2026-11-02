@@ -76,6 +76,11 @@ final class FakeSage200Server {
 	public bool $refuseClient = false;
 
 	/**
+	 * Whether the gateway wants a subscription key (the official guide does not name one).
+	 */
+	public bool $requireKey = true;
+
+	/**
 	 * Decimals the site rounds amounts to (the base currency).
 	 */
 	public int $places = 2;
@@ -322,6 +327,9 @@ final class FakeSage200Server {
 			return new HttpResponse( 401, '', array() );
 		}
 		$key = (string) ( $headers['ocp-apim-subscription-key'] ?? '' );
+		if ( ! $this->requireKey && '' === $key ) {
+			$key = self::SUBSCRIPTION_KEY;
+		}
 		if ( '' === $key ) {
 			return FakeHttpClient::json( array( 'statusCode' => 401, 'message' => 'Access denied due to missing subscription key. Make sure to include subscription key when making requests to an API.' ), 401 );
 		}

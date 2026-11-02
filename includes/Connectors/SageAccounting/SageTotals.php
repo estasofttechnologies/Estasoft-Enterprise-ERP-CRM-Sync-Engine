@@ -32,10 +32,11 @@ final class SageTotals {
 	 *
 	 * @param array<string,mixed> $document Invoice or credit note as Sage returned it.
 	 * @param string              $currency Currency of the business.
-	 * @param int|null            $expected Total the shop expects, or null to skip the total.
+	 * @param int|null            $expected  Total the shop expects, or null to skip the total.
+	 * @param int                 $tolerance Most the totals may differ, in minor units (more for prices that include tax, which are converted line by line).
 	 * @return ConnectorError|null The failure, or null when all agrees.
 	 */
-	public function check( array $document, string $currency, ?int $expected ): ?ConnectorError {
+	public function check( array $document, string $currency, ?int $expected, int $tolerance = 1 ): ?ConnectorError {
 		$actualCurrency = strtoupper( SagePayloadReader::text( $document['currency']['id'] ?? ( $document['currency'] ?? '' ) ) );
 		if ( '' !== $actualCurrency && '' !== $currency && $actualCurrency !== $currency ) {
 			return SageErrors::refused(
@@ -55,7 +56,7 @@ final class SageTotals {
 		if ( null === $actual ) {
 			return SageErrors::refused( 'total_amount', __( 'Sage did not report a total to compare.', 'estasoft-erp-crm-sync-engine' ) );
 		}
-		if ( $this->amounts->agree( abs( $expected ), abs( $actual ) ) ) {
+		if ( $this->amounts->agree( abs( $expected ), abs( $actual ), $tolerance ) ) {
 			return null;
 		}
 		return SageErrors::refused(

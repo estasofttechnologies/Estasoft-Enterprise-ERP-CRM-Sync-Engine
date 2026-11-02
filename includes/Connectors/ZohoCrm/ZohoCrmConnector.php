@@ -17,6 +17,7 @@ use Estasoft\SyncEngine\Connectors\CrmCommon\CrmFields;
 use Estasoft\SyncEngine\Connectors\CrmCommon\CrmMappings;
 use Estasoft\SyncEngine\Connectors\CrmCommon\CrmOptions;
 use Estasoft\SyncEngine\Connectors\CrmCommon\OrderData;
+use Estasoft\SyncEngine\Connectors\CrmCommon\ReferenceField;
 use Estasoft\SyncEngine\Connectors\CrmCommon\Summary;
 use Estasoft\SyncEngine\Connectors\CrmCommon\Text;
 use Estasoft\SyncEngine\Connectors\Support\ApiException;
@@ -97,7 +98,7 @@ final class ZohoCrmConnector extends AbstractSalesConnector implements OAuthConn
 			CredentialFields::clientSecret(),
 			new CredentialField( 'stage_paid', __( 'Deal stage for paid orders', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Leave empty for Closed Won.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
 			new CredentialField( 'stage_unpaid', __( 'Deal stage for unpaid orders', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Leave empty for Qualification.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
-			new CredentialField( 'pipeline', __( 'Pipeline name', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Only if your Zoho CRM uses pipelines.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
+			new CredentialField( 'pipeline', __( 'Pipeline name', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Needed when your Deals use pipelines. Test connection lists the names it finds.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
 		);
 	}
 
@@ -120,6 +121,10 @@ final class ZohoCrmConnector extends AbstractSalesConnector implements OAuthConn
 				'ZohoCRM.modules.products.READ',
 				'ZohoCRM.org.READ',
 				'ZohoCRM.coql.READ',
+				'ZohoCRM.settings.layouts.READ',
+				'ZohoCRM.settings.pipeline.READ',
+				'ZohoCRM.settings.fields.READ',
+				'ZohoCRM.settings.fields.CREATE',
 			)
 		);
 	}
@@ -205,12 +210,15 @@ final class ZohoCrmConnector extends AbstractSalesConnector implements OAuthConn
 	}
 
 	/**
-	 * Test connection: the organisation, and what the token may read.
+	 * Test connection: the organisation, what the token may read, the deal pipelines and the field that carries the order reference.
+	 * The field is created when it is missing and the user may; when it cannot be, the deal name stays the key and the test says so.
 	 *
 	 * @param Connection $connection Connection.
+	 * @throws ApiException When Zoho refuses a call for a reason that is not a missing right.
 	 */
 	protected function identify( Connection $connection ): TestResult {
 		$zoho        = $this->zoho( $connection );
+		$options     = $this->options( $connection );
 		$org         = $zoho->org();
 		$permissions = array(
 			'read_deals'    => $zoho->readable( 'Deals', 'Deal_Name' ),
@@ -219,13 +227,86 @@ final class ZohoCrmConnector extends AbstractSalesConnector implements OAuthConn
 		);
 		$missing     = array_keys( array_filter( $permissions, static fn( bool $allowed ): bool => ! $allowed ) );
 		$error       = array() === $missing ? null : $this->noPermission( str_replace( 'read_', 'read ', (string) $missing[0] ) );
-		$detected    = array_filter(
-			array(
-				'currency'    => $this->orgCurrency( $org ),
-				'data_centre' => ZohoDataCentre::forConnection( $connection )->id(),
-			)
+		$detected    = array(
+			'currency'       => $this->orgCurrency( $org ),
+			'data_centre'    => ZohoDataCentre::forConnection( $connection )->id(),
+			'multi_currency' => isset( $org['mc_status'] ) ? ( ! empty( $org['mc_status'] ) ? 'yes' : 'no' ) : '',
 		);
-		return new TestResult( null === $error, 'Zoho CRM API v8', (string) ( $org['company_name'] ?? 'Zoho CRM' ), array(), $permissions, $error, $detected );
+		if ( null === $error ) {
+			$setup     = new ZohoCrmSetup( $zoho );
+			$pipelines = $setup->pipelines( $options->text( 'pipeline' ) );
+			$error     = $this->pipelineProblem( $pipelines );
+
+			$permissions['read_pipelines'] = 'unreadable' !== $pipelines['status'];
+			if ( 'chosen' === $pipelines['status'] && '' === $options->text( 'pipeline' ) ) {
+				$detected['pipeline'] = $pipelines['pipeline'];
+			}
+			if ( null === $error ) {
+				$detected += $this->referenceSetup( $setup, $options, $permissions );
+			}
+		}
+		return new TestResult( null === $error, 'Zoho CRM API v8', (string) ( $org['company_name'] ?? 'Zoho CRM' ), array(), $permissions, $error, array_filter( $detected ) );
+	}
+
+	/**
+	 * The error for a pipeline that cannot be used, or null.
+	 *
+	 * @param array{status:string,pipeline:string,names:array<int,string>} $pipelines Result of ZohoCrmSetup::pipelines().
+	 */
+	private function pipelineProblem( array $pipelines ): ?ConnectorError {
+		$names = implode( ', ', array_slice( $pipelines['names'], 0, 8 ) );
+		if ( 'unknown' === $pipelines['status'] ) {
+			/* translators: 1: pipeline names found in Zoho CRM */
+			return $this->invalid( 'pipeline', sprintf( __( 'Zoho CRM has no pipeline with that name. Its pipelines are: %s.', 'estasoft-erp-crm-sync-engine' ), $names ) );
+		}
+		if ( 'ambiguous' === $pipelines['status'] ) {
+			/* translators: 1: pipeline names found in Zoho CRM */
+			return $this->invalid( 'pipeline', sprintf( __( 'Zoho CRM has several pipelines (%s). Enter the one new orders go to in the connection settings.', 'estasoft-erp-crm-sync-engine' ), $names ) );
+		}
+		return null;
+	}
+
+	/**
+	 * Find or create the reference field, and report which key the connector will use.
+	 *
+	 * @param ZohoCrmSetup       $setup       Setup helper.
+	 * @param CrmOptions         $options     Options.
+	 * @param array<string,bool> &$permissions Permission list; gets `create_reference_field`.
+	 * @return array<string,string> Facts for `detected`.
+	 */
+	private function referenceSetup( ZohoCrmSetup $setup, CrmOptions $options, array &$permissions ): array {
+		$typed = $options->text( 'reference_field' );
+		if ( '' !== $typed ) {
+			// The merchant chose: a field of their own, or `name` on purpose. Nothing is created and nothing is warned about.
+			$own = 'name' !== Text::lower( $typed ) && ! Text::same( $typed, 'Deal_Name' ) && ReferenceField::valid( $typed );
+			return array( 'reference_mode' => $own ? 'field' : 'name' );
+		}
+		$made                                  = $setup->referenceField();
+		$permissions['create_reference_field'] = null !== $made;
+		if ( null === $made ) {
+			return array(
+				'reference_mode' => 'name',
+				'warning'        => 'reference_field',
+			);
+		}
+		return array(
+			'reference_mode'         => 'field',
+			ReferenceField::DETECTED => $made['field'],
+		);
+	}
+
+	/**
+	 * Cheap health probe: one read of the organisation.
+	 *
+	 * @param Connection $connection Connection.
+	 */
+	public function ping( Connection $connection ): bool {
+		try {
+			return array() !== $this->zoho( $connection )->org();
+		} catch ( \Throwable $throwable ) {
+			unset( $throwable );
+			return false;
+		}
 	}
 
 	/**
@@ -282,7 +363,9 @@ final class ZohoCrmConnector extends AbstractSalesConnector implements OAuthConn
 	}
 
 	/**
-	 * Deals created since a date whose name is a WooCommerce reference.
+	 * Deals created since a date that carry a WooCommerce reference, in the dedicated field or in the name. Each deal's own currency is read
+	 * (multi-currency organisations, `mc_status` of the Organization API), because an amount in KWD or BHD has three decimals and cannot be
+	 * read with the organisation's two.
 	 *
 	 * @param Connection         $connection Connection.
 	 * @param \DateTimeImmutable $from       UTC window start.
@@ -291,24 +374,31 @@ final class ZohoCrmConnector extends AbstractSalesConnector implements OAuthConn
 	public function listForReconcile( Connection $connection, \DateTimeImmutable $from ): array|ConnectorError {
 		try {
 			$zoho     = $this->zoho( $connection );
-			$field    = $this->referenceField( $this->options( $connection ) );
-			$currency = $this->options( $connection )->text( 'org_currency', 'USD' );
+			$ref      = $this->reference( $connection );
+			$org      = $zoho->org();
+			$home     = strtoupper( $this->options( $connection )->text( 'org_currency' ) );
+			$home     = 1 === preg_match( '/^[A-Z]{3}$/', $home ) ? $home : ( '' !== $this->orgCurrency( $org ) ? $this->orgCurrency( $org ) : 'USD' );
 			$since    = $from->setTimezone( new \DateTimeZone( 'UTC' ) )->format( 'Y-m-d\TH:i:s+00:00' );
+			$tests    = array_map( static fn( string $field ): string => "{$field} like 'WC-%'", $ref->searchFields() );
+			$where    = '(' . ( count( $tests ) > 1 ? '(' . implode( ' or ', $tests ) . ')' : $tests[0] ) . " and Created_Time >= '{$since}')";
+			$columns  = array_values( array_unique( array_merge( array( 'id' ), $ref->searchFields(), array( 'Amount', 'Currency', 'Created_Time' ) ) ) );
+			$currency = false !== ( $org['mc_status'] ?? null ); // Organization API: mc_status says whether several currencies are on.
 			$found    = array();
 			for ( $offset = 0; $offset < 10000; $offset += 200 ) {
-				$page = $zoho->coql( "select id, {$field}, Amount, Created_Time from Deals where ({$field} like 'WC-%' and Created_Time >= '{$since}') order by Created_Time asc limit 200 offset {$offset}" );
+				$page = $this->coqlPage( $zoho, $columns, $where, $offset, $currency );
 				foreach ( $page['rows'] as $row ) {
-					$reference = (string) ( $row[ $field ] ?? '' );
-					if ( 1 === preg_match( '/^WC-\d+$/', $reference ) && ! isset( $found[ $reference ] ) ) {
+					$reference = $ref->readFrom( $row );
+					if ( '' !== $reference && ! isset( $found[ $reference ] ) ) {
+						$code                = $currency && is_scalar( $row['Currency'] ?? null ) && 1 === preg_match( '/^[A-Za-z]{3}$/', trim( (string) $row['Currency'] ) ) ? strtoupper( trim( (string) $row['Currency'] ) ) : $home;
 						$found[ $reference ] = new ExternalRef(
 							(string) ( $row['id'] ?? '' ),
 							$reference,
 							null,
 							array(
-								'total_minor'    => Amounts::minor( $row['Amount'] ?? null, $currency ) ?? 0,
+								'total_minor'    => Amounts::minor( $row['Amount'] ?? null, $code ) ?? 0,
 								'refunded_minor' => null,
 								'email'          => '',
-								'currency'       => $currency,
+								'currency'       => $code,
 							)
 						);
 					}
@@ -324,6 +414,32 @@ final class ZohoCrmConnector extends AbstractSalesConnector implements OAuthConn
 	}
 
 	/**
+	 * One page of the reconciliation query. The Currency column exists only in organisations that use several currencies. When the
+	 * organisation did not say (no `mc_status`) and Zoho refuses the first page with it, the query is asked again without it and every
+	 * amount is read in the organisation's currency.
+	 *
+	 * @param ZohoCrmApi        $zoho      API.
+	 * @param array<int,string> $columns   Columns to select.
+	 * @param string            $where     Where clause with its parentheses.
+	 * @param int               $offset    Offset.
+	 * @param bool              &$currency Whether the Currency column is selected; set to false when Zoho refuses it.
+	 * @return array{rows:array<int,array<string,mixed>>,more:bool}
+	 * @throws ApiException When Zoho refuses the query for another reason.
+	 */
+	private function coqlPage( ZohoCrmApi $zoho, array $columns, string $where, int $offset, bool &$currency ): array {
+		$select = $currency ? $columns : array_values( array_diff( $columns, array( 'Currency' ) ) );
+		try {
+			return $zoho->coql( 'select ' . implode( ', ', $select ) . " from Deals where {$where} order by Created_Time asc limit 200 offset {$offset}" );
+		} catch ( ApiException $exception ) {
+			if ( ! $currency || 0 !== $offset || ErrorCode::Val002 !== $exception->error()->code ) {
+				throw $exception;
+			}
+			$currency = false;
+			return $this->coqlPage( $zoho, $columns, $where, $offset, $currency );
+		}
+	}
+
+	/**
 	 * A deal is finished when its summary note exists: the note is written last.
 	 *
 	 * @param Connection $connection Connection.
@@ -332,7 +448,7 @@ final class ZohoCrmConnector extends AbstractSalesConnector implements OAuthConn
 	protected function findOrder( Connection $connection, Item $item ): ExternalRef|ConnectorError|null {
 		$zoho    = $this->zoho( $connection );
 		$options = $this->options( $connection );
-		$deal    = $this->findDeal( $zoho, $options, $item->clientReference() );
+		$deal    = $this->findDeal( $zoho, $this->reference( $connection ), $item->clientReference() );
 		if ( null === $deal || null === $this->findNote( $zoho, (string) $deal['id'], $item->clientReference() ) ) {
 			return null;
 		}
@@ -348,7 +464,7 @@ final class ZohoCrmConnector extends AbstractSalesConnector implements OAuthConn
 	protected function findRefund( Connection $connection, Item $item ): ExternalRef|ConnectorError|null {
 		$zoho  = $this->zoho( $connection );
 		$order = 1 === preg_match( '/^order:(\d+)$/', $item->partitionKey, $parts ) ? 'WC-' . $parts[1] : '';
-		$deal  = '' === $order ? null : $this->findDeal( $zoho, $this->options( $connection ), $order );
+		$deal  = '' === $order ? null : $this->findDeal( $zoho, $this->reference( $connection ), $order );
 		if ( null === $deal ) {
 			return null;
 		}
@@ -370,7 +486,7 @@ final class ZohoCrmConnector extends AbstractSalesConnector implements OAuthConn
 		}
 		$zoho    = $this->zoho( $connection );
 		$options = $this->options( $connection );
-		$deal    = $this->findDeal( $zoho, $options, $order->reference );
+		$deal    = $this->findDeal( $zoho, $this->reference( $connection ), $order->reference );
 		if ( null !== $this->creditWait( $zoho ) ) {
 			return SendResult::failure( $this->waitFor( 3600 ) );
 		}
@@ -380,7 +496,7 @@ final class ZohoCrmConnector extends AbstractSalesConnector implements OAuthConn
 
 		$resumed = null !== $deal;
 		if ( null === $deal ) {
-			$deal = array( 'id' => $zoho->insert( 'Deals', $this->dealRecord( $zoho, $options, $order ) )['id'] );
+			$deal = array( 'id' => $zoho->insert( 'Deals', $this->dealRecord( $zoho, $options, $order, $this->reference( $connection ), $this->pipeline( $connection ) ) )['id'] );
 		}
 		$dealId = (string) $deal['id'];
 		if ( '' === $dealId ) {
@@ -430,7 +546,7 @@ final class ZohoCrmConnector extends AbstractSalesConnector implements OAuthConn
 			return SendResult::failure( $refund );
 		}
 		$zoho = $this->zoho( $connection );
-		$deal = $this->findDeal( $zoho, $this->options( $connection ), $refund->orderRef );
+		$deal = $this->findDeal( $zoho, $this->reference( $connection ), $refund->orderRef );
 		if ( null === $deal ) {
 			/* translators: 1: order reference */
 			return SendResult::failure( $this->invalid( 'Deals', sprintf( __( 'The order %s is not in Zoho CRM yet.', 'estasoft-erp-crm-sync-engine' ), $refund->orderRef ) ) );
@@ -488,13 +604,26 @@ final class ZohoCrmConnector extends AbstractSalesConnector implements OAuthConn
 	}
 
 	/**
-	 * The field that carries the reference: Deal_Name unless the merchant made a field for it.
+	 * The fields that carry the reference: the dedicated field Test connection found or made (or the merchant's own), then the deal name.
 	 *
-	 * @param CrmOptions $options Options.
+	 * @param Connection $connection Connection.
 	 */
-	private function referenceField( CrmOptions $options ): string {
-		$field = $options->text( 'reference_field', 'Deal_Name' );
-		return 1 === preg_match( '/^[A-Za-z][A-Za-z0-9_]{0,60}$/', $field ) ? $field : 'Deal_Name';
+	private function reference( Connection $connection ): ReferenceField {
+		return ReferenceField::choose( $connection, $this->options( $connection ), 'reference_field', 'Deal_Name' );
+	}
+
+	/**
+	 * The pipeline new deals go to: the option, else the one Test connection chose, else none (an account without pipelines).
+	 *
+	 * @param Connection $connection Connection.
+	 */
+	private function pipeline( Connection $connection ): string {
+		$typed = $this->options( $connection )->text( 'pipeline' );
+		if ( '' !== $typed ) {
+			return $typed;
+		}
+		$detected = $connection->config( 'detected' );
+		return is_array( $detected ) && is_scalar( $detected['pipeline'] ?? null ) ? trim( (string) $detected['pipeline'] ) : '';
 	}
 
 	/**
@@ -523,20 +652,22 @@ final class ZohoCrmConnector extends AbstractSalesConnector implements OAuthConn
 	}
 
 	/**
-	 * The oldest deal carrying the reference.
+	 * The oldest deal carrying the reference: in the dedicated field first, then (the documented fallback, which also finds a deal made
+	 * before the field existed) in the deal name.
 	 *
-	 * @param ZohoCrmApi $zoho      API.
-	 * @param CrmOptions $options   Options.
-	 * @param string     $reference WC-number.
+	 * @param ZohoCrmApi     $zoho      API.
+	 * @param ReferenceField $ref       Fields that carry the reference.
+	 * @param string         $reference WC-number.
 	 * @return array<string,mixed>|null
 	 */
-	private function findDeal( ZohoCrmApi $zoho, CrmOptions $options, string $reference ): ?array {
-		$field = $this->referenceField( $options );
-		$rows  = $zoho->search( 'Deals', 'criteria', '(' . $field . ':equals:' . $this->escapeCriteria( $reference ) . ')' );
-		usort( $rows, array( $this, 'byAge' ) );
-		foreach ( $rows as $row ) {
-			if ( Text::same( (string) ( $row[ $field ] ?? '' ), $reference ) ) {
-				return $row;
+	private function findDeal( ZohoCrmApi $zoho, ReferenceField $ref, string $reference ): ?array {
+		foreach ( $ref->searchFields() as $field ) {
+			$rows = $zoho->search( 'Deals', 'criteria', '(' . $field . ':equals:' . $this->escapeCriteria( $reference ) . ')' );
+			usort( $rows, array( $this, 'byAge' ) );
+			foreach ( $rows as $row ) {
+				if ( Text::same( (string) ( $row[ $field ] ?? '' ), $reference ) ) {
+					return $row;
+				}
 			}
 		}
 		return null;
@@ -661,12 +792,14 @@ final class ZohoCrmConnector extends AbstractSalesConnector implements OAuthConn
 	/**
 	 * Fields of a new deal; creates the account and contact first.
 	 *
-	 * @param ZohoCrmApi $zoho    API.
-	 * @param CrmOptions $options Options.
-	 * @param OrderData  $order   Order.
+	 * @param ZohoCrmApi     $zoho     API.
+	 * @param CrmOptions     $options  Options.
+	 * @param OrderData      $order    Order.
+	 * @param ReferenceField $ref      Fields that carry the reference.
+	 * @param string         $pipeline Pipeline name, empty for an account without pipelines.
 	 * @return array<string,mixed>
 	 */
-	private function dealRecord( ZohoCrmApi $zoho, CrmOptions $options, OrderData $order ): array {
+	private function dealRecord( ZohoCrmApi $zoho, CrmOptions $options, OrderData $order, ReferenceField $ref, string $pipeline ): array {
 		$accountId = null;
 		if ( '' !== $order->contact['company'] ) {
 			$rows      = $zoho->search( 'Accounts', 'criteria', '(Account_Name:equals:' . $this->escapeCriteria( $order->contact['company'] ) . ')' );
@@ -675,23 +808,21 @@ final class ZohoCrmConnector extends AbstractSalesConnector implements OAuthConn
 		$contact   = $this->findContact( $zoho, $order->contact['email'] );
 		$contactId = null !== $contact ? (string) $contact['id'] : $zoho->insert( 'Contacts', $this->contactRecord( $order->contact, $accountId ), true )['id'];
 
-		$field  = $this->referenceField( $options );
 		$record = array(
-			$field         => $order->reference,
+			'Deal_Name'    => $order->reference,
 			'Stage'        => $order->paid ? $options->text( 'stage_paid', 'Closed Won' ) : $options->text( 'stage_unpaid', 'Qualification' ),
 			'Amount'       => Amounts::number( $order->totalMinor, $order->currency ),
 			'Closing_Date' => $order->date,
 			'Contact_Name' => array( 'id' => $contactId ),
 		);
-		if ( 'Deal_Name' !== $field ) {
-			/* translators: 1: order number */
-			$record['Deal_Name'] = sprintf( __( 'Order %s', 'estasoft-erp-crm-sync-engine' ), substr( $order->reference, 3 ) );
+		if ( $ref->dedicated ) {
+			$record[ $ref->field ] = $order->reference;
 		}
 		if ( null !== $accountId ) {
 			$record['Account_Name'] = array( 'id' => $accountId );
 		}
-		if ( '' !== $options->text( 'pipeline' ) ) {
-			$record['Pipeline'] = $options->text( 'pipeline' );
+		if ( '' !== $pipeline ) {
+			$record['Pipeline'] = $pipeline;
 		}
 		if ( '' !== $order->note ) {
 			$record['Description'] = $order->note;

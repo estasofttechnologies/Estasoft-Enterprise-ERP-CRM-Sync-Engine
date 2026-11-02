@@ -26,14 +26,14 @@ final class ExactAuthAndErrorsTest extends ExactTestCase {
 
 	public function test_an_expiring_token_is_refreshed_and_the_new_refresh_token_is_kept_for_the_next_time(): void {
 		$connection = $this->connection();
-		$this->kit->clock->advance( 400 );
+		$this->kit->clock->advance( 575 );
 		list( $item, $payload ) = $this->order( '4001' );
 		$this->assertTrue( $this->connector->send( $this->kit->storage->load( 1 ), $item, $payload )->isSuccess() );
 		$stored = $this->kit->storage->load( 1 );
 		$this->assertNotSame( 'refresh-access-0', $stored->secret( OAuthTokenManager::REFRESH_TOKEN ), 'The new refresh token replaced the old one.' );
 		$this->assertArrayNotHasKey( 'refresh-access-0', array_filter( $this->server->refreshTokens ), 'The old one works only once.' );
 		$this->assertEqualsWithDelta( $this->kit->clock->now()->getTimestamp() + 30 * 86400, $this->kit->storage->rows[1]['credential_expires_at'], 30, 'The 30 day window moves on.' );
-		$this->kit->clock->advance( 400 );
+		$this->kit->clock->advance( 575 );
 		list( $second, $secondPayload ) = $this->order( '4002' );
 		$this->assertTrue( $this->connector->send( $this->kit->storage->load( 1 ), $second, $secondPayload )->isSuccess(), 'The second refresh uses the new refresh token.' );
 		unset( $connection );
@@ -42,7 +42,7 @@ final class ExactAuthAndErrorsTest extends ExactTestCase {
 	public function test_a_refresh_token_the_server_no_longer_knows_holds_the_connection_for_a_new_sign_in(): void {
 		$this->connection();
 		$this->server->refreshTokens = array();
-		$this->kit->clock->advance( 400 );
+		$this->kit->clock->advance( 575 );
 		list( $item, $payload ) = $this->order( '4003' );
 		$result = $this->connector->send( $this->kit->storage->load( 1 ), $item, $payload );
 		$this->assertSame( ErrorCode::Auth002, $result->error->code );
@@ -50,13 +50,50 @@ final class ExactAuthAndErrorsTest extends ExactTestCase {
 		$this->assertSame( array(), $this->server->invoices );
 	}
 
-	public function test_a_401_in_the_middle_of_a_token_s_life_refreshes_once_and_repeats_the_call(): void {
+	public function test_exact_refuses_a_refresh_before_9_minutes_30_so_the_connector_does_not_ask_before_then(): void {
+		$this->connection();
+		$first   = $this->kit->storage->load( 1 )->secret( OAuthTokenManager::ACCESS_TOKEN );
+		$started = $this->kit->clock->now()->getTimestamp();
+		foreach ( array( 260, 150 ) as $step ) {
+			$this->kit->clock->advance( $step );
+			$age = $this->kit->clock->now()->getTimestamp() - $started;
+			$this->assertLessThan( 540, $age, 'The test stays well inside the first 570 seconds.' );
+			list( $item, $payload ) = $this->order( (string) ( 4300 + $step ) );
+			$result = $this->connector->send( $this->kit->storage->load( 1 ), $item, $payload );
+			$this->assertTrue( $result->isSuccess(), 'Age ' . $age . ': ' . (string) $result->error?->message() );
+		}
+		$this->assertLessThan( 570, $this->kit->clock->now()->getTimestamp() - $started );
+		$this->assertSame( array(), $this->kit->http->matching( '#oauth2/token#' ), 'No refresh before the token is 570 seconds old, however many calls.' );
+		$this->assertSame( $first, $this->kit->storage->load( 1 )->secret( OAuthTokenManager::ACCESS_TOKEN ) );
+		$this->kit->clock->advance( 575 - ( $this->kit->clock->now()->getTimestamp() - $started ) );
+		list( $item, $payload ) = $this->order( '4399' );
+		$this->assertTrue( $this->connector->send( $this->kit->storage->load( 1 ), $item, $payload )->isSuccess() );
+		$this->assertCount( 1, $this->kit->http->matching( '#oauth2/token#' ), 'One refresh once the token is 570 seconds old.' );
+		$this->assertNotSame( $first, $this->kit->storage->load( 1 )->secret( OAuthTokenManager::ACCESS_TOKEN ) );
+		$this->assertSame( ConnectionStatus::Active, $this->kit->storage->status( 1 ) );
+	}
+
+	public function test_a_401_before_the_minimum_age_is_not_answered_with_a_refresh_and_does_not_hold_the_connection(): void {
 		$this->connection();
 		$this->server->accessTokens = array();
-		$this->server->refreshTokens['refresh-access-0'] = true;
+		$this->kit->clock->advance( 120 );
 		list( $item, $payload ) = $this->order( '4004' );
 		$result = $this->connector->send( $this->kit->storage->load( 1 ), $item, $payload );
+		$this->assertFalse( $result->isSuccess() );
+		$this->assertSame( ErrorCode::Auth002, $result->error->code );
+		$this->assertSame( array(), $this->kit->http->matching( '#oauth2/token#' ), 'A refresh now would be refused.' );
+		$this->assertSame( ConnectionStatus::Active, $this->kit->storage->status( 1 ) );
+		$this->assertSame( array(), $this->server->invoices );
+	}
+
+	public function test_a_401_for_a_token_old_enough_refreshes_once_and_repeats_the_call(): void {
+		$this->connection();
+		$this->server->accessTokens = array();
+		$this->kit->clock->advance( 575 );
+		list( $item, $payload ) = $this->order( '4005' );
+		$result = $this->connector->send( $this->kit->storage->load( 1 ), $item, $payload );
 		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$this->assertCount( 1, $this->kit->http->matching( '#oauth2/token#' ) );
 		$this->assertCount( 1, $this->server->invoices );
 	}
 
@@ -71,7 +108,18 @@ final class ExactAuthAndErrorsTest extends ExactTestCase {
 		$this->assertSame( array( 'force_login' => '0' ), $config->extraAuthorizeParams );
 		$this->assertSame( 30, $config->refreshTokenLifetimeDays );
 		$this->assertSame( 600, $config->accessTokenFallbackSeconds );
+		$this->assertSame( 570, $config->minTokenAgeSeconds, 'Exact refuses a refresh of a token younger than 9 minutes 30.' );
 		$this->assertContains( 'start.exactonline.de', $config->allowedHosts );
+	}
+
+	public function test_ping_is_one_read_of_the_current_user(): void {
+		$connection = $this->connection();
+		$before     = count( $this->server->log );
+		$this->assertTrue( $this->connector->ping( $connection ) );
+		$this->assertCount( 1, array_slice( $this->server->log, $before ), 'One call, not the whole test connection.' );
+		$this->assertStringContainsString( 'current/Me', $this->server->log[ $before ] );
+		$this->server->fail( 'GET', '#current/Me#', FakeHttpClient::status( 500, 'down' ) );
+		$this->assertFalse( $this->connector->ping( $this->connection( array(), array(), 'access-9' ) ) );
 	}
 
 	public function test_the_redirect_address_is_shown_and_the_form_has_region_id_and_secret(): void {

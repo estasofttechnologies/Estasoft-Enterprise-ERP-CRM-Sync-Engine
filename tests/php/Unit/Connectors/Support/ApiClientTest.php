@@ -155,6 +155,49 @@ final class ApiClientTest extends TestCase {
 		$this->assertStringNotContainsString( 'steal', $error->message() . wp_json_encode( $error->context ) );
 	}
 
+	public function test_a_hostile_location_or_next_link_is_refused_before_any_credential_is_applied(): void {
+		$this->kit->http->queue( new HttpResponse( 302, '', array( 'location' => 'https://evil.test/collect?x=1' ) ) );
+		$first    = $this->client( new BearerAuth( 'api_key' ) )->get( '/export/1', array(), null, array( 'allow' => array( 302 ) ) );
+		$location = (string) $first->header( 'Location' );
+		$this->assertSame( 'https://evil.test/collect?x=1', $location );
+		$sent = $this->kit->http->count();
+
+		foreach ( array( $location, 'https://api.demo.test.evil.test/x', 'https://api.demo.test@evil.test/x', 'https://api.demo.test:8443/x', 'http://api.demo.test/x', 'https://files.demo.test:8443/x', 'https://files.demo.test.evil.test/x' ) as $hostile ) {
+			$error = $this->failure( $this->client( new BearerAuth( 'api_key' ) ), 'get', $hostile );
+			$this->assertSame( ErrorCode::Val002, $error->code, $hostile );
+			$this->assertSame( 'address', $error->context['field'], $hostile );
+		}
+		$this->assertSame( $sent, $this->kit->http->count(), 'Not one request went out.' );
+		foreach ( $this->kit->http->requests as $request ) {
+			$this->assertStringNotContainsString( 'evil.test', $request['url'] );
+		}
+		$this->assertStringNotContainsString( self::KEY, wp_json_encode( $this->kit->http->requests[ $sent - 1 ]['url'] ?? '' ) );
+	}
+
+	public function test_a_link_on_the_same_origin_or_a_declared_host_is_followed_with_the_usual_credentials(): void {
+		$this->kit->http->fallback( static fn() => FakeHttpClient::json( array() ) );
+		$client = $this->client( new BearerAuth( 'api_key' ) );
+		$client->get( 'https://api.demo.test/v1/items?page=2' );
+		$this->assertSame( 'Bearer ' . self::KEY, $this->kit->http->last()['headers']['Authorization'] );
+		$client->get( 'https://API.DEMO.TEST/v1/items?page=3' );
+		$this->assertSame( 'https://API.DEMO.TEST/v1/items?page=3', $this->kit->http->last()['url'], 'The host is compared in lower case.' );
+		$client->get( 'https://api.demo.test:443/v1/items?page=4' );
+		$client->get( 'https://files.demo.test/dl/9' );
+		$this->assertSame( 4, $this->kit->http->count() );
+	}
+
+	public function test_a_merchant_host_follows_links_only_on_its_own_origin(): void {
+		$this->kit->http->fallback( static fn() => FakeHttpClient::json( array() ) );
+		$connection = $this->connection();
+		$client     = new ApiClient( $this->kit->http, $connection, 'https://erp.acme-trading.test:8443/api', new BearerAuth( 'api_key' ), new HostPolicy( array(), true ), 'Demo', new Redaction(), new RateLimitHints() );
+		$client->get( 'https://erp.acme-trading.test:8443/api/orders?page=2' );
+		$this->assertSame( 1, $this->kit->http->count() );
+		foreach ( array( 'https://other.acme-trading.test:8443/x', 'https://erp.acme-trading.test/x', 'https://erp.acme-trading.test:9443/x', 'https://93.184.216.34/x' ) as $other ) {
+			$this->assertSame( ErrorCode::Val002, $this->failure( $client, 'get', $other )->code, $other . ' is public, but it is not this server.' );
+		}
+		$this->assertSame( 1, $this->kit->http->count() );
+	}
+
 	public function test_a_query_key_goes_in_the_url_and_a_bearer_in_the_header(): void {
 		$this->kit->http->fallback( static fn() => FakeHttpClient::json( array() ) );
 		$this->client( new QueryKeyAuth( 'key', 'api_key' ) )->get( '/x', array( 'a' => '1' ) );

@@ -98,6 +98,13 @@ final class RefundPayload {
 	}
 
 	/**
+	 * Rows the credit note will have: product rows, shipping and other amounts (at least one).
+	 */
+	public function rows(): int {
+		return max( 1, count( $this->lines ) + ( $this->shippingMinor > 0 ? 1 : 0 ) + ( $this->otherMinor > 0 ? 1 : 0 ) );
+	}
+
+	/**
 	 * What the credit note should add up to: the refund less the part that belongs to products left out.
 	 */
 	public function expectedTotal(): int {

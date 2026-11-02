@@ -119,7 +119,9 @@ final class BcDocuments {
 	}
 
 	/**
-	 * Make the document hold exactly the planned lines and the marker. Lines already present are checked against the plan and kept.
+	 * Make the document hold the planned lines. Lines already present are checked against the plan and kept, never added twice. The
+	 * completion marker is not written here: it is the statement that the document is right, so it is written (see ensureMarker) only after
+	 * the total of the document was checked.
 	 *
 	 * @param BcDocType         $type     Kind of document.
 	 * @param string            $id       Document GUID.
@@ -146,23 +148,38 @@ final class BcDocuments {
 			$this->bc->create( $this->bc->path( $type->collection(), $id, $type->lines() ), $line->body( $currency ) );
 			++$written;
 		}
-		$count  = count( $plan );
-		$marker = BcLine::comment( BcPlan::marker( $ref, $count ) );
-		if ( isset( $existing[ $count ] ) ) {
-			if ( ! $marker->matches( $existing[ $count ], $currency ) ) {
-				return array(
-					'written' => $written,
-					'error'   => $this->changed(),
-				);
-			}
-		} else {
-			$this->bc->create( $this->bc->path( $type->collection(), $id, $type->lines() ), $marker->body( $currency ) );
-			++$written;
+		$count = count( $plan );
+		if ( isset( $existing[ $count ] ) && ! BcLine::comment( BcPlan::marker( $ref, $count ) )->matches( $existing[ $count ], $currency ) ) {
+			return array(
+				'written' => $written,
+				'error'   => $this->changed(),
+			);
 		}
 		return array(
 			'written' => $written,
 			'error'   => null,
 		);
+	}
+
+	/**
+	 * Write the completion marker after the last planned line, when it is not there yet. Call it only once the total was checked: a document
+	 * with the marker is reported as finished by findExisting() and is never looked at again.
+	 *
+	 * @param BcDocType $type     Kind of document.
+	 * @param string    $id       Document GUID.
+	 * @param string    $ref      WC-123.
+	 * @param int       $count    Number of planned lines before the marker.
+	 * @param string    $currency Currency of the document.
+	 * @return bool True when the marker was written now.
+	 *
+	 * @throws ApiException On failure.
+	 */
+	public function ensureMarker( BcDocType $type, string $id, string $ref, int $count, string $currency ): bool {
+		if ( null !== $this->markerCount( $this->lines( $type, $id ), $ref ) ) {
+			return false;
+		}
+		$this->bc->create( $this->bc->path( $type->collection(), $id, $type->lines() ), BcLine::comment( BcPlan::marker( $ref, $count ) )->body( $currency ) );
+		return true;
 	}
 
 	/**

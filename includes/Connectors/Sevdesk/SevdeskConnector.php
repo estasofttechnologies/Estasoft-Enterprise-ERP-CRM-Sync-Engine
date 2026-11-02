@@ -90,6 +90,11 @@ final class SevdeskConnector extends AbstractApiConnector {
 			'default' => 'fail',
 			'allowed' => array( 'fail', 'warn' ),
 		),
+		'total_tolerance'        => array( 'default' => '' ),
+		'payment_date_format'    => array(
+			'default' => 'ymd',
+			'allowed' => array( 'ymd', 'unix' ),
+		),
 		'unity_id'               => array(
 			'default' => 1,
 			'min'     => 1,
@@ -178,6 +183,20 @@ final class SevdeskConnector extends AbstractApiConnector {
 	 */
 	protected function vendorError( ApiResponse $response ): ?ConnectorError {
 		return ( new SevdeskErrorMapper() )->map( $response );
+	}
+
+	/**
+	 * Is the token accepted: one cheap read of the bookkeeping version, nothing else.
+	 *
+	 * @param Connection $connection Connection.
+	 */
+	public function ping( Connection $connection ): bool {
+		try {
+			return $this->api( $connection )->get( 'Tools/bookkeepingSystemVersion' )->isSuccess();
+		} catch ( \Throwable $throwable ) {
+			unset( $throwable );
+			return false;
+		}
 	}
 
 	/**

@@ -20,13 +20,13 @@ One document per connector id. Each starts with a front matter block that the ca
 | [Moneybird](moneybird.md) | `moneybird` | Key or login | `moneybird.com` | No |
 | [NetSuite](netsuite.md) | `netsuite` | Cloud app, no sign-in page | `*.suitetalk.api.netsuite.com` | No |
 | [Odoo](odoo.md) | `odoo` | Key or login | The address you enter, or none | No |
-| [Oracle Fusion Cloud ERP](oracle-fusion.md) | `oracle-fusion` | Cloud app, no sign-in page | The address you enter, or none | No |
+| [Oracle Fusion Cloud ERP](oracle-fusion.md) | `oracle-fusion` | Cloud app, no sign-in page | `*.oraclecloud.com` | No |
 | [Pennylane](pennylane.md) | `pennylane` | Key or login | `app.pennylane.com` | No |
 | [Pipedrive](pipedrive.md) | `pipedrive` | Key or login | `*.pipedrive.com` | No |
-| [Qoyod](qoyod.md) | `qoyod` | Key or login | `api.qoyod.com`, `www.qoyod.com` | No |
+| [Qoyod](qoyod.md) | `qoyod` | Key or login | `api.qoyod.com` | No |
 | [QuickBooks Online](quickbooks.md) | `quickbooks` | Your own app, sign in | `quickbooks.api.intuit.com`, `sandbox-quickbooks.api.intuit.com`, `appcenter.intuit.com`, `oauth.platform.intuit.com` | No |
 | [SAP Business One](sap-b1.md) | `sap-b1` | Server login | The address you enter, or none | No |
-| [SAP S/4HANA](sap-s4hana.md) | `sap-s4hana` | Cloud app, no sign-in page | The address you enter, or none | No |
+| [SAP S/4HANA](sap-s4hana.md) | `sap-s4hana` | Cloud app, no sign-in page | `*.s4hana.cloud.sap` | No |
 | [SMACC](smacc.md) | `smacc` | None | The address you enter, or none | No |
 | [Sage 200](sage200.md) | `sage200` | Your own app, sign in | `id.sage.com`, `api.columbus.sage.com` | No |
 | [Sage 300](sage300.md) | `sage300` | Server login | The address you enter, or none | No |
@@ -41,5 +41,7 @@ One document per connector id. Each starts with a front matter block that the ca
 | [Zoho Books](zoho-books.md) | `zoho-books` | Your own app, sign in | `accounts.zoho.com`, `accounts.zoho.eu`, `accounts.zoho.in`, `accounts.zoho.com.au`, `accounts.zoho.jp`, `accounts.zoho.sa`, `accounts.zohocloud.ca`, `accounts.zoho.com.cn`, `www.zohoapis.com`, `www.zohoapis.eu`, `www.zohoapis.in`, `www.zohoapis.com.au`, `www.zohoapis.jp`, `www.zohoapis.sa`, `www.zohoapis.ca`, `www.zohoapis.com.cn` | No |
 | [Zoho CRM](zoho-crm.md) | `zoho-crm` | Your own app, sign in | `accounts.zoho.com`, `accounts.zoho.eu`, `accounts.zoho.in`, `accounts.zoho.com.au`, `accounts.zoho.jp`, `accounts.zoho.sa`, `accounts.zohocloud.ca`, `accounts.zoho.com.cn`, `www.zohoapis.com`, `www.zohoapis.eu`, `www.zohoapis.in`, `www.zohoapis.com.au`, `www.zohoapis.jp`, `www.zohoapis.sa`, `www.zohoapis.ca`, `www.zohoapis.com.cn` | No |
 | [sevDesk](sevdesk.md) | `sevdesk` | Key or login | `my.sevdesk.de` | No |
+
+A host that starts with `*.` is a pattern: any subdomain of it (a system that gives each customer a host of its own). A system with `available: false` cannot be chosen yet; its document says why in `unavailable_reason`.
 
 No connector has been tried on a live vendor account yet: each document ends with the manual smoke test to run on a real account.

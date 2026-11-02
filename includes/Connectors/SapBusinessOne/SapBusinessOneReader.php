@@ -168,7 +168,7 @@ final class SapBusinessOneReader {
 	 * @throws ApiException On failure.
 	 */
 	public function orders( \DateTimeImmutable $from ): array {
-		$day    = $this->gateway->dateLiteral( $from->setTimezone( new \DateTimeZone( 'UTC' ) )->format( 'Y-m-d' ) );
+		$day    = $this->gateway->dateLiteral( $from->setTimezone( new \DateTimeZone( 'UTC' ) )->modify( '-1 day' )->format( 'Y-m-d' ) );
 		$filter = "startswith(NumAtCard,'WC-') and DocDate ge {$day} and Cancelled eq 'tNO'";
 		$rows   = $this->gateway->list(
 			'Orders',

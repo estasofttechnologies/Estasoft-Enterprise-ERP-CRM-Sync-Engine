@@ -25,7 +25,20 @@ final class MappingRules {
 	 */
 	public static function orderHeader(): array {
 		return array(
-			self::rule( 'order-date', 'order_date', 'order.created_at', array( self::transform( 'date_utc', array( 'format' => 'date' ) ) ) ),
+			self::rule(
+				'order-date',
+				'order_date',
+				'order.created_at',
+				array(
+					self::transform(
+						'date_utc',
+						array(
+							'format'          => 'date',
+							'output_timezone' => 'store',
+						)
+					),
+				)
+			),
 			self::rule( 'order-currency', 'currency', 'order.currency', array(), true, 'SYNC-VAL-002' ),
 			self::rule( 'order-note', 'note', 'order.note', array( self::transform( 'trim' ) ) ),
 			self::rule( 'order-total', 'total', 'order.total' ),

@@ -24,7 +24,8 @@ final class DynamicsFinanceOrderTest extends DynamicsFinanceTestCase {
 		$this->assertSame( 'WC-1001', $orders[0]['CustomersOrderReference'] );
 		$this->assertSame( 'WC-1001 (1 lines)', $orders[0]['SalesOrderName'] );
 		$this->assertSame( 'AED', $orders[0]['CurrencyCode'] );
-		$this->assertSame( '2026-11-01', $orders[0]['RequestedShippingDate'] );
+		$this->assertSame( '2026-11-01T12:00:00Z', $orders[0]['RequestedShippingDate'], 'An Edm.DateTimeOffset literal at midday UTC.' );
+		$this->assertSame( '2026-11-01T12:00:00Z', $orders[0]['RequestedReceiptDate'] );
 		$this->assertSame( 'Jane Doe', $orders[0]['DeliveryAddressName'] );
 		$this->assertSame( 'ARE', $orders[0]['DeliveryAddressCountryRegionId'] );
 		$this->assertSame( $orders[0]['OrderingCustomerAccountNumber'], $orders[0]['InvoiceCustomerAccountNumber'] );
@@ -34,7 +35,7 @@ final class DynamicsFinanceOrderTest extends DynamicsFinanceTestCase {
 		$this->assertSame( 3, $lines[0]['OrderedSalesQuantity'] );
 		$this->assertSame( 19.99, $lines[0]['SalesPrice'] );
 		$this->assertSame( 'FULL', $lines[0]['SalesTaxItemGroupCode'] );
-		$this->assertSame( '2026-11-01', $lines[0]['RequestedShippingDate'] );
+		$this->assertSame( '2026-11-01T12:00:00Z', $lines[0]['RequestedShippingDate'] );
 		$this->assertSame( 6297, $result->ref->extra['total_minor'] );
 		$this->assertSame( $orders[0]['SalesOrderNumber'], $result->ref->ref );
 	}
@@ -215,18 +216,102 @@ final class DynamicsFinanceOrderTest extends DynamicsFinanceTestCase {
 		$this->assertNotEmpty( $this->connector->send( $warn, $this->item( '1022' ), $this->payload( array( 'total' => 5997 ) ) )->ref->extra['warnings'] );
 	}
 
-	public function test_a_total_f_and_o_does_not_fill_in_is_a_warning_and_the_order_is_linked(): void {
+	public function test_a_total_f_and_o_does_not_give_is_not_a_pass(): void {
+		$item                     = $this->item( '1023' );
 		$this->fo->computesTotals = false;
-		$result                   = $this->connector->send( $this->connection, $this->item( '1023' ), $this->payload() );
+		$result                   = $this->connector->send( $this->connection, $item, $this->payload() );
+		$this->assertFalse( $result->isSuccess(), 'No total to compare: the order is not reported as synced.' );
+		$this->assertSame( ErrorCode::Val002, $result->error->code );
+		$this->assertStringContainsString( 'total_mismatch', $result->error->message() );
+		$this->assertStringContainsString( '62.97 AED', $result->error->message() );
+		$this->assertNull( $this->connector->findExisting( $this->connection, $item ), 'The order is not marked as finished.' );
+		$this->assertSame( 'WC-1023 (syncing)', $this->fo->all( 'SalesOrderHeadersV2' )[0]['SalesOrderName'] );
+		$this->assertCount( 1, $this->linesOfOrder() );
+
+		// F&O fills in the total later (or a person checked the order): the next try finishes the same order.
+		$this->fo->computesTotals = true;
+		$done                     = $this->connector->send( $this->connection, $item, $this->payload() );
+		$this->assertTrue( $done->isSuccess(), (string) $done->error?->message() );
+		$this->assertCount( 1, $this->fo->all( 'SalesOrderHeadersV2' ) );
+		$this->assertCount( 1, $this->linesOfOrder() );
+		$this->assertSame( 'WC-1023 (1 lines)', $this->fo->all( 'SalesOrderHeadersV2' )[0]['SalesOrderName'] );
+		$this->assertNotNull( $this->connector->findExisting( $this->connection, $item ) );
+	}
+
+	public function test_warn_mode_finishes_an_order_whose_total_f_and_o_does_not_give(): void {
+		$this->fo->computesTotals = false;
+		$item                     = $this->item( '1046' );
+		$result                   = $this->connector->send( $this->connection( array( 'total_mismatch' => 'warn' ) ), $item, $this->payload() );
 		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
 		$this->assertNotEmpty( $result->ref->extra['warnings'] );
+		$this->assertNotNull( $this->connector->findExisting( $this->connection, $item ) );
+	}
+
+	public function test_an_order_that_failed_its_total_check_is_never_linked_by_a_retry(): void {
+		$item   = $this->item( '1047' );
+		$failed = $this->connector->send( $this->connection, $item, $this->payload( array( 'total' => 5997 ) ) );
+		$this->assertSame( ErrorCode::Val002, $failed->error->code );
+		$this->assertNull( $this->connector->findExisting( $this->connection, $item ), 'The name still says syncing.' );
+		$this->assertSame( ErrorCode::Val002, $this->connector->send( $this->connection, $item, $this->payload( array( 'total' => 5997 ) ) )->error->code );
+		$this->assertNull( $this->connector->findExisting( $this->connection, $item ) );
 		$this->assertCount( 1, $this->fo->all( 'SalesOrderHeadersV2' ) );
+		$this->assertCount( 1, $this->fo->all( 'SalesOrderLines' ) );
+
+		$right = $this->connector->send( $this->connection, $item, $this->payload() );
+		$this->assertTrue( $right->isSuccess(), (string) $right->error?->message() );
+		$this->assertNotNull( $this->connector->findExisting( $this->connection, $item ) );
+	}
+
+	public function test_lines_f_and_o_stored_with_another_price_stop_the_order(): void {
+		$this->fo->storedPrice = 25.0;
+		$item                  = $this->item( '1048' );
+		$result                = $this->connector->send( $this->connection, $item, $this->payload() );
+		$this->assertSame( ErrorCode::Val002, $result->error->code );
+		$this->assertStringContainsString( 'stored the lines differently', $result->error->message() );
+		$this->assertNull( $this->connector->findExisting( $this->connection, $item ) );
+	}
+
+	public function test_a_manual_number_sequence_is_named_and_the_shop_reference_option_numbers_the_order(): void {
+		$this->fo->manualNumbering = true;
+		$item                      = $this->item( '1049' );
+		$refused                   = $this->connector->send( $this->connection, $item, $this->payload() );
+		$this->assertSame( ErrorCode::Val002, $refused->error->code );
+		$this->assertStringContainsString( 'order_numbering', $refused->error->message() );
+		$this->assertCount( 0, $this->fo->all( 'SalesOrderHeadersV2' ) );
+
+		$connection = $this->connection( array( 'order_numbering' => 'shop_reference' ) );
+		$sent       = $this->connector->send( $connection, $item, $this->payload() );
+		$this->assertTrue( $sent->isSuccess(), (string) $sent->error?->message() );
+		$this->assertSame( 'WC-1049', $this->fo->all( 'SalesOrderHeadersV2' )[0]['SalesOrderNumber'] );
+		$this->assertSame( 'WC-1049', $sent->ref->id );
+		$again = $this->connector->send( $connection, $item, $this->payload() );
+		$this->assertTrue( $again->alreadyExisted );
+		$this->assertCount( 1, $this->fo->all( 'SalesOrderHeadersV2' ) );
+		$this->assertCount( 1, $this->linesOfOrder() );
+	}
+
+	public function test_automatic_numbering_sends_no_number(): void {
+		$this->connector->send( $this->connection, $this->item( '1050' ), $this->payload() );
+		$create = array_values( array_filter( $this->kit->http->requests, static fn( array $r ): bool => 'POST' === $r['method'] && str_contains( $r['url'], '/data/SalesOrderHeadersV2' ) ) );
+		$this->assertCount( 1, $create );
+		$this->assertArrayNotHasKey( 'SalesOrderNumber', json_decode( (string) $create[0]['body'], true ) );
+	}
+
+	public function test_a_date_of_the_store_is_the_date_on_the_order(): void {
+		// 22:30 UTC on the last day of October is 02:30 on the first of November in Dubai.
+		\Estasoft\SyncEngine\Connectors\Microsoft\Dates::resolveWith( static fn() => new \DateTimeZone( 'Asia/Dubai' ) );
+		try {
+			$this->connector->send( $this->connection, $this->item( '1051' ), $this->payload( array( 'order_date' => '2026-10-31T22:30:00Z' ) ) );
+		} finally {
+			\Estasoft\SyncEngine\Connectors\Microsoft\Dates::resolveWith( null );
+		}
+		$this->assertSame( '2026-11-01T12:00:00Z', $this->fo->all( 'SalesOrderHeadersV2' )[0]['RequestedShippingDate'] );
 	}
 
 	public function test_the_requested_shipping_date_follows_the_option(): void {
 		$connection = $this->connection( array( 'shipping_date' => 'today' ) );
 		$this->connector->send( $connection, $this->item( '1024' ), $this->payload() );
-		$this->assertSame( gmdate( 'Y-m-d' ), $this->fo->all( 'SalesOrderHeadersV2' )[0]['RequestedShippingDate'] );
+		$this->assertSame( gmdate( 'Y-m-d' ) . 'T12:00:00Z', $this->fo->all( 'SalesOrderHeadersV2' )[0]['RequestedShippingDate'] );
 	}
 
 	public function test_an_order_changed_by_a_person_is_not_silently_continued(): void {

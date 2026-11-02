@@ -383,4 +383,129 @@ final class ZohoBooksConnectorTest extends TestCase {
 		$this->assertSame( 4500, $result->ref->extra['total_minor'] );
 		$this->assertSame( '5.00', $this->rows( 'invoices' )[1]['discount'] ?? '5.00' );
 	}
+
+	public function test_two_different_buyers_with_the_same_name_each_get_a_contact_and_the_email_comes_first_next_time(): void {
+		list( $first, $p1 )  = SalesFixtures::order( '160', array( 'name' => 'John Smith', 'email' => 'john.smith@example.test', 'currency' => 'EUR' ) );
+		list( $second, $p2 ) = SalesFixtures::order( '161', array( 'name' => 'John Smith', 'email' => 'john.other@example.test', 'currency' => 'EUR' ) );
+		$connection          = $this->connection();
+
+		$this->assertTrue( $this->connector->send( $connection, $first, $p1 )->isSuccess() );
+		$result = $this->connector->send( $connection, $second, $p2 );
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+
+		$contacts = $this->rows( 'contacts' );
+		$this->assertCount( 2, $contacts );
+		$this->assertSame( 'John Smith', $contacts[0]['contact_name'] );
+		$this->assertSame( 'John Smith (john.other@example.test)', $contacts[1]['contact_name'] );
+		$this->assertSame( $contacts[1]['contact_id'], $this->rows( 'invoices' )[1]['customer_id'] );
+
+		list( $third, $p3 ) = SalesFixtures::order( '162', array( 'name' => 'John Smith', 'email' => 'JOHN.OTHER@example.test', 'currency' => 'EUR' ) );
+		$this->assertTrue( $this->connector->send( $connection, $third, $p3 )->isSuccess() );
+		$this->assertCount( 2, $this->rows( 'contacts' ), 'The second John is found by email, not made again.' );
+		$this->assertSame( $contacts[1]['contact_id'], $this->rows( 'invoices' )[2]['customer_id'] );
+	}
+
+	public function test_a_name_that_is_taken_for_another_reason_is_not_retried_forever(): void {
+		$this->books->addContact( 'Dana Example', 'someone.else@example.test' );
+		$this->books->addContact( 'Dana Example (dana.example@example.test)', 'third.person@example.test' );
+		list( $item, $payload ) = SalesFixtures::order( '163' );
+		$result                 = $this->connector->send( $this->connection(), $item, $payload );
+		$this->assertSame( ErrorCode::Val002, $result->error->code );
+		$this->assertStringContainsString( 'already exists', $result->error->context['reason'] );
+		$this->assertCount( 2, $this->rows( 'contacts' ) );
+		$this->assertSame( 0, $this->books->writes );
+	}
+
+	public function test_a_payment_applies_the_balance_the_invoice_still_has_on_the_day_the_order_was_paid(): void {
+		$options                = array( 'record_payment' => 'yes', 'payment_account' => 'acct-1' );
+		$this->books->addInvoice( 'WC-170', 50.0, 'EUR', 20.0 );
+		list( $item, $payload ) = SalesFixtures::order( '170', array( 'paid' => true ) );
+		$payload['paid_at']     = '2026-11-03 09:00:00';
+		$result                 = $this->connector->send( $this->connection( $options ), $item, $payload );
+
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$payment = $this->rows( 'customerpayments' )[0];
+		$this->assertSame( 20.0, (float) $payment['amount'], 'A credit already took 30.00 off the invoice.' );
+		$this->assertSame( '2026-11-03', $payment['date'], 'The paid date, not the order date.' );
+		$this->assertSame( 'paid', $result->ref->extra['status'] );
+		$this->assertSame( 0.0, (float) $this->rows( 'invoices' )[0]['balance'] );
+	}
+
+	public function test_an_invoice_that_nothing_is_owed_on_gets_no_payment(): void {
+		$this->books->addInvoice( 'WC-171', 50.0, 'EUR', 0.0 );
+		list( $item, $payload ) = SalesFixtures::order( '171', array( 'paid' => true ) );
+		$result                 = $this->connector->send( $this->connection( array( 'record_payment' => 'yes', 'payment_account' => 'acct-1' ) ), $item, $payload );
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$this->assertCount( 0, $this->rows( 'customerpayments' ) );
+	}
+
+	public function test_a_sku_that_is_not_in_the_item_name_is_found_and_the_item_list_is_read_once_per_order(): void {
+		$tray = $this->books->addItem( 'ZZ-900', 'Walnut tray' );
+		$bowl = $this->books->addItem( 'ZZ-901', 'Stoneware bowl', 12.0, 'Hand made' );
+		$lines                  = array(
+			array( 'sku' => 'ZZ-900', 'name' => 'Tray', 'quantity' => '1', 'unit_price' => 2000, 'total' => 2000, 'tax' => 0 ),
+			array( 'sku' => 'zz-901', 'name' => 'Bowl', 'quantity' => '2', 'unit_price' => 1500, 'total' => 3000, 'tax' => 0 ),
+		);
+		list( $item, $payload ) = SalesFixtures::order( '172', array( 'lines' => $lines ) );
+		$result                 = $this->connector->send( $this->connection(), $item, $payload );
+
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$invoice = $this->rows( 'invoices' )[0];
+		$this->assertSame( $tray, $invoice['line_items'][0]['item_id'] );
+		$this->assertSame( $bowl, $invoice['line_items'][1]['item_id'] );
+		$reads = array_filter( $this->books->calls, static fn( string $call ): bool => str_starts_with( $call, 'GET /books/v3/items' ) && ! str_contains( $call, 'search_text' ) );
+		$this->assertCount( 1, $reads, 'One read of the item list serves both lines.' );
+	}
+
+	public function test_an_item_with_no_sku_never_matches_and_the_refusal_names_the_sku(): void {
+		$this->books->addItem( '', 'Gift wrap' );
+		list( $item, $payload ) = SalesFixtures::order( '173', array( 'sku' => 'GIFT-WRAP', 'product' => 'Gift wrap' ) );
+		$result                 = $this->connector->send( $this->connection(), $item, $payload );
+		$this->assertSame( ErrorCode::Map001, $result->error->code, 'Matching is by SKU; an item that has the same name but no SKU is not a match.' );
+		$this->assertSame( 'GIFT-WRAP', $result->error->context['sku'] );
+		$this->assertSame( 0, $this->books->writes );
+	}
+
+	public function test_the_sku_mapping_search_finds_a_sku_that_is_not_in_the_name(): void {
+		$this->books->addItem( 'ZZ-902', 'Linen cloth' );
+		$found = $this->connector->searchProducts( $this->connection(), 'zz-90' );
+		$this->assertCount( 1, $found );
+		$this->assertSame( 'ZZ-902', $found[0]->ref );
+	}
+
+	public function test_the_daily_allowance_follows_the_plan(): void {
+		$method = new \ReflectionMethod( $this->inner, 'limitsFor' );
+		$method->setAccessible( true );
+		$this->assertSame( 900, $method->invoke( $this->inner, $this->connection() )->requestsPerDay, 'Free is the default.' );
+		$this->assertSame( 1800, $method->invoke( $this->inner, $this->connection( array( 'plan' => 'standard' ) ) )->requestsPerDay );
+		$this->assertSame( 4500, $method->invoke( $this->inner, $this->connection( array( 'plan' => 'professional' ) ) )->requestsPerDay );
+		$this->assertSame( 9000, $method->invoke( $this->inner, $this->connection( array( 'plan' => 'premium' ) ) )->requestsPerDay );
+		$this->assertSame( 900, $method->invoke( $this->inner, $this->connection( array( 'plan' => 'nonsense' ) ) )->requestsPerDay );
+		$names = array_map( static fn( $field ): string => $field->name, $this->inner->credentialFields() );
+		$this->assertContains( 'plan', $names );
+	}
+
+	public function test_the_connector_stops_with_a_wait_before_the_daily_allowance_is_used_up(): void {
+		$connection = $this->connection();
+		for ( $i = 0; $i < 900; $i++ ) {
+			$this->assertTrue( $this->connector->ping( $connection ) );
+		}
+		$this->assertFalse( $this->connector->ping( $connection ), 'The 901st call is not made.' );
+		$callsBefore            = count( $this->books->calls );
+		list( $item, $payload ) = SalesFixtures::order( '174' );
+		$stopped                = $this->connector->send( $connection, $item, $payload );
+
+		$this->assertSame( ErrorCode::Rate001, $stopped->error->code );
+		$this->assertGreaterThan( 11 * 3600, $stopped->error->retryAfter, 'It waits for the next day, not a minute.' );
+		$this->assertSame( $callsBefore, count( $this->books->calls ), 'Nothing reached Zoho.' );
+		$this->assertSame( 0, $this->books->writes );
+	}
+
+	public function test_ping_is_one_cheap_call_and_false_for_a_refused_sign_in(): void {
+		$this->assertTrue( $this->connector->ping( $this->connection() ) );
+		$this->assertSame( array( 'GET /books/v3/organizations' ), $this->books->calls );
+
+		$this->books->failNextWrite( 'auth' );
+		$this->assertFalse( $this->connector->ping( $this->connection() ) );
+	}
 }

@@ -99,6 +99,16 @@ final class SageBusiness {
 	}
 
 	/**
+	 * One fresh read of the list of businesses for a health probe; what is cached is not trusted.
+	 *
+	 * @throws ApiException On a failed call.
+	 */
+	public function probe(): void {
+		$this->businesses = null;
+		$this->businesses();
+	}
+
+	/**
 	 * The entry of this connection's business in the list.
 	 *
 	 * @return array<string,mixed>|null

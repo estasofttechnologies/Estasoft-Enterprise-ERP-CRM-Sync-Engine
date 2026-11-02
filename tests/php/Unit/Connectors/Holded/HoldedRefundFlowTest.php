@@ -221,11 +221,16 @@ final class HoldedRefundFlowTest extends HoldedTestCase {
 		$this->assertTrue( $this->connector()->send( $this->connection(), $this->refundItem(), $this->refundPayload() )->isSuccess() );
 	}
 
-	public function test_a_refund_costs_eight_calls_when_nothing_is_kept(): void {
+	public function test_a_refund_costs_seven_calls_and_the_product_is_read_from_the_store_the_second_time(): void {
 		$this->syncOrder();
-		$before = count( $this->kit->http->requests );
+		$this->store->values = array();
+		$before              = count( $this->kit->http->requests );
 		$this->assertTrue( $this->connector()->send( $this->connection(), $this->refundItem(), $this->refundPayload() )->isSuccess() );
-		$this->assertSame( 8, count( $this->kit->http->requests ) - $before, 'Credit note window, order window and its empty page, the order, products and their empty page, create, read back.' );
+		$this->assertSame( 7, count( $this->kit->http->requests ) - $before, 'Credit note window, order window and its empty page, the order, the product (found on the first page), create, read back.' );
+
+		$before = count( $this->kit->http->requests );
+		$this->assertTrue( $this->connector()->send( $this->connection(), $this->refundItem( '502' ), $this->refundPayload() )->isSuccess() );
+		$this->assertCount( 0, array_filter( array_slice( $this->kit->http->requests, $before ), static fn( array $request ): bool => str_contains( $request['url'], '/products' ) ), 'The product index is in the store.' );
 	}
 
 	public function test_find_existing_for_a_refund_reads_credit_notes_of_the_last_thirty_days(): void {

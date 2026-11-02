@@ -405,6 +405,46 @@ final class ErpnextOrderTest extends ErpnextTestCase {
 		$this->assertCount( 1, $this->server->all( 'Payment Entry' ) );
 	}
 
+	public function test_an_unpaid_order_counts_as_finished_for_a_created_item_and_a_paid_item_waits_for_its_payment_entry(): void {
+		$options = array( 'documents' => 'order_invoice_payment', 'payment_account' => 'Bank - CS' );
+		$this->assertTrue( $this->sendOrder( $options )->isSuccess() );
+		$connector = $this->connector();
+
+		$this->assertNotNull( $connector->findExisting( $this->connection( $options ), $this->item( EntityType::Order, '100' ) ), 'Nothing was paid, so nothing is missing.' );
+		$this->assertNull( $connector->findExisting( $this->connection( $options ), $this->itemOf( EntityType::Order, '100', 'paid' ) ), 'The paid item is not finished until the Payment Entry exists.' );
+
+		$paid = $this->connector()->send( $this->connection( $options ), $this->itemOf( EntityType::Order, '100', 'paid' ), $this->order( array( 'payment' => array( 'paid_at' => '2026-11-02' ) ) ) );
+		$this->assertTrue( $paid->isSuccess(), (string) $paid->error?->message() . (string) ( $paid->error->context['reason'] ?? '' ) );
+		$this->assertCount( 1, $this->server->all( 'Payment Entry' ) );
+		$this->assertNotNull( $connector->findExisting( $this->connection( $options ), $this->itemOf( EntityType::Order, '100', 'paid' ) ) );
+	}
+
+	public function test_a_duplicate_entry_on_the_orders_own_reference_links_the_order_that_is_there(): void {
+		$server = $this->server;
+		$server->failNext(
+			'POST',
+			'#/api/resource/Sales Order$#',
+			function () use ( $server ): \Estasoft\SyncEngine\Contract\HttpResponse {
+				$server->put( 'Sales Order', array( 'name' => 'SO-RACE', 'po_no' => 'WC-100', 'customer' => 'C', 'docstatus' => 1, 'status' => 'To Deliver and Bill', 'grand_total' => 438.0, 'currency' => 'AED' ) );
+				return FakeHttpClient::json( array( 'exc_type' => 'DuplicateEntryError', '_server_messages' => (string) json_encode( array( (string) json_encode( array( 'message' => 'Duplicate entry' ) ) ) ) ), 409 );
+			}
+		);
+		$result = $this->sendOrder();
+
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() . (string) ( $result->error->context['reason'] ?? '' ) );
+		$this->assertTrue( $result->alreadyExisted );
+		$this->assertSame( 'SO-RACE', $result->ref->id );
+		$this->assertCount( 1, $this->server->all( 'Sales Order' ) );
+	}
+
+	public function test_a_duplicate_entry_without_an_order_behind_it_is_still_val_002(): void {
+		$this->server->failNext( 'POST', '#/api/resource/Sales Order$#', FakeHttpClient::json( array( 'exc_type' => 'DuplicateEntryError' ), 409 ) );
+		$result = $this->sendOrder();
+
+		$this->assertFalse( $result->isSuccess() );
+		$this->assertSame( ErrorCode::Val002, $result->error->code );
+	}
+
 	public function test_an_unpaid_order_gets_no_payment_and_a_payment_needs_an_account_in_the_orders_currency(): void {
 		$options = array( 'documents' => 'order_invoice_payment', 'payment_account' => 'Bank - CS' );
 		$this->assertTrue( $this->sendOrder( $options )->isSuccess() );

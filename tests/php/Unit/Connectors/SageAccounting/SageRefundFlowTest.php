@@ -112,20 +112,78 @@ final class SageRefundFlowTest extends SageTestCase {
 		$this->assertSame( array(), $this->sage->writes() );
 	}
 
-	public function test_a_refund_total_that_differs_voids_the_credit_note_it_made_and_a_later_try_is_not_blocked_by_that(): void {
+	public function test_a_wrong_credit_note_that_sage_will_not_void_stays_and_the_message_says_so_and_a_retry_does_not_accept_it(): void {
 		$this->order( '2007' );
+
 		$result = $this->send( '2107', '2007', array( 'amount' => 9999 ) );
 
 		$this->assertFalse( $result->isSuccess() );
 		$this->assertSame( ErrorCode::Val002, $result->error->code );
-		$note = $this->sage->byReference( 'credit', 'WC-2107' );
+		$this->assertStringContainsString( '99.99', $result->error->message() );
+		$this->assertStringContainsString( 'could not be removed', $result->error->message(), 'The guide documents no way to void a credit note; it stayed, and the message says so.' );
+		$this->assertSame( 'UNPAID', $this->sage->byReference( 'credit', 'WC-2107' )['status']['id'] );
+		$delete = $this->sage->calls( 'DELETE', '/sales_credit_notes/[^/]+' );
+		$this->assertCount( 1, $delete );
+		$this->assertSame( array( 'void_reason' => 'Created with the wrong total by the WooCommerce sync' ), $delete[0]->json() );
+
+		$again = $this->send( '2107', '2007', array( 'amount' => 9999 ) );
+		$this->assertFalse( $again->isSuccess(), 'A retry does not take a credit note whose total is wrong.' );
+		$this->assertStringContainsString( 'could not be removed', $again->error->message() );
+		$this->assertCount( 1, $this->sage->store['credit'], 'No second credit note.' );
+		$this->assertCount( 1, $this->sage->calls( 'DELETE', '/sales_credit_notes/[^/]+' ), 'A credit note found on a later pass is not touched.' );
+
+		$right = $this->send( '2107', '2007' );
+		$this->assertTrue( $right->isSuccess(), (string) $right->error?->message() );
+		$this->assertTrue( $right->alreadyExisted );
+	}
+
+	public function test_a_wrong_credit_note_that_sage_does_void_is_reported_as_removed_and_a_later_try_is_not_blocked_by_that(): void {
+		$this->sage->creditNotesCanBeVoided = true;
+		$this->order( '2017' );
+
+		$result = $this->send( '2117', '2017', array( 'amount' => 9999 ) );
+
+		$this->assertFalse( $result->isSuccess() );
+		$this->assertStringNotContainsString( 'could not be removed', $result->error->message() );
+		$note = $this->sage->byReference( 'credit', 'WC-2117' );
 		$this->assertSame( 'VOID', $note['status']['id'] );
 		$this->assertSame( 'Created with the wrong total by the WooCommerce sync', $note['void_reason'] );
 
-		$retry = $this->send( '2107', '2007', array(), null, 1 );
+		$retry = $this->send( '2117', '2017' );
 		$this->assertTrue( $retry->isSuccess(), (string) $retry->error?->message() );
 		$this->assertFalse( $retry->alreadyExisted );
 		$this->assertCount( 2, $this->sage->store['credit'], 'The voided one stays in Sage; a new one was made.' );
+		$ids = array_map( static fn( $r ): string => (string) $r->json()['sales_credit_note']['idempotency_id'], $this->sage->calls( 'POST', '/sales_credit_notes' ) );
+		$this->assertCount( 2, $ids );
+		$this->assertNotSame( $ids[0], $ids[1], 'The voided credit note is part of the new idempotency id.' );
+	}
+
+	public function test_a_retry_of_a_refund_after_a_time_out_sends_the_same_idempotency_id_and_gets_the_first_credit_note(): void {
+		$this->order( '2018' );
+		$this->sage->loseNextAnswer = true;
+		$this->assertFalse( $this->send( '2118', '2018' )->isSuccess() );
+		$this->sage->hideDocuments = 1;
+
+		$retry = $this->send( '2118', '2018', array(), null, 5 );
+
+		$this->assertTrue( $retry->isSuccess(), (string) $retry->error?->message() );
+		$this->assertCount( 1, $this->sage->store['credit'] );
+		$ids = array_map( static fn( $r ): string => (string) $r->json()['sales_credit_note']['idempotency_id'], $this->sage->calls( 'POST', '/sales_credit_notes' ) );
+		$this->assertCount( 2, $ids );
+		$this->assertSame( $ids[0], $ids[1] );
+	}
+
+	public function test_a_refund_of_an_order_with_prices_that_include_tax_is_sent_with_the_flag_in_the_uk(): void {
+		$this->order( '2019' );
+
+		$result = $this->send( '2119', '2019', array( 'prices_include_tax' => true, 'refund_line' => array( array( 'amount' => 5040 ) ) ) );
+
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$line = $this->sage->calls( 'POST', '/sales_credit_notes' )[0]->json()['sales_credit_note']['credit_note_lines'][0];
+		$this->assertTrue( $line['unit_price_includes_tax'] );
+		$this->assertSame( '50.40', $line['unit_price'] );
+		$this->assertArrayNotHasKey( 'tax_amount', $line );
+		$this->assertSame( 5040, $result->ref->extra['total_minor'] );
 	}
 
 	public function test_a_credit_note_a_person_voided_stops_the_item(): void {
@@ -144,7 +202,8 @@ final class SageRefundFlowTest extends SageTestCase {
 
 	public function test_when_sage_does_not_say_why_a_credit_note_was_voided_it_counts_as_a_persons_choice(): void {
 		$this->order( '2009' );
-		$this->sage->showVoidReason = false;
+		$this->sage->creditNotesCanBeVoided = true;
+		$this->sage->showVoidReason         = false;
 		$this->send( '2109', '2009', array( 'amount' => 9999 ) );
 
 		$result = $this->send( '2109', '2009', array(), null, 1 );
@@ -168,7 +227,7 @@ final class SageRefundFlowTest extends SageTestCase {
 		$this->assertSame( 'GB_NO_TAX', $this->sage->calls( 'POST', '/sales_credit_notes' )[1]->json()['sales_credit_note']['credit_note_lines'][0]['tax_rate_id'] );
 	}
 
-	public function test_a_refund_with_no_lines_and_no_amount_no_order_or_amounts_with_tax_is_refused_before_any_request(): void {
+	public function test_a_refund_with_no_lines_and_no_amount_or_no_order_is_refused_before_any_request(): void {
 		$none = $this->connector->send( $this->connection, $this->item( '2112', EntityType::Refund ), array( 'order_ref' => 'WC-2010' ) );
 		$this->assertFalse( $none->isSuccess() );
 		$this->assertStringContainsString( 'no lines', $none->error->message() );
@@ -176,8 +235,6 @@ final class SageRefundFlowTest extends SageTestCase {
 		$noOrder = $this->connector->send( $this->connection, $this->item( '2113', EntityType::Refund ), array( 'amount' => 100 ) );
 		$this->assertFalse( $noOrder->isSuccess() );
 
-		$inclusive = $this->send( '2114', '2010', array( 'prices_include_tax' => true ) );
-		$this->assertFalse( $inclusive->isSuccess() );
 		$this->assertSame( array(), $this->sage->server->received );
 	}
 }

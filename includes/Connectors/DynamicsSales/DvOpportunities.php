@@ -21,8 +21,10 @@ use Estasoft\SyncEngine\Contract\ExternalRef;
 /**
  * Find the deal of an order by its reference, read and complete its lines, and carry the completion marker. The reference is the start of the
  * topic (`WC-123 - Buyer`), or a custom text column when the connection names one. The marker is the last line of the description,
- * `Estasoft Sync WC-123 lines=3 email=buyer@example.test`, written in the same call that creates the deal: the deal is finished when the
- * marker is there and at least that many products are on it.
+ * `Estasoft Sync WC-123 lines=3 email=buyer@example.test`, written in the same call that creates the deal. The marker only says that the
+ * deal was started. Once the products are on it and its total was checked, the marker gets the word `verified` (see seal()); the deal is
+ * finished when the verified marker is there and at least that many products are on it. A deal whose total failed the check therefore
+ * stays unfinished, is never linked by findExisting() and is checked again by the next send().
  */
 final class DvOpportunities {
 
@@ -170,14 +172,16 @@ final class DvOpportunities {
 	}
 
 	/**
-	 * The last line of the description of a finished deal.
+	 * The last line of the description of a deal: the marker. Written without `verified` when the deal is created and with it once the
+	 * total was checked.
 	 *
-	 * @param string $ref   WC-123.
-	 * @param int    $count Number of product lines.
-	 * @param string $email Buyer's email.
+	 * @param string $ref      WC-123.
+	 * @param int    $count    Number of product lines.
+	 * @param string $email    Buyer's email.
+	 * @param bool   $verified Whether the total of the deal was checked.
 	 */
-	public static function marker( string $ref, int $count, string $email ): string {
-		return sprintf( 'Estasoft Sync %s lines=%d email=%s', $ref, $count, $email );
+	public static function marker( string $ref, int $count, string $email, bool $verified = false ): string {
+		return sprintf( 'Estasoft Sync %s lines=%d email=%s', $ref, $count, $email ) . ( $verified ? ' verified' : '' );
 	}
 
 	/**
@@ -185,20 +189,21 @@ final class DvOpportunities {
 	 *
 	 * @param string $description Description text.
 	 * @param string $ref         WC-123.
-	 * @return array{lines:int,email:string}|null
+	 * @return array{lines:int,email:string,verified:bool}|null
 	 */
 	public static function markerInfo( string $description, string $ref ): ?array {
-		if ( 1 !== preg_match( '/Estasoft Sync ' . preg_quote( $ref, '/' ) . ' lines=(\d+) email=(\S*)\s*$/', $description, $found ) ) {
+		if ( 1 !== preg_match( '/Estasoft Sync ' . preg_quote( $ref, '/' ) . ' lines=(\d+) email=(\S*?)( verified)?\s*$/', $description, $found ) ) {
 			return null;
 		}
 		return array(
-			'lines' => (int) $found[1],
-			'email' => $found[2],
+			'lines'    => (int) $found[1],
+			'email'    => $found[2],
+			'verified' => isset( $found[3] ) && '' !== $found[3],
 		);
 	}
 
 	/**
-	 * Whether the deal is finished: its marker is there and so are its products.
+	 * Whether the deal is finished: its verified marker is there and so are its products.
 	 *
 	 * @param array<string,mixed> $row Opportunity row.
 	 * @param string              $ref WC-123.
@@ -208,7 +213,42 @@ final class DvOpportunities {
 	public function isComplete( array $row, string $ref ): bool {
 		$info = self::markerInfo( (string) ( $row['description'] ?? '' ), $ref );
 		$id   = OData::guid( $row['opportunityid'] ?? null );
-		return null !== $info && null !== $id && count( $this->lines( $id ) ) >= $info['lines'];
+		return null !== $info && $info['verified'] && null !== $id && count( $this->lines( $id ) ) >= $info['lines'];
+	}
+
+	/**
+	 * Mark the deal as checked: the last line of the description becomes the verified marker. A marker that is missing (a person edited the
+	 * description) is written again; a marker that is already verified is left alone.
+	 *
+	 * @param array<string,mixed> $row   Opportunity row with its description.
+	 * @param string              $ref   WC-123.
+	 * @param int                 $count Number of product lines.
+	 * @param string              $email Buyer's email.
+	 * @return bool True when the description was changed now.
+	 *
+	 * @throws ApiException On failure.
+	 */
+	public function seal( array $row, string $ref, int $count, string $email ): bool {
+		$id = OData::guid( $row['opportunityid'] ?? null );
+		if ( null === $id ) {
+			return false;
+		}
+		$description = (string) ( $row['description'] ?? '' );
+		$marker      = self::marker( $ref, $count, $email, true );
+		$keep        = array();
+		$prefix      = 'Estasoft Sync ' . $ref . ' lines=';
+		$parts       = preg_split( '/\R/', $description );
+		foreach ( false === $parts ? array() : $parts as $line ) {
+			if ( '' !== trim( $line ) && 0 !== strncmp( trim( $line ), $prefix, strlen( $prefix ) ) ) {
+				$keep[] = $line;
+			}
+		}
+		$sealed = ( array() === $keep ? '' : implode( "\n", $keep ) . "\n" ) . $marker;
+		if ( rtrim( $description ) === $sealed ) {
+			return false;
+		}
+		$this->dv->update( 'opportunities', $id, array( 'description' => $sealed ) );
+		return true;
 	}
 
 	/**

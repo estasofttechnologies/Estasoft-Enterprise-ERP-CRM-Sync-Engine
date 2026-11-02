@@ -3,7 +3,10 @@
  * A small in-memory HubSpot CRM for the connector tests.
  *
  * Shapes follow developers.hubspot.com: POST /crm/objects/{version}/{object}/search, create with properties and associations,
- * 409 "Contact already exists. Existing ID: n", error bodies with status, message, category and errors[].
+ * 409 "Contact already exists. Existing ID: n", error bodies with status, message, category and errors[]. The properties API creates a deal
+ * property (name, label, type, fieldType, groupName, hasUniqueValue); a unique property refuses a second deal with the same value (409).
+ * Search answers carry no rate-limit headers (usage guidelines: "Responses from the search API endpoints will not include any of the rate
+ * limit headers"); other answers carry none here either, because the connector no longer reads them.
  *
  * @package Estasoft\SyncEngine
  */
@@ -44,9 +47,31 @@ final class FakeHubSpot extends FakeSalesServer {
 	public bool $recalculate = false;
 
 	/**
-	 * Daily requests left, sent as a header when set.
+	 * Custom deal properties that exist: internal name => definition.
+	 *
+	 * @var array<string,array<string,mixed>>
 	 */
-	public ?int $dailyRemaining = null;
+	public array $properties = array();
+
+	/**
+	 * Whether the key lacks the schema scope to read properties.
+	 */
+	public bool $schemaReadDenied = false;
+
+	/**
+	 * Whether the key lacks the schema scope to create properties.
+	 */
+	public bool $schemaWriteDenied = false;
+
+	/**
+	 * Whether a deal with a property that does not exist is refused (PROPERTY_DOESNT_EXIST).
+	 */
+	public bool $strictProperties = false;
+
+	/**
+	 * When set, another worker makes a deal with this reference (in dealname and the unique property) just before the next deal create.
+	 */
+	public ?string $raceReference = null;
 
 	/**
 	 * Scopes the key lacks (object names).
@@ -100,13 +125,18 @@ final class FakeHubSpot extends FakeSalesServer {
 	 * @param array<string,string> $headers Headers.
 	 */
 	protected function route( string $method, string $path, array $query, array $body, array $headers ): HttpResponse {
-		unset( $query );
-		$extra = null === $this->dailyRemaining ? array() : array( 'X-HubSpot-RateLimit-Daily-Remaining' => (string) $this->dailyRemaining );
+		$extra = array();
 		if ( 'Bearer ' . self::KEY !== ( $headers['authorization'] ?? '' ) ) {
 			return $this->json( array( 'status' => 'error', 'message' => 'Authentication credentials not found.', 'category' => 'INVALID_AUTHENTICATION' ), 401, $extra );
 		}
+		if ( 1 === preg_match( '~^/crm/properties/[\d-]+/deals(?:/(\w+))?$~', $path, $m ) ) {
+			return $this->propertyApi( $method, $m[1] ?? '', $body );
+		}
 		if ( 1 === preg_match( '~^/crm/objects/[\d-]+/(\w+)/search$~', $path, $m ) && 'POST' === $method ) {
-			return $this->denied( $m[1] ) ?? $this->json( $this->search( $m[1], $body ), 200, $extra );
+			return $this->denied( $m[1] ) ?? $this->unknownProperty( $m[1], $body ) ?? $this->json( $this->search( $m[1], $body ), 200, $extra );
+		}
+		if ( 1 === preg_match( '~^/crm/objects/[\d-]+/(\w+)$~', $path, $m ) && 'GET' === $method ) {
+			return $this->denied( $m[1] ) ?? $this->json( $this->search( $m[1], array( 'limit' => (int) ( $query['limit'] ?? 10 ) ) ), 200, $extra );
 		}
 		if ( 1 === preg_match( '~^/crm/objects/[\d-]+/(\w+)$~', $path, $m ) && 'POST' === $method ) {
 			return $this->denied( $m[1] ) ?? $this->create( $m[1], $body, $extra );
@@ -134,6 +164,57 @@ final class FakeHubSpot extends FakeSalesServer {
 			'auth'         => $this->json( array( 'status' => 'error', 'message' => 'The OAuth token used to make this call is expired.', 'category' => 'EXPIRED_AUTHENTICATION' ), 401 ),
 			default        => $this->json( array( 'unexpected' => 'shape' ), 418 ),
 		};
+	}
+
+	/**
+	 * A search on a deal property that does not exist is refused when the fake is strict.
+	 *
+	 * @param string              $object Object.
+	 * @param array<string,mixed> $body   Search body.
+	 */
+	private function unknownProperty( string $object, array $body ): ?HttpResponse {
+		if ( ! $this->strictProperties || 'deals' !== $object ) {
+			return null;
+		}
+		foreach ( (array) ( $body['filterGroups'][0]['filters'] ?? array() ) as $filter ) {
+			$name = (string) ( $filter['propertyName'] ?? '' );
+			if ( ! in_array( $name, array( 'dealname', 'amount', 'createdate', 'closedate', 'pipeline', 'dealstage' ), true ) && ! isset( $this->properties[ $name ] ) ) {
+				return $this->invalid( $name, 'The property "' . $name . '" does not exist', array() );
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * The properties API for deals: read one, create one.
+	 *
+	 * @param string              $method Method.
+	 * @param string              $name   Property name from the path; empty for a create.
+	 * @param array<string,mixed> $body   Body.
+	 */
+	private function propertyApi( string $method, string $name, array $body ): HttpResponse {
+		$scope = array( 'status' => 'error', 'message' => 'This app hasn\'t been granted all required scopes to make this call.', 'category' => 'MISSING_SCOPES', 'errors' => array( array( 'message' => 'One or more of the following scopes are required.', 'context' => array( 'requiredGranularScopes' => array( 'crm.schemas.deals.' . ( 'GET' === $method ? 'read' : 'write' ) ) ) ) ) );
+		if ( 'GET' === $method ) {
+			if ( $this->schemaReadDenied ) {
+				return $this->json( $scope, 403 );
+			}
+			return isset( $this->properties[ $name ] )
+				? $this->json( $this->properties[ $name ] )
+				: $this->json( array( 'status' => 'error', 'message' => 'Property ' . $name . ' does not exist', 'category' => 'OBJECT_NOT_FOUND' ), 404 );
+		}
+		if ( $this->schemaWriteDenied ) {
+			return $this->json( $scope, 403 );
+		}
+		foreach ( array( 'name', 'label', 'type', 'fieldType', 'groupName' ) as $required ) {
+			if ( empty( $body[ $required ] ) ) {
+				return $this->invalid( $required, $required . ' is required', array() );
+			}
+		}
+		if ( isset( $this->properties[ (string) $body['name'] ] ) ) {
+			return $this->json( array( 'status' => 'error', 'message' => 'Property already exists', 'category' => 'CONFLICT' ), 409 );
+		}
+		$this->properties[ (string) $body['name'] ] = $body + array( 'hasUniqueValue' => false );
+		return $this->json( $this->properties[ (string) $body['name'] ], 201 );
 	}
 
 	/**
@@ -233,6 +314,10 @@ final class FakeHubSpot extends FakeSalesServer {
 				}
 			}
 		}
+		if ( 'deals' === $object && null !== $this->raceReference ) {
+			$this->insert( 'deals', array( 'dealname' => $this->raceReference, 'estasoft_order_ref' => $this->raceReference, 'pipeline' => 'default', 'dealstage' => 'appointmentscheduled' ) );
+			$this->raceReference = null;
+		}
 		if ( 'deals' === $object ) {
 			foreach ( array( 'dealname', 'pipeline', 'dealstage' ) as $required ) {
 				if ( empty( $props[ $required ] ) ) {
@@ -241,6 +326,22 @@ final class FakeHubSpot extends FakeSalesServer {
 			}
 			if ( isset( $props['deal_currency_code'] ) && ! in_array( $props['deal_currency_code'], $this->currencies, true ) ) {
 				return $this->invalid( 'deal_currency_code', $props['deal_currency_code'] . ' is not a valid currency code', $extra );
+			}
+			if ( $this->strictProperties ) {
+				foreach ( array_keys( $props ) as $key ) {
+					if ( ! in_array( $key, array( 'dealname', 'amount', 'deal_currency_code', 'closedate', 'description', 'pipeline', 'dealstage' ), true ) && ! isset( $this->properties[ $key ] ) ) {
+						return $this->invalid( (string) $key, 'Property "' . $key . '" does not exist', $extra );
+					}
+				}
+			}
+			foreach ( $this->properties as $name => $definition ) {
+				if ( ! empty( $definition['hasUniqueValue'] ) && isset( $props[ $name ] ) ) {
+					foreach ( $this->objects['deals'] as $row ) {
+						if ( empty( $row['archived'] ) && 0 === strcasecmp( (string) ( $row['properties'][ $name ] ?? '' ), (string) $props[ $name ] ) ) {
+							return $this->json( array( 'status' => 'error', 'message' => 'A deal with the same unique value for ' . $name . ' exists. Existing ID: ' . $row['id'], 'category' => 'CONFLICT' ), 409, $extra );
+						}
+					}
+				}
 			}
 		}
 		if ( 'line_items' === $object && (float) ( $props['price'] ?? 0 ) < 0 ) {

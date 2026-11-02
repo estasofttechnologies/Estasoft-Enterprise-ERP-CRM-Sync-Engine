@@ -175,7 +175,7 @@ final class OracleFusionOrders {
 		return Problem::validation(
 			$this->system,
 			'InvoiceStatus',
-			__( 'The invoice is in Oracle Fusion but its status is Incomplete. Complete or delete it in Oracle Fusion Receivables, then try again.', 'estasoft-erp-crm-sync-engine' )
+			__( 'The transaction is in Oracle Fusion but its status is Incomplete. Complete or delete it in Oracle Fusion Receivables, then try again.', 'estasoft-erp-crm-sync-engine' )
 		);
 	}
 

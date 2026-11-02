@@ -60,6 +60,7 @@ abstract class SageX3TestCase extends TestCase {
 				'folder'        => FakeSageX3Server::FOLDER,
 				'username'      => FakeSageX3Server::USER,
 				'customer_code' => 'WEB001',
+				'total_property' => 'ORDINVATI',
 			),
 			array( 'password' => $password )
 		);
@@ -107,7 +108,7 @@ abstract class SageX3TestCase extends TestCase {
 	 * @param string              $id      Order id.
 	 */
 	protected function sendOrder( array $config = array(), array $payload = array(), string $id = '100' ) {
-		return $this->connector()->send( $this->connection( $config + array( 'total_property' => 'ORDINVATI' ) ), $this->item( EntityType::Order, $id ), $this->order( $payload ) );
+		return $this->connector()->send( $this->connection( $config ), $this->item( EntityType::Order, $id ), $this->order( $payload ) );
 	}
 
 	/**

@@ -207,16 +207,22 @@ final class NetSuiteOrderFlowTest extends NetSuiteTestCase {
 		$this->assertSame( 'SAVE10', $line['description'] );
 	}
 
-	public function test_addresses_are_sent_unless_the_merchant_turns_them_off(): void {
+	public function test_ping_is_one_cheap_call_after_the_sign_in(): void {
+		$this->assertTrue( $this->connector->ping( $this->connection() ) );
+		$calls = array_filter( $this->kit->http->requests, static fn( array $request ): bool => ! str_contains( $request['url'], 'oauth2/v1/token' ) );
+		$this->assertCount( 1, $calls, 'One read, not the probes of Test connection.' );
+	}
+
+	public function test_addresses_are_not_sent_by_default_and_are_when_the_merchant_turns_them_on(): void {
 		$this->connector->send( $this->connection(), $this->item( '1022' ), $this->payload() );
-		$order = array_values( $this->server->all( 'salesOrder' ) )[0];
+		$first = array_values( $this->server->all( 'salesOrder' ) )[0];
+		$this->assertArrayNotHasKey( 'billingAddress', $first, 'Address subrecords in a REST create are not verified, so they are off.' );
+		$this->assertArrayNotHasKey( 'shippingAddress', $first );
+		$this->connector->send( $this->connection( array( 'send_addresses' => 'yes' ) ), $this->item( '1023' ), $this->payload() );
+		$order = array_values( $this->server->all( 'salesOrder' ) )[1];
 		$this->assertSame( 'Sheikh Zayed Road', $order['billingAddress']['addr1'] );
 		$this->assertSame( array( 'id' => 'AE' ), $order['shippingAddress']['country'] );
 		$this->assertSame( 'Marina Walk 4', $order['shippingAddress']['addr1'] );
-		$this->connector->send( $this->connection( array( 'send_addresses' => 'no' ) ), $this->item( '1023' ), $this->payload() );
-		$second = array_values( $this->server->all( 'salesOrder' ) )[1];
-		$this->assertArrayNotHasKey( 'billingAddress', $second );
-		$this->assertArrayNotHasKey( 'shippingAddress', $second );
 	}
 
 	public function test_a_long_note_is_cut_with_an_ellipsis_and_a_warning_and_the_reference_is_never_cut(): void {

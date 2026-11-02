@@ -122,6 +122,26 @@ enum Charset: string {
 	}
 
 	/**
+	 * The characters of a text this set cannot hold, each with how often it occurs, in the order they first appear. They are written as a
+	 * question mark, so the person is told which ones were replaced.
+	 *
+	 * @param string $text Valid UTF-8.
+	 * @return array<string,int> Character to count; empty for a set that holds everything.
+	 */
+	public function lostCharacters( string $text ): array {
+		if ( self::Windows1252 !== $this || 1 === preg_match( '/^[\x00-\x7F]*$/', $text ) ) {
+			return array();
+		}
+		$lost = array();
+		foreach ( Utf8::chars( $text ) as $char ) {
+			if ( null === self::byteFor( Utf8::codePoint( $char ) ) ) {
+				$lost[ $char ] = ( $lost[ $char ] ?? 0 ) + 1;
+			}
+		}
+		return $lost;
+	}
+
+	/**
 	 * Windows-1252 byte of a code point, or null.
 	 *
 	 * @param int $code Code point.

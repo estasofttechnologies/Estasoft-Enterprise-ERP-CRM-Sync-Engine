@@ -131,8 +131,10 @@ final class DvOrderSender {
 			__( 'Check that the products and the tax amounts of the order were written as the shop has them, then delete the deal and try again.', 'estasoft-erp-crm-sync-engine' )
 		);
 		if ( $check['error'] instanceof ConnectorError ) {
+			// No seal: a deal that failed its check is not finished and is not linked on the next try.
 			return SendResult::failure( $check['error'] );
 		}
+		$work   = $opps->seal( $fresh, $ref, count( $plan ), $order->partner['email'] ?? '' ) || $work;
 		$result = $opps->ref( $fresh, $order->currency, $this->environment, $check['warning'] );
 		return $work ? SendResult::created( $result ) : SendResult::existing( $result );
 	}
@@ -151,7 +153,7 @@ final class DvOrderSender {
 	private function headerBody( OrderData $order, string $ref, string $currency, array $parties, int $lines, ?string $priceList ): array {
 		$marker             = DvOpportunities::marker( $ref, $lines, $order->partner['email'] ?? '' );
 		$note               = trim( $order->note . ( '' !== $order->paymentReference ? "\n" . sprintf( /* translators: %s: payment reference. */ __( 'Payment %s', 'estasoft-erp-crm-sync-engine' ), $order->paymentReference ) : '' ) . ( '' !== ( $order->partner['vat'] ?? '' ) ? "\n" . sprintf( /* translators: %s: tax number of the buyer. */ __( 'Tax number %s', 'estasoft-erp-crm-sync-engine' ), $order->partner['vat'] ) : '' ) );
-		list( $note, $cut ) = Text::fit( $note, DvOpportunities::DESCRIPTION_MAX - strlen( $marker ) - 1 );
+		list( $note, $cut ) = Text::fit( $note, DvOpportunities::DESCRIPTION_MAX - strlen( DvOpportunities::marker( $ref, $lines, $order->partner['email'] ?? '', true ) ) - 1 );
 		if ( $cut ) {
 			$this->logger?->warning( 'The order note was shortened to fit the Dynamics 365 description.', array( 'order' => $ref ) );
 		}

@@ -79,7 +79,7 @@ Base: `{environment URL}/api/data/v9.2/`. Money fields are in the record's curre
 | `billing.company` | `partner.company_name` | `accounts.name`; the contact gets `parentcustomerid_account@odata.bind` |
 | `order.buyer_tax_number` | `partner.vat` | appended to the opportunity description (Dataverse accounts have no standard tax number column) |
 | `order.client_ref` | none (from the queue item) | opportunity `name` begins `WC-{id} - ` (or the column of option `reference_column`) |
-| `order.created_at` | `order_date` | `estimatedclosedate` (date) |
+| `order.created_at` | `order_date` | `estimatedclosedate` (date, in the shop's time zone: the default rule uses `output_timezone: store`) |
 | `order.currency` | `currency` | `transactioncurrencyid@odata.bind` to the `transactioncurrencies` row whose `isocurrencycode` matches |
 | `order.note`, `order.payment.transaction_id` | `note`, `payment.reference` | `description` (cut to 2,000 characters with an ellipsis before the marker) |
 | `order.total`, `order.excluded_total` | `total`, `excluded_total` | `estimatedvalue`; compared with `totalamount` |
@@ -96,14 +96,14 @@ Opportunity: `name` is the topic (300 characters at most `[documented]`), `custo
 
 Lines of an existing product need a unit of measure: the product's `defaultuomid` is read with the product and bound as `uomid@odata.bind` `[inferred]`. The opportunity's price list is not forced: with `ispriceoverridden = true` the order's own price wins; option `price_list` binds `pricelevelid` for environments that insist on one.
 
-Money: minor units inside, `Core\Support\Money` at the edge, string arithmetic only; the currency's decimal places (`currencyprecision` of the `transactioncurrency` row) are read, and when they are fewer than the ISO exponent (a KWD currency set up with 2 places) the order is refused with SYNC-VAL-002 naming the currency, instead of storing a rounded amount.
+Money: minor units inside, `Core\Support\Money` at the edge, string arithmetic only; the currency's decimal places (`currencyprecision` of the `transactioncurrency` row) are read, and when they are fewer than the ISO exponent (a KWD currency set up with 2 places) the order is refused with SYNC-VAL-002 naming the currency, instead of storing a rounded amount. The price of a product (`opportunityproduct.priceperunit`) does not follow the currency row: it is stored with the organization's Pricing Decimal Precision (`organizations.pricingdecimalprecision`, 2 on a default organization) `[documented: opportunityproduct page; the setting's path in the UI is inferred]`. So a KWD, BHD or OMR price of 1.234 would be stored as 1.23 and the total check would fail after the deal was half made. Before anything is written, the connector reads the organization and refuses the order (SYNC-VAL-002, field `pricing_decimal_precision`, naming the setting) when its pricing precision is lower than the currency's decimal places; the merchant raises the setting and the next try goes through. This costs one extra read per order.
 
 ## Duplicate protection
 
 - Reference: the opportunity `name` starts with `WC-{order id} - ` and is searched with `startswith(name,'WC-123 - ')` (string filters are case-insensitive `[documented]`) before every create; the hits are compared in PHP for the exact prefix, so `WC-12` never matches `WC-123`. The search follows `@odata.nextLink`.
 - Option `reference_column`: the logical name of a custom text column that holds exactly `WC-{order id}` (the merchant adds it in Power Apps, Tables, Opportunity, New column). When set, the search is `$filter=<column> eq 'WC-123'` and the column is written. It survives someone renaming the topic. The Dataverse docs support alternate keys (`PATCH entityset(key=value)`, `If-None-Match: *`) `[documented]`; the connector does not use them because a key needs a solution or a column and index the plugin cannot ship, and search-before-create is what the contract asks for.
 - Account and contact: found before creating (contact by `emailaddress1`, account by `name`), so a retry never makes a second one. Several matches: the oldest by `createdon`.
-- Completion marker: the opportunity description ends with a line `Estasoft Sync WC-123 lines=3 email=buyer@example.test`, written in the same POST that creates the opportunity. `findExisting()` reports the opportunity only when the marker is there and the number of `opportunityproducts` of the opportunity (paged) is at least the number in the marker. `send()` finds an unfinished opportunity, creates the products that are missing (in payload order, matched by line number), and then checks the total. A marker that a person removed makes the record unfinished: `send()` completes it from the payload and writes the marker again.
+- Completion marker: the opportunity description ends with a line `Estasoft Sync WC-123 lines=3 email=buyer@example.test`, written in the same POST that creates the opportunity. That line only says the deal was started. When the products are on the deal and its total was checked (or a difference was accepted with `total_mismatch = warn`), the same line gets the word `verified` at its end (one `PATCH` of the description). `findExisting()` reports the opportunity only when the verified marker is there and the number of `opportunityproducts` of the opportunity (paged) is at least the number in the marker, so a deal that failed its total check is never linked by a retry: `send()` finds it, creates the products that are missing (in payload order, matched by line number), checks the total again and seals it only when it passes. A marker that a person removed or edited makes the record unfinished: `send()` completes it from the payload, checks the total and writes the verified marker again.
 - Refund: the note subject is `Refund WC-{refund id} of WC-{order id}`; a note on the same opportunity whose subject starts with `Refund WC-{refund id} ` is returned instead of creating another.
 
 ## Taxes
@@ -145,7 +145,7 @@ Reconciliation (flagged): `listForReconcile()` reads opportunities whose name st
 | Certificate failure | SYNC-NET-003 | needs a person |
 | SKU not a product with `unknown_sku = refuse` | SYNC-MAP-001 | needs a person |
 | Customer email missing | SYNC-MAP-003 | needs a person |
-| Currency missing in Dataverse, too few decimals, total differs, original opportunity missing | SYNC-VAL-002 | needs a person |
+| Currency missing in Dataverse, too few decimals (currency row or organization pricing precision), total differs, original opportunity missing | SYNC-VAL-002 | needs a person |
 
 The hex code in `error.code` is not used to decide anything except the three service-protection codes, which only confirm a 429.
 
@@ -176,7 +176,7 @@ The hex code in `error.code` is not used to decide anything except the three ser
 
 - No live Dynamics 365 Sales environment was available (a trial needs two administrators and a work account). All behaviour is tested against a fake (`FakeDynamicsSalesServer`, with the shared `FakeMicrosoftEntra` and `FakeMicrosoftOData`) that follows the pages above. The wire fixtures in `tests/php/fixtures/dynamics-sales/` and `tests/php/fixtures/microsoft/` use the shapes of the pages cited in `MicrosoftWireFixturesTest` with synthetic values; the token error texts (AADSTS codes) are `[inferred]` because the Entra error list could not be read.
 - Which columns Dataverse requires when an opportunity product is created from an existing product (price list, unit of measure) was not on the pages read; the research says `pricelevelid` and `transactioncurrencyid` may be required. The connector sets the currency and a unit of measure, and the price list when `price_list` is set.
-- The names `transactioncurrencies` (`isocurrencycode`, `currencyprecision`), `uoms`, `pricelevels`, `organizations`, the `_defaultuomid_value` lookup property, `RetrieveVersion` and `WhoAmI`'s response fields come from the usual Dataverse conventions, not from a page read today.
+- The names `transactioncurrencies` (`isocurrencycode`, `currencyprecision`), `uoms`, `pricelevels`, `organizations` (`pricingdecimalprecision`), the `_defaultuomid_value` lookup property, `RetrieveVersion` and `WhoAmI`'s response fields come from the usual Dataverse conventions, not from a page read today.
 - `objectid_opportunity` for notes, and `customerid_contact` for the polymorphic lookup (see above).
 - That `totalamount` equals lines plus tax plus freight minus discount, and whether it is calculated at once or later.
 - The wording of a missing-application-user answer and of a missing-privilege answer (third-party reports only).
@@ -193,7 +193,7 @@ No credentials are stored in the repository. Use a 30-day Dynamics 365 Sales tri
 1. Follow the six steps. In the trial's Power Platform admin center create the application user and a role as in step 4.
 2. In WordPress add a Dynamics 365 Sales connection with the tenant ID, client ID, secret and the environment URL. Press Test connection. Expected: the organisation name, the user the app runs as, and the version when `RetrieveVersion` answers. A wrong secret gives SYNC-AUTH-001; a missing application user SYNC-AUTH-007; a role without a privilege SYNC-AUTH-004 on the first write.
 3. Create a product whose Product ID equals a WooCommerce SKU and publish it.
-4. Place a WooCommerce order. Expected: a contact (and an account when a company name was given), one open opportunity named `WC-{id} - {name}` with its products and a description whose last line starts `Estasoft Sync`. Sync it again: no second opportunity.
-5. Place an order in a currency the environment does not have: expected SYNC-VAL-002 naming the currency.
+4. Place a WooCommerce order. Expected: a contact (and an account when a company name was given), one open opportunity named `WC-{id} - {name}` with its products and a description whose last line starts `Estasoft Sync` and ends with `verified`. Sync it again: no second opportunity.
+5. Place an order in a currency the environment does not have: expected SYNC-VAL-002 naming the currency. With a three-decimal currency (KWD) and Pricing Decimal Precision 2: expected SYNC-VAL-002 naming Pricing Decimal Precision and nothing written.
 6. Refund the order: expected a note on the opportunity.
 7. Run the nightly check from the Reconciliation screen.

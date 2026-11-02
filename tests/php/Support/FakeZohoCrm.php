@@ -3,7 +3,10 @@
  * A small in-memory Zoho CRM (with its accounts server) for the connector tests.
  *
  * Shapes follow the Zoho CRM v8 developer pages: POST /crm/v8/{module} with data[], answers {data:[{code, details, message, status}]},
- * search with criteria "(Field:equals:value)" or email, 204 for no match, related lists, COQL, credits header, token endpoint.
+ * search with criteria "(Field:equals:value)" or email, 204 for no match, related lists, COQL, credits header, token endpoint, and the settings
+ * calls Test connection makes: layouts (module is mandatory), pipelines (layout_id is mandatory), fields (list and create, with the
+ * edition's cap). The Deals Pipeline field is mandatory when pipelines exist (insert records page). The Currency column of COQL exists only
+ * in a multi-currency organisation; asking for it elsewhere is INVALID_QUERY.
  *
  * @package Estasoft\SyncEngine
  */
@@ -40,9 +43,50 @@ final class FakeZohoCrm extends FakeSalesServer {
 	public bool $multiCurrency = false;
 
 	/**
-	 * Whether Deals need a Pipeline.
+	 * Whether the Organization API says if several currencies are on (mc_status); false makes the connector find out by asking.
+	 */
+	public bool $reportsMultiCurrency = true;
+
+	/**
+	 * Whether Deals need a Pipeline although no pipeline is listed.
 	 */
 	public bool $requirePipeline = false;
+
+	/**
+	 * Pipelines of the Deals module (display_value, actual_value, default); Pipeline is mandatory and must be one of them when not empty.
+	 *
+	 * @var array<int,array{display_value:string,actual_value:string,default:bool}>
+	 */
+	public array $pipelines = array();
+
+	/**
+	 * Whether the user may create fields (the Fields API answers NO_PERMISSION otherwise).
+	 */
+	public bool $fieldsCreatable = true;
+
+	/**
+	 * Custom fields the edition allows per module.
+	 */
+	public int $fieldCap = 10;
+
+	/**
+	 * Custom fields of Deals: API name => label.
+	 *
+	 * @var array<string,string>
+	 */
+	public array $customFields = array();
+
+	/**
+	 * Whether Deals refuse a field that does not exist (INVALID_DATA).
+	 */
+	public bool $strictFields = false;
+
+	/**
+	 * Settings calls the token has no scope for: layouts, pipeline, fields.
+	 *
+	 * @var array<int,string>
+	 */
+	public array $deniedSettings = array();
 
 	/**
 	 * Whether a second contact with the same email is refused as DUPLICATE_DATA.
@@ -88,11 +132,13 @@ final class FakeZohoCrm extends FakeSalesServer {
 	/**
 	 * Add a deal as an earlier pass or the merchant would.
 	 *
-	 * @param string $name   Deal name.
-	 * @param float  $amount Amount.
+	 * @param string $name     Deal name.
+	 * @param float  $amount   Amount.
+	 * @param string $currency Currency of the deal (multi-currency organisations); none when empty.
+	 * @param array<string,mixed> $extra Other fields, such as the dedicated reference field.
 	 */
-	public function addDeal( string $name, float $amount ): string {
-		return $this->insertRow( 'Deals', array( 'Deal_Name' => $name, 'Amount' => $amount, 'Stage' => 'Qualification' ) );
+	public function addDeal( string $name, float $amount, string $currency = '', array $extra = array() ): string {
+		return $this->insertRow( 'Deals', $extra + array( 'Deal_Name' => $name, 'Amount' => $amount, 'Stage' => 'Qualification' ) + ( '' !== $currency ? array( 'Currency' => $currency ) : array() ) );
 	}
 
 	/**
@@ -151,10 +197,20 @@ final class FakeZohoCrm extends FakeSalesServer {
 			return $this->json( array( 'code' => 'INVALID_TOKEN', 'details' => new \stdClass(), 'message' => 'invalid oauth token', 'status' => 'error' ), 401 );
 		}
 		if ( '/crm/v8/org' === $path ) {
-			return $this->json( array( 'org' => array( array( 'id' => '9000001', 'company_name' => 'Example Trading LLC', 'iso_code' => 'AED', 'currency' => 'AED' ) ) ), 200, $extra );
+			$org = array( 'id' => '9000001', 'company_name' => 'Example Trading LLC', 'iso_code' => 'AED', 'currency' => 'AED' );
+			return $this->json( array( 'org' => array( $this->reportsMultiCurrency ? $org + array( 'mc_status' => $this->multiCurrency ) : $org ) ), 200, $extra );
 		}
 		if ( '/crm/v8/coql' === $path ) {
 			return $this->coql( (string) ( $body['select_query'] ?? '' ), $extra );
+		}
+		if ( '/crm/v8/settings/layouts' === $path ) {
+			return $this->settings( 'layouts', $query, $extra ) ?? $this->json( array( 'layouts' => array( array( 'id' => '3000000000001', 'name' => 'Standard', 'status' => 'active' ) ) ), 200, $extra );
+		}
+		if ( '/crm/v8/settings/pipeline' === $path ) {
+			return $this->settings( 'pipeline', $query, $extra ) ?? $this->pipelineList( $query, $extra );
+		}
+		if ( '/crm/v8/settings/fields' === $path ) {
+			return $this->settings( 'fields', $query, $extra ) ?? $this->fieldSettings( $method, $query, $body, $extra );
 		}
 		if ( 1 === preg_match( '~^/crm/v8/(\w+)/search$~', $path, $m ) ) {
 			return $this->denial( $m[1] ) ?? $this->search( $m[1], $query, $extra );
@@ -182,6 +238,75 @@ final class FakeZohoCrm extends FakeSalesServer {
 			'auth'         => $this->json( array( 'code' => 'INVALID_TOKEN', 'message' => 'invalid oauth token', 'status' => 'error' ), 401 ),
 			default        => $this->json( array( 'weird' => true ), 418 ),
 		};
+	}
+
+	/**
+	 * A scope refusal or a missing mandatory parameter of a settings call; null when the call may go on.
+	 *
+	 * @param string               $name  layouts, pipeline or fields.
+	 * @param array<string,mixed>  $query Query.
+	 * @param array<string,string> $extra Headers.
+	 */
+	private function settings( string $name, array $query, array $extra ): ?HttpResponse {
+		if ( in_array( $name, $this->deniedSettings, true ) ) {
+			return $this->json( array( 'code' => 'OAUTH_SCOPE_MISMATCH', 'message' => 'invalid oauth scope to access this API', 'status' => 'error' ), 401, $extra );
+		}
+		if ( 'pipeline' === $name && empty( $query['layout_id'] ) ) {
+			return $this->json( array( 'code' => 'REQUIRED_PARAM_MISSING', 'details' => array( 'param' => 'layout_id' ), 'message' => 'One of the expected parameter is missing', 'status' => 'error' ), 400, $extra );
+		}
+		if ( in_array( $name, array( 'layouts', 'fields' ), true ) && empty( $query['module'] ) ) {
+			return $this->json( array( 'code' => 'REQUIRED_PARAM_MISSING', 'details' => array( 'param' => 'module' ), 'message' => 'One of the expected parameter is missing', 'status' => 'error' ), 400, $extra );
+		}
+		return null;
+	}
+
+	/**
+	 * @param array<string,mixed>  $query Query.
+	 * @param array<string,string> $extra Headers.
+	 */
+	private function pipelineList( array $query, array $extra ): HttpResponse {
+		unset( $query );
+		$rows = array();
+		foreach ( $this->pipelines as $index => $pipeline ) {
+			$rows[] = $pipeline + array( 'id' => (string) ( 4000000000001 + $index ), 'maps' => array() );
+		}
+		return $this->json( array( 'pipeline' => $rows ), 200, $extra );
+	}
+
+	/**
+	 * The Fields API: list the Deals fields, create a custom text field.
+	 *
+	 * @param string               $method Method.
+	 * @param array<string,mixed>  $query  Query.
+	 * @param array<string,mixed>  $body   Body.
+	 * @param array<string,string> $extra  Headers.
+	 */
+	private function fieldSettings( string $method, array $query, array $body, array $extra ): HttpResponse {
+		unset( $query );
+		if ( 'GET' === $method ) {
+			$fields = array( array( 'api_name' => 'Deal_Name', 'field_label' => 'Deal Name' ), array( 'api_name' => 'Amount', 'field_label' => 'Amount' ) );
+			foreach ( $this->customFields as $name => $label ) {
+				$fields[] = array( 'api_name' => $name, 'field_label' => $label, 'custom_field' => true );
+			}
+			return $this->json( array( 'fields' => $fields ), 200, $extra );
+		}
+		$field = (array) ( $body['fields'][0] ?? array() );
+		$fail  = static fn( string $code, string $message ): array => array( 'fields' => array( array( 'code' => $code, 'details' => new \stdClass(), 'message' => $message, 'status' => 'error' ) ) );
+		if ( ! $this->fieldsCreatable ) {
+			return $this->json( $fail( 'NO_PERMISSION', 'permission denied' ), 400, $extra );
+		}
+		if ( empty( $field['field_label'] ) || empty( $field['data_type'] ) ) {
+			return $this->json( $fail( 'MANDATORY_NOT_FOUND', 'required field not found' ), 400, $extra );
+		}
+		if ( count( $this->customFields ) >= $this->fieldCap ) {
+			return $this->json( $fail( 'LIMIT_EXCEEDED', 'the field limit of your edition is reached' ), 400, $extra );
+		}
+		$name = str_replace( ' ', '_', (string) $field['field_label'] );
+		if ( isset( $this->customFields[ $name ] ) ) {
+			return $this->json( $fail( 'DUPLICATE_DATA', 'a field with this name exists' ), 400, $extra );
+		}
+		$this->customFields[ $name ] = (string) $field['field_label'];
+		return $this->json( array( 'fields' => array( array( 'code' => 'SUCCESS', 'details' => array( 'id' => '5000000000001' ), 'message' => 'field created', 'status' => 'success' ) ) ), 201, $extra );
 	}
 
 	/**
@@ -245,8 +370,19 @@ final class FakeZohoCrm extends FakeSalesServer {
 					return $bad( 'MANDATORY_NOT_FOUND', $required, 'required field not found' );
 				}
 			}
-			if ( $this->requirePipeline && empty( $record['Pipeline'] ) ) {
+			if ( ( $this->requirePipeline || array() !== $this->pipelines ) && empty( $record['Pipeline'] ) ) {
 				return $bad( 'MANDATORY_NOT_FOUND', 'Pipeline', 'required field not found' );
+			}
+			if ( array() !== $this->pipelines && ! in_array( $record['Pipeline'], array_merge( array_column( $this->pipelines, 'display_value' ), array_column( $this->pipelines, 'actual_value' ) ), true ) ) {
+				return $bad( 'INVALID_DATA', 'Pipeline', 'invalid data' );
+			}
+			if ( $this->strictFields ) {
+				$known = array( 'Deal_Name', 'Stage', 'Amount', 'Closing_Date', 'Contact_Name', 'Account_Name', 'Pipeline', 'Description', 'Currency' );
+				foreach ( array_keys( $record ) as $key ) {
+					if ( ! in_array( $key, $known, true ) && ! isset( $this->customFields[ $key ] ) ) {
+						return $bad( 'INVALID_DATA', (string) $key, 'the field does not exist' );
+					}
+				}
 			}
 			if ( isset( $record['Currency'] ) && ! $this->multiCurrency ) {
 				return $bad( 'INVALID_DATA', 'Currency', 'invalid data' );
@@ -332,19 +468,37 @@ final class FakeZohoCrm extends FakeSalesServer {
 	 * @param array<string,string> $extra Headers.
 	 */
 	private function coql( string $query, array $extra ): HttpResponse {
-		preg_match( "/where \((\w+) like '(\w+-)%' and Created_Time >= '([^']+)'\)/i", $query, $m );
+		if ( 1 !== preg_match( '/^select (.+?) from Deals where (.+?) order by/is', trim( $query ), $parts ) ) {
+			return $this->json( array( 'code' => 'INVALID_QUERY', 'details' => new \stdClass(), 'message' => 'invalid query', 'status' => 'error' ), 400, $extra );
+		}
+		$columns = array_map( 'trim', explode( ',', $parts[1] ) );
+		if ( in_array( 'Currency', $columns, true ) && ! $this->multiCurrency ) {
+			return $this->json( array( 'code' => 'INVALID_QUERY', 'details' => array( 'reason' => 'invalid column name' ), 'message' => 'invalid query formed', 'status' => 'error' ), 400, $extra );
+		}
+		preg_match_all( "/(\w+) like '(\w+-)%'/i", $parts[2], $likes, PREG_SET_ORDER );
+		preg_match( "/Created_Time >= '([^']+)'/i", $parts[2], $since );
 		preg_match( '/limit (\d+) offset (\d+)/i', $query, $l );
-		$field  = $m[1] ?? 'Deal_Name';
-		$prefix = $m[2] ?? '';
-		$since  = strtotime( $m[3] ?? '1970-01-01' );
-		$rows   = array_values( array_filter( $this->all( 'Deals' ), static fn( array $row ): bool => str_starts_with( (string) ( $row[ $field ] ?? '' ), $prefix ) && strtotime( (string) $row['Created_Time'] ) >= $since ) );
+		$after = strtotime( $since[1] ?? '1970-01-01' );
+		$rows  = array_values(
+			array_filter(
+				$this->all( 'Deals' ),
+				static function ( array $row ) use ( $likes, $after ): bool {
+					foreach ( $likes as $like ) {
+						if ( str_starts_with( (string) ( $row[ $like[1] ] ?? '' ), $like[2] ) && strtotime( (string) $row['Created_Time'] ) >= $after ) {
+							return true;
+						}
+					}
+					return false;
+				}
+			)
+		);
 		if ( array() === $rows ) {
 			return new HttpResponse( 204, '', $extra );
 		}
 		$limit  = (int) ( $l[1] ?? 200 );
 		$offset = (int) ( $l[2] ?? 0 );
 		$slice  = array_slice( $rows, $offset, $limit );
-		return $this->json( array( 'data' => array_map( fn( array $row ): array => array( 'id' => $row['id'], $field => $row[ $field ], 'Amount' => $row['Amount'] ?? null ), $slice ), 'info' => array( 'more_records' => $offset + $limit < count( $rows ), 'count' => count( $slice ) ) ), 200, $extra );
+		return $this->json( array( 'data' => array_map( static fn( array $row ): array => array_combine( $columns, array_map( static fn( string $column ) => $row[ $column ] ?? null, $columns ) ), $slice ), 'info' => array( 'more_records' => $offset + $limit < count( $rows ), 'count' => count( $slice ) ) ), 200, $extra );
 	}
 
 	/**

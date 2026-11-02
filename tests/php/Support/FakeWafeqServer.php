@@ -101,6 +101,18 @@ final class FakeWafeqServer {
 	private bool $loseAnswer = false;
 
 	/**
+	 * Refuse every tax authority report with a 400.
+	 */
+	public bool $reportRefused = false;
+
+	/**
+	 * Reports requested, by invoice id.
+	 *
+	 * @var array<string,string>
+	 */
+	public array $reports = array();
+
+	/**
 	 * Reject negative unit amounts.
 	 */
 	public bool $rejectNegative = false;
@@ -275,6 +287,9 @@ final class FakeWafeqServer {
 		if ( 'invoice-credit-notes' === $table && 'POST' === $method ) {
 			return $this->applyCreditNote( $body );
 		}
+		if ( 'invoices' === $table && 'POST' === $method && 'tax-authority' === ( $segments[2] ?? '' ) && 'report' === ( $segments[3] ?? '' ) ) {
+			return $this->report( $segments[1] ?? '' );
+		}
 		if ( ! isset( $this->tables[ $table ] ) ) {
 			return FakeHttpClient::json( array( 'detail' => 'Not found.' ), 404 );
 		}
@@ -292,6 +307,26 @@ final class FakeWafeqServer {
 			return $this->patch( $table, $id, $body );
 		}
 		return FakeHttpClient::json( array( 'detail' => 'Method not allowed.' ), 405 );
+	}
+
+	/**
+	 * Report an invoice to the tax authority: the first request is accepted as PENDING, one made while it runs is a 409.
+	 *
+	 * @param string $id Invoice id.
+	 */
+	private function report( string $id ): HttpResponse {
+		$invoice = $this->tables['invoices'][ $id ] ?? null;
+		if ( null === $invoice ) {
+			return FakeHttpClient::json( array( 'detail' => 'Not found.' ), 404 );
+		}
+		if ( $this->reportRefused || 'FINALIZED' !== $invoice['status'] ) {
+			return FakeHttpClient::json( array( 'detail' => 'This organization is not registered with the tax authority.' ), 400 );
+		}
+		if ( isset( $this->reports[ $id ] ) ) {
+			return FakeHttpClient::json( array( 'code' => 'report_in_progress', 'detail' => 'A report is already in progress.' ), 409 );
+		}
+		$this->reports[ $id ] = 'PENDING';
+		return FakeHttpClient::json( array( 'status' => 'PENDING' ) );
 	}
 
 	/**
@@ -393,6 +428,9 @@ final class FakeWafeqServer {
 			}
 			if ( ! isset( $this->tables['accounts'][ $line['account'] ] ) ) {
 				return FakeHttpClient::json( array( 'line_items' => array( $index => array( 'account' => array( 'Invalid pk.' ) ) ) ), 400 );
+			}
+			if ( ! empty( $line['item'] ) && ! isset( $this->tables['items'][ $line['item'] ] ) ) {
+				return FakeHttpClient::json( array( 'line_items' => array( $index => array( 'item' => array( 'Invalid pk.' ) ) ) ), 400 );
 			}
 			if ( $this->rejectNegative && (float) $line['unit_amount'] < 0 ) {
 				return FakeHttpClient::json( array( 'line_items' => array( $index => array( 'unit_amount' => array( 'Ensure this value is greater than or equal to 0.' ) ) ) ), 400 );

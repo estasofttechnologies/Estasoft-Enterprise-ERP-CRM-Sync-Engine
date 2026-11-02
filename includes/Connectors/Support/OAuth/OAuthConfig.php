@@ -56,6 +56,7 @@ final class OAuthConfig {
 	 * @param array<int,string>    $allowedHosts             Hosts the sign-in and token addresses must have (a leading `*.` matches subdomains). Empty allows nothing unless `merchantHost` is true.
 	 * @param bool                 $refreshOnDemand          True for a vendor whose access tokens live only minutes (Sage: 5): the scheduled task leaves the token to the next call and only keeps the refresh token from running out.
 	 * @param bool                 $merchantHost             True when the merchant types the host of the sign-in and token addresses (a server of their own). The host is then looked up and every address must be public. Use `allowedHosts` for a vendor's own hosts.
+	 * @param int                  $minTokenAgeSeconds       A vendor that refuses a refresh before the token is this old (Exact Online: 570 seconds for a 600 second token). The manager does not refresh earlier, and a 401 before that age is not answered with a refresh. 0 means no minimum.
 	 */
 	public function __construct(
 		public readonly string $authorizeUrl,
@@ -87,6 +88,7 @@ final class OAuthConfig {
 		public readonly array $allowedHosts = array(),
 		public readonly bool $refreshOnDemand = false,
 		public readonly bool $merchantHost = false,
+		public readonly int $minTokenAgeSeconds = 0,
 	) {
 	}
 

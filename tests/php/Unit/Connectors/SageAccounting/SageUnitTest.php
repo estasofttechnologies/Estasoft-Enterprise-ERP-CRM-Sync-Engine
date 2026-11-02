@@ -58,6 +58,21 @@ final class SageUnitTest extends TestCase {
 		$this->assertSame( -3, $amounts->percentOf( -25, 10.0 ) );
 	}
 
+	public function test_the_net_inside_a_gross_amount_is_rounded_half_away_from_zero_and_the_neighbour_that_gives_the_gross_back_is_preferred(): void {
+		$amounts = new SageAmounts();
+		$this->assertSame( 8400, $amounts->netFromGross( 10080, 200000 ), '100.80 with 20 percent in it is 84.00 plus 16.80.' );
+		$this->assertSame( 1000, $amounts->netFromGross( 1200, 200000 ) );
+		$this->assertSame( 4998, $amounts->netFromGross( 5997, 200000 ), '49.975 has no neighbour that adds up, so the rounded net stays and the line is off by one cent.' );
+		$this->assertSame( 83, $amounts->netFromGross( 100, 200000 ), '83.33 rounds to 83 and 83 + 17 = 100.' );
+		$this->assertSame( 88, $amounts->netFromGross( 105, 200000 ), '87.5 rounds away from zero; neither neighbour adds up either, so it is off by one cent.' );
+		$this->assertSame( -8400, $amounts->netFromGross( -10080, 200000 ) );
+		$this->assertSame( 700, $amounts->netFromGross( 700, 0 ), 'A zero rate leaves the amount alone.' );
+		foreach ( range( 1, 400 ) as $gross ) {
+			$net = $amounts->netFromGross( $gross, 200000 );
+			$this->assertLessThanOrEqual( 1, abs( $net + $amounts->taxOn( $net, 200000 ) - $gross ), 'Never more than a cent away: ' . $gross );
+		}
+	}
+
 	public function test_a_list_answer_is_read_from_items_or_as_a_plain_list(): void {
 		$this->assertSame( array( array( 'a' => 1 ) ), SageApi::items( new ApiResponse( 200, '{"$items":[{"a":1},"x"],"$next":null,"$total":1}' ) ) );
 		$this->assertSame( array( array( 'id' => 'x' ) ), SageApi::items( new ApiResponse( 200, '[{"id":"x"}]' ) ) );
@@ -122,7 +137,7 @@ final class SageUnitTest extends TestCase {
 	}
 
 	public function test_the_client_reference_always_comes_from_the_queue_item_and_the_excluded_total_is_taken_off(): void {
-		$item    = new Item( 9, 1, EntityType::Order, '9', 'created', 'order:9', 'k', ItemState::Syncing, attempt: 2 );
+		$item    = new Item( 9, 1, EntityType::Order, '9', 'created', 'order:9', 'k', ItemState::Syncing );
 		$payload = SageOrderPayload::parse(
 			array(
 				'client_order_ref' => 'WC-EVIL',
@@ -139,7 +154,6 @@ final class SageUnitTest extends TestCase {
 		$this->assertSame( 3800, $payload->totalMinor );
 		$this->assertSame( 250, $payload->shippingMinor );
 		$this->assertSame( '', $payload->shippingTax );
-		$this->assertSame( 2, $payload->attempt );
 	}
 
 	public function test_a_refund_payload_needs_the_order_it_belongs_to(): void {

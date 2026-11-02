@@ -30,7 +30,6 @@ final class QuickBooksRefundPayload {
 	 * @param int|null                       $amountMinor      Refund total the shop expects, or null.
 	 * @param bool                           $pricesIncludeTax True when the mapped amounts include tax.
 	 * @param array<int,array<string,mixed>> $lines            Lines: sku, name, quantity, amount_minor, tax.
-	 * @param int                            $attempt          Tries the queue made so far; part of the request id.
 	 */
 	private function __construct(
 		public readonly string $clientRef,
@@ -40,7 +39,6 @@ final class QuickBooksRefundPayload {
 		public readonly ?int $amountMinor,
 		public readonly bool $pricesIncludeTax,
 		public readonly array $lines,
-		public readonly int $attempt = 0,
 	) {
 	}
 
@@ -124,8 +122,7 @@ final class QuickBooksRefundPayload {
 			QuickBooksPayloadReader::text( $payload['reason'] ?? '' ),
 			null === $amount ? null : abs( $amount ),
 			QuickBooksPayloadReader::flag( $payload['prices_include_tax'] ?? null, false ),
-			$lines,
-			$item->attempt
+			$lines
 		);
 	}
 }

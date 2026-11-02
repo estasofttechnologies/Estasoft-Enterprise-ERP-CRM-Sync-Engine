@@ -277,7 +277,11 @@ final class SapBusinessOneConnector extends AbstractApiConnector {
 		$kit = $this->kit( $connection );
 		if ( EntityType::Refund === $item->entityType ) {
 			$note = $kit->refunds->find( $item->clientReference() );
-			return null === $note ? null : $kit->refunds->reference( $note, $kit->orders->currencyOf( $note ) );
+			if ( null === $note ) {
+				return null;
+			}
+			$error = $kit->refunds->checkMarked( $note, $kit->total );
+			return $error ?? $kit->refunds->reference( $note, $kit->orders->currencyOf( $note ) );
 		}
 		if ( EntityType::Order !== $item->entityType ) {
 			return null;
@@ -471,12 +475,29 @@ final class SapBusinessOneConnector extends AbstractApiConnector {
 		if ( $refund instanceof ConnectorError ) {
 			return SendResult::failure( $refund );
 		}
-		$note = $kit->refunds->find( $refund->reference );
-		if ( null !== $note ) {
-			return SendResult::existing( $kit->refunds->reference( $note, $kit->orders->currencyOf( $note ) ) );
+		$expected = $kit->refunds->expected( $refund );
+		$warnings = new Warnings();
+		$note     = $kit->refunds->find( $refund->reference );
+		$existed  = null !== $note;
+		$note     = $note ?? $kit->refunds->create( $refund, $warnings );
+		$currency = $kit->orders->currencyOf( $note );
+		$error    = $kit->refunds->check( $note, $expected, $currency, $kit->total, $warnings );
+		if ( null !== $error ) {
+			if ( ! $existed && 'fail' === $kit->options->totalMismatch() ) {
+				$cancelled = $kit->refunds->cancel( $note );
+				$error     = Problem::validation(
+					self::SYSTEM,
+					'credit note total',
+					(string) $error->context['reason'] . ' ' . ( $cancelled ? __( 'The credit note was cancelled. Credit the customer in SAP.', 'estasoft-erp-crm-sync-engine' ) : __( 'The credit note could not be cancelled and stays in SAP; cancel or correct it there.', 'estasoft-erp-crm-sync-engine' ) )
+				);
+			}
+			return SendResult::failure( $error );
 		}
-		$note = $kit->refunds->create( $refund, new Warnings() );
-		return SendResult::created( $kit->refunds->reference( $note, $kit->orders->currencyOf( $note ) ) );
+		$ref = $kit->refunds->reference( $note, $currency );
+		if ( $warnings->any() ) {
+			$ref = new ExternalRef( $ref->id, $ref->ref, $ref->url, $ref->extra + array( 'warnings' => $warnings->all() ) );
+		}
+		return $existed ? SendResult::existing( $ref ) : SendResult::created( $ref );
 	}
 
 	/**

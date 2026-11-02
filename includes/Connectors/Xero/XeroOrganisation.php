@@ -75,6 +75,16 @@ final class XeroOrganisation {
 	}
 
 	/**
+	 * One fresh read of the organisation for a health probe; what is cached is not trusted.
+	 *
+	 * @throws ApiException On a failed call or an answer with no organisation.
+	 */
+	public function probe(): void {
+		$this->organisation = null;
+		$this->facts();
+	}
+
+	/**
 	 * Calls left today according to Xero's header, when it sent one.
 	 */
 	public function dailyLeft(): ?int {

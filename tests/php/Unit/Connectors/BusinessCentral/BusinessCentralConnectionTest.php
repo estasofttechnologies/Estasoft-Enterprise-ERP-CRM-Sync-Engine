@@ -199,6 +199,16 @@ final class BusinessCentralConnectionTest extends BusinessCentralTestCase {
 		$this->assertNotContains( 'redirect_uri', $names, 'Client credentials need no redirect address.' );
 	}
 
+	public function test_ping_is_one_cheap_call(): void {
+		$this->assertTrue( $this->connector->ping( $this->connection ) );
+		$api = array_values( array_filter( $this->kit->http->requests, static fn( array $r ): bool => ! str_contains( $r['url'], 'login.microsoftonline.com' ) ) );
+		$this->assertCount( 1, $api, 'One read, not the whole Test connection.' );
+		$this->assertSame( 'GET', $api[0]['method'] );
+		$before = $this->kit->http->count();
+		$this->assertTrue( $this->connector->ping( $this->connection ) );
+		$this->assertSame( 1, $this->kit->http->count() - $before, 'The token is kept, so the next probe is the read alone.' );
+	}
+
 	public function test_ping_answers_yes_and_no_without_throwing(): void {
 		$this->assertTrue( $this->connector->ping( $this->connection ) );
 		$this->assertFalse( $this->connector->ping( $this->connection( array(), array( 'client_secret' => 'wrong-secret-value' ), 10 ) ) );

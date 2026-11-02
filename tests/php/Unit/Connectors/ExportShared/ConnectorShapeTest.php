@@ -160,7 +160,7 @@ final class ConnectorShapeTest extends TestCase {
 		$sage = Sage50Settings::fromConnection( FakeExportKit::connection( 'sage50-export', array() ) );
 		$this->assertTrue( $sage->isUk() );
 		$this->assertSame( 'windows-1252', $sage->charset()->value );
-		$this->assertTrue( $sage->headerRow() );
+		$this->assertFalse( $sage->headerRow(), 'No heading row unless the person turns it on: no source says the import skips it.' );
 		$this->assertFalse( $sage->useItems() );
 		$this->assertFalse( $sage->recordPayments() );
 		$this->assertSame( 'T0', $sage->untaxedCode() );

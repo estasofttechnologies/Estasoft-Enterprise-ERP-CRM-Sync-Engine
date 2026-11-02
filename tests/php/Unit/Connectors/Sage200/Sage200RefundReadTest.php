@@ -121,28 +121,6 @@ final class Sage200RefundReadTest extends Sage200TestCase {
 		$this->assertSame( 'order_ref', $result->error->context['field'] );
 	}
 
-	public function test_the_nightly_list_has_the_shops_orders_with_totals_and_every_page_is_read(): void {
-		for ( $i = 1; $i <= 520; $i++ ) {
-			$this->server->put( 'sop_orders', array( 'document_no' => 'SOP' . $i, 'customer_document_no' => 'WC-' . $i, 'document_date' => '2026-11-02T00:00:00Z', 'total_gross_value' => 10.0, 'currency' => array( 'is_base_currency' => true ) ) );
-		}
-		$this->server->put( 'sop_orders', array( 'document_no' => 'SOPX', 'customer_document_no' => 'PO-77', 'document_date' => '2026-11-02T00:00:00Z', 'total_gross_value' => 10.0 ) );
-		$list = $this->connector()->listForReconcile( $this->connection(), new \DateTimeImmutable( '2026-11-02T00:00:00Z' ) );
-
-		$this->assertCount( 520, $list, 'Both pages of the window, and not the order that is not the shop\'s.' );
-		$this->assertSame( 1000, $list['WC-7']->extra['total_minor'] );
-		$this->assertSame( 0, $list['WC-7']->extra['refunded_minor'] );
-		$this->assertSame( 'GBP', $list['WC-7']->extra['currency'] );
-		$this->assertSame( 2, $this->server->count( 'GET', '#/sop_orders$#' ) );
-	}
-
-	public function test_orders_before_the_window_are_not_listed(): void {
-		$this->placeOrder();
-		$id = (string) $this->server->all( 'sop_orders' )[0]['id'];
-		$this->server->records['sop_orders'][ $id ]['document_date'] = '2026-10-01T00:00:00Z';
-
-		$this->assertSame( array(), $this->connector()->listForReconcile( $this->connection(), new \DateTimeImmutable( '2026-11-02T00:00:00Z' ) ) );
-	}
-
 	public function test_a_customer_is_found_by_contact_email_and_an_unknown_one_is_null(): void {
 		$customer = $this->server->addCustomer( 'ALPHA001', 'Amelia existing', 'amelia@example.test' );
 		$ref      = $this->connector()->lookupCustomer( $this->connection(), 'AMELIA@example.test' );

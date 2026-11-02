@@ -18,6 +18,7 @@ use Estasoft\SyncEngine\Connectors\CrmCommon\CrmMappings;
 use Estasoft\SyncEngine\Connectors\CrmCommon\CrmOptions;
 use Estasoft\SyncEngine\Connectors\CrmCommon\OrderData;
 use Estasoft\SyncEngine\Connectors\CrmCommon\OrderLine;
+use Estasoft\SyncEngine\Connectors\CrmCommon\ReferenceField;
 use Estasoft\SyncEngine\Connectors\CrmCommon\Summary;
 use Estasoft\SyncEngine\Connectors\CrmCommon\Text;
 use Estasoft\SyncEngine\Connectors\Support\ApiException;
@@ -49,11 +50,6 @@ final class HubSpotConnector extends AbstractSalesConnector {
 	 * API versions the connector accepts.
 	 */
 	private const VERSIONS = array( '2026-03', '2026-09' );
-
-	/**
-	 * Daily requests left below which the connector stops and waits.
-	 */
-	private const QUOTA_FLOOR = 50;
 
 	/**
 	 * Default association type ids, HUBSPOT_DEFINED (HubSpot association table).
@@ -154,7 +150,8 @@ final class HubSpotConnector extends AbstractSalesConnector {
 	}
 
 	/**
-	 * Test connection: the scopes for contacts, deals, line items and notes, the account, the pipelines.
+	 * Test connection: the scopes for contacts, deals, line items and notes, the account, the pipelines, and the property that carries the
+	 * order reference (created when it is missing and the key may; otherwise the deal name stays the key and the test says so).
 	 *
 	 * @param Connection $connection Connection.
 	 * @throws ApiException When HubSpot refuses the key.
@@ -187,15 +184,63 @@ final class HubSpotConnector extends AbstractSalesConnector {
 				)
 			);
 		}
+		$label                 = '' !== $company ? $company : ( '' !== $options->text( 'portal_id' ) ? 'HubSpot ' . $options->text( 'portal_id' ) : 'HubSpot' );
+		$version               = 'HubSpot API ' . $detected['api_version'];
 		$pipelines             = $records->pipelines();
 		$detected['pipelines'] = null === $pipelines ? null : count( $pipelines );
 		$wanted                = $options->text( 'pipeline' );
 		if ( null !== $pipelines && '' !== $wanted && ! in_array( $wanted, array_map( static fn( array $row ): string => (string) ( $row['id'] ?? '' ), $pipelines ), true ) ) {
-			return new TestResult( false, 'HubSpot API ' . $detected['api_version'], '' !== $company ? $company : 'HubSpot', array(), $permissions, $this->invalid( 'pipeline', __( 'HubSpot has no deal pipeline with this id.', 'estasoft-erp-crm-sync-engine' ) ), $detected );
+			return new TestResult( false, $version, $label, array(), $permissions, $this->invalid( 'pipeline', __( 'HubSpot has no deal pipeline with this id.', 'estasoft-erp-crm-sync-engine' ) ), $detected );
 		}
 		$missing = array_keys( array_filter( $permissions, static fn( bool $allowed ): bool => ! $allowed ) );
 		$error   = array() === $missing ? null : $this->noPermission( sprintf( /* translators: 1: object name */ __( 'read %s', 'estasoft-erp-crm-sync-engine' ), str_replace( 'read_', '', (string) $missing[0] ) ) );
-		return new TestResult( null === $error, 'HubSpot API ' . $detected['api_version'], '' !== $company ? $company : ( '' !== $options->text( 'portal_id' ) ? 'HubSpot ' . $options->text( 'portal_id' ) : 'HubSpot' ), array(), $permissions, $error, $detected );
+		if ( null === $error ) {
+			$detected += $this->referenceSetup( $records, $options, $permissions );
+		}
+		return new TestResult( null === $error, $version, $label, array(), $permissions, $error, $detected );
+	}
+
+	/**
+	 * Find or create the reference property, and report which key the connector will use.
+	 *
+	 * @param HubSpotRecords     $records      Records.
+	 * @param CrmOptions         $options      Options.
+	 * @param array<string,bool> &$permissions Permission list; gets `create_reference_field`.
+	 * @return array<string,string> Facts for `detected`.
+	 */
+	private function referenceSetup( HubSpotRecords $records, CrmOptions $options, array &$permissions ): array {
+		$typed = $options->text( 'reference_property' );
+		if ( '' !== $typed ) {
+			// The merchant chose: a property of their own, or `dealname` on purpose. Nothing is created and nothing is warned about.
+			$own = 'name' !== Text::lower( $typed ) && ! Text::same( $typed, 'dealname' ) && ReferenceField::valid( $typed );
+			return array( 'reference_mode' => $own ? 'field' : 'name' );
+		}
+		$made                                  = ( new HubSpotSetup( $records ) )->referenceProperty();
+		$permissions['create_reference_field'] = null !== $made;
+		if ( null === $made ) {
+			return array(
+				'reference_mode' => 'name',
+				'warning'        => 'reference_field',
+			);
+		}
+		return array(
+			'reference_mode'         => 'field',
+			ReferenceField::DETECTED => $made['field'],
+		);
+	}
+
+	/**
+	 * Cheap health probe: one read of deals.
+	 *
+	 * @param Connection $connection Connection.
+	 */
+	public function ping( Connection $connection ): bool {
+		try {
+			return $this->records( $connection )->probe();
+		} catch ( \Throwable $throwable ) {
+			unset( $throwable );
+			return false;
+		}
 	}
 
 	/**
@@ -258,7 +303,7 @@ final class HubSpotConnector extends AbstractSalesConnector {
 	public function listForReconcile( Connection $connection, \DateTimeImmutable $from ): array|ConnectorError {
 		try {
 			$records = $this->records( $connection );
-			$prop    = $this->options( $connection )->text( 'reference_property', 'dealname' );
+			$ref     = $this->reference( $connection );
 			$start   = (string) ( (int) $from->format( 'U' ) * 1000 );
 			$found   = array();
 			for ( $round = 0; $round < 20; ++$round ) {
@@ -271,13 +316,12 @@ final class HubSpotConnector extends AbstractSalesConnector {
 							'value'        => $start,
 						),
 					),
-					array_unique( array_merge( self::dealProperties(), array( $prop ) ) ),
+					array_unique( array_merge( self::dealProperties(), $ref->searchFields() ) ),
 					HubSpotRecords::SEARCH_CAP
 				);
 				foreach ( $rows as $row ) {
-					$properties = (array) ( $row['properties'] ?? array() );
-					$reference  = (string) ( $properties[ $prop ] ?? '' );
-					if ( 1 === preg_match( '/^WC-\d+$/', $reference ) && ! isset( $found[ $reference ] ) ) {
+					$reference = $ref->readFrom( (array) ( $row['properties'] ?? array() ) );
+					if ( '' !== $reference && ! isset( $found[ $reference ] ) ) {
 						$found[ $reference ] = $this->dealRef( $row, $reference, $connection, true );
 					}
 				}
@@ -304,7 +348,7 @@ final class HubSpotConnector extends AbstractSalesConnector {
 	 * @param Item       $item       Item.
 	 */
 	protected function findOrder( Connection $connection, Item $item ): ExternalRef|ConnectorError|null {
-		$deal = $this->findDeal( $this->records( $connection ), $this->options( $connection ), $item->clientReference() );
+		$deal = $this->findDeal( $this->records( $connection ), $this->reference( $connection ), $item->clientReference() );
 		return null === $deal ? null : $this->dealRef( $deal, $item->clientReference(), $connection, false );
 	}
 
@@ -317,7 +361,7 @@ final class HubSpotConnector extends AbstractSalesConnector {
 	protected function findRefund( Connection $connection, Item $item ): ExternalRef|ConnectorError|null {
 		$records = $this->records( $connection );
 		$order   = $this->orderReference( $item );
-		$deal    = '' === $order ? null : $this->findDeal( $records, $this->options( $connection ), $order );
+		$deal    = '' === $order ? null : $this->findDeal( $records, $this->reference( $connection ), $order );
 		if ( null === $deal ) {
 			return null;
 		}
@@ -331,6 +375,7 @@ final class HubSpotConnector extends AbstractSalesConnector {
 	 * @param Connection          $connection Connection.
 	 * @param Item                $item       Item.
 	 * @param array<string,mixed> $payload    Mapped payload.
+	 * @throws ApiException When HubSpot refuses a call, after the line items made so far are archived (send() turns it into a failure).
 	 */
 	protected function sendOrder( Connection $connection, Item $item, array $payload ): SendResult {
 		$order = $this->reader()->order( $item, $payload );
@@ -340,10 +385,8 @@ final class HubSpotConnector extends AbstractSalesConnector {
 		$records = $this->records( $connection );
 		$options = $this->options( $connection );
 
-		$existing = $this->findDeal( $records, $options, $order->reference );
-		if ( null !== $this->quotaWait( $records ) ) {
-			return SendResult::failure( $this->waitFor( 3600 ) );
-		}
+		$ref      = $this->reference( $connection );
+		$existing = $this->findDeal( $records, $ref, $order->reference );
 		if ( null !== $existing ) {
 			return SendResult::existing( $this->dealRef( $existing, $order->reference, $connection, false ) );
 		}
@@ -358,15 +401,10 @@ final class HubSpotConnector extends AbstractSalesConnector {
 		}
 		$contactId    = $this->contactId( $records, $order->contact );
 		$associations = array( $this->association( $contactId, self::ASSOC_DEAL_TO_CONTACT ) );
-		foreach ( $this->lineItemRows( $order, $products ) as $properties ) {
-			$line           = $records->create( 'line_items', $properties )->json();
-			$associations[] = $this->association( (string) ( $line['id'] ?? '' ), self::ASSOC_DEAL_TO_LINE );
-		}
 
-		$reference                 = $options->text( 'reference_property', 'dealname' );
 		list( $description, $cut ) = Text::limit( Summary::order( $order ), 60000 );
 		$properties                = array(
-			$reference           => $order->reference,
+			'dealname'           => $order->reference,
 			'amount'             => Amounts::decimal( $order->totalMinor, $order->currency ),
 			'deal_currency_code' => $order->currency,
 			'closedate'          => $order->date . 'T00:00:00Z',
@@ -374,13 +412,35 @@ final class HubSpotConnector extends AbstractSalesConnector {
 			'pipeline'           => $stage['pipeline'],
 			'dealstage'          => $stage['stage'],
 		);
-		if ( 'dealname' !== $reference ) {
-			/* translators: 1: order number */
-			$properties['dealname'] = sprintf( __( 'Order %s', 'estasoft-erp-crm-sync-engine' ), substr( $order->reference, 3 ) );
+		if ( $ref->dedicated ) {
+			$properties[ $ref->field ] = $order->reference;
 		}
-		$deal = $records->create( 'deals', $properties, $associations )->json();
+
+		// The line items are made one call at a time before the deal. Whatever stops the flow from here on, they must not stay behind.
+		$lineIds = array();
+		try {
+			foreach ( $this->lineItemRows( $order, $products ) as $lineProperties ) {
+				$line           = $records->create( 'line_items', $lineProperties )->json();
+				$lineIds[]      = (string) ( $line['id'] ?? '' );
+				$associations[] = $this->association( (string) ( $line['id'] ?? '' ), self::ASSOC_DEAL_TO_LINE );
+			}
+			$created = $records->create( 'deals', $properties, $associations, array( 409 ) );
+		} catch ( ApiException $exception ) {
+			$this->discardLineItems( $records, $lineIds );
+			throw $exception;
+		}
+		if ( 409 === $created->status() ) {
+			// The reference property is unique: another pass made this deal between our search and our create. Use that one.
+			$this->discardLineItems( $records, $lineIds );
+			$winner = $this->findDeal( $records, $ref, $order->reference );
+			return null === $winner
+				? SendResult::failure( $this->invalid( 'deal', __( 'HubSpot says a deal with this order number exists but did not return it. It is retried.', 'estasoft-erp-crm-sync-engine' ) ) )
+				: SendResult::existing( $this->dealRef( $winner, $order->reference, $connection, false ) );
+		}
+		$deal = $created->json();
 		$id   = (string) ( $deal['id'] ?? '' );
 		if ( '' === $id ) {
+			$this->discardLineItems( $records, $lineIds );
 			return SendResult::failure( $this->invalid( 'deal', __( 'HubSpot did not return the new deal.', 'estasoft-erp-crm-sync-engine' ) ) );
 		}
 
@@ -391,7 +451,7 @@ final class HubSpotConnector extends AbstractSalesConnector {
 		$actual  = Amounts::minor( $read['amount'] ?? null, $order->currency );
 		$problem = $this->totalProblem( $order, $actual, (string) ( $read['deal_currency_code'] ?? '' ), $options );
 		if ( $problem instanceof ConnectorError ) {
-			$this->discard( $records, $id );
+			$this->discard( $records, $id, $lineIds );
 			return SendResult::failure( $problem );
 		}
 		$warnings = array();
@@ -428,7 +488,7 @@ final class HubSpotConnector extends AbstractSalesConnector {
 			return SendResult::failure( $refund );
 		}
 		$records = $this->records( $connection );
-		$deal    = $this->findDeal( $records, $this->options( $connection ), $refund->orderRef );
+		$deal    = $this->findDeal( $records, $this->reference( $connection ), $refund->orderRef );
 		if ( null === $deal ) {
 			/* translators: 1: order reference */
 			return SendResult::failure( $this->invalid( 'order', sprintf( __( 'The order %s is not in HubSpot yet.', 'estasoft-erp-crm-sync-engine' ), $refund->orderRef ) ) );
@@ -520,32 +580,43 @@ final class HubSpotConnector extends AbstractSalesConnector {
 	}
 
 	/**
-	 * The oldest deal carrying the reference.
+	 * The oldest deal carrying the reference: in the dedicated property first, then (the documented fallback, which also finds a deal made
+	 * before the property existed) in the deal name.
 	 *
 	 * @param HubSpotRecords $records   Records.
-	 * @param CrmOptions     $options   Options.
+	 * @param ReferenceField $ref       Properties that carry the reference.
 	 * @param string         $reference WC-number.
 	 * @return array<string,mixed>|null
 	 */
-	private function findDeal( HubSpotRecords $records, CrmOptions $options, string $reference ): ?array {
-		$property = $options->text( 'reference_property', 'dealname' );
-		$rows     = $records->searchAll(
-			'deals',
-			array(
+	private function findDeal( HubSpotRecords $records, ReferenceField $ref, string $reference ): ?array {
+		foreach ( $ref->searchFields() as $property ) {
+			$rows = $records->searchAll(
+				'deals',
 				array(
-					'propertyName' => $property,
-					'operator'     => 'EQ',
-					'value'        => $reference,
+					array(
+						'propertyName' => $property,
+						'operator'     => 'EQ',
+						'value'        => $reference,
+					),
 				),
-			),
-			array_unique( array_merge( self::dealProperties(), array( $property ) ) )
-		);
-		foreach ( $rows as $row ) {
-			if ( Text::same( (string) ( $row['properties'][ $property ] ?? '' ), $reference ) ) {
-				return $row;
+				array_unique( array_merge( self::dealProperties(), $ref->searchFields() ) )
+			);
+			foreach ( $rows as $row ) {
+				if ( Text::same( (string) ( $row['properties'][ $property ] ?? '' ), $reference ) ) {
+					return $row;
+				}
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * The properties that carry the reference: the dedicated one Test connection found or made (or the merchant's own), then dealname.
+	 *
+	 * @param Connection $connection Connection.
+	 */
+	private function reference( Connection $connection ): ReferenceField {
+		return ReferenceField::choose( $connection, $this->options( $connection ), 'reference_property', 'dealname' );
 	}
 
 	/**
@@ -883,26 +954,37 @@ final class HubSpotConnector extends AbstractSalesConnector {
 	}
 
 	/**
-	 * Archive a deal that must not stay (wrong money); a failure to archive is left for the next pass to report.
+	 * Archive a deal that must not stay (wrong money), with the line items made for it; a failure to archive is left for the next pass to report.
 	 *
-	 * @param HubSpotRecords $records Records.
-	 * @param string         $id      Deal id.
+	 * @param HubSpotRecords    $records Records.
+	 * @param string            $id      Deal id.
+	 * @param array<int,string> $lineIds Line item ids made for the deal.
 	 */
-	private function discard( HubSpotRecords $records, string $id ): void {
+	private function discard( HubSpotRecords $records, string $id, array $lineIds ): void {
 		try {
 			$records->archive( 'deals', $id );
 		} catch ( ApiException $exception ) {
 			unset( $exception );
 		}
+		$this->discardLineItems( $records, $lineIds );
 	}
 
 	/**
-	 * Seconds to wait when HubSpot said the daily quota is nearly used.
+	 * Archive line items that belong to no deal. Each is tried on its own so one refusal does not leave the rest behind.
 	 *
-	 * @param HubSpotRecords $records Records.
+	 * @param HubSpotRecords    $records Records.
+	 * @param array<int,string> $lineIds Line item ids.
 	 */
-	private function quotaWait( HubSpotRecords $records ): ?int {
-		$left = $records->dailyRemaining();
-		return null !== $left && $left < self::QUOTA_FLOOR ? 3600 : null;
+	private function discardLineItems( HubSpotRecords $records, array $lineIds ): void {
+		foreach ( $lineIds as $lineId ) {
+			if ( '' === $lineId ) {
+				continue;
+			}
+			try {
+				$records->archive( 'line_items', $lineId );
+			} catch ( ApiException $exception ) {
+				unset( $exception );
+			}
+		}
 	}
 }

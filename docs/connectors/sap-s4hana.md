@@ -5,7 +5,7 @@ catalog_row: SAP S/4HANA
 connection_method: cloud_app
 available: true
 verified: false
-hosts: []
+hosts: ["*.s4hana.cloud.sap"]
 terms_url: https://www.sap.com/about/legal/terms-of-use.html
 privacy_url: https://www.sap.com/about/legal/privacy.html
 developer_url: https://github.com/stud0709/sap-dev-release/wiki/Configuring-Access-to-S4HANA-Cloud-with-Basic-Auth
@@ -14,7 +14,7 @@ variants: []
 
 # SAP S/4HANA connector
 
-Connector id `sap-s4hana`, type ERP, contract version 1. Code: `includes/Connectors/SapS4Hana/` (shared ERP helpers in `includes/Connectors/EnterpriseCommon/`). It sends WooCommerce orders to SAP S/4HANA (Cloud public or private edition) as sales orders through the OData V2 API `API_SALES_ORDER_SRV`, refunds as credit memo requests through `API_CREDIT_MEMO_REQUEST_SRV`, and reads products and billing documents back. The tenant host is the merchant's own, so `hosts` in the front matter is empty and private addresses are refused unless the filter `estasoft_sync_allow_private_hosts` allows them.
+Connector id `sap-s4hana`, type ERP, contract version 1. Code: `includes/Connectors/SapS4Hana/` (shared ERP helpers in `includes/Connectors/EnterpriseCommon/`). It sends WooCommerce orders to SAP S/4HANA (Cloud public or private edition) as sales orders through the OData V2 API `API_SALES_ORDER_SRV`, refunds as credit memo requests through `API_CREDIT_MEMO_REQUEST_SRV`, and reads products and billing documents back. The public cloud API host (`myXXXXXX-api.s4hana.cloud.sap`) and its token service are under `*.s4hana.cloud.sap`, which the front matter `hosts` names. A private edition or on-premise system has an address the merchant types; it is allowed too (the connector accepts any public https address, `merchantHost`), and private network addresses are refused unless the filter `estasoft_sync_allow_private_hosts` allows them. The token URL is typed by the merchant and may point to another host; it is contacted only for the token.
 
 What it does not do, and why: it does not create customers (section 7), has no nightly check list (the net amount of S/4HANA cannot be compared with the shop's totals), reads no stock (its fields were not read), and no delivery tracking.
 
@@ -95,15 +95,17 @@ The order note, the payment reference and the buyer's details are not sent: the 
 
 Refund payload: `order_ref`, `date`, `reason`, `amount`, `refund_line[].{product, quantity, amount}`. The paths are the ones the shared ERP parser reads (`includes/Connectors/EnterpriseCommon/OrderParser.php`, `RefundParser.php`).
 
-Dates are sent as OData V2 `/Date(milliseconds)/` of midnight UTC. Money is an integer in minor units inside the plugin and a decimal string with the currency's exponent on the wire. Arabic and other scripts are sent as UTF-8. The sales order type is the option `sales_order_type` (default `OR`).
+Dates are sent as OData V2 `/Date(milliseconds)/` of midnight UTC; the day itself is the order date in the store's time zone (the WordPress setting), so a Gulf shop at UTC+4 does not get the previous day between midnight and 4 a.m. Money is an integer in minor units inside the plugin and a decimal string with the currency's exponent on the wire. Arabic and other scripts are sent as UTF-8. The sales order type is the option `sales_order_type` (default `OR`).
 
 Shipping, fees and discounts: S/4HANA prices them with condition types of the merchant's pricing procedure that this connector cannot know. An order with shipping, fees or a discount is sent with its goods lines only, the option `extra_charges` (`fail` default) refuses such an order with SYNC-VAL-002 naming the pricing procedure, and `ignore` lets it go on (the total check then decides).
 
-Options (connection settings, key `options`): `price_source` (`shop` default, or `system` to let S/4HANA price from its own master data), `price_condition` (`PR00`), `sales_order_type` (`OR`), `credit_memo_type` (`CR`), `total_mismatch` (`fail` default, `warn`), `extra_charges` (`fail`, `ignore`). An unknown SKU always stops the order with SYNC-MAP-001.
+Options (connection settings, key `options`): `total_field` (name of a free text header property, see section 6), `price_source` (`shop` default, or `system` to let S/4HANA price from its own master data), `price_condition` (`PR00`), `sales_order_type` (`OR`), `credit_memo_type` (`CR`), `total_mismatch` (`fail` default, `warn`), `extra_charges` (`fail`, `ignore`). An unknown SKU always stops the order with SYNC-MAP-001.
 
 ## 6. Duplicate protection
 
 `PurchaseOrderByCustomer = WC-{order id}` is the client reference. Before every create: `GET A_SalesOrder?$filter=PurchaseOrderByCustomer eq 'WC-123'&$select=SalesOrder,...` (the value is quoted by doubling `'`). If more than one row is found the oldest by `SalesOrder` is used. Credit memo requests use `WC-{refund id}` in the same way. No idempotency key exists. A create whose answer was lost is found by this search on the next pass. A reference longer than 35 characters is refused (SYNC-VAL-002); it is never cut.
+
+The engine links whatever `findExisting()` returns without calling `send()`, and `findExisting()` has no payload. If the option `total_field` names a free text property of the sales order header that the tenant has (for example a custom field `YY1_ShopNet_SDH`), the connector writes the shop's net amount there ("Shop net 63.00 AED", `price_source = shop` only) and `findExisting()` compares it with `TotalNetAmount` and `TransactionCurrency`: a difference is returned as SYNC-VAL-002 instead of a reference. The option is empty by default because a property the tenant does not have makes S/4HANA refuse the whole order (400); there is no property that every tenant has [not verified]. Without it nothing is compared by `findExisting()`.
 
 ## 7. Customers, taxes, currency and the total check
 
@@ -113,7 +115,7 @@ Options (connection settings, key `options`): `price_source` (`shop` default, or
 - Prices: with `price_source = shop` each item carries a price condition so SAP uses the shop's price. Whether that condition type accepts a manual value depends on the pricing procedure [not verified]. With `system` S/4HANA prices the order; the total check shows the difference.
 - Currency: `TransactionCurrency` is the order's; after creation it is read back, a different one fails the order.
 - Total check: the answer shown in the SAP tutorial has `TotalNetAmount` (net of tax) and no gross figure, and tax is S/4HANA's own, so the connector checks the net amount. With `price_source = shop` it compares `TotalNetAmount` with the sum of quantity times unit price of the lines it sent, in minor units; one minor unit is tolerated. With `price_source = system` S/4HANA prices the order, nothing is comparable, and the result carries a warning (`extra.warnings`). Tax can therefore not be checked against the WooCommerce total; that is a stated limit of this connector.
-- With `total_mismatch = fail` a new order that fails the check (currency, or net amount with `price_source = shop`) is removed (`DELETE A_SalesOrder('id')` with the ETag) and the item fails with SYNC-VAL-002, so the next pass starts clean. If the DELETE is refused the order stays and the message says so. Known limit: the engine links whatever `findExisting()` returns without calling `send()`, `findExisting()` has no payload, and S/4HANA has no field that every tenant has for the shop's total, so an order that stays after a refused DELETE is found by its reference on the next pass and linked without the check. The person who reads the first error must delete or correct it in S/4HANA.
+- With `total_mismatch = fail` a new order that fails the check (currency, or net amount with `price_source = shop`) is removed (`DELETE A_SalesOrder('id')` with the ETag) and the item fails with SYNC-VAL-002, so the next pass starts clean. If the DELETE is refused the order stays and the message says so. Known limit: without `total_field` (section 6), an order that stays after a refused DELETE is found by its reference on the next pass and linked by `findExisting()` without the check. The person who reads the first error must delete or correct it in S/4HANA. A pass never deletes an order it only found: if `send()` finds an order that fails the check, the item fails with SYNC-VAL-002 ("not made by this pass") and the order stays for a person.
 
 ## 8. Flow
 
@@ -125,7 +127,7 @@ Options (connection settings, key `options`): `price_source` (`shop` default, or
 
 Invoicing: S/4HANA creates billing documents through its own billing steps (the API `API_BILLING_DOCUMENT_SRV` is read-only apart from cancel); the connector never creates or cancels one. `findExisting()` returns an order as found once the sales order exists (nothing else is done by this connector; see the limit in section 7).
 
-Refund: the order must exist (else SYNC-VAL-002 on `order_ref`, before any create) and every refund line must name a product (an amount-only refund is SYNC-VAL-002: credit it in S/4HANA). `GET A_CreditMemoRequest` by `WC-{refund id}`; if none, `POST A_CreditMemoRequest` with type `CR` (option `credit_memo_type`), the connector's sales organization, distribution channel and division, the order's sold-to party and currency, `ReferenceSDDocument` = the sales order [inferred], `PurchaseOrderByCustomer` = `WC-{refund id}`, and one item per refund line (`Material`, `RequestedQuantity`, and a price condition `price_condition` whose rate is the line amount divided by the quantity). A credit memo request is a request document: S/4HANA turns it into a credit memo in its billing run.
+Refund: the order must exist (else SYNC-VAL-002 on `order_ref`, before any create) and every refund line must name a product (an amount-only refund is SYNC-VAL-002: credit it in S/4HANA). After the create the request's `TotalNetAmount` and `TransactionCurrency` are compared with the sum of the refund lines (one minor unit tolerated; `TotalNetAmount` on the request is [inferred]). With `total_mismatch = fail` a request this pass made that differs is deleted (`DELETE A_CreditMemoRequest('id')` with the ETag) and the item fails with SYNC-VAL-002; if the delete is refused the request stays and the message says so. A request that was only found is checked but never deleted. Tax is not part of the comparison. `GET A_CreditMemoRequest` by `WC-{refund id}`; if none, `POST A_CreditMemoRequest` with type `CR` (option `credit_memo_type`), the connector's sales organization, distribution channel and division, the order's sold-to party and currency, `ReferenceSDDocument` = the sales order [inferred], `PurchaseOrderByCustomer` = `WC-{refund id}`, and one item per refund line (`Material`, `RequestedQuantity`, and a price condition `price_condition` whose rate is the line amount divided by the quantity). A credit memo request is a request document: S/4HANA turns it into a credit memo in its billing run.
 
 Payments: not built.
 

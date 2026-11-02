@@ -210,6 +210,54 @@ final class Sage50UkTest extends Sage50TestCase {
 	}
 
 	/**
+	 * Windows-1252 cannot hold Arabic: the file has question marks, and the export says which characters of which order were replaced
+	 * (a notes file, and the preview); with UTF-8 nothing is replaced and there is no notes file.
+	 */
+	public function test_replaced_characters_are_reported(): void {
+		$payload                       = $this->order( '1020' );
+		$payload['line'][0]['name']    = 'طاولة Oak';
+		$this->send( $this->uk(), $payload );
+		$file  = $this->file();
+		$this->assertSame( '????? Oak', $this->records( $file['bytes'] )[1][6] );
+		$this->assertArrayHasKey( 'Notes', $file['attachments'] );
+		$this->assertStringContainsString( "Order 1020: ط, ا, و, ل, ة\n", $file['attachments']['Notes'] );
+		$preview = $this->connector->previewText( $this->deps->exports->openBatch( 7 ) );
+		$this->assertStringContainsString( '5 characters cannot be written in Windows-1252 and become question marks (1 orders).', $preview );
+		$this->assertStringContainsString( 'Order 1020: ط, ا, و, ل, ة', $preview );
+
+		$this->deps->exports->closeBatch( 7 );
+		$this->send( $this->uk( array( 'encoding' => 'utf-8-bom' ) ), $payload );
+		$this->assertArrayNotHasKey( 'Notes', $this->file()['attachments'] );
+	}
+
+	/**
+	 * No heading row is written unless the person asks for one: no source says the audit-trail import skips the first row, and a heading
+	 * row that is not skipped would be read as a transaction. The setting on the screen says No too.
+	 */
+	public function test_heading_row_is_off_by_default(): void {
+		$connection = FakeExportKit::connection( 'sage50-export', array( 'edition' => 'uk', 'currency' => 'GBP' ) );
+		$this->send( $connection, $this->order() );
+		$rows = $this->records( $this->file()['bytes'] );
+		$this->assertCount( 3, $rows, 'Three rows for the three lines and no heading row.' );
+		$this->assertSame( 'SI', $rows[0][0] );
+
+		$field = array_values( array_filter( $this->connector->credentialFields(), static fn( $field ): bool => 'header_row' === $field->name ) );
+		$this->assertCount( 1, $field );
+		$this->assertSame( 'no', $field[0]->default );
+		$this->assertStringContainsString( 'confirmed', $field[0]->hint );
+	}
+
+	/**
+	 * The heading row can be switched on.
+	 */
+	public function test_with_heading_row(): void {
+		$this->send( $this->uk( array( 'header_row' => 'yes' ) ), $this->order() );
+		$rows = $this->records( $this->file()['bytes'] );
+		$this->assertCount( 4, $rows );
+		$this->assertSame( 'Type', $rows[0][0] );
+	}
+
+	/**
 	 * The heading row can be switched off.
 	 */
 	public function test_without_heading_row(): void {

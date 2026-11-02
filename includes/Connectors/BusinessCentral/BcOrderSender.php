@@ -149,8 +149,10 @@ final class BcOrderSender {
 		$fresh = $docs->header( $type, $id ) ?? $header;
 		$check = BcTotals::compare( $fresh, $order->expectedMinor(), $order->currency, $order->pricesIncludeTax, 'fail' === $this->options->totalMismatch(), $this->system );
 		if ( $check['error'] instanceof ConnectorError ) {
+			// No marker: a document that failed its check is not finished and is not linked on the next try.
 			return SendResult::failure( $check['error'] );
 		}
+		$work = $docs->ensureMarker( $type, $id, $ref, count( $plan ), $order->currency ) || $work;
 		if ( 'order' === $this->options->documents() ) {
 			$result = BcRefs::document( $type, $fresh, $order->currency, $check['warning'] );
 			return $work ? SendResult::created( $result ) : SendResult::existing( $result );

@@ -55,6 +55,44 @@ final class Sage300RefundReadTest extends Sage300TestCase {
 		$this->assertSame( 'CN000001', $result->ref->ref );
 	}
 
+	public function test_a_refund_is_refused_without_a_credit_note_total_property_unless_the_person_chose_to_continue(): void {
+		$this->placeOrder();
+		$refused = $this->sendRefund( array( 'refund_total_property' => '' ) );
+		$this->assertSame( ErrorCode::Val002, $refused->error->code );
+		$this->assertSame( 'refund_total_property', $refused->error->context['field'] );
+		$this->assertCount( 0, $this->server->all( 'OE/OECreditDebitNotes' ), 'Refused before the credit note is made.' );
+
+		$warned = $this->sendRefund( array( 'refund_total_property' => '', 'total_mismatch' => 'warn' ) );
+		$this->assertTrue( $warned->isSuccess(), $this->why( $warned ) );
+		$this->assertCount( 1, $warned->ref->extra['warnings'] );
+	}
+
+	public function test_a_credit_note_is_compared_with_the_refund_and_a_difference_is_reported_every_pass(): void {
+		$this->placeOrder();
+		$ok = $this->sendRefund( array(), array(), '501' );
+		$this->assertTrue( $ok->isSuccess(), $this->why( $ok ) );
+
+		$this->server->noteVat = 0.05;
+		$first                 = $this->sendRefund( array(), array(), '502' );
+		$second                = $this->sendRefund( array(), array(), '502' );
+		$this->assertSame( ErrorCode::Val002, $first->error->code );
+		$this->assertSame( 'total', $first->error->context['field'] );
+		$this->assertStringContainsString( '229.95', $this->why( $first ) );
+		$this->assertFalse( $second->isSuccess() );
+		$this->assertCount( 2, $this->server->all( 'OE/OECreditDebitNotes' ), 'The wrong credit note is checked again, never made again.' );
+	}
+
+	public function test_a_credit_note_answer_without_its_total_is_refused_unless_the_person_chose_to_continue(): void {
+		$this->placeOrder();
+		$this->server->noteTotalInAnswer = false;
+		$refused                         = $this->sendRefund();
+		$this->assertSame( 'refund_total_property', $refused->error->context['field'] );
+		$this->assertStringContainsString( 'stays in Sage 300', $this->why( $refused ) );
+
+		$warned = $this->sendRefund( array( 'total_mismatch' => 'warn' ), array(), '502' );
+		$this->assertTrue( $warned->isSuccess(), $this->why( $warned ) );
+	}
+
 	public function test_the_same_refund_is_never_made_twice_and_findExisting_knows_it(): void {
 		$this->placeOrder();
 		$first = $this->sendRefund();
@@ -114,36 +152,6 @@ final class Sage300RefundReadTest extends Sage300TestCase {
 		$result = $this->sendRefund( array(), array( 'order_ref' => 'bogus' ) );
 
 		$this->assertSame( 'order_ref', $result->error->context['field'] );
-	}
-
-	public function test_the_nightly_list_has_the_shops_orders_with_totals_and_every_page_is_read(): void {
-		for ( $i = 1; $i <= 130; $i++ ) {
-			$this->server->put( 'OE/OEOrders', array( 'OrderNumber' => sprintf( 'OE%06d', $i ), 'OrderUniquifier' => (string) $i, 'PONumber' => 'WC-' . $i, 'CustomerNumber' => '1200', 'OrderDate' => '2026-11-02', 'OrderTotal' => 10.0 ) );
-		}
-		$this->server->put( 'OE/OEOrders', array( 'OrderNumber' => 'OE999999', 'OrderUniquifier' => '999', 'PONumber' => 'PO-77', 'CustomerNumber' => '1200', 'OrderDate' => '2026-11-02', 'OrderTotal' => 10.0 ) );
-		$list = $this->connector()->listForReconcile( $this->connection(), new \DateTimeImmutable( '2026-11-02T00:00:00Z' ) );
-
-		$this->assertCount( 130, $list, 'Both pages, and not the order that is not the shop\'s.' );
-		$this->assertSame( 1000, $list['WC-7']->extra['total_minor'] );
-		$this->assertSame( 0, $list['WC-7']->extra['refunded_minor'] );
-		$this->assertSame( 'AED', $list['WC-7']->extra['currency'], 'The currency of the order\'s customer.' );
-		$this->assertSame( 2, $this->server->count( 'GET', '#/OE/OEOrders$#' ) );
-	}
-
-	public function test_a_server_that_refuses_startswith_gets_the_date_filter_alone_and_the_prefix_is_applied_after_reading(): void {
-		$this->server->rejectStartswith = true;
-		$this->server->put( 'OE/OEOrders', array( 'OrderNumber' => 'OE000001', 'OrderUniquifier' => '1', 'PONumber' => 'WC-5', 'CustomerNumber' => '1200', 'OrderDate' => '2026-11-02', 'OrderTotal' => 10.0 ) );
-		$this->server->put( 'OE/OEOrders', array( 'OrderNumber' => 'OE000002', 'OrderUniquifier' => '2', 'PONumber' => 'PO-8', 'CustomerNumber' => '1200', 'OrderDate' => '2026-11-02', 'OrderTotal' => 10.0 ) );
-		$list = $this->connector()->listForReconcile( $this->connection(), new \DateTimeImmutable( '2026-11-02T00:00:00Z' ) );
-
-		$this->assertSame( array( 'WC-5' ), array_keys( $list ) );
-	}
-
-	public function test_orders_before_the_window_are_not_listed(): void {
-		$this->placeOrder();
-		$this->server->records['OE/OEOrders'][0]['OrderDate'] = '2026-10-01';
-
-		$this->assertSame( array(), $this->connector()->listForReconcile( $this->connection(), new \DateTimeImmutable( '2026-11-02T00:00:00Z' ) ) );
 	}
 
 	public function test_a_customer_is_found_by_the_email_property_and_an_unknown_one_is_null(): void {

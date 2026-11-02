@@ -434,6 +434,19 @@ final class Sage300OrderSender {
 	private function verify( array $order, OrderPayload $payload, array &$warnings ): ?ConnectorError {
 		$total = $this->totalOf( $order );
 		if ( null === $total ) {
+			$number = trim( (string) ( $order['OrderNumber'] ?? $order['OrderUniquifier'] ?? '' ) );
+			if ( ( new TotalCheck( $this->options, $this->amounts, $this->system ) )->isStrict() ) {
+				return Problems::refused(
+					$this->system,
+					'total_property',
+					sprintf(
+						/* translators: %s: order number. */
+						__( 'Order %s was made but its answer has no total (OrderTotal, TotalOrderAmount or OrderTotalAmount), so it could not be compared with the shop; price lists in Sage 300 can change the prices unnoticed. The order stays in Sage 300. Enter the property that holds the total in "total_property", or choose "Continue with a warning".', 'estasoft-erp-crm-sync-engine' ),
+						'' !== $number ? $number : $payload->clientRef
+					),
+					'total missing'
+				);
+			}
 			$warnings[] = __( 'Sage 300 did not return an order total, so the total was not verified.', 'estasoft-erp-crm-sync-engine' );
 			return null;
 		}

@@ -334,12 +334,17 @@ abstract class AbstractApiConnector implements ConnectorInterface {
 	}
 
 	/**
-	 * Cheap health probe. The default is identify(); override with a lighter call where the vendor has one.
+	 * Cheap health probe, run by the circuit breaker. When `meta()` declares a `pingPath` this is one GET of it and nothing else; without one it
+	 * falls back to identify(), which may be several calls. Declare `pingPath`, or override ping() with a lighter call.
 	 *
 	 * @param Connection $connection Connection.
 	 */
 	public function ping( Connection $connection ): bool {
 		try {
+			$path = $this->connectorMeta()->pingPath;
+			if ( null !== $path && '' !== $path ) {
+				return $this->api( $connection )->get( $path )->isSuccess();
+			}
 			return $this->identify( $connection )->ok;
 		} catch ( \Throwable $throwable ) {
 			unset( $throwable );

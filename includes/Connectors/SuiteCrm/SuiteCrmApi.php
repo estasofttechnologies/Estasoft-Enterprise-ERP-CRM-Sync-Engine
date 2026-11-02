@@ -231,6 +231,39 @@ final class SuiteCrmApi {
 	}
 
 	/**
+	 * Whether a module has a field SuiteCRM can filter on: one filtered read of a single record. SuiteCRM answers an unknown filter field
+	 * with an error that names it.
+	 *
+	 * @param string $module Module.
+	 * @param string $field  Field name.
+	 *
+	 * @throws ApiException For a failure that is not about the field (a lapsed sign-in, the network).
+	 */
+	public function fieldExists( string $module, string $field ): bool {
+		try {
+			$this->call(
+				'get',
+				'V8/module/' . rawurlencode( $module ),
+				array(
+					'page'   => array(
+						'size'   => 1,
+						'number' => 1,
+					),
+					'filter' => array( $field => array( 'eq' => 'WC-0' ) ),
+				),
+				null,
+				array( 'accept' => self::MEDIA )
+			);
+			return true;
+		} catch ( ApiException $exception ) {
+			if ( ErrorCode::Val002 === $exception->error()->code ) {
+				return false;
+			}
+			throw $exception;
+		}
+	}
+
+	/**
 	 * The user the token belongs to.
 	 *
 	 * @return array<string,mixed> Attributes of the user (empty when SuiteCRM gives none).

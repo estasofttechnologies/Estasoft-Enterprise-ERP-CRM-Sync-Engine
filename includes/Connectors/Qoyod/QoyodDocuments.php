@@ -200,7 +200,7 @@ final class QoyodDocuments {
 	 */
 	private function search( ApiClient $api, string $path, string $root, string $reference ): array {
 		$found = array();
-		foreach ( $this->pager->all( $api, $path, array( 'q' => array( 'reference_eq' => $reference ) ), $root ) as $row ) {
+		foreach ( $this->pager->all( $api, $path, array( 'q' => array( 'reference_eq' => $reference ) ), $root, static fn( array $row ): bool => QoyodPayloadReader::text( $row['reference'] ?? '' ) === $reference ) as $row ) {
 			$record = new QoyodRecord( $row );
 			if ( $record->reference() === $reference ) {
 				$found[] = $record;

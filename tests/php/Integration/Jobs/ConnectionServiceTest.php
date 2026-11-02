@@ -481,7 +481,7 @@ final class ConnectionServiceTest extends JobsTestCase {
 		$this->assertTrue( $catalog[0]['available'], 'its connector is in the registry' );
 		$this->assertFalse( $catalog[1]['available'] );
 		$this->assertNull( $catalog[1]['connector'] );
-		$this->assertSame( array( 'name', 'type', 'regions', 'connector', 'connection_method', 'needs', 'available', 'verified', 'variants', 'hosts', 'terms_url', 'privacy_url', 'developer_url', 'steps', 'wave', 'credential_fields', 'can_sign_in', 'auth_style' ), array_keys( $catalog[0] ) );
+		$this->assertSame( array( 'name', 'type', 'regions', 'connector', 'connection_method', 'needs', 'available', 'unavailable_reason', 'verified', 'variants', 'hosts', 'terms_url', 'privacy_url', 'developer_url', 'steps', 'wave', 'credential_fields', 'can_sign_in', 'auth_style' ), array_keys( $catalog[0] ) );
 
 		add_filter(
 			'estasoft_sync_catalog',
@@ -502,6 +502,23 @@ final class ConnectionServiceTest extends JobsTestCase {
 	 */
 	private function serviceWith( array $rows, ?CatalogForms $forms = null ): ConnectionService {
 		return new ConnectionService( $this->h->connections, $this->h->connectionSettings, $this->h->mappings, fn() => $this->h->registry, $this->h->box, $this->h->logger, $this->h->clock, $this->h->pause, $this->j->signIns, static fn(): array => $rows, $forms );
+	}
+
+	public function test_the_reason_a_system_cannot_be_chosen_is_sent_apart_from_the_hand_written_needs(): void {
+		$service = $this->serviceWith(
+			array(
+				array( 'name' => 'SMACC', 'type' => 'accounting', 'connector' => 'fake', 'connection_method' => 'none', 'needs' => 'Hand-written text.', 'selectable' => false, 'unavailable_reason' => 'No API is published yet.' ),
+				array( 'name' => 'Other', 'type' => 'erp', 'connector' => 'fake', 'connection_method' => 'key', 'needs' => 'An API key.' ),
+				array( 'name' => 'Family', 'type' => 'erp', 'connector' => null, 'connection_method' => 'key', 'variants' => array( array( 'id' => 'fake', 'label' => 'A', 'unavailable_reason' => 'Edition A is not ready.' ), array( 'id' => 'nope', 'label' => 'B' ) ) ),
+			)
+		);
+		$catalog = $service->catalog();
+		$this->assertFalse( $catalog[0]['available'] );
+		$this->assertSame( 'Hand-written text.', $catalog[0]['needs'], 'The hand-written text is untouched.' );
+		$this->assertSame( 'No API is published yet.', $catalog[0]['unavailable_reason'] );
+		$this->assertSame( '', $catalog[1]['unavailable_reason'], 'Always a string; empty when there is nothing to say.' );
+		$this->assertSame( 'Edition A is not ready.', $catalog[2]['variants'][0]['unavailable_reason'] );
+		$this->assertArrayNotHasKey( 'unavailable_reason', $catalog[2]['variants'][1], 'A variant carries one only when its document has one.' );
 	}
 
 	public function test_an_available_row_carries_the_connect_form_and_a_missing_one_has_none(): void {

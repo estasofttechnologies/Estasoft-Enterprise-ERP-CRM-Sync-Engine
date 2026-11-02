@@ -17,8 +17,9 @@ use Estasoft\SyncEngine\Contract\ConnectorError;
 use Estasoft\SyncEngine\Domain\ErrorCode;
 
 /**
- * Daftra documents a `keywords` search on clients and no email filter. A client is found by searching the email as keywords and checking every
- * page of the answer locally for an exact, case-insensitive email; a miss creates the client.
+ * The filtering page documents `filter[field]=value` on list endpoints, so a client is looked for first with `filter[email]=` and, when that gives
+ * no exact match (the filter may be case-sensitive or unsupported for clients), with the `keywords` search. Every page of each answer is checked
+ * locally for an exact, case-insensitive email; a miss in both creates the client.
  */
 final class DaftraClients {
 
@@ -44,9 +45,11 @@ final class DaftraClients {
 		if ( '' === $email ) {
 			return null;
 		}
-		foreach ( $this->pager->all( $api, 'clients.json', array( 'keywords' => $email ), 'Client' ) as $row ) {
-			if ( strtolower( DaftraPayloadReader::text( $row['email'] ?? '' ) ) === $email ) {
-				return $row;
+		foreach ( array( array( 'filter' => array( 'email' => $email ) ), array( 'keywords' => $email ) ) as $query ) {
+			foreach ( $this->pager->all( $api, 'clients.json', $query, 'Client' ) as $row ) {
+				if ( strtolower( DaftraPayloadReader::text( $row['email'] ?? '' ) ) === $email ) {
+					return $row;
+				}
 			}
 		}
 		return null;

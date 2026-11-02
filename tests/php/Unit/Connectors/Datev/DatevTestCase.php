@@ -123,7 +123,7 @@ abstract class DatevTestCase extends TestCase {
 	/**
 	 * Build the file of the open batch.
 	 *
-	 * @return array{bytes:string,mime:string,left_out:array<int,array{item_id:int,order:string,reason:string}>}
+	 * @return array{bytes:string,mime:string,left_out:array<int,array{item_id:int,order:string,reason:string}>,attachments:array<string,string>}
 	 */
 	protected function file(): array {
 		$batch = $this->deps->exports->openBatch( 7 );
@@ -132,6 +132,7 @@ abstract class DatevTestCase extends TestCase {
 			'bytes'    => FakeExportKit::bytes( $file ),
 			'mime'     => $file->format->mime,
 			'left_out' => $batch->leftOut(),
+			'attachments' => array_column( $file->attachments, 'contents', 'name' ),
 		);
 	}
 

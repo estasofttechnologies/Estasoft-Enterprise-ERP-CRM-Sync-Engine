@@ -190,13 +190,35 @@ final class SuiteCrmRecords {
 	}
 
 	/**
-	 * The oldest opportunity of an order reference.
+	 * The oldest opportunity of an order reference: found by the dedicated field when the option names one, else by the start of the name.
 	 *
 	 * @param string $reference WC-{id}.
 	 * @return array{id:string,attributes:array<string,mixed>}|null
 	 */
 	public function opportunity( string $reference ): ?array {
+		$field = $this->referenceField();
+		if ( '' !== $field ) {
+			foreach ( $this->api->find( 'Opportunities', array( array( $field, 'eq', $reference ) ), 'and', 'date_entered' ) as $record ) {
+				if ( trim( (string) ( $record['attributes'][ $field ] ?? '' ) ) === $reference ) {
+					return $record;
+				}
+			}
+		}
 		return $this->byReferenceName( 'Opportunities', $reference );
+	}
+
+	/**
+	 * The custom text field of Opportunities that also holds the reference (option `reference_field`), or an empty text. A deal name can be
+	 * edited by anyone, a dedicated field is a safer key. The name must be a plain field name.
+	 *
+	 * @throws SuiteCrmFailure When the option is not a field name.
+	 */
+	public function referenceField(): string {
+		$field = trim( $this->options->text( 'reference_field' ) );
+		if ( '' !== $field && 1 !== preg_match( '/^[A-Za-z_][A-Za-z0-9_]{0,63}$/', $field ) ) {
+			SuiteCrmFailure::refuse( 'reference_field', __( 'The option reference_field must be the name of a text field of Opportunities, such as wc_reference_c.', 'estasoft-erp-crm-sync-engine' ) );
+		}
+		return $field;
 	}
 
 	/**

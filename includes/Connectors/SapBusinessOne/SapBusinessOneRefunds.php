@@ -14,6 +14,8 @@ defined( 'ABSPATH' ) || exit;
 use Estasoft\SyncEngine\Connectors\EnterpriseCommon\Amounts;
 use Estasoft\SyncEngine\Connectors\EnterpriseCommon\Problem;
 use Estasoft\SyncEngine\Connectors\EnterpriseCommon\RefundData;
+use Estasoft\SyncEngine\Connectors\EnterpriseCommon\ShopTotalMarker;
+use Estasoft\SyncEngine\Connectors\EnterpriseCommon\TotalCheck;
 use Estasoft\SyncEngine\Connectors\EnterpriseCommon\Warnings;
 use Estasoft\SyncEngine\Connectors\Support\ApiException;
 use Estasoft\SyncEngine\Contract\ExternalRef;
@@ -32,6 +34,7 @@ final class SapBusinessOneRefunds {
 	 * @param SapBusinessOneOrders  $orders  Orders.
 	 * @param SapBusinessOneOptions $options Options.
 	 * @param Amounts               $amounts Conversion helper.
+	 * @param ShopTotalMarker       $marker  Shop total in the remarks.
 	 * @param string                $system  System name for messages.
 	 */
 	public function __construct(
@@ -39,6 +42,7 @@ final class SapBusinessOneRefunds {
 		private readonly SapBusinessOneOrders $orders,
 		private readonly SapBusinessOneOptions $options,
 		private readonly Amounts $amounts,
+		private readonly ShopTotalMarker $marker,
 		private readonly string $system
 	) {
 	}
@@ -79,13 +83,19 @@ final class SapBusinessOneRefunds {
 			$problem = Problem::validation( $this->system, 'order_ref', __( 'The order of this refund is not in SAP yet.', 'estasoft-erp-crm-sync-engine' ) );
 			throw new ApiException( $problem ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 		}
+		if ( null === $this->orders->invoiceOf( $refund->orderRef ) && ! $this->options->refundWithoutInvoice() ) {
+			$problem = Problem::validation( $this->system, 'invoice', __( 'SAP has no A/R invoice for this order, so a credit note would book against a sale that was never invoiced. Set documents to "order and invoice", or turn on refund_without_invoice, or credit it in SAP.', 'estasoft-erp-crm-sync-engine' ) );
+			throw new ApiException( $problem ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
+		}
 		$currency = $this->orders->currencyOf( $order );
+		$expected = $this->expected( $refund );
+		$last     = $this->marker->append( '', $expected, $currency );
 		$remarks  = trim( sprintf( 'Refund %s of order %s: %s', $refund->reference, $refund->orderRef, $refund->reason ), ' :' );
 		$body     = array(
 			'CardCode'      => (string) ( $order['CardCode'] ?? '' ),
 			'NumAtCard'     => $refund->reference,
 			'DocCurrency'   => $currency,
-			'Comments'      => $warnings->fit( 'Comments', $remarks, 254 ),
+			'Comments'      => $this->marker->append( $warnings->fit( 'Comments', $remarks, 254 - ( '' === $last ? 0 : strlen( $last ) + 1 ) ), $expected, $currency ),
 			'DocumentLines' => $this->lines( $refund, $currency ),
 		);
 		if ( '' !== $refund->date ) {
@@ -94,6 +104,77 @@ final class SapBusinessOneRefunds {
 		}
 		$created = $this->gateway->create( 'CreditNotes', $body );
 		return isset( $created['DocEntry'] ) ? $created : ( $this->find( $refund->reference ) ?? $created );
+	}
+
+	/**
+	 * What the credit note should come to in minor units: the refund amount, else the sum of its lines.
+	 *
+	 * @param RefundData $refund Payload.
+	 */
+	public function expected( RefundData $refund ): ?int {
+		if ( null !== $refund->amountMinor && $refund->amountMinor > 0 ) {
+			return $refund->amountMinor;
+		}
+		$sum = 0;
+		foreach ( $refund->lines as $line ) {
+			$sum += $line->amountMinor;
+		}
+		return $sum > 0 ? $sum : null;
+	}
+
+	/**
+	 * Compare a credit note with the refund: currency, and total within one minor unit. A credit note is a final document, so it is never
+	 * reported as synced unchecked.
+	 *
+	 * @param array<string,mixed> $note     Credit note.
+	 * @param int|null            $expected Refund amount in minor units.
+	 * @param string              $currency ISO code of the order.
+	 * @param TotalCheck          $total    Total check.
+	 * @param Warnings            $warnings Receives accepted differences.
+	 */
+	public function check( array $note, ?int $expected, string $currency, TotalCheck $total, Warnings $warnings ): ?\Estasoft\SyncEngine\Contract\ConnectorError {
+		$actual = strtoupper( (string) ( $note['DocCurrency'] ?? '' ) );
+		if ( '' !== $actual && strtoupper( $currency ) !== $actual ) {
+			return Problem::validation(
+				$this->system,
+				'DocCurrency',
+				sprintf(
+					/* translators: 1: currency in SAP, 2: currency of the order. */
+					__( 'SAP holds the credit note in %1$s but the order is in %2$s.', 'estasoft-erp-crm-sync-engine' ),
+					$actual,
+					$currency
+				)
+			);
+		}
+		$figure = $this->orders->totalOf( $note, $currency );
+		return $total->run( $expected, null === $figure ? null : abs( $figure ), $currency, $warnings, __( 'credit note total', 'estasoft-erp-crm-sync-engine' ) );
+	}
+
+	/**
+	 * The check findExisting() can make without a payload: the credit note total against the refund total written in its remarks.
+	 *
+	 * @param array<string,mixed> $note  Credit note.
+	 * @param TotalCheck          $total Total check.
+	 */
+	public function checkMarked( array $note, TotalCheck $total ): ?\Estasoft\SyncEngine\Contract\ConnectorError {
+		$marked = $this->marker->read( (string) ( $note['Comments'] ?? '' ) );
+		return null === $marked ? null : $this->check( $note, $marked['minor'], $marked['currency'], $total, new Warnings() );
+	}
+
+	/**
+	 * Cancel a credit note that failed the check (the Cancel action makes the cancelling document).
+	 *
+	 * @param array<string,mixed> $note Credit note.
+	 * @return bool False when SAP refused (the credit note stays and a person cancels it).
+	 */
+	public function cancel( array $note ): bool {
+		try {
+			$this->gateway->post( 'CreditNotes(' . rawurlencode( (string) ( $note['DocEntry'] ?? '' ) ) . ')/Cancel', array() );
+			return true;
+		} catch ( ApiException $exception ) {
+			unset( $exception );
+			return false;
+		}
 	}
 
 	/**

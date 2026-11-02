@@ -121,6 +121,34 @@ final class WafeqDocuments {
 	}
 
 	/**
+	 * Ask Wafeq to report a finalized invoice to the tax authority. The answer to a first request is documented as status `PENDING` (the
+	 * authority's verdict is still outstanding) and a request made while a report runs as 409 `report_in_progress` [documented].
+	 *
+	 * @param ApiClient $api Client.
+	 * @param string    $id  Invoice id.
+	 * @param string    $key Idempotency key.
+	 * @return string `pending` (or the status Wafeq names, lower case), `in_progress` or `requested` when the answer names none.
+	 *
+	 * @throws ApiException On failure other than a report already running.
+	 */
+	public function report( ApiClient $api, string $id, string $key ): string {
+		$response = $api->post(
+			'invoices/' . rawurlencode( $id ) . '/tax-authority/report/',
+			array(),
+			null,
+			array(
+				'idempotency_key' => $key,
+				'allow'           => array( 409 ),
+			)
+		);
+		if ( 409 === $response->status() ) {
+			return 'in_progress';
+		}
+		$status = strtolower( WafeqPayloadReader::text( $response->json()['status'] ?? '' ) );
+		return '' !== $status ? $status : 'requested';
+	}
+
+	/**
 	 * Change fields of an invoice.
 	 *
 	 * @param ApiClient           $api     Client.

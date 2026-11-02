@@ -57,11 +57,57 @@ final class QoyodOrderFlowTest extends QoyodTestCase {
 		}
 	}
 
-	public function test_the_other_documented_address_can_be_chosen(): void {
-		$this->server->hosts = array( 'www.qoyod.com' );
-		$result              = $this->connector()->send( $this->connection( array( 'endpoint' => 'www.qoyod.com' ) ), $this->item(), $this->payload() );
+	public function test_the_only_documented_address_is_used_whatever_the_settings_say(): void {
+		$result = $this->connector()->send( $this->connection( array( 'endpoint' => 'www.qoyod.com' ) ), $this->item(), $this->payload() );
 		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
-		$this->assertStringStartsWith( 'https://www.qoyod.com/2.0/', $this->kit->http->requests[0]['url'] );
+		foreach ( $this->kit->http->requests as $request ) {
+			$this->assertStringStartsWith( 'https://api.qoyod.com/2.0/', $request['url'] );
+		}
+	}
+
+	public function test_a_line_without_a_tax_stops_the_order_before_anything_is_created_and_is_never_approved_as_zero_rated(): void {
+		$payload = $this->payload();
+		unset( $payload['lines'][0]['tax_code'] );
+		$result = $this->connector()->send( $this->connection(), $this->item(), $payload );
+		$this->assertFalse( $result->isSuccess() );
+		$this->assertSame( ErrorCode::Val002, $result->error->code );
+		$this->assertSame( 'lines[].tax_code', $result->error->context['field'] );
+		$this->assertCount( 0, $this->requests( 'POST', '#.#' ) );
+		$this->assertCount( 0, $this->server->all( 'invoices' ) );
+	}
+
+	public function test_the_merchant_can_choose_zero_rated_or_exempt_for_lines_without_a_tax(): void {
+		$payload = $this->payload();
+		unset( $payload['lines'][0]['tax_code'] );
+		$zero = $this->connector()->send( $this->connection( array( 'untaxed_rows' => 'zero_rated' ) ), $this->item(), $payload );
+		$this->assertTrue( $zero->isSuccess(), (string) $zero->error?->message() );
+		$this->assertSame( '2', $this->bodyOf( $this->requests( 'POST', '#/2.0/invoices$#' )[0] )['invoice']['line_items_attributes'][0]['tax_id'] );
+		$exempt = $this->connector()->send( $this->connection( array( 'untaxed_rows' => 'exempt' ) ), $this->item( EntityType::Order, '2' ), $payload );
+		$this->assertTrue( $exempt->isSuccess(), (string) $exempt->error?->message() );
+		$this->assertSame( '3', $this->bodyOf( $this->requests( 'POST', '#/2.0/invoices$#' )[1] )['invoice']['line_items_attributes'][0]['tax_id'] );
+	}
+
+	public function test_a_server_that_ignores_the_search_filter_still_gives_the_right_invoice_on_a_small_account(): void {
+		$this->server->ignoreFilters = true;
+		$connector                   = $this->connector();
+		$first                       = $connector->send( $this->connection(), $this->item(), $this->payload() );
+		$this->assertTrue( $first->isSuccess(), (string) $first->error?->message() );
+		$second = $connector->send( $this->connection(), $this->item(), $this->payload() );
+		$this->assertTrue( $second->alreadyExisted );
+		$this->assertCount( 1, $this->server->all( 'invoices' ) );
+	}
+
+	public function test_a_server_that_ignores_the_search_filter_on_a_huge_account_says_so_instead_of_blaming_the_search(): void {
+		$this->server->ignoreFilters = true;
+		$this->server->pageSize      = 2;
+		for ( $i = 1; $i <= 260; ++$i ) {
+			$this->server->tables['invoices'][ 5000 + $i ] = array( 'id' => 5000 + $i, 'reference' => 'OTHER-' . $i, 'status' => 'Approved', 'total' => '1.00', 'contact_id' => 1, 'description' => '', 'issue_date' => '2026-01-01', 'line_items' => array() );
+		}
+		$result = $this->connector()->send( $this->connection(), $this->item(), $this->payload() );
+		$this->assertFalse( $result->isSuccess() );
+		$this->assertSame( ErrorCode::Val002, $result->error->code );
+		$this->assertStringContainsString( 'did not apply the search filter', $result->error->context['reason'] );
+		$this->assertCount( 0, $this->requests( 'POST', '#.#' ), 'Nothing is created when the lookup could not finish.' );
 	}
 
 	public function test_a_second_send_links_to_the_same_invoice_and_writes_nothing(): void {

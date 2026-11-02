@@ -41,13 +41,14 @@ final class QuickBooksDocumentBuilder {
 	 * @param string                                 $customerId QuickBooks customer Id.
 	 * @param string                                 $currency   Currency of the document.
 	 * @param string                                 $home       Home currency of the company.
+	 * @param bool                                   $multi      Whether the company uses more than one currency (then every document names its currency).
 	 * @param bool                                   $us         Whether the company is a US company.
 	 * @param array<string,array<string,mixed>>      $items      Items by lower-case SKU.
-	 * @param array<string,array<string,mixed>|null> $named  Items named in the options, by kind (shipping, fee, discount, generic).
+	 * @param array<string,array<string,mixed>|null> $named      Items named in the options, by kind (shipping, fee, discount, generic).
 	 * @param array<int,string>                      $warnings   Receives notes about cut values.
 	 * @return array<string,mixed>|ConnectorError
 	 */
-	public function invoice( QuickBooksOrderPayload $payload, string $customerId, string $currency, string $home, bool $us, array $items, array $named, array &$warnings ): array|ConnectorError {
+	public function invoice( QuickBooksOrderPayload $payload, string $customerId, string $currency, string $home, bool $multi, bool $us, array $items, array $named, array &$warnings ): array|ConnectorError {
 		$cut   = false;
 		$lines = array();
 		foreach ( $payload->lines as $line ) {
@@ -74,7 +75,7 @@ final class QuickBooksDocumentBuilder {
 			$invoice['TxnDate'] = $payload->date;
 			$invoice['DueDate'] = $this->dueDate( $payload->date );
 		}
-		if ( '' !== $currency && $currency !== $home ) {
+		if ( '' !== $currency && ( $multi || $currency !== $home ) ) {
 			$invoice['CurrencyRef'] = array( 'value' => $currency );
 		}
 		if ( ! $us ) {
@@ -104,13 +105,14 @@ final class QuickBooksDocumentBuilder {
 	 * @param array<string,mixed>                    $invoice    The refunded order's invoice.
 	 * @param string                                 $currency   Currency of the invoice.
 	 * @param string                                 $home       Home currency of the company.
+	 * @param bool                                   $multi      Whether the company uses more than one currency (then every document names its currency).
 	 * @param bool                                   $us         Whether the company is a US company.
 	 * @param array<string,array<string,mixed>>      $items      Items by lower-case SKU.
-	 * @param array<string,array<string,mixed>|null> $named  Items named in the options, by kind.
+	 * @param array<string,array<string,mixed>|null> $named      Items named in the options, by kind.
 	 * @param array<int,string>                      $warnings   Receives notes about cut values.
 	 * @return array<string,mixed>|ConnectorError
 	 */
-	public function creditMemo( QuickBooksRefundPayload $payload, array $invoice, string $currency, string $home, bool $us, array $items, array $named, array &$warnings ): array|ConnectorError {
+	public function creditMemo( QuickBooksRefundPayload $payload, array $invoice, string $currency, string $home, bool $multi, bool $us, array $items, array $named, array &$warnings ): array|ConnectorError {
 		$cut   = false;
 		$lines = array();
 		foreach ( $payload->lines as $index => $line ) {
@@ -167,7 +169,7 @@ final class QuickBooksDocumentBuilder {
 		if ( '' !== $payload->date ) {
 			$memo['TxnDate'] = $payload->date;
 		}
-		if ( '' !== $currency && $currency !== $home ) {
+		if ( '' !== $currency && ( $multi || $currency !== $home ) ) {
 			$memo['CurrencyRef'] = array( 'value' => $currency );
 		}
 		if ( ! $us ) {

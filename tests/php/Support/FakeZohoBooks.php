@@ -4,7 +4,9 @@
  *
  * Shapes follow what the Zoho Books API summaries and Zoho's Deluge page show: answers {code: 0, message, invoice: {...}}, lists with
  * page_context.has_more_page, errors {code, message}, organization_id on every call, token endpoint on the accounts host. The invoice total
- * is net lines plus line tax minus the discount; no other Zoho rule is modelled.
+ * is net lines plus line tax minus the discount; no other Zoho rule is modelled except the three that bit the connector: a contact name must be
+ * unique (code 1001, "The customer ... already exists. Please specify a different name."), the item list has no SKU filter (`search_text`
+ * looks at names and descriptions only), and a payment cannot apply more than the invoice balance.
  *
  * @package Estasoft\SyncEngine
  */
@@ -85,12 +87,13 @@ final class FakeZohoBooks extends FakeSalesServer {
 	/**
 	 * Add an item the way a merchant would.
 	 *
-	 * @param string $sku  SKU.
-	 * @param string $name Name.
-	 * @param float  $rate Price.
+	 * @param string $sku         SKU.
+	 * @param string $name        Name.
+	 * @param float  $rate        Price.
+	 * @param string $description Description.
 	 */
-	public function addItem( string $sku, string $name, float $rate = 10.0 ): string {
-		return $this->insert( 'items', 'item_id', array( 'name' => $name, 'sku' => $sku, 'rate' => $rate ) );
+	public function addItem( string $sku, string $name, float $rate = 10.0, string $description = '' ): string {
+		return $this->insert( 'items', 'item_id', array( 'name' => $name, 'sku' => $sku, 'rate' => $rate, 'description' => $description ) );
 	}
 
 	/**
@@ -107,12 +110,13 @@ final class FakeZohoBooks extends FakeSalesServer {
 	/**
 	 * Add an invoice as an earlier pass or the merchant would.
 	 *
-	 * @param string $reference Reference.
-	 * @param float  $total     Total.
-	 * @param string $currency  Currency code.
+	 * @param string     $reference Reference.
+	 * @param float      $total     Total.
+	 * @param string     $currency  Currency code.
+	 * @param float|null $balance   Balance still owed; the total when null (a smaller one stands for a part payment or a credit).
 	 */
-	public function addInvoice( string $reference, float $total, string $currency = 'EUR' ): string {
-		return $this->insert( 'invoices', 'invoice_id', array( 'reference_number' => $reference, 'total' => $total, 'balance' => $total, 'status' => 'sent', 'currency_code' => $currency, 'date' => '2026-11-01', 'invoice_number' => 'INV-' . $this->counter ) );
+	public function addInvoice( string $reference, float $total, string $currency = 'EUR', ?float $balance = null ): string {
+		return $this->insert( 'invoices', 'invoice_id', array( 'reference_number' => $reference, 'total' => $total, 'balance' => $balance ?? $total, 'status' => 'sent', 'currency_code' => $currency, 'date' => '2026-11-01', 'invoice_number' => 'INV-' . $this->counter ) );
 	}
 
 	/**
@@ -242,8 +246,9 @@ final class FakeZohoBooks extends FakeSalesServer {
 			$rows = array_values( array_filter( $rows, static fn( array $row ): bool => (string) ( $row['date'] ?? '9999' ) >= (string) $query['date_start'] ) );
 		}
 		if ( isset( $query['search_text'] ) ) {
+			// Documented for the item list: names and descriptions. The SKU is not searched.
 			$needle = strtolower( (string) $query['search_text'] );
-			$rows   = array_values( array_filter( $rows, static fn( array $row ): bool => str_contains( strtolower( (string) wp_json_encode( array( $row['name'] ?? '', $row['sku'] ?? '' ) ) ), $needle ) ) );
+			$rows   = array_values( array_filter( $rows, static fn( array $row ): bool => str_contains( strtolower( (string) ( $row['name'] ?? '' ) . ' ' . (string) ( $row['description'] ?? '' ) ), $needle ) ) );
 		}
 		$per   = (int) ( $query['per_page'] ?? 200 );
 		$page  = (int) ( $query['page'] ?? 1 );
@@ -260,6 +265,11 @@ final class FakeZohoBooks extends FakeSalesServer {
 			if ( empty( $body['contact_name'] ) ) {
 				return $this->json( array( 'code' => 1, 'message' => 'Invalid value passed for contact_name' ), 400 );
 			}
+			foreach ( $this->rows['contacts'] as $row ) {
+				if ( 0 === strcasecmp( (string) ( $row['contact_name'] ?? '' ), (string) $body['contact_name'] ) ) {
+					return $this->json( array( 'code' => 1001, 'message' => 'The customer "' . $body['contact_name'] . '" already exists. Please specify a different name.' ), 400 );
+				}
+			}
 			$email = (string) ( $body['contact_persons'][0]['email'] ?? '' );
 			$code  = (string) array_search( (string) ( $body['currency_id'] ?? '' ), $this->currencies, true );
 			$id    = $this->insert( 'contacts', 'contact_id', array( 'contact_name' => $body['contact_name'], 'company_name' => $body['company_name'] ?? '', 'email' => $email, 'currency_id' => $body['currency_id'] ?? '', 'currency_code' => '' !== $code ? $code : 'AED', 'billing_address' => $body['billing_address'] ?? array() ) );
@@ -270,12 +280,19 @@ final class FakeZohoBooks extends FakeSalesServer {
 		}
 		if ( 'customerpayments' === $collection ) {
 			$invoice = $this->rows['invoices'][ (string) ( $body['invoices'][0]['invoice_id'] ?? '' ) ] ?? null;
-			if ( null === $invoice || empty( $body['account_id'] ) ) {
+			if ( null === $invoice || empty( $body['account_id'] ) || empty( $body['date'] ) ) {
 				return $this->json( array( 'code' => 1, 'message' => 'Invalid value passed for invoices' ), 400 );
 			}
-			$this->rows['invoices'][ $invoice['invoice_id'] ]['status']  = 'paid';
-			$this->rows['invoices'][ $invoice['invoice_id'] ]['balance'] = 0;
-			$id = $this->insert( 'customerpayments', 'payment_id', array( 'reference_number' => $body['reference_number'] ?? '', 'amount' => $body['amount'] ?? 0 ) );
+			$code    = (string) $invoice['currency_code'];
+			$applied = Money::fromDecimalString( (string) json_encode( $body['invoices'][0]['amount_applied'] ?? 0 ), $code );
+			$paid    = Money::fromDecimalString( (string) json_encode( $body['amount'] ?? 0 ), $code );
+			$owed    = Money::fromDecimalString( (string) json_encode( $invoice['balance'] ), $code );
+			if ( $applied <= 0 || $applied > $owed || $paid !== $applied ) {
+				return $this->json( array( 'code' => 1, 'message' => 'The amount applied cannot be more than the balance of the invoice for amount_applied' ), 400 );
+			}
+			$this->rows['invoices'][ $invoice['invoice_id'] ]['balance'] = (float) Money::toDecimalString( $owed - $applied, $code );
+			$this->rows['invoices'][ $invoice['invoice_id'] ]['status']  = $owed === $applied ? 'paid' : 'partially_paid';
+			$id = $this->insert( 'customerpayments', 'payment_id', array( 'reference_number' => $body['reference_number'] ?? '', 'amount' => $body['amount'] ?? 0, 'date' => $body['date'] ) );
 			return $this->json( array( 'code' => 0, 'message' => 'The payment has been recorded.', 'payment' => $this->rows['customerpayments'][ $id ] ), 201 );
 		}
 		return $this->json( array( 'code' => 5, 'message' => 'Invalid URL Passed' ), 404 );

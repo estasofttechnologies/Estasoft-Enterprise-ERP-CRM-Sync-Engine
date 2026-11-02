@@ -19,7 +19,8 @@ use Estasoft\SyncEngine\Domain\Item;
 
 /**
  * Wafeq documents no email filter on contacts. A customer is found by `external_id` (a hash of the email, written by this connector) and,
- * failing that, by the `keyword` search, whose results are checked locally for an exact, case-insensitive email. Every page is read.
+ * failing that, by the `keyword` search, whose results are checked locally for an exact, case-insensitive email. Which fields `keyword` searches is
+ * not stated, so a miss on the email is tried again with the customer's name before a contact is created. Every page is read.
  */
 final class WafeqContacts {
 
@@ -37,11 +38,12 @@ final class WafeqContacts {
 	 *
 	 * @param ApiClient $api   Client.
 	 * @param string    $email Email address.
+	 * @param string    $name  Name of the customer, for the second keyword search; empty to skip it.
 	 * @return array<string,mixed>|null The contact, or null.
 	 *
 	 * @throws ApiException On failure.
 	 */
-	public function find( ApiClient $api, string $email ): ?array {
+	public function find( ApiClient $api, string $email, string $name = '' ): ?array {
 		$email = strtolower( trim( $email ) );
 		if ( '' === $email ) {
 			return null;
@@ -52,9 +54,11 @@ final class WafeqContacts {
 				return $row;
 			}
 		}
-		foreach ( $this->pager->all( $api, 'contacts/', array( 'keyword' => $email ) ) as $row ) {
-			if ( strtolower( WafeqPayloadReader::text( $row['email'] ?? '' ) ) === $email ) {
-				return $row;
+		foreach ( array_unique( array_filter( array( $email, trim( $name ) ) ) ) as $keyword ) {
+			foreach ( $this->pager->all( $api, 'contacts/', array( 'keyword' => $keyword ) ) as $row ) {
+				if ( strtolower( WafeqPayloadReader::text( $row['email'] ?? '' ) ) === $email ) {
+					return $row;
+				}
 			}
 		}
 		return null;
@@ -71,7 +75,7 @@ final class WafeqContacts {
 	 * @throws ApiException On failure.
 	 */
 	public function resolve( ApiClient $api, Item $item, array $customer ): string|ConnectorError {
-		$existing = $this->find( $api, $customer['email'] );
+		$existing = $this->find( $api, $customer['email'], $customer['name'] );
 		if ( null !== $existing ) {
 			$id = WafeqPayloadReader::text( $existing['id'] ?? '' );
 			if ( '' !== $id ) {

@@ -184,4 +184,33 @@ final class AcumaticaReadTest extends AcumaticaTestCase {
 		$this->assertStringContainsString( 'rate set by the tax zone', $codes[0]['label'] );
 		$this->assertSame( 0.0, $codes[0]['rate_percent'] );
 	}
+
+	public function test_a_period_with_more_orders_than_the_cap_is_refused_not_cut_short(): void {
+		$this->kit->http->route(
+			'GET',
+			'#/entity/Default/24\.200\.001/SalesOrder\?#',
+			static function ( array $request ): \Estasoft\SyncEngine\Contract\HttpResponse {
+				parse_str( (string) wp_parse_url( $request['url'], PHP_URL_QUERY ), $query );
+				$rows = array();
+				for ( $i = (int) $query['$skip']; $i < min( (int) $query['$skip'] + (int) $query['$top'], 25000 ); $i++ ) {
+					$rows[] = array(
+						'OrderType'     => array( 'value' => 'SO' ),
+						'OrderNbr'      => array( 'value' => sprintf( '%06d', $i ) ),
+						'CustomerOrder' => array( 'value' => 'WC-' . $i ),
+						'OrderTotal'    => array( 'value' => 10 ),
+						'CurrencyID'    => array( 'value' => 'AED' ),
+						'Status'        => array( 'value' => 'Open' ),
+					);
+				}
+				return \Estasoft\SyncEngine\Tests\Support\FakeHttpClient::json( $rows );
+			}
+		);
+		$connection = $this->connection();
+		$result     = $this->connector()->listForReconcile( $connection, new \DateTimeImmutable( '2026-11-01T00:00:00Z' ) );
+
+		$this->assertInstanceOf( \Estasoft\SyncEngine\Contract\ConnectorError::class, $result );
+		$this->assertSame( \Estasoft\SyncEngine\Domain\ErrorCode::Val002, $result->code );
+		$this->assertSame( 'window', $result->context['field'] );
+		$this->assertStringContainsString( '20000', (string) $result->context['reason'] );
+	}
 }

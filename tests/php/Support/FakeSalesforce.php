@@ -37,6 +37,20 @@ final class FakeSalesforce extends FakeSalesServer {
 	public bool $multiCurrency = false;
 
 	/**
+	 * Custom fields that exist on Opportunity and that the user can see (the describe answer lists them); any other `__c` name is refused.
+	 *
+	 * @var array<int,string>
+	 */
+	public array $opportunityFields = array();
+
+	/**
+	 * Which of those are Unique (a second record with the same value is refused with DUPLICATE_VALUE).
+	 *
+	 * @var array<int,string>
+	 */
+	public array $uniqueFields = array();
+
+	/**
 	 * Records per query page.
 	 */
 	public int $pageSize = 2000;
@@ -222,6 +236,9 @@ final class FakeSalesforce extends FakeSalesServer {
 		if ( $this->multiCurrency ) {
 			$names[] = 'CurrencyIsoCode';
 		}
+		if ( 'Opportunity' === $object ) {
+			$names = array_merge( $names, $this->opportunityFields );
+		}
 		return $this->json( array( 'name' => $object, 'createable' => ! in_array( $object, $this->notCreateable, true ), 'fields' => array_map( static fn( string $name ): array => array( 'name' => $name ), $names ) ), 200, $extra );
 	}
 
@@ -238,6 +255,13 @@ final class FakeSalesforce extends FakeSalesServer {
 		$object = $m[2];
 		if ( ! isset( $this->rows[ $object ] ) ) {
 			return $this->json( array( array( 'message' => "sObject type '{$object}' is not supported.", 'errorCode' => 'INVALID_TYPE' ) ), 400, $extra );
+		}
+		if ( 'Opportunity' === $object && preg_match_all( '/\b(\w+__c)\b/', $m[1] . ' ' . ( $m[3] ?? '' ), $custom ) ) {
+			foreach ( array_unique( $custom[1] ) as $field ) {
+				if ( ! in_array( $field, $this->opportunityFields, true ) ) {
+					return $this->json( array( array( 'message' => "No such column '{$field}' on entity 'Opportunity'.", 'errorCode' => 'INVALID_FIELD' ) ), 400, $extra );
+				}
+			}
 		}
 		$rows = $this->all( $object );
 		if ( ! empty( $m[3] ) ) {
@@ -412,6 +436,20 @@ final class FakeSalesforce extends FakeSalesServer {
 		}
 		if ( isset( $fields['CurrencyIsoCode'] ) && ! $this->multiCurrency ) {
 			return array( 'message' => "No such column 'CurrencyIsoCode' on sobject of type {$object}", 'errorCode' => 'INVALID_FIELD', 'fields' => array( 'CurrencyIsoCode' ) );
+		}
+		if ( 'Opportunity' === $object ) {
+			foreach ( array_keys( $fields ) as $field ) {
+				if ( str_ends_with( (string) $field, '__c' ) && ! in_array( $field, $this->opportunityFields, true ) ) {
+					return array( 'message' => "No such column '{$field}' on sobject of type Opportunity", 'errorCode' => 'INVALID_FIELD', 'fields' => array( $field ) );
+				}
+			}
+			foreach ( $this->uniqueFields as $field ) {
+				foreach ( $this->all( 'Opportunity' ) as $row ) {
+					if ( isset( $fields[ $field ] ) && 0 === strcasecmp( (string) ( $row[ $field ] ?? '' ), (string) $fields[ $field ] ) ) {
+						return array( 'message' => "duplicate value found: {$field} duplicates value on record with id: {$row['Id']}", 'errorCode' => 'DUPLICATE_VALUE', 'fields' => array( $field ) );
+					}
+				}
+			}
 		}
 		if ( 'Opportunity' === $object && ! in_array( $fields['StageName'], array( 'Prospecting', 'Closed Won', 'Qualification' ), true ) ) {
 			return array( 'message' => 'Stage: bad value for restricted picklist field: ' . $fields['StageName'], 'errorCode' => 'INVALID_OR_NULL_FOR_RESTRICTED_PICKLIST', 'fields' => array( 'StageName' ) );

@@ -9,6 +9,7 @@ use Estasoft\SyncEngine\Connectors\Support\GuardedConnector;
 use Estasoft\SyncEngine\Contract\ConnectorError;
 use Estasoft\SyncEngine\Contract\ConnectorInterface;
 use Estasoft\SyncEngine\Contract\ExternalRef;
+use Estasoft\SyncEngine\Contract\HttpResponse;
 use Estasoft\SyncEngine\Domain\Connection;
 use Estasoft\SyncEngine\Domain\EntityType;
 use Estasoft\SyncEngine\Domain\ErrorCode;
@@ -116,15 +117,19 @@ final class HubSpotConnectorTest extends TestCase {
 		$this->assertSame( 1, $this->hub->count( 'deals' ) );
 	}
 
-	public function test_a_custom_reference_property_is_searched_and_the_name_stays_readable(): void {
+	public function test_a_property_the_merchant_made_is_searched_first_and_the_name_carries_the_reference_too(): void {
 		list( $item, $payload ) = SalesFixtures::order( '128' );
 		$connection             = $this->connection( array( 'reference_property' => 'woo_order' ) );
 		$this->connector->send( $connection, $item, $payload );
 		$deal = $this->only( 'deals' )[0];
 
 		$this->assertSame( 'WC-128', $deal['properties']['woo_order'] );
-		$this->assertSame( 'Order 128', $deal['properties']['dealname'] );
+		$this->assertSame( 'WC-128', $deal['properties']['dealname'], 'The name is the documented fallback key.' );
 		$this->assertInstanceOf( ExternalRef::class, $this->connector->findExisting( $connection, $item ) );
+
+		$this->hub->objects['deals'][ $deal['id'] ]['properties']['dealname'] = 'Mugs for Dana';
+		$this->assertTrue( $this->connector->send( $connection, $item, $payload )->alreadyExisted, 'A renamed deal is still found.' );
+		$this->assertSame( 1, $this->hub->count( 'deals' ) );
 	}
 
 	public function test_the_reference_is_matched_without_regard_to_case_and_the_oldest_deal_wins(): void {
@@ -291,15 +296,6 @@ final class HubSpotConnectorTest extends TestCase {
 		$this->assertStringContainsString( 'crm.objects.contacts.read', (string) $result->error->context['action'] );
 	}
 
-	public function test_the_daily_quota_header_stops_the_connector_with_a_wait(): void {
-		$this->hub->dailyRemaining = 10;
-		list( $item, $payload )    = SalesFixtures::order( '145' );
-		$result                    = $this->connector->send( $this->connection(), $item, $payload );
-		$this->assertSame( ErrorCode::Rate001, $result->error->code );
-		$this->assertSame( 3600, $result->error->retryAfter );
-		$this->assertSame( 0, $this->hub->writes );
-	}
-
 	public function test_a_burst_limit_without_retry_after_waits_ten_seconds_and_a_daily_one_an_hour(): void {
 		list( $item, $payload ) = SalesFixtures::order( '146' );
 		$this->kit->http->route( 'POST', '~/deals/search~', \Estasoft\SyncEngine\Tests\Support\FakeHttpClient::json( array( 'status' => 'error', 'errorType' => 'RATE_LIMIT', 'policyName' => 'DAILY' ), 429 ) );
@@ -373,5 +369,162 @@ final class HubSpotConnectorTest extends TestCase {
 		}
 		$this->assertInstanceOf( ConnectorError::class, $result->error );
 		$this->assertStringNotContainsString( FakeHubSpot::KEY, $result->error->message() . $result->error->detail );
+	}
+
+	public function test_a_deal_that_cannot_be_made_leaves_none_of_its_line_items_behind(): void {
+		list( $item, $payload ) = SalesFixtures::order( '160', array( 'shipping' => 500 ) );
+		$this->hub->failNextWrite( 'server_error', 0, 3 );
+		$failed = $this->connector->send( $this->connection(), $item, $payload );
+
+		$this->assertFalse( $failed->isSuccess(), 'The deal create was the fourth write: contact and two line items came first.' );
+		$this->assertSame( 0, $this->hub->count( 'deals' ) );
+		$this->assertSame( 0, $this->hub->count( 'line_items' ), 'Both line items were archived again.' );
+		$this->assertSame( 1, $this->hub->count( 'contacts' ), 'The contact is a real record and stays.' );
+
+		$retry = $this->connector->send( $this->connection(), $item, $payload );
+		$this->assertTrue( $retry->isSuccess() );
+		$this->assertSame( 2, $this->hub->count( 'line_items' ) );
+	}
+
+	public function test_a_line_item_that_cannot_be_made_takes_the_ones_made_before_it_away(): void {
+		list( $item, $payload ) = SalesFixtures::order( '161', array( 'shipping' => 500 ) );
+		$this->hub->failNextWrite( 'server_error', 0, 2 );
+		$failed = $this->connector->send( $this->connection(), $item, $payload );
+		$this->assertFalse( $failed->isSuccess() );
+		$this->assertSame( 0, $this->hub->count( 'line_items' ) );
+		$this->assertSame( 0, $this->hub->count( 'deals' ) );
+	}
+
+	public function test_a_deal_archived_for_wrong_money_takes_its_line_items_with_it(): void {
+		$this->hub->recalculate = true;
+		$this->hub->lockAmount  = true;
+		list( $item, $payload ) = SalesFixtures::order( '162', array( 'tax' => 500, 'shipping' => 500 ) );
+		$result                 = $this->connector->send( $this->connection(), $item, $payload );
+		$this->assertSame( ErrorCode::Val002, $result->error->code );
+		$this->assertSame( 0, $this->hub->count( 'deals' ) );
+		$this->assertSame( 0, $this->hub->count( 'line_items' ) );
+	}
+
+	public function test_the_close_date_goes_out_as_an_iso_utc_midnight_which_hubspot_accepts_for_a_datetime(): void {
+		list( $item, $payload ) = SalesFixtures::order( '163' );
+		$this->connector->send( $this->connection(), $item, $payload );
+		$this->assertSame( '2026-11-01T00:00:00Z', $this->only( 'deals' )[0]['properties']['closedate'] );
+	}
+
+	public function test_test_connection_makes_the_reference_property_once_and_every_deal_carries_it_beside_the_name(): void {
+		$this->hub->strictProperties = true;
+		$first                       = $this->connector->test( $this->connection() );
+		$this->assertTrue( $first->ok, (string) $first->error?->message() );
+		$this->assertTrue( $first->permissions['create_reference_field'] );
+		$this->assertSame( 'estasoft_order_ref', $first->detected['reference_field'] );
+		$this->assertSame( 'field', $first->detected['reference_mode'] );
+		$this->assertArrayNotHasKey( 'warning', $first->detected );
+		$definition = $this->hub->properties['estasoft_order_ref'];
+		$this->assertSame( 'string', $definition['type'] );
+		$this->assertSame( 'text', $definition['fieldType'] );
+		$this->assertTrue( $definition['hasUniqueValue'] );
+
+		$this->connector->test( $this->connection() );
+		$this->assertSame( 1, $this->hub->countCalls( 'POST /crm/properties/' ), 'The second test finds it.' );
+
+		list( $item, $payload ) = SalesFixtures::order( '164' );
+		$sent                   = $this->connector->send( $this->connection( array( 'detected' => $first->detected ) ), $item, $payload );
+		$this->assertTrue( $sent->isSuccess(), (string) $sent->error?->message() );
+		$deal = $this->only( 'deals' )[0];
+		$this->assertSame( 'WC-164', $deal['properties']['estasoft_order_ref'] );
+		$this->assertSame( 'WC-164', $deal['properties']['dealname'] );
+	}
+
+	public function test_a_rep_who_renames_the_deal_does_not_break_replays_refunds_or_reconciliation(): void {
+		$this->hub->strictProperties = true;
+		$connection                  = $this->connection( array( 'detected' => $this->connector->test( $this->connection() )->detected ) );
+		list( $order, $payload )     = SalesFixtures::order( '165' );
+		$first                       = $this->connector->send( $connection, $order, $payload );
+		$this->hub->objects['deals'][ $first->ref->id ]['properties']['dealname'] = 'Dana - big mug order';
+
+		$replay = $this->connector->send( $connection, $order, $payload );
+		$this->assertTrue( $replay->alreadyExisted );
+		$this->assertSame( 1, $this->hub->count( 'deals' ), 'No second deal.' );
+
+		list( $refund, $rpayload ) = SalesFixtures::refund( '56', '165' );
+		$this->assertTrue( $this->connector->send( $connection, $refund, $rpayload )->isSuccess() );
+		$this->assertSame( $first->ref->id, $this->connector->findExisting( $connection, $refund )->extra['deal_id'] );
+
+		$list = $this->connector->listForReconcile( $connection, new \DateTimeImmutable( '2026-01-01T00:00:00Z' ) );
+		$this->assertArrayHasKey( 'WC-165', $list );
+		$this->assertSame( 5000, $list['WC-165']->extra['total_minor'] );
+	}
+
+	public function test_a_deal_made_before_the_property_existed_is_still_found_by_its_name(): void {
+		$legacy                 = $this->hub->addDeal( 'WC-166', '50.00' );
+		$connection             = $this->connection( array( 'detected' => array( 'reference_field' => 'estasoft_order_ref' ) ) );
+		list( $item, $payload ) = SalesFixtures::order( '166' );
+		$result                 = $this->connector->send( $connection, $item, $payload );
+		$this->assertTrue( $result->alreadyExisted );
+		$this->assertSame( $legacy, $result->ref->id );
+		$this->assertSame( 1, $this->hub->count( 'deals' ) );
+		$this->assertArrayHasKey( 'WC-166', $this->connector->listForReconcile( $connection, new \DateTimeImmutable( '2026-01-01T00:00:00Z' ) ) );
+	}
+
+	public function test_another_worker_that_makes_the_same_deal_first_is_refused_by_the_unique_property_and_its_deal_is_used(): void {
+		$this->hub->strictProperties = true;
+		$detected                    = $this->connector->test( $this->connection() )->detected;
+		$connection                  = $this->connection( array( 'detected' => $detected ) );
+		$this->hub->raceReference    = 'WC-167';
+		list( $item, $payload )      = SalesFixtures::order( '167' );
+		$result                      = $this->connector->send( $connection, $item, $payload );
+
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$this->assertTrue( $result->alreadyExisted );
+		$this->assertSame( 1, $this->hub->count( 'deals' ), 'One deal, not two.' );
+		$this->assertSame( 0, $this->hub->count( 'line_items' ), 'The line items made for the losing attempt are gone.' );
+	}
+
+	public function test_when_the_property_cannot_be_made_the_name_stays_the_key_and_the_test_says_so(): void {
+		$this->hub->strictProperties  = true;
+		$this->hub->schemaWriteDenied = true;
+		$test                         = $this->connector->test( $this->connection() );
+		$this->assertTrue( $test->ok, 'Orders still work; only the safer key is missing.' );
+		$this->assertFalse( $test->permissions['create_reference_field'] );
+		$this->assertSame( array( 'create_reference_field' ), $test->missingPermissions() );
+		$this->assertSame( 'name', $test->detected['reference_mode'] );
+		$this->assertSame( 'reference_field', $test->detected['warning'] );
+		$this->assertArrayNotHasKey( 'reference_field', $test->detected );
+
+		list( $item, $payload ) = SalesFixtures::order( '168' );
+		$this->assertTrue( $this->connector->send( $this->connection( array( 'detected' => $test->detected ) ), $item, $payload )->isSuccess(), 'Nothing is written to a property that does not exist.' );
+
+		$this->hub->schemaWriteDenied = false;
+		$this->hub->schemaReadDenied  = true;
+		$creates                      = $this->hub->countCalls( 'POST /crm/properties/' );
+		$unreadable                   = $this->connector->test( $this->connection() );
+		$this->assertTrue( $unreadable->ok );
+		$this->assertFalse( $unreadable->permissions['create_reference_field'], 'Without the schema scope the property cannot even be looked for.' );
+		$this->assertSame( $creates, $this->hub->countCalls( 'POST /crm/properties/' ), 'No create is tried blind.' );
+	}
+
+	public function test_naming_dealname_on_purpose_creates_nothing_and_warns_about_nothing(): void {
+		$test = $this->connector->test( $this->connection( array( 'reference_property' => 'dealname' ) ) );
+		$this->assertTrue( $test->ok );
+		$this->assertSame( 0, $this->hub->countCalls( 'POST /crm/properties/' ) );
+		$this->assertArrayNotHasKey( 'create_reference_field', $test->permissions );
+		$this->assertArrayNotHasKey( 'warning', $test->detected );
+		$this->assertSame( 'name', $test->detected['reference_mode'] );
+	}
+
+	public function test_a_low_header_on_an_answer_does_not_stop_the_connector_because_no_header_is_trusted(): void {
+		list( $item, $payload ) = SalesFixtures::order( '169' );
+		$this->kit->http->route( 'POST', '~/line_items$~', new HttpResponse( 201, '{"id":"900","properties":{}}', array( 'X-HubSpot-RateLimit-Daily-Remaining' => '1' ) ) );
+		$result = $this->connector->send( $this->connection(), $item, $payload );
+		$this->assertNotSame( ErrorCode::Rate001, $result->error?->code );
+	}
+
+	public function test_ping_is_one_cheap_call_and_false_for_a_refused_key(): void {
+		$this->assertTrue( $this->connector->ping( $this->connection() ) );
+		$this->assertSame( 1, count( $this->hub->calls ) );
+		$this->assertStringStartsWith( 'GET /crm/objects/2026-03/deals', $this->hub->calls[0] );
+
+		$bad = $this->kit->connection( 'hubspot', array(), array( 'access_token' => 'wrong-key-0002' ), 2 );
+		$this->assertFalse( $this->connector->ping( $bad ) );
 	}
 }

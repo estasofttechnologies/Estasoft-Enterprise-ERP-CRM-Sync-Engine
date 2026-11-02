@@ -227,7 +227,11 @@ final class SapS4HanaConnector extends AbstractApiConnector {
 			return null;
 		}
 		$order = $kit->orders->find( $item->clientReference() );
-		return null === $order ? null : $kit->orders->reference( $order, strtoupper( (string) ( $order['TransactionCurrency'] ?? '' ) ) );
+		if ( null === $order ) {
+			return null;
+		}
+		$error = $kit->orders->checkMarked( $order, $kit->total );
+		return $error ?? $kit->orders->reference( $order, strtoupper( (string) ( $order['TransactionCurrency'] ?? '' ) ) );
 	}
 
 	/**
@@ -332,9 +336,14 @@ final class SapS4HanaConnector extends AbstractApiConnector {
 		$order    = $order ?? $kit->orders->create( $parsed, $warnings );
 		$error    = $kit->orders->check( $order, $parsed, $kit->total, $warnings );
 		if ( null !== $error ) {
-			$removed = 'fail' === $kit->options->totalMismatch() ? $kit->orders->remove( $order ) : true;
-			if ( ! $removed ) {
-				$error = Problem::validation( self::SYSTEM, 'net amount', $error->context['reason'] . ' ' . __( 'The sales order could not be deleted and stays in S/4HANA.', 'estasoft-erp-crm-sync-engine' ) );
+			if ( $existed ) {
+				$error = Problem::validation( self::SYSTEM, 'net amount', $error->context['reason'] . ' ' . __( 'The sales order was found, not made by this pass, so it is not deleted. Correct or delete it in S/4HANA.', 'estasoft-erp-crm-sync-engine' ) );
+			} elseif ( 'fail' === $kit->options->totalMismatch() ) {
+				$error = Problem::validation(
+					self::SYSTEM,
+					'net amount',
+					$error->context['reason'] . ' ' . ( $kit->orders->remove( $order ) ? __( 'The sales order was deleted.', 'estasoft-erp-crm-sync-engine' ) : __( 'The sales order could not be deleted and stays in S/4HANA.', 'estasoft-erp-crm-sync-engine' ) )
+				);
 			}
 			return SendResult::failure( $error );
 		}
@@ -358,11 +367,29 @@ final class SapS4HanaConnector extends AbstractApiConnector {
 		if ( $refund instanceof ConnectorError ) {
 			return SendResult::failure( $refund );
 		}
-		$request = $kit->refunds->find( $refund->reference );
-		if ( null !== $request ) {
-			return SendResult::existing( $kit->refunds->reference( $request ) );
+		$warnings = new Warnings();
+		$request  = $kit->refunds->find( $refund->reference );
+		$existed  = null !== $request;
+		$request  = $request ?? $kit->refunds->create( $refund );
+		$currency = strtoupper( (string) ( $request['OrderCurrency'] ?? ( $request['TransactionCurrency'] ?? '' ) ) );
+		$error    = $kit->refunds->check( $request, $refund, $currency, $kit->total, $warnings );
+		if ( null !== $error ) {
+			if ( $existed ) {
+				$error = Problem::validation( self::SYSTEM, 'net amount', $error->context['reason'] . ' ' . __( 'The credit memo request was found, not made by this pass, so it is not deleted. Correct or delete it in S/4HANA.', 'estasoft-erp-crm-sync-engine' ) );
+			} elseif ( 'fail' === $kit->options->totalMismatch() ) {
+				$error = Problem::validation(
+					self::SYSTEM,
+					'net amount',
+					$error->context['reason'] . ' ' . ( $kit->refunds->remove( $request ) ? __( 'The credit memo request was deleted.', 'estasoft-erp-crm-sync-engine' ) : __( 'The credit memo request could not be deleted and stays in S/4HANA.', 'estasoft-erp-crm-sync-engine' ) )
+				);
+			}
+			return SendResult::failure( $error );
 		}
-		return SendResult::created( $kit->refunds->reference( $kit->refunds->create( $refund ) ) );
+		$ref = $kit->refunds->reference( $request );
+		if ( $warnings->any() ) {
+			$ref = new ExternalRef( $ref->id, $ref->ref, $ref->url, array( 'warnings' => $warnings->all() ) );
+		}
+		return $existed ? SendResult::existing( $ref ) : SendResult::created( $ref );
 	}
 
 	/**

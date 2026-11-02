@@ -14,6 +14,8 @@ defined( 'ABSPATH' ) || exit;
 use Estasoft\SyncEngine\Connectors\EnterpriseCommon\Amounts;
 use Estasoft\SyncEngine\Connectors\EnterpriseCommon\Problem;
 use Estasoft\SyncEngine\Connectors\EnterpriseCommon\RefundData;
+use Estasoft\SyncEngine\Connectors\EnterpriseCommon\ShopTotalMarker;
+use Estasoft\SyncEngine\Connectors\EnterpriseCommon\TotalCheck;
 use Estasoft\SyncEngine\Connectors\EnterpriseCommon\Warnings;
 use Estasoft\SyncEngine\Connectors\Support\ApiException;
 use Estasoft\SyncEngine\Contract\ExternalRef;
@@ -33,6 +35,7 @@ final class NetSuiteRefunds {
 	 * @param NetSuiteOrders  $orders  Orders.
 	 * @param NetSuiteOptions $options Options.
 	 * @param Amounts         $amounts Conversion helper.
+	 * @param ShopTotalMarker $marker  Shop total in the memo.
 	 * @param string          $system  System name for messages.
 	 * @param string          $host    Host of the account (for links).
 	 */
@@ -42,6 +45,7 @@ final class NetSuiteRefunds {
 		private readonly NetSuiteOrders $orders,
 		private readonly NetSuiteOptions $options,
 		private readonly Amounts $amounts,
+		private readonly ShopTotalMarker $marker,
 		private readonly string $system,
 		private readonly string $host
 	) {
@@ -57,7 +61,7 @@ final class NetSuiteRefunds {
 	 */
 	public function find( string $reference ): ?array {
 		$rows = $this->gateway->rows(
-			"SELECT id, tranid, foreigntotal, currency FROM transaction WHERE type = 'CustCred' AND (externalid = ? OR memo LIKE ?) ORDER BY id",
+			"SELECT id, tranid, foreigntotal, currency, memo FROM transaction WHERE type = 'CustCred' AND (externalid = ? OR memo LIKE ?) ORDER BY id",
 			array( $reference, '%[' . $reference . ']%' ),
 			1
 		);
@@ -85,7 +89,9 @@ final class NetSuiteRefunds {
 			throw new ApiException( $problem ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 		}
 		$currency = $this->orders->currencyCodeOf( $order );
-		$memo     = $warnings->fit( 'memo', trim( '[' . $refund->reference . '] ' . $refund->reason ), 999 );
+		$total    = $this->expected( $refund );
+		$last     = $this->marker->append( '', $total, $currency );
+		$memo     = $this->marker->append( $warnings->fit( 'memo', trim( '[' . $refund->reference . '] ' . $refund->reason ), 999 - ( '' === $last ? 0 : strlen( $last ) + 1 ) ), $total, $currency );
 		$body     = array(
 			'memo' => $memo,
 			'item' => array( 'items' => $this->lines( $refund, $currency ) ),
@@ -113,6 +119,84 @@ final class NetSuiteRefunds {
 		);
 		$row = $this->find( $refund->reference );
 		return null === $row ? array( 'id' => $id ) : $row;
+	}
+
+	/**
+	 * What the credit memo should come to in minor units: the refund amount, else the sum of its lines.
+	 *
+	 * @param RefundData $refund Payload.
+	 */
+	public function expected( RefundData $refund ): ?int {
+		if ( null !== $refund->amountMinor && $refund->amountMinor > 0 ) {
+			return $refund->amountMinor;
+		}
+		$sum = 0;
+		foreach ( $refund->lines as $line ) {
+			$sum += $line->amountMinor;
+		}
+		return $sum > 0 ? $sum : null;
+	}
+
+	/**
+	 * Compare a credit memo with the refund: currency, and total within one minor unit. The transform page does not say whether the lines
+	 * sent replace the lines copied from the invoice or are added to them, so a memo is never reported as synced unchecked.
+	 *
+	 * @param array<string,mixed> $row      Credit memo row (foreigntotal, currency).
+	 * @param int|null            $expected Refund amount in minor units.
+	 * @param string              $currency ISO code of the order.
+	 * @param TotalCheck          $total    Total check.
+	 * @param Warnings            $warnings Receives accepted differences.
+	 *
+	 * @throws ApiException On failure of the currency read.
+	 */
+	public function check( array $row, ?int $expected, string $currency, TotalCheck $total, Warnings $warnings ): ?\Estasoft\SyncEngine\Contract\ConnectorError {
+		$symbol = $this->lookups->symbolOf( (string) ( $row['currency'] ?? '' ) );
+		if ( '' !== $symbol && '' !== $currency && $symbol !== $currency ) {
+			return Problem::validation(
+				$this->system,
+				'currency',
+				sprintf(
+					/* translators: 1: currency of the credit memo, 2: currency of the order. */
+					__( 'NetSuite holds the credit memo in %1$s but the order is in %2$s.', 'estasoft-erp-crm-sync-engine' ),
+					$symbol,
+					$currency
+				)
+			);
+		}
+		$actual = null === ( $row['foreigntotal'] ?? null ) ? null : $this->amounts->fromWire( $row['foreigntotal'], $currency );
+		if ( null === $actual ) {
+			return Problem::validation( $this->system, 'total', __( 'NetSuite did not show the total of the credit memo, so it could not be compared with the refund.', 'estasoft-erp-crm-sync-engine' ) );
+		}
+		return $total->run( $expected, abs( $actual ), $currency, $warnings, __( 'credit memo total', 'estasoft-erp-crm-sync-engine' ) );
+	}
+
+	/**
+	 * The check findExisting() can make without a payload: the credit memo total against the refund total written in its memo.
+	 *
+	 * @param array<string,mixed> $row   Credit memo row.
+	 * @param TotalCheck          $total Total check.
+	 *
+	 * @throws ApiException On failure of the currency read.
+	 */
+	public function checkMarked( array $row, TotalCheck $total ): ?\Estasoft\SyncEngine\Contract\ConnectorError {
+		$marked = $this->marker->read( (string) ( $row['memo'] ?? '' ) );
+		return null === $marked ? null : $this->check( $row, $marked['minor'], $marked['currency'], $total, new Warnings() );
+	}
+
+	/**
+	 * Delete a credit memo that failed the check.
+	 *
+	 * @param string $id Internal id.
+	 * @return bool False when NetSuite refused (the memo stays and a person removes it).
+	 */
+	public function remove( string $id ): bool {
+		try {
+			$this->gateway->write( 'DELETE', 'record/v1/creditMemo/' . rawurlencode( $id ), array() );
+			return true;
+		} catch ( ApiException $exception ) {
+			unset( $exception );
+			return false;
+		}
 	}
 
 	/**

@@ -70,7 +70,7 @@ final class NetSuiteReader {
 	 * @throws ApiException On failure.
 	 */
 	public function orders( \DateTimeImmutable $from ): array {
-		$day     = $from->setTimezone( new \DateTimeZone( 'UTC' ) )->format( 'Y-m-d' );
+		$day     = $from->setTimezone( new \DateTimeZone( 'UTC' ) )->modify( '-1 day' )->format( 'Y-m-d' );
 		$symbols = array_flip( $this->lookups->currencies() );
 		$rows    = $this->gateway->rows(
 			"SELECT t.id, t.tranid, t.externalid, t.foreigntotal, t.currency, c.email FROM transaction t LEFT JOIN customer c ON c.id = t.entity WHERE t.type = 'SalesOrd' AND t.externalid LIKE 'WC-%' AND t.trandate >= TO_DATE(?, 'YYYY-MM-DD') ORDER BY t.id",

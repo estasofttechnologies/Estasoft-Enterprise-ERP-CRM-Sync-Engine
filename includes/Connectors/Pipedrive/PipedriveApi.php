@@ -218,10 +218,11 @@ final class PipedriveApi {
 	/**
 	 * Deals changed since a time, cursor paged.
 	 *
-	 * @param string $since RFC 3339 UTC time.
+	 * @param string $since       RFC 3339 UTC time.
+	 * @param string $customField API key of the custom field to include with every deal (the order reference field); empty for none.
 	 * @return array<int,array<string,mixed>>
 	 */
-	public function dealsUpdatedSince( string $since ): array {
+	public function dealsUpdatedSince( string $since, string $customField = '' ): array {
 		$rows   = array();
 		$cursor = null;
 		for ( $page = 0; $page < self::MAX_PAGES; ++$page ) {
@@ -231,6 +232,7 @@ final class PipedriveApi {
 					'updated_since' => $since,
 					'limit'         => 500,
 					'cursor'        => $cursor,
+					'custom_fields' => '' !== $customField ? $customField : null,
 				),
 				null,
 				array( 'action' => __( 'read deals', 'estasoft-erp-crm-sync-engine' ) )
@@ -246,6 +248,68 @@ final class PipedriveApi {
 			}
 		}
 		return $rows;
+	}
+
+	/**
+	 * The custom fields of deals, cursor paged; null when the user may not read them (403).
+	 *
+	 * @return array<int,array<string,mixed>>|null
+	 */
+	public function dealFields(): ?array {
+		$rows   = array();
+		$cursor = null;
+		for ( $page = 0; $page < self::MAX_PAGES; ++$page ) {
+			$response = $this->api->get(
+				'/api/v2/dealFields',
+				array(
+					'limit'  => self::PAGE,
+					'cursor' => $cursor,
+				),
+				null,
+				array(
+					'allow'  => array( 403 ),
+					'action' => __( 'read the deal fields', 'estasoft-erp-crm-sync-engine' ),
+				)
+			);
+			if ( 403 === $response->status() ) {
+				return null;
+			}
+			$json = $response->json();
+			foreach ( (array) ( $json['data'] ?? array() ) as $row ) {
+				if ( is_array( $row ) ) {
+					$rows[] = $row;
+				}
+			}
+			$cursor = $json['additional_data']['next_cursor'] ?? null;
+			if ( ! is_string( $cursor ) || '' === $cursor ) {
+				break;
+			}
+		}
+		return $rows;
+	}
+
+	/**
+	 * Create a text custom field on deals; null when Pipedrive refuses (a user without the right to manage custom fields gets 403).
+	 *
+	 * @param string $name Field name shown in Pipedrive.
+	 * @param string $type Field type, varchar for a short text.
+	 * @return array<string,mixed>|null The field as Pipedrive describes it.
+	 */
+	public function createDealField( string $name, string $type ): ?array {
+		$response = $this->api->post(
+			'/api/v2/dealFields',
+			array(),
+			array(
+				'field_name' => $name,
+				'field_type' => $type,
+			),
+			array(
+				'allow'  => array( 400, 403 ),
+				'action' => __( 'create deal fields', 'estasoft-erp-crm-sync-engine' ),
+			)
+		);
+		$data     = $response->isSuccess() ? ( $response->json()['data'] ?? null ) : null;
+		return is_array( $data ) ? $data : null;
 	}
 
 	/**

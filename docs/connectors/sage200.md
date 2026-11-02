@@ -16,7 +16,7 @@ variants: [{ id: sage200, label: "Sage 200 (Standard and Professional, UK)" }]
 
 Connector id `sage200`, type ERP, contract version 1. Code: `includes/Connectors/Sage200/` (shared order and money helpers in `includes/Connectors/ErpCommon/`). One of the three products of the catalog row "Sage 200, Sage 300 and Sage X3"; each has its own connector, provider and document (`sage300.md`, `sagex3.md`).
 
-The connector sends WooCommerce orders to Sage 200 as Sales Order Processing orders (`sop_orders` with their lines), refunds as SOP returns (`sop_returns`), and customers. It reads nothing back except the order itself and the list for the nightly check. **This is the least verified of the connectors in the build: the official Sage 200 API reference pages could not be read (section 1).** Resource and field names come from the authentication and FAQ guides (documented) and from open-source clients that call the live API (third-party, MIT or Apache licensed). Test connection probes every resource the connector uses, so a wrong name shows when connecting, not on the first order.
+The connector sends WooCommerce orders to Sage 200 as Sales Order Processing orders (`sop_orders` with their lines), refunds as SOP returns (`sop_returns`), and customers. It reads nothing back except the order or return itself (to find it again and check its total); there is no nightly list (section 11). **This is the least verified of the connectors in the build: the official Sage 200 API reference pages could not be read (section 1).** Resource and field names come from the authentication and FAQ guides (documented) and from open-source clients that call the live API (third-party, MIT or Apache licensed). Test connection probes every resource the connector uses, so a wrong name shows when connecting, not on the first order.
 
 Supported: Sage 200 Standard and Sage 200 Professional (online, UK). The API paths use a `uk` segment; whether other countries exist is not stated (`regions` is UK only).
 
@@ -32,12 +32,12 @@ Fetched or read on 2026-11-02. `developer.sage.com` reference pages and the Sage
 | https://github.com/prismatic-io/components (`components/sage-200`, MIT) `[third-party]` | Header `ocp-apim-subscription-key`; base `.../accounts/v1`; `GET /sites` (`company_id`, `company_name`, `tenant_id`, `site_id`, `site_name`, `site_short_name`); `/customers`, `/customer_contacts` (`default_email`), `/customer_delivery_addresses`, `/products`, `/tax_codes` (`id`, `code`, `name`, `tax_rate`), `/sop_orders` (POST body `customer_id`, `document_date`, `customer_document_no`, `customer_delivery_address_id`, `exchange_rate`, `use_invoice_address`; GET answers `total_net_value`, `total_tax_value`, `total_gross_value`, `currency_id`, `currency{is_base_currency}`, `lines`), `/sop_order_lines` (`line_type` `EnumLineTypeStandard`, `product_id`, `line_quantity`, `selling_unit_price`, `unit_discount_percent`, `tax_code_id`, `line_total_value`, `line_tax_value`), `date_time_updated gt <ISO>` as a filter, bare JSON arrays, `$orderby=id` paging |
 | https://github.com/hotgluexyz/target-sage-200 `[third-party]` | Posting `sop_orders` with nested `lines` (each `product_id`, `line_quantity`, `tax_code_id`, optional `selling_unit_price` and `unit_discount_percent`); `/sop_returns` takes the same body; ledger endpoints `/sales_invoices` and `/sales_credit_notes` post financial totals only; customers by `reference`, products by `code`, `$filter=<field> eq '<value with doubled quotes>'`; list answers are a bare array or `{"value": [...]}`; changing `selling_unit_price` needs the Sage permission "Override prices and discounts on order lines"; Standard base `https://api.columbus.sage.com/uk/sage200/accounts/v1`, Professional `https://api.columbus.sage.com/uk/sage200extra/accounts/v1` |
 | docs/research/integration-research-vendors.md section 4.11 | Earlier research: ISV account and credential request form (up to 72 hours), Professional needs Azure AD tunnelling set up by the partner |
-| Sage terms and privacy pages | **Not fetched**; the addresses in the front matter are Sage's usual legal index and notice and are listed under "Not verified" |
+| https://www.sage.com/en-gb/legal/ | Fetched 2026-11-02: "Sage UK legal information", linking the terms and the privacy and cookies policy. The privacy and cookies page itself (front matter) is listed by web search but the fetch tool failed on it, so it was not read |
 
 ## 2. How the merchant connects
 
 1. Ask Sage for API credentials: choose a web application and give the redirect address shown on this screen as its callback.
-2. Copy the Client ID, the Client Secret and the subscription key Sage sends into the fields here, and choose Standard or Professional.
+2. Copy the Client ID and Client Secret Sage sends into the fields here, and choose Standard or Professional.
 3. Press Sign in with Sage and approve the access as a Sage 200 user whose role allows Sales Order Processing.
 4. Choose the site and company if Sage lists several, then press Test connection.
 5. In Sage 200 give the user the permission to override prices on order lines, and make the products and a tax code per rate.
@@ -46,9 +46,9 @@ Plan gate: the API is enabled by default on Standard and needs "API access" enab
 
 ## 3. Authentication
 
-OAuth 2.0 authorization code through Sage ID with the merchant's own client (`own_app`). Authorize `https://id.sage.com/authorize?audience=s200ukipd/sage200`, token `https://id.sage.com/oauth/token`, client secret in the request body, scope `openid profile email offline_access`, no PKCE (not mentioned in the guide). Every API call carries `Authorization: Bearer <token>`, `ocp-apim-subscription-key`, `X-Site` and `X-Company`, `Content-Type: application/json`. The access token is renewed under a lock by the shared token manager when less than five minutes remain; `credential_expires_at` is set 90 days after each refresh.
+OAuth 2.0 authorization code through Sage ID with the merchant's own client (`own_app`). Authorize `https://id.sage.com/authorize?audience=s200ukipd/sage200`, token `https://id.sage.com/oauth/token`, client secret in the request body, scope `openid profile email offline_access`, no PKCE (not mentioned in the guide). Every API call carries `Authorization: Bearer <token>`, `X-Site`, `X-Company` and `Content-Type: application/json`, which are the headers the authentication guide lists. The header `ocp-apim-subscription-key` comes only from third-party clients: it is sent only when the merchant filled in the optional field `subscription_key`, and not at all otherwise. The access token is renewed under a lock by the shared token manager when less than five minutes remain; `credential_expires_at` is set 90 days after each refresh.
 
-Stored: `client_id`, `edition`, `site_id`, `company_id`, `subscription_key` is a **secret** (it identifies the merchant's subscription) with the client secret and the tokens. After sign-in `GET /sites` lists the sites and companies the user can reach and the person picks one (`organisations()` and `selectOrganisation()`); the choice stores `site_id` and `company_id`, pinned on every call.
+Stored: `client_id`, `edition`, `site_id`, `company_id`, `subscription_key` (optional) is a **secret** like the client secret and the tokens. After sign-in `GET /sites` lists the sites and companies the user can reach and the person picks one (`organisations()` and `selectOrganisation()`); the choice stores `site_id` and `company_id`, pinned on every call.
 
 ## 4. Data sent and when (External services disclosure)
 
@@ -57,10 +57,9 @@ Hosts: `id.sage.com` (sign-in, renewal) and `api.columbus.sage.com` (data).
 | Action | Data sent | Data read |
 | --- | --- | --- |
 | Sign in / renewal | Client id, client secret, code or refresh token | Access token, refresh token |
-| Test connection | Nothing | Sites and companies, one record each of tax codes, customers, products, orders |
+| Test connection | Nothing | One record each of tax codes, customers, contacts, products, orders and returns; the sites, to name the company |
 | Order synced | Buyer name, email, phone, address, order number, order date, line SKUs, quantities, prices, tax codes, shipping and fee lines, note | Customer by reference or contact email, products by code, tax codes, order by customer document number, totals back |
 | Refund synced | Refund lines, quantities, amounts, refund number | Order by customer document number, return by number |
-| Nightly check | Date window | Orders with `WC-` document numbers |
 
 ## 5. Objects and field mapping
 
@@ -119,7 +118,7 @@ A refund is a `POST /sop_returns` with the same body as an order: `customer_id` 
 
 ## 11. Reading from Sage 200
 
-- `listForReconcile`: `GET /sop_orders?$filter=document_date ge <ISO date>&$orderby=id&$top=500&$skip=N` paged until a short page (the documented maximum with `$top` is 5,000); the window starts one day before the date asked for; rows whose `customer_document_no` is `WC-` and digits are kept (the prefix filter is applied after the date filter has narrowed the window server-side; every page of the window is read, never just the first). Totals come from `total_gross_value`. **Limit:** a SOP return carries only the refund reference, so it cannot be tied to its order; `refunded_minor` is always 0 and the nightly check will report a `refund_missing` difference for an order that was refunded in the shop. The same is true of `email`, which is empty.
+- **No nightly list.** `listForReconcile` is not provided and the `reconciliation` flag is off: a SOP return carries only `WC-{refund id}`, so the connector cannot tell which order it refunds, and a list with `refunded_minor` always 0 would raise a false `refund_missing` every night for every refunded order.
 - `lookupCustomer`, `lookupProduct`, `searchProducts` (`name` or `code` filter), `listTaxCodes`: read-only helpers.
 - Stock, tracking and invoice read-back are **not** provided. The product payload in the third-party example carries `free_stock_quantity`, but the official page that would document it could not be read, so `stock_in` is not flagged.
 
@@ -157,7 +156,7 @@ No limit is stated in the guides read (the FAQ says nothing about rate limits). 
 | tracking_in | no | Not found in any source |
 | prices_in | no | |
 | invoice_readback | no | Posted invoices do not appear as an entity `[third-party]` |
-| reconciliation | yes | `sop_orders` by date |
+| reconciliation | no | A SOP return carries only the refund reference and cannot be tied to its order, so the nightly check would report `refund_missing` for every refunded order; the flag is off rather than wrong |
 | webhooks | no | Not found |
 | shadow_lookup | yes | Read-only |
 
@@ -171,15 +170,14 @@ No limit is stated in the guides read (the FAQ says nothing about rate limits). 
 - The body of a refused client secret at `id.sage.com` (the connector expects the standard `invalid_client`; Sage ID is Auth0-based and may answer `access_denied` with `Unauthorized`, which the shared token code reads as a sign-in that was not completed, SYNC-AUTH-003, instead of SYNC-AUTH-001).
 - That Sage 200 ids are integers in request bodies, the 8-character account reference, the fields of `customer_contacts`, `customer_delivery_addresses` and the invoice address on `customers`, and the shape of the answer of a `POST`.
 - That a 401 for a wrong `X-Site` or `X-Company` names the header (the connector reads such a text as a wrong site; any other 401 is read as an expired sign-in).
-- Reconciliation cannot see refunds (section 11).
 - Whether Professional on-premise sites older than 2018 expose `sop_returns`.
-- The terms and privacy addresses were not fetched.
+- The privacy and cookies page was not read (the legal index, the terms address, was).
 - A free third-party plugin using the API is covered by Sage's ISV terms, which could not be read; the credential request form is aimed at developers and customers (see research).
 
 ## 16. Manual smoke test against a real Sage 200
 
 1. Use a Sage 200 Standard trial or a demo site with API access enabled for a test user, and a Sage developer subscription.
-2. Request credentials on the Sage form with the plugin's redirect address, note the Client ID, secret and subscription key.
+2. Request credentials on the Sage form with the plugin's redirect address, note the Client ID and secret (and the subscription key, if Sage sends one).
 3. In Sage 200 create a product whose code equals a WooCommerce SKU, a tax code, and give the user the permission to override prices on order lines.
 4. Add the connection, sign in, pick the site and company, press Test connection: expect the sites, company, tax codes and every resource probe passing.
 5. Place an order in the base currency: expect one SOP order with Customer Document No `WC-{id}` and the shop total. Run it again: no second order.

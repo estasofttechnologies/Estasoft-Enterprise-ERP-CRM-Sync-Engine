@@ -17,6 +17,7 @@ use Estasoft\SyncEngine\Connectors\EuAccountingCommon\Options;
 use Estasoft\SyncEngine\Connectors\EuAccountingCommon\OrderPayload;
 use Estasoft\SyncEngine\Connectors\EuAccountingCommon\PayloadReader;
 use Estasoft\SyncEngine\Connectors\EuAccountingCommon\Refusal;
+use Estasoft\SyncEngine\Connectors\EuAccountingCommon\Tolerance;
 use Estasoft\SyncEngine\Connectors\Support\ApiClient;
 use Estasoft\SyncEngine\Connectors\Support\ApiException;
 use Estasoft\SyncEngine\Contract\ConnectorError;
@@ -46,21 +47,75 @@ final class MoneybirdDocuments {
 	}
 
 	/**
-	 * The invoice with a reference, or null (`find_by_reference` answers 404 when there is none) [documented].
+	 * The invoice (or, with `$credit`, the credit invoice) with a reference, or null.
+	 *
+	 * `find_by_reference` answers one document or 404 [documented]. Nothing documented says it finds drafts (its sibling `find_by_invoice_id` never
+	 * does) or which document it returns when an invoice and its credit invoice share a reference, so a miss, or a document of the other kind, is
+	 * checked against the list endpoint filtered by the reference, which does list drafts [documented for `state:draft`].
 	 *
 	 * @param ApiClient $api       Client.
 	 * @param string    $reference Reference such as WC-1234.
+	 * @param bool      $credit    True to look for a credit invoice instead of an invoice.
 	 * @return array<string,mixed>|null
 	 *
 	 * @throws ApiException On failure.
 	 */
-	public function findByReference( ApiClient $api, string $reference ): ?array {
+	public function findByReference( ApiClient $api, string $reference, bool $credit = false ): ?array {
 		$response = $api->get( 'sales_invoices/find_by_reference/' . rawurlencode( $reference ) . '.json', array(), null, array( 'allow' => array( 404 ) ) );
-		if ( ! $response->isSuccess() ) {
-			return null;
+		if ( $response->isSuccess() ) {
+			$invoice = $response->json();
+			if ( '' !== PayloadReader::text( $invoice['id'] ?? '' ) && $this->isCredit( $invoice ) === $credit ) {
+				return $invoice;
+			}
 		}
-		$invoice = $response->json();
-		return '' === PayloadReader::text( $invoice['id'] ?? '' ) ? null : $invoice;
+		foreach ( $this->listByReference( $api, $reference ) as $candidate ) {
+			if ( $this->isCredit( $candidate ) === $credit ) {
+				return $candidate;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Every sales invoice and credit invoice, draft or not, whose reference is exactly this one.
+	 *
+	 * @param ApiClient $api       Client.
+	 * @param string    $reference Reference.
+	 * @return array<int,array<string,mixed>>
+	 *
+	 * @throws ApiException On failure.
+	 */
+	public function listByReference( ApiClient $api, string $reference ): array {
+		$found = array();
+		for ( $page = 1; $page <= 10; $page++ ) {
+			$rows = $api->get(
+				'sales_invoices.json',
+				array(
+					'filter'   => 'reference:' . $reference,
+					'page'     => $page,
+					'per_page' => 100,
+				)
+			)->json();
+			$rows = array_is_list( $rows ) ? $rows : array();
+			foreach ( $rows as $row ) {
+				if ( is_array( $row ) && '' !== PayloadReader::text( $row['id'] ?? '' ) && PayloadReader::text( $row['reference'] ?? '' ) === $reference ) {
+					$found[] = $row;
+				}
+			}
+			if ( count( $rows ) < 100 ) {
+				break;
+			}
+		}
+		return $found;
+	}
+
+	/**
+	 * Whether a document is a credit invoice (it points at its original).
+	 *
+	 * @param array<string,mixed> $invoice Invoice as read.
+	 */
+	public function isCredit( array $invoice ): bool {
+		return '' !== PayloadReader::text( $invoice['original_sales_invoice_id'] ?? '' );
 	}
 
 	/**
@@ -126,7 +181,7 @@ final class MoneybirdDocuments {
 		if ( null === $invoice ) {
 			return SendResult::failure( Refusal::value( MoneybirdConnector::LABEL, 'invoice', __( 'Moneybird could not read the invoice back.', 'estasoft-erp-crm-sync-engine' ), 'read back failed' ) );
 		}
-		$problem = $this->check( $invoice, $order->currency, $order->totalMinor, $options, $warnings );
+		$problem = $this->check( $invoice, $order->currency, $order->totalMinor, $options, $warnings, $order->rows(), $order->date );
 		if ( null !== $problem ) {
 			if ( $fresh && 'draft' === (string) ( $invoice['state'] ?? '' ) ) {
 				$api->delete( 'sales_invoices/' . rawurlencode( $id ) . '.json', array(), null, array( 'allow' => array( 404 ) ) );
@@ -135,6 +190,9 @@ final class MoneybirdDocuments {
 		}
 		if ( $options->is( 'invoice_state', 'sent' ) && 'draft' === (string) ( $invoice['state'] ?? '' ) ) {
 			$invoice = $this->send( $api, $id ) ?? $invoice;
+			if ( LocalDate::differs( $invoice['invoice_date'] ?? null, $order->date, $options->text( 'timezone' ) ) ) {
+				$warnings[] = 'date_differs';
+			}
 		}
 		$account = $options->text( 'payment_account' );
 		if ( '' !== $account && $order->isPaid() && 'draft' !== (string) ( $invoice['state'] ?? '' ) ) {
@@ -187,9 +245,11 @@ final class MoneybirdDocuments {
 	 * @param string              $currency Expected currency (empty skips the check).
 	 * @param int|null            $expected Expected total in minor units, or null for no check.
 	 * @param Options             $options  Settings.
-	 * @param array<int,string>   $warnings Warnings, extended when the totals differ and the setting is warn.
+	 * @param array<int,string>   $warnings Warnings, extended when the totals differ and the setting is warn, or when the date differs.
+	 * @param int                 $rows     Rows of the document, for the default tolerance.
+	 * @param string              $utcDate  The date (UTC text) the connector converted into `invoice_date`, or empty for no date check.
 	 */
-	public function check( array $invoice, string $currency, ?int $expected, Options $options, array &$warnings ): ?ConnectorError {
+	public function check( array $invoice, string $currency, ?int $expected, Options $options, array &$warnings, int $rows = 1, string $utcDate = '' ): ?ConnectorError {
 		$actualCurrency = strtoupper( PayloadReader::text( $invoice['currency'] ?? '' ) );
 		if ( '' !== $currency && '' !== $actualCurrency && $actualCurrency !== $currency ) {
 			return Refusal::value(
@@ -204,6 +264,9 @@ final class MoneybirdDocuments {
 				'currency differs'
 			);
 		}
+		if ( '' !== $utcDate && LocalDate::differs( $invoice['invoice_date'] ?? null, $utcDate, $options->text( 'timezone' ) ) ) {
+			$warnings[] = 'date_differs';
+		}
 		if ( null === $expected ) {
 			return null;
 		}
@@ -212,7 +275,7 @@ final class MoneybirdDocuments {
 		if ( null === $actual ) {
 			return Refusal::value( MoneybirdConnector::LABEL, 'total_price_incl_tax', __( 'Moneybird returned no total for the invoice.', 'estasoft-erp-crm-sync-engine' ), 'no total' );
 		}
-		if ( abs( $actual - $expected ) <= 1 ) {
+		if ( Tolerance::accepts( $actual, $expected, $options, $rows ) ) {
 			return null;
 		}
 		if ( $options->is( 'total_mismatch', 'warn' ) ) {

@@ -137,14 +137,19 @@ final class SalesforceConnectorTest extends TestCase {
 		$this->assertSame( 'AED', $this->sf->all( 'Opportunity' )[0]['CurrencyIsoCode'] );
 	}
 
-	public function test_a_custom_reference_field_is_searched_and_the_name_stays_readable(): void {
-		list( $item, $payload ) = SalesFixtures::order( '130' );
-		$connection             = $this->connection( array( 'reference_field' => 'Woo_Order__c' ) );
+	public function test_a_field_the_merchant_made_is_searched_first_and_the_name_carries_the_reference_too(): void {
+		$this->sf->opportunityFields[] = 'Woo_Order__c';
+		list( $item, $payload )        = SalesFixtures::order( '130' );
+		$connection                    = $this->connection( array( 'reference_field' => 'Woo_Order__c' ) );
 		$this->connector->send( $connection, $item, $payload );
 		$opp = $this->sf->all( 'Opportunity' )[0];
 		$this->assertSame( 'WC-130', $opp['Woo_Order__c'] );
-		$this->assertSame( 'Order 130', $opp['Name'] );
+		$this->assertSame( 'WC-130', $opp['Name'], 'The name is the documented fallback key.' );
 		$this->assertNotNull( $this->connector->findExisting( $connection, $item ) );
+
+		$this->sf->rows['Opportunity'][ $opp['Id'] ]['Name'] = 'Mugs for Dana';
+		$this->assertTrue( $this->connector->send( $connection, $item, $payload )->alreadyExisted, 'A renamed Opportunity is still found.' );
+		$this->assertCount( 1, $this->sf->all( 'Opportunity' ) );
 	}
 
 	public function test_products_mode_adds_one_line_per_product_with_the_gross_total_and_refuses_unknown_codes(): void {
@@ -253,8 +258,6 @@ final class SalesforceConnectorTest extends TestCase {
 		$this->assertSame( 'Salesforce API v66.0', $good->version );
 		$this->assertSame( 'Example Trading LLC', $good->company );
 		$this->assertFalse( $good->detected['multi_currency'] );
-		$this->assertArrayNotHasKey( 'warning', $good->detected );
-		$this->assertArrayHasKey( 'warning', $this->connector->test( $this->connection( array( 'org_currency' => '' ) ) )->detected );
 
 		$this->sf->notCreateable = array( 'Task' );
 		$bad                     = $this->connector->test( $this->connection() );
@@ -368,5 +371,129 @@ final class SalesforceConnectorTest extends TestCase {
 				$this->assertStringNotContainsString( $secret, $request['url'] );
 			}
 		}
+	}
+
+	public function test_a_single_currency_org_that_has_not_said_its_currency_refuses_every_order_before_anything_is_made(): void {
+		list( $item, $payload ) = SalesFixtures::order( '150', array( 'currency' => 'AED' ) );
+		$result                 = $this->connector->send( $this->connection( array( 'org_currency' => '' ) ), $item, $payload );
+
+		$this->assertSame( ErrorCode::Val002, $result->error->code );
+		$this->assertSame( 'org_currency', $result->error->context['field'] );
+		$this->assertStringContainsString( 'currency', $result->error->context['reason'] );
+		$this->assertSame( 0, $this->sf->writes, 'An AED order must not become an unlabelled amount in a USD org.' );
+		$this->assertCount( 0, $this->sf->all( 'Opportunity' ) );
+
+		list( $same, $samePayload ) = SalesFixtures::order( '151', array( 'currency' => 'EUR' ) );
+		$this->assertSame( 'org_currency', $this->connector->send( $this->connection( array( 'org_currency' => '' ) ), $same, $samePayload )->error->context['field'], 'Even the order that might match is refused: the connection does not know.' );
+		$this->assertTrue( $this->connector->send( $this->connection( array( 'org_currency' => 'eur' ) ), $same, $samePayload )->isSuccess(), 'Said once, in any case, the matching currency works.' );
+	}
+
+	public function test_a_multi_currency_org_needs_no_currency_setting(): void {
+		$this->sf->multiCurrency = true;
+		list( $item, $payload )  = SalesFixtures::order( '152', array( 'currency' => 'AED' ) );
+		$this->assertTrue( $this->connector->send( $this->connection( array( 'org_currency' => '' ) ), $item, $payload )->isSuccess() );
+		$this->assertSame( 'AED', $this->sf->all( 'Opportunity' )[0]['CurrencyIsoCode'] );
+	}
+
+	public function test_test_connection_refuses_a_single_currency_org_without_its_currency_and_passes_with_it(): void {
+		$bad = $this->connector->test( $this->connection( array( 'org_currency' => '' ) ) );
+		$this->assertFalse( $bad->ok );
+		$this->assertSame( ErrorCode::Val002, $bad->error->code );
+		$this->assertSame( 'org_currency', $bad->error->context['field'] );
+
+		$this->assertTrue( $this->connector->test( $this->connection( array( 'org_currency' => 'EUR' ) ) )->ok );
+
+		$this->sf->multiCurrency = true;
+		$this->assertTrue( $this->connector->test( $this->connection( array( 'org_currency' => '' ) ) )->ok, 'A multi-currency org labels every amount itself.' );
+	}
+
+	public function test_a_reconciliation_does_not_guess_the_currency_of_a_single_currency_org(): void {
+		$this->sf->addOpportunity( 'WC-9301', 10.0 );
+		$none = $this->connector->listForReconcile( $this->connection( array( 'org_currency' => '' ) ), new \DateTimeImmutable( '2026-01-01T00:00:00Z' ) );
+		$this->assertInstanceOf( \Estasoft\SyncEngine\Contract\ConnectorError::class, $none );
+		$this->assertSame( 'org_currency', $none->context['field'] );
+
+		$list = $this->connector->listForReconcile( $this->connection( array( 'org_currency' => 'KWD' ) ), new \DateTimeImmutable( '2026-01-01T00:00:00Z' ) );
+		$this->assertSame( 10000, $list['WC-9301']->extra['total_minor'], 'Read with the org currency, three decimals for KWD.' );
+		$this->assertSame( 'KWD', $list['WC-9301']->extra['currency'] );
+	}
+
+	public function test_the_reference_field_is_used_as_soon_as_it_exists_and_every_opportunity_carries_it_beside_the_name(): void {
+		$without                = $this->connector->test( $this->connection() );
+		$this->assertTrue( $without->ok, 'The name still works as the key.' );
+		$this->assertFalse( $without->permissions['find_reference_field'] );
+		$this->assertSame( array( 'find_reference_field' ), $without->missingPermissions() );
+		$this->assertSame( 'name', $without->detected['reference_mode'] );
+		$this->assertSame( 'reference_field', $without->detected['warning'] );
+
+		$this->sf->opportunityFields[] = 'Woo_Order_Ref__c';
+		$this->sf->uniqueFields[]      = 'Woo_Order_Ref__c';
+		$with                          = $this->connector->test( $this->connection() );
+		$this->assertTrue( $with->permissions['find_reference_field'] );
+		$this->assertSame( array(), $with->missingPermissions() );
+		$this->assertSame( 'field', $with->detected['reference_mode'] );
+		$this->assertArrayNotHasKey( 'warning', $with->detected );
+
+		list( $item, $payload ) = SalesFixtures::order( '153' );
+		$this->assertTrue( $this->connector->send( $this->connection(), $item, $payload )->isSuccess() );
+		$opp = $this->sf->all( 'Opportunity' )[0];
+		$this->assertSame( 'WC-153', $opp['Woo_Order_Ref__c'] );
+		$this->assertSame( 'WC-153', $opp['Name'] );
+	}
+
+	public function test_a_rep_who_renames_the_opportunity_does_not_break_replays_refunds_or_reconciliation(): void {
+		$this->sf->opportunityFields[] = 'Woo_Order_Ref__c';
+		$this->sf->uniqueFields[]      = 'Woo_Order_Ref__c';
+		$connection                    = $this->connection();
+		list( $order, $payload )       = SalesFixtures::order( '154' );
+		$first                         = $this->connector->send( $connection, $order, $payload );
+		$this->sf->rows['Opportunity'][ $first->ref->id ]['Name'] = 'Dana - big mug order';
+
+		$replay = $this->connector->send( $connection, $order, $payload );
+		$this->assertTrue( $replay->alreadyExisted );
+		$this->assertCount( 1, $this->sf->all( 'Opportunity' ), 'No second Opportunity.' );
+		$this->assertSame( $first->ref->id, $this->connector->findExisting( $connection, $order )->id );
+
+		list( $refund, $rpayload ) = SalesFixtures::refund( '58', '154' );
+		$this->assertTrue( $this->connector->send( $connection, $refund, $rpayload )->isSuccess() );
+		$this->assertSame( $first->ref->id, $this->connector->findExisting( $connection, $refund )->extra['opportunity_id'] );
+
+		$list = $this->connector->listForReconcile( $connection, new \DateTimeImmutable( '2026-01-01T00:00:00Z' ) );
+		$this->assertArrayHasKey( 'WC-154', $list, 'The reference field is read, not the new name.' );
+		$this->assertSame( 5000, $list['WC-154']->extra['total_minor'] );
+	}
+
+	public function test_an_opportunity_made_before_the_field_existed_is_still_found_by_its_name(): void {
+		$legacy = $this->sf->addOpportunity( 'WC-155', 50.0 );
+		$this->sf->rows['Contact']['c1'] = array( 'Id' => 'c1', 'Name' => 'Dana Example', 'Email' => 'dana.example@example.test', '_deleted' => false, 'CreatedDate' => '2026-01-01T00:00:00.000Z' );
+		$this->sf->rows['OpportunityContactRole']['r1'] = array( 'Id' => 'r1', 'OpportunityId' => $legacy, 'ContactId' => 'c1', '_deleted' => false, 'CreatedDate' => '2026-01-01T00:00:00.000Z' );
+		$this->sf->opportunityFields[] = 'Woo_Order_Ref__c';
+		list( $item, $payload )        = SalesFixtures::order( '155' );
+		$result                        = $this->connector->send( $this->connection(), $item, $payload );
+		$this->assertTrue( $result->alreadyExisted );
+		$this->assertSame( $legacy, $result->ref->id );
+		$this->assertCount( 1, $this->sf->all( 'Opportunity' ) );
+		$this->assertArrayHasKey( 'WC-155', $this->connector->listForReconcile( $this->connection(), new \DateTimeImmutable( '2026-01-01T00:00:00Z' ) ) );
+	}
+
+	public function test_naming_the_opportunity_name_on_purpose_ignores_the_field_and_warns_about_nothing(): void {
+		$this->sf->opportunityFields[] = 'Woo_Order_Ref__c';
+		$test                          = $this->connector->test( $this->connection( array( 'reference_field' => 'Name' ) ) );
+		$this->assertTrue( $test->ok );
+		$this->assertArrayNotHasKey( 'find_reference_field', $test->permissions );
+		$this->assertArrayNotHasKey( 'warning', $test->detected );
+
+		list( $item, $payload ) = SalesFixtures::order( '156' );
+		$this->connector->send( $this->connection( array( 'reference_field' => 'Name' ) ), $item, $payload );
+		$this->assertArrayNotHasKey( 'Woo_Order_Ref__c', $this->sf->all( 'Opportunity' )[0] );
+	}
+
+	public function test_ping_is_one_cheap_call_and_false_for_a_refused_sign_in(): void {
+		$this->assertTrue( $this->connector->ping( $this->connection() ) );
+		$this->assertCount( 1, $this->sf->calls );
+		$this->assertStringContainsString( 'FROM%20Organization', $this->sf->calls[0] );
+
+		$this->sf->failNextWrite( 'auth' );
+		$this->assertFalse( $this->connector->ping( $this->connection() ) );
 	}
 }

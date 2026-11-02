@@ -17,6 +17,7 @@ use Estasoft\SyncEngine\Connectors\EuAccountingCommon\Options;
 use Estasoft\SyncEngine\Connectors\EuAccountingCommon\OrderPayload;
 use Estasoft\SyncEngine\Connectors\EuAccountingCommon\PayloadReader;
 use Estasoft\SyncEngine\Connectors\EuAccountingCommon\Refusal;
+use Estasoft\SyncEngine\Connectors\EuAccountingCommon\Tolerance;
 use Estasoft\SyncEngine\Connectors\Support\ApiClient;
 use Estasoft\SyncEngine\Connectors\Support\ApiException;
 use Estasoft\SyncEngine\Contract\ConnectorError;
@@ -61,7 +62,7 @@ final class PennylaneDocuments {
 		for ( $i = 0; $i < 10; $i++ ) {
 			$page = $this->pennylane->page( $api, 'customer_invoices', array( array( 'external_reference', 'eq', $reference ) ), $cursor );
 			foreach ( $page['items'] as $invoice ) {
-				if ( PayloadReader::text( $invoice['external_reference'] ?? $reference ) === $reference && empty( $invoice['credit_note'] ) ) {
+				if ( PayloadReader::text( $invoice['external_reference'] ?? '' ) === $reference && empty( $invoice['credit_note'] ) ) {
 					return $invoice;
 				}
 			}
@@ -139,7 +140,7 @@ final class PennylaneDocuments {
 		if ( null === $invoice ) {
 			return SendResult::failure( Refusal::value( PennylaneConnector::LABEL, 'invoice', __( 'Pennylane could not read the invoice back.', 'estasoft-erp-crm-sync-engine' ), 'read back failed' ) );
 		}
-		$problem = $this->check( $invoice, $order->totalMinor, $options, $warnings );
+		$problem = $this->check( $invoice, $order->totalMinor, $options, $warnings, $order->rows(), $order->date );
 		if ( null !== $problem ) {
 			return SendResult::failure( $problem );
 		}
@@ -149,6 +150,9 @@ final class PennylaneDocuments {
 				return SendResult::failure( Refusal::value( PennylaneConnector::LABEL, 'finalize', __( 'Pennylane did not accept the finalise call. The invoice stays a draft.', 'estasoft-erp-crm-sync-engine' ), 'finalize refused' ) );
 			}
 			$invoice = $this->read( $api, $id ) ?? $invoice;
+			if ( LocalDate::differs( $invoice['date'] ?? null, $order->date, $options->text( 'timezone' ) ) ) {
+				$warnings[] = 'date_differs';
+			}
 		}
 		return SendResult::created( $this->ref( $invoice, $warnings ) );
 	}
@@ -182,9 +186,14 @@ final class PennylaneDocuments {
 	 * @param array<string,mixed> $invoice  Invoice as read.
 	 * @param int|null            $expected Expected total in minor units, or null for no check.
 	 * @param Options             $options  Settings.
-	 * @param array<int,string>   $warnings Warnings, extended when the totals differ and the setting is warn.
+	 * @param array<int,string>   $warnings Warnings, extended when the totals differ and the setting is warn, or when the date differs.
+	 * @param int                 $rows     Rows of the document, for the default tolerance.
+	 * @param string              $utcDate  The date (UTC text) the connector converted into `date`, or empty for no date check.
 	 */
-	public function check( array $invoice, ?int $expected, Options $options, array &$warnings ): ?ConnectorError {
+	public function check( array $invoice, ?int $expected, Options $options, array &$warnings, int $rows = 1, string $utcDate = '' ): ?ConnectorError {
+		if ( '' !== $utcDate && LocalDate::differs( $invoice['date'] ?? null, $utcDate, $options->text( 'timezone' ) ) ) {
+			$warnings[] = 'date_differs';
+		}
 		if ( null === $expected ) {
 			return null;
 		}
@@ -192,7 +201,7 @@ final class PennylaneDocuments {
 		if ( null === $actual ) {
 			return Refusal::value( PennylaneConnector::LABEL, 'currency_amount', __( 'Pennylane returned no total for the invoice.', 'estasoft-erp-crm-sync-engine' ), 'no total' );
 		}
-		if ( abs( $actual - $expected ) <= 1 ) {
+		if ( Tolerance::accepts( $actual, $expected, $options, $rows ) ) {
 			return null;
 		}
 		if ( $options->is( 'total_mismatch', 'warn' ) ) {

@@ -16,6 +16,7 @@ use Estasoft\SyncEngine\Connectors\EuAccountingCommon\Options;
 use Estasoft\SyncEngine\Connectors\EuAccountingCommon\PayloadReader;
 use Estasoft\SyncEngine\Connectors\EuAccountingCommon\Refusal;
 use Estasoft\SyncEngine\Connectors\EuAccountingCommon\RefundPayload;
+use Estasoft\SyncEngine\Connectors\EuAccountingCommon\Tolerance;
 use Estasoft\SyncEngine\Connectors\Support\ApiClient;
 use Estasoft\SyncEngine\Connectors\Support\ApiException;
 use Estasoft\SyncEngine\Contract\SendResult;
@@ -24,8 +25,9 @@ use Estasoft\SyncEngine\Domain\Item;
 /**
  * `PATCH sales_invoices/{id}/duplicate_creditinvoice` copies the invoice into a draft credit invoice with `original_sales_invoice_id` set [documented];
  * an optional `detail_ids` limits it to some lines. WooCommerce refunds are often partial and Moneybird's lines carry no SKU, so only a refund of the
- * whole order is created here; any other refund stops with a clear message. The credit invoice gets the reference `WC-{refund id}` straight after it
- * is made, so a retry finds it. The window between the two calls is a known gap (docs/connectors/moneybird.md).
+ * whole order is created here; any other refund stops with a clear message. The copy keeps the original's reference (so an invoice and its credit
+ * invoice share it) and gets `WC-{refund id}` from a second call. If that call fails, the retry finds the draft copy through the list endpoint
+ * (a draft credit invoice that points at the original) and adopts it instead of making a second one.
  */
 final class MoneybirdRefunds {
 
@@ -50,12 +52,12 @@ final class MoneybirdRefunds {
 	 */
 	public function sendRefund( ApiClient $api, Item $item, RefundPayload $refund, Options $options ): SendResult {
 		$marker   = $item->clientReference();
-		$existing = $this->documents->findByReference( $api, $marker );
+		$existing = $this->documents->findByReference( $api, $marker, true );
 		if ( null !== $existing ) {
 			return $this->resume( $api, $existing, $options );
 		}
 		$original = $this->documents->findByReference( $api, $refund->orderRef );
-		if ( null === $original || '' !== PayloadReader::text( $original['original_sales_invoice_id'] ?? '' ) ) {
+		if ( null === $original ) {
 			return SendResult::failure( Refusal::value( MoneybirdConnector::LABEL, 'order_ref', __( 'Moneybird has no invoice for the refunded order.', 'estasoft-erp-crm-sync-engine' ), 'no invoice for the refund' ) );
 		}
 		if ( 'draft' === (string) ( $original['state'] ?? '' ) ) {
@@ -64,7 +66,8 @@ final class MoneybirdRefunds {
 		$currency = strtoupper( PayloadReader::text( $original['currency'] ?? '' ) );
 		$exponent = $this->amounts->exponent( $currency );
 		$total    = $this->amounts->toMinor( $original['total_price_incl_tax'] ?? null, $exponent );
-		if ( null === $total || abs( $refund->expectedTotal() - $total ) > 1 ) {
+		$rows     = max( 1, count( (array) ( $original['details'] ?? array() ) ) );
+		if ( null === $total || abs( $refund->expectedTotal() - $total ) > Tolerance::minor( $options, $rows ) ) {
 			return SendResult::failure(
 				Refusal::value(
 					MoneybirdConnector::LABEL,
@@ -74,14 +77,36 @@ final class MoneybirdRefunds {
 				)
 			);
 		}
-		$credit = $api->patch( 'sales_invoices/' . rawurlencode( (string) $original['id'] ) . '/duplicate_creditinvoice.json', array(), new \stdClass() )->json();
-		$id     = PayloadReader::text( $credit['id'] ?? '' );
+		$credit = $this->orphan( $api, $refund->orderRef, (string) $original['id'] );
+		if ( null === $credit ) {
+			$credit = $api->patch( 'sales_invoices/' . rawurlencode( (string) $original['id'] ) . '/duplicate_creditinvoice.json', array(), new \stdClass() )->json();
+		}
+		$id = PayloadReader::text( $credit['id'] ?? '' );
 		if ( '' === $id ) {
 			return SendResult::failure( Refusal::value( MoneybirdConnector::LABEL, 'credit invoice', __( 'Moneybird did not return the new credit invoice.', 'estasoft-erp-crm-sync-engine' ), 'no credit invoice id' ) );
 		}
 		$api->patch( 'sales_invoices/' . rawurlencode( $id ) . '.json', array(), array( 'sales_invoice' => array( 'reference' => $marker ) ) );
 		$result = $this->resume( $api, $credit + array( 'id' => $id ), $options );
 		return $result->isSuccess() ? SendResult::created( $result->ref ) : $result;
+	}
+
+	/**
+	 * A draft credit invoice of this original that still has the original's reference: the copy an earlier pass made before its second call failed.
+	 *
+	 * @param ApiClient $api         Client.
+	 * @param string    $orderRef    Reference of the refunded order, WC-{id}.
+	 * @param string    $originalId  Id of the original invoice.
+	 * @return array<string,mixed>|null
+	 *
+	 * @throws ApiException On failure.
+	 */
+	private function orphan( ApiClient $api, string $orderRef, string $originalId ): ?array {
+		foreach ( $this->documents->listByReference( $api, $orderRef ) as $candidate ) {
+			if ( $this->documents->isCredit( $candidate ) && PayloadReader::text( $candidate['original_sales_invoice_id'] ?? '' ) === $originalId && 'draft' === (string) ( $candidate['state'] ?? '' ) ) {
+				return $candidate;
+			}
+		}
+		return null;
 	}
 
 	/**

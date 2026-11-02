@@ -381,11 +381,23 @@ final class FakeSapS4Server {
 			return $this->createOrder( $body );
 		}
 		if ( 'A_CreditMemoRequest' === $path ) {
-			$number = (string) ( 90000000 + $this->sequence( $path ) );
-			$row    = array(
+			$number   = (string) ( 90000000 + $this->sequence( $path ) );
+			$currency = $this->forceCurrency ?? (string) ( $body['TransactionCurrency'] ?? '' );
+			$net      = 0;
+			foreach ( (array) ( $body['to_Item'] ?? array() ) as $item ) {
+				$price = isset( $this->products[ (string) ( $item['Material'] ?? '' ) ] ) ? (int) $this->amounts->fromWire( $this->products[ (string) $item['Material'] ], $currency ) : 0;
+				foreach ( (array) ( $item['to_PricingElement'] ?? array() ) as $element ) {
+					if ( 'PR00' === ( $element['ConditionType'] ?? '' ) ) {
+						$price = (int) $this->amounts->fromWire( $element['ConditionRateValue'] ?? 0, $currency );
+					}
+				}
+				$net += $this->amounts->lineTotal( $price, (string) ( $item['RequestedQuantity'] ?? 1 ) );
+			}
+			$row = array(
 				'CreditMemoRequest'       => $number,
 				'PurchaseOrderByCustomer' => (string) ( $body['PurchaseOrderByCustomer'] ?? '' ),
-				'TransactionCurrency'     => (string) ( $body['TransactionCurrency'] ?? '' ),
+				'TransactionCurrency'     => $currency,
+				'TotalNetAmount'          => $this->amounts->toDecimal( $net, $currency ),
 				'ReferenceSDDocument'     => (string) ( $body['ReferenceSDDocument'] ?? '' ),
 				'to_Item'                 => $body['to_Item'] ?? array(),
 			) + $body;
@@ -435,6 +447,7 @@ final class FakeSapS4Server {
 			'SalesOrderDate'          => (string) ( $body['SalesOrderDate'] ?? '/Date(1793000000000)/' ),
 			'to_Item'                 => $body['to_Item'] ?? array(),
 		);
+		$row += array_diff_key( $body, $row );
 		$this->data['A_SalesOrder'][ $number ] = $row;
 		return FakeHttpClient::json( array( 'd' => $row ), 201 );
 	}

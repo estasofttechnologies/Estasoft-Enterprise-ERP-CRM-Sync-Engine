@@ -5,7 +5,7 @@ catalog_row: Oracle Fusion Cloud ERP
 connection_method: cloud_app
 available: true
 verified: false
-hosts: []
+hosts: ["*.oraclecloud.com"]
 terms_url: https://www.oracle.com/legal/terms/
 privacy_url: https://www.oracle.com/legal/privacy/privacy-policy.html
 developer_url: https://docs.oracle.com/en/cloud/saas/financials/26a/farfa/Retrieving_Bearer_Token_Using_IDCS.html
@@ -14,7 +14,7 @@ variants: []
 
 # Oracle Fusion Cloud ERP connector
 
-Connector id `oracle-fusion`, type ERP, contract version 1. Code: `includes/Connectors/OracleFusion/` (shared ERP helpers in `includes/Connectors/EnterpriseCommon/`). It sends WooCommerce orders to Oracle Fusion Cloud Receivables as invoices through the REST API `receivablesInvoices`, refunds as on-account credit memos through `receivablesCreditMemos`, and reads items and the nightly check list back. The pod host and the identity domain host are the merchant's own (`https://<instance>.fa.<datacenter>.oraclecloud.com` and `https://idcs-….identity.oraclecloud.com`), so `hosts` in the front matter is empty and the connector accepts any public https address; private addresses are refused unless the filter `estasoft_sync_allow_private_hosts` allows them.
+Connector id `oracle-fusion`, type ERP, contract version 1. Code: `includes/Connectors/OracleFusion/` (shared ERP helpers in `includes/Connectors/EnterpriseCommon/`). It sends WooCommerce orders to Oracle Fusion Cloud Receivables as invoices through the REST API `receivablesInvoices`, refunds as on-account credit memos through `receivablesCreditMemos`, and reads items and the nightly check list back. The pod host and the identity domain host are the merchant's own (`https://<instance>.fa.<datacenter>.oraclecloud.com` and `https://idcs-….identity.oraclecloud.com`); both are under `*.oraclecloud.com`, which the front matter `hosts` names. A government region, a vanity domain or another identity domain host is allowed too (the connector accepts any public https address, `merchantHost`); private addresses are refused unless the filter `estasoft_sync_allow_private_hosts` allows them.
 
 What it does not do, and why: it does not create customer accounts (REST creates the party only; the account is SOAP, section 7), reads no stock, and no tracking.
 
@@ -84,7 +84,7 @@ Payload paths are the ones the shared ERP parser reads (`includes/Connectors/Ent
 | Canonical (source) | Payload path | Fusion attribute (`receivablesInvoices`) |
 | --- | --- | --- |
 | `order.client_ref` | `client_ref` (the queue item supplies `WC-{id}`) | `PurchaseOrder` (50), or `CrossReference` (30) by option `reference_field` |
-| `order.created_at` | `order_date` | `TransactionDate` (the date part) |
+| `order.created_at` | `order_date` | `TransactionDate` (the date part, in the store's time zone) |
 | `order.currency` | `currency` | `InvoiceCurrencyCode` |
 | `order.note`, payment reference | `note`, `payment.reference` | `Comments` (1760): note, then the payment reference, then the last line `Shop total 59.97 AED` (section 6); the note is cut with an ellipsis and a warning to make room for that line |
 | a custom field | `bill_to_customer_number` | `BillToCustomerNumber` (wins over the option `bill_to_account`) |
@@ -102,7 +102,7 @@ Lines are descriptive: the SKU is put in the description. The option `memo_line`
 
 The default rules offer no buyer fields and no tax code field, because every order is billed to one account and Fusion works tax out; the mapping screen shows one extra target, `bill_to_customer_number`.
 
-Options (connection settings, key `options`): `unknown_sku` (`fail`, `free_text`), `total_mismatch` (`fail` default, `warn`), `reference_field` (`purchase_order` default, `cross_reference`), `memo_line`, `credit_memo_type` (default `Credit Memo`), `rest_framework_version` (2 to 9, default 2). `payment_terms` is a connection setting.
+Options (connection settings, key `options`): `credit_line_sign` (`positive` default, `negative`), `unknown_sku` (`fail`, `free_text`), `total_mismatch` (`fail` default, `warn`), `reference_field` (`purchase_order` default, `cross_reference`), `memo_line`, `credit_memo_type` (default `Credit Memo`), `rest_framework_version` (2 to 9, default 2). `payment_terms` is a connection setting.
 
 ## 6. Duplicate protection
 
@@ -117,7 +117,7 @@ The engine links whatever `findExisting()` returns and does not call `send()` fo
 - Prices: Fusion lines take a unit selling price; tax-inclusive prices are not expressible, so a payload with `prices_include_tax` is refused with SYNC-VAL-002 before any request.
 - Currency: `InvoiceCurrencyCode` is the order's. The invoice is read back and a different currency fails the order. If the order currency differs from the ledger currency Fusion needs a rate: `ConversionRateType` is left to Fusion's default and a missing rate makes Fusion refuse the invoice; its words reach the person as SYNC-VAL-002.
 - Total check: the attribute that holds the invoice total is not on the pages read; the connector reads `TotalAmount` [inferred] and, for an invoice created a moment ago, `InvoiceBalanceAmount` [inferred] (equal to the total until something is paid or credited). If the answer to the create has neither, the invoice is read again once. The figure is compared with the shop total (`total` less excluded products) in minor units, one unit tolerated. When Fusion shows no total the check is skipped and the result carries a warning (`extra.warnings`), and the nightly check list returns SYNC-VAL-002 saying so instead of reporting every order missing. A difference with `total_mismatch = fail` leaves the invoice in Fusion (a posted invoice cannot be deleted by this connector), the item fails with SYNC-VAL-002 naming both totals, and `findExisting()` keeps returning that error (section 6) so that no second invoice is made and the wrong one is not linked; a person fixes it in Fusion. With `warn` the invoice is linked and the difference is a warning.
-- Dates: `TransactionDate` is the order date (UTC date). `AccountingDate` is left to Fusion; completion may set it to the open period, which can differ from the order date, so the nightly check uses `TransactionDate`.
+- Dates: `TransactionDate` is the order date in the store's time zone (the WordPress setting): a Gulf shop at UTC+4 would otherwise get the previous day between midnight and 4 a.m., which can be the wrong tax period at month end. `AccountingDate` is left to Fusion; completion may set it to the open period, which can differ from the order date, so the nightly check uses `TransactionDate`.
 
 ## 8. Flow
 
@@ -130,13 +130,20 @@ The engine links whatever `findExisting()` returns and does not call `send()` fo
 
 The result's id is `CustomerTransactionId`, its reference `TransactionNumber`, and `extra.total_minor` the total when Fusion shows one.
 
-Refund: `order_ref` must name an invoice in Fusion (SYNC-VAL-002 before any create otherwise). `GET receivablesCreditMemos` by `WC-{refund id}`; if none, `POST receivablesCreditMemos` with the business unit, source, bill-to account and currency taken from the invoice, `TransactionType` = `credit_memo_type`, the reference, `TransactionDate` = the refund date, `Comments` = "Refund {WC-refund} of order {WC-order}: reason", and `receivablesCreditMemoLines` with one line per refund line (`[SKU] Refund`, quantity, unit price = amount divided by quantity) or, for a refund with no lines, one line "Refund of order {WC-order}" for the amount. It is an on-account credit memo [documented]: it is not applied to the invoice by this connector, so a Receivables clerk applies it. Attribute names of credit memos and their lines are [inferred] from the invoice resource, and so is the sign convention (positive quantities and prices are sent). Payments (receipts) are not built.
+Refund: `order_ref` must name an invoice in Fusion (SYNC-VAL-002 before any create otherwise). `GET receivablesCreditMemos` by `WC-{refund id}`; if none, `POST receivablesCreditMemos` with the business unit, source, bill-to account and currency taken from the invoice, `TransactionType` = `credit_memo_type`, the reference, `TransactionDate` = the refund date, `Comments` = "Refund {WC-refund} of order {WC-order}: reason" plus the last line "Shop total 39.98 AED" (the refund amount), `InvoiceStatus` = `Incomplete` (a draft), and `receivablesCreditMemoLines` with one line per refund line (`[SKU] Refund`, quantity, unit price = amount divided by quantity) or, for a refund with no lines, one line "Refund of order {WC-order}" for the amount. It is an on-account credit memo [documented]: it is not applied to the invoice by this connector, so a Receivables clerk applies it. Attribute names of credit memos and their lines are [inferred] from the invoice resource, and so is the sign convention. Payments (receipts) are not built.
+
+Because the sign is inferred and a credit memo with the wrong sign would post as a debit, the memo is made as a draft first and completed only after it was read back:
+
+1. `POST` with `InvoiceStatus` = `Incomplete` [the values Complete, Incomplete and Frozen are documented for invoices; for credit memos [inferred]], then `GET` the draft.
+2. The draft must show the same currency, and a `TotalAmount` that is negative (a credit; a positive total would book a debit). A draft that shows no total, a positive total or another currency is deleted (`DELETE receivablesCreditMemos/{id}` [inferred]) and the item fails with SYNC-VAL-002; the message says whether the draft was deleted, and for a positive total names the option `credit_line_sign = negative`, which sends negative quantities for a pod whose credit lines must be negative.
+3. `PATCH receivablesCreditMemos/{id}` with `InvoiceStatus` = `Complete` [inferred]. If Fusion refuses (missing accounting setup, for example), the draft is deleted and Fusion's words are returned.
+4. The completed memo is read back and its `TotalAmount` (absolute) is compared with the refund amount (one minor unit tolerated), because tax is worked out at completion. A difference with `total_mismatch = fail` fails the item with SYNC-VAL-002; a completed credit memo is not deleted by the connector and stays for a person. `findExisting()` reads the refund total from the last line of `Comments` and returns that error (or the Incomplete-status error) instead of linking the memo. With `warn` the difference is a warning.
 
 ## 9. Reading from Fusion
 
 - `lookupProduct`: `itemsV2` by `ItemNumber` (`q`, exact, then the upper-case form); with `free_text` the SKU itself, without a request. `searchProducts`: `q=ItemNumber like '%TEXT%' or ItemDescription like '%text%'` (the number part upper-cased), at most 25. Pages are read with `limit=100` and `offset` until `hasMore` is false.
 - `fetchInvoice($ref)`: the invoice by `CustomerTransactionId`: `number` = `TransactionNumber`, `status` = `issued` (`draft` when `InvoiceStatus` is Incomplete), `issued_at` = `TransactionDate`; `authority_status` is empty. Null when the invoice does not exist.
-- `listForReconcile($from)`: invoices whose reference starts `WC-`, in the business unit, with `TransactionDate >= from` (`q` with `like`), keyed by reference with `total_minor` (`TotalAmount`), `refunded_minor` and an empty `email`. `refunded_minor` is the sum of the absolute `TotalAmount` of the credit memos with the same filter whose `Comments` say "of order WC-…". If an invoice or a credit memo shows no total, the call returns SYNC-VAL-002 instead of a list.
+- `listForReconcile($from)`: invoices whose reference starts `WC-`, in the business unit, with `TransactionDate >= from - 1 day` (`q` with `like`; the dates are the shop's own, not UTC), keyed by reference with `total_minor` (`TotalAmount`), `refunded_minor` and an empty `email`. `refunded_minor` is the sum of the absolute `TotalAmount` of the credit memos with the same filter whose `Comments` say "of order WC-…". If an invoice or a credit memo shows no total, the call returns SYNC-VAL-002 instead of a list.
 - Stock, tracking: not built.
 
 ## 10. Rate limits and pacing
@@ -179,7 +186,8 @@ SYNC-AUTH-005, SYNC-AUTH-006 and SYNC-AUTH-007 are not produced: no Fusion answe
 ## 13. Not verified
 
 - No live Fusion pod was available. Behaviour above the wire is tested against `FakeOracleFusionServer` (tests/php/Support), which encodes the assumptions below; it proves the connector's logic, not Oracle's behaviour.
-- Several REST reference pages answered with the landing page, and the credit memo example pages could not be fetched (not on the tool's allowlist), so these are [inferred]: attribute names of `receivablesInvoiceLines` beyond `Description`, `LineNumber`, `Quantity`, `UnitSellingPrice` (including `TaxClassificationCode`, `MemoLine`), the resource attributes and the line array name `receivablesCreditMemoLines` of `receivablesCreditMemos` (they are constants in `OracleFusionRefunds`), the sign convention of credit memo lines, the attribute that holds the invoice total (`TotalAmount`, `InvoiceBalanceAmount`) and whether the answer to the create already shows it, whether `PurchaseOrder`, `CrossReference` and `TransactionDate` can be used in `q`, `FreightAmount` as a header attribute when tax and freight accounting are set up, the exact error body (`o:errorDetails` is assumed from the Oracle REST framework, not read), and the maximum lengths of `Comments` (1760 is on the page) and of a line `Description` (240 is assumed).
+- The sign convention of a credit memo, that `InvoiceStatus` = `Incomplete` makes a draft on a credit memo, that a `PATCH` of `InvoiceStatus` completes it, and that an Incomplete credit memo can be deleted: all [inferred]. The connector guards against the first (draft total must be negative) but depends on the other three; a pod that behaves differently makes every refund fail with SYNC-VAL-002 and nothing is booked.
+- Several REST reference pages answered with the landing page, and the credit memo example pages could not be fetched (not on the tool's allowlist), so these are [inferred]: attribute names of `receivablesInvoiceLines` beyond `Description`, `LineNumber`, `Quantity`, `UnitSellingPrice` (including `TaxClassificationCode`, `MemoLine`), the resource attributes and the line array name `receivablesCreditMemoLines` of `receivablesCreditMemos` (they are constants in `OracleFusionRefunds`), the attribute that holds the invoice total (`TotalAmount`, `InvoiceBalanceAmount`) and whether the answer to the create already shows it, whether `PurchaseOrder`, `CrossReference` and `TransactionDate` can be used in `q`, `FreightAmount` as a header attribute when tax and freight accounting are set up, the exact error body (`o:errorDetails` is assumed from the Oracle REST framework, not read), and the maximum lengths of `Comments` (1760 is on the page) and of a line `Description` (240 is assumed).
 - The `q` quoting of framework version 2 (single quotes assumed, a quote inside doubled; one source shows double quotes), whether `like` is case sensitive, the `orderBy=Attribute:asc` form, and `onlyData=true`.
 - The status text of an unfinished invoice (`Incomplete` is on the usage notes page; the comparison is case-insensitive).
 - Whether `TransactionSource` accepts `Manual` through the API (the Oracle example uses it) or needs an imported source, and whether `TransactionNumber` must be supplied for a source without automatic numbering (the connector never sends it).

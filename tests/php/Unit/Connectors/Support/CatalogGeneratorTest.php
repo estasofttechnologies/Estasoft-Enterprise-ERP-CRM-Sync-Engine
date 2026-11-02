@@ -108,4 +108,115 @@ final class CatalogGeneratorTest extends TestCase {
 		$php = 'return ' . estasoft_export( $value, 0 ) . ';';
 		$this->assertSame( $value, eval( $php ) ); // phpcs:ignore Squiz.PHP.Eval.Discouraged -- reads back a generated literal in a test.
 	}
+
+	/**
+	 * A small plugin root with a catalog and some documents.
+	 *
+	 * @param array<int,array<string,mixed>> $rows Catalog rows.
+	 * @param array<string,string>           $docs Document text by file name.
+	 */
+	private function fixtureRoot( array $rows, array $docs ): string {
+		$root = sys_get_temp_dir() . '/estasoft-catalog-' . bin2hex( random_bytes( 5 ) );
+		mkdir( $root . '/includes/Catalog', 0777, true );
+		mkdir( $root . '/docs/connectors', 0777, true );
+		file_put_contents( $root . '/includes/Catalog/catalog.php', "<?php\nreturn " . estasoft_export( $rows, 0 ) . ";\n" );
+		foreach ( $docs as $name => $text ) {
+			file_put_contents( $root . '/docs/connectors/' . $name, $text );
+		}
+		return $root;
+	}
+
+	/**
+	 * The rows of a generated catalog file, read back by loading it.
+	 *
+	 * @param string $catalog File text.
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function rowsOf( string $catalog ): array {
+		$file = sys_get_temp_dir() . '/estasoft-catalog-out-' . bin2hex( random_bytes( 5 ) ) . '.php';
+		file_put_contents( $file, $catalog );
+		$rows = require $file;
+		unlink( $file );
+		return $rows;
+	}
+
+	private function removeRoot( string $root ): void {
+		foreach ( (array) glob( $root . '/docs/connectors/*' ) as $file ) {
+			unlink( $file );
+		}
+		@rmdir( $root . '/docs/connectors' ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- a test cleaning up its temporary folder.
+	}
+
+	private function row( string $name ): array {
+		return array( 'name' => $name, 'type' => 'erp', 'regions' => 'Global', 'connector' => null, 'connection_method' => 'key', 'needs' => 'Hand-written needs.', 'wave' => 1 );
+	}
+
+	public function test_the_reason_a_system_is_unavailable_goes_into_the_row_and_the_needs_text_stays(): void {
+		$root = $this->fixtureRoot(
+			array( $this->row( 'Gone' ), $this->row( 'Fine' ) ),
+			array(
+				'gone.md' => "---\nid: gone\nname: Gone\ncatalog_row: Gone\nconnection_method: none\navailable: false\nunavailable_reason: \"No API is published yet.\"\nhosts: []\n---\n\n## How the merchant connects\n\n1. Wait.\n",
+				'fine.md' => "---\nid: fine\nname: Fine\ncatalog_row: Fine\nconnection_method: key\navailable: true\nhosts: [api.fine.test]\n---\n\n## How the merchant connects\n\n1. Paste the key.\n",
+			)
+		);
+		$problems = array();
+		$built    = estasoft_catalog_from_docs( $root, $problems );
+		$rows     = $this->rowsOf( $built['catalog'] );
+		$this->removeRoot( $root );
+
+		$gone = array_column( $rows, null, 'name' )['Gone'];
+		$this->assertFalse( $gone['available'] );
+		$this->assertFalse( $gone['selectable'] );
+		$this->assertSame( 'No API is published yet.', $gone['unavailable_reason'] );
+		$this->assertSame( 'Hand-written needs.', $gone['needs'] );
+		$this->assertArrayNotHasKey( 'unavailable_reason', array_column( $rows, null, 'name' )['Fine'], 'A system that can be chosen has none.' );
+		$this->assertSame( array(), $problems );
+	}
+
+	public function test_an_unavailable_document_without_a_reason_is_reported(): void {
+		$root = $this->fixtureRoot( array( $this->row( 'Gone' ) ), array( 'gone.md' => "---\nid: gone\nname: Gone\ncatalog_row: Gone\nconnection_method: none\navailable: false\nhosts: []\n---\n\n## How the merchant connects\n\n1. Wait.\n" ) );
+		$problems = array();
+		estasoft_catalog_from_docs( $root, $problems );
+		$this->removeRoot( $root );
+		$this->assertStringContainsString( 'no unavailable_reason', implode( ' | ', $problems ) );
+	}
+
+	public function test_a_row_without_a_document_keeps_the_reason_it_has(): void {
+		$row = $this->row( 'Static' ) + array( 'available' => false, 'selectable' => false, 'unavailable_reason' => 'Kept.' );
+		$this->assertSame( 'Kept.', estasoft_row( $row, array() )['unavailable_reason'] );
+		$this->assertArrayNotHasKey( 'unavailable_reason', estasoft_row( $this->row( 'Plain' ), array() ) );
+	}
+
+	public function test_wildcard_hosts_are_kept_as_patterns_and_normalised(): void {
+		$root = $this->fixtureRoot(
+			array( $this->row( 'Cloud' ) ),
+			array( 'cloud.md' => "---\nid: cloud\nname: Cloud\ncatalog_row: Cloud\nconnection_method: cloud_app\navailable: true\nhosts: [\"*.OracleCloud.com\", \" login.cloud.test \", \"*.fa.oraclecloud.com\"]\n---\n\n## How the merchant connects\n\n1. Sign in.\n" )
+		);
+		$problems = array();
+		$built    = estasoft_catalog_from_docs( $root, $problems );
+		$rows     = $this->rowsOf( $built['catalog'] );
+		$readme   = $built['readme'];
+		$this->removeRoot( $root );
+
+		$this->assertSame( array( '*.oraclecloud.com', 'login.cloud.test', '*.fa.oraclecloud.com' ), $rows[0]['hosts'], 'Lower case, trimmed, and a pattern keeps its *.' );
+		$this->assertSame( array(), $problems, 'Wildcard hosts are accepted.' );
+		$this->assertStringContainsString( '`*.oraclecloud.com`', $readme );
+		$this->assertStringContainsString( 'A host that starts with `*.` is a pattern', $readme );
+		$this->assertTrue( estasoft_host_is_pattern( $rows[0]['hosts'][0] ) );
+		$this->assertFalse( estasoft_host_is_pattern( $rows[0]['hosts'][1] ) );
+	}
+
+	public function test_a_host_that_is_not_a_name_or_a_clean_pattern_is_reported(): void {
+		foreach ( array( '*', '*.com', 'a.*.example.com', 'https://api.example.com', 'api.example.com/v1', 'api.example.com:8443', 'api example.com', '*.*.example.com', 'localhost' ) as $bad ) {
+			$this->assertNotNull( estasoft_host_problem( $bad ), $bad );
+		}
+		foreach ( array( 'api.example.com', '*.oraclecloud.com', '*.fa.us2.oraclecloud.com', 'a-b.example.co.uk', 'login.microsoftonline.com' ) as $good ) {
+			$this->assertNull( estasoft_host_problem( $good ), $good );
+		}
+		$root = $this->fixtureRoot( array( $this->row( 'Odd' ) ), array( 'odd.md' => "---\nid: odd\nname: Odd\ncatalog_row: Odd\nconnection_method: key\navailable: true\nhosts: [\"https://odd.test/v1\"]\n---\n\n## How the merchant connects\n\n1. Go.\n" ) );
+		$problems = array();
+		estasoft_catalog_from_docs( $root, $problems );
+		$this->removeRoot( $root );
+		$this->assertStringContainsString( 'odd: hosts:', implode( ' | ', $problems ) );
+	}
 }

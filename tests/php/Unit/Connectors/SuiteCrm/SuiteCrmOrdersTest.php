@@ -247,6 +247,34 @@ final class SuiteCrmOrdersTest extends SuiteCrmTestCase {
 		$this->assertCount( 1, $this->records( 'Contacts' ) );
 	}
 
+	public function test_a_dedicated_reference_field_finds_the_order_even_when_somebody_renames_the_opportunity(): void {
+		$this->server->customFields['Opportunities'] = array( 'wc_reference_c' );
+		$connection = $this->connection( $this->options( array( 'reference_field' => 'wc_reference_c' ) ) );
+		list( $item, $payload ) = $this->order( '6001' );
+		$first = $this->connector->send( $connection, $item, $payload );
+		$this->assertTrue( $first->isSuccess(), (string) $first->error?->message() );
+		$this->assertSame( 'WC-6001', $this->records( 'Opportunities' )[0]['wc_reference_c'] );
+		$dealId = array_key_first( $this->server->modules['Opportunities'] );
+		$this->server->modules['Opportunities'][ $dealId ]['attributes']['name'] = 'Big autumn deal (renamed by sales)';
+		$again = $this->connector->send( $connection, $item, $payload );
+		$this->assertTrue( $again->alreadyExisted );
+		$this->assertCount( 1, $this->records( 'Opportunities' ), 'No second opportunity after the rename.' );
+		$this->assertInstanceOf( ExternalRef::class, $this->connector->findExisting( $connection, $item ) );
+		list( $other ) = $this->order( '600' );
+		$this->assertNull( $this->connector->findExisting( $connection, $other ), 'WC-600 is not WC-6001.' );
+	}
+
+	public function test_a_reference_field_that_is_not_a_field_name_or_does_not_exist_stops_the_order_before_anything_is_made(): void {
+		list( $item, $payload ) = $this->order( '6002' );
+		$bad = $this->connector->send( $this->connection( $this->options( array( 'reference_field' => 'wc ref; drop' ) ) ), $item, $payload );
+		$this->assertSame( ErrorCode::Val002, $bad->error->code );
+		$this->assertSame( 'reference_field', $bad->error->context['field'] );
+		$missing = $this->connector->send( $this->connection( $this->options( array( 'reference_field' => 'no_such_field_c' ) ), array(), 2 ), $item, $payload );
+		$this->assertSame( ErrorCode::Val002, $missing->error->code );
+		$this->assertSame( array(), $this->records( 'Opportunities' ) );
+		$this->assertSame( array(), $this->records( 'Contacts' ) );
+	}
+
 	public function test_a_refund_becomes_a_note_on_the_opportunity_and_is_made_once(): void {
 		$connection = $this->connection();
 		list( $item, $payload ) = $this->order( '3001' );

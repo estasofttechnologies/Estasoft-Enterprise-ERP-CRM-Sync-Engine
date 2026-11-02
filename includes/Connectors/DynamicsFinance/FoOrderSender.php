@@ -12,7 +12,9 @@ namespace Estasoft\SyncEngine\Connectors\DynamicsFinance;
 defined( 'ABSPATH' ) || exit;
 
 use Estasoft\SyncEngine\Connectors\Microsoft\Amounts;
+use Estasoft\SyncEngine\Connectors\Microsoft\Dates;
 use Estasoft\SyncEngine\Connectors\Microsoft\Failures;
+use Estasoft\SyncEngine\Connectors\Microsoft\MicrosoftErrors;
 use Estasoft\SyncEngine\Connectors\Microsoft\OData;
 use Estasoft\SyncEngine\Connectors\Microsoft\OrderData;
 use Estasoft\SyncEngine\Connectors\Microsoft\Text;
@@ -27,9 +29,11 @@ use Estasoft\SyncEngine\Domain\Item;
 /**
  * One pass over an order. It starts from a read (is there a sales order of this legal entity whose customer reference is `WC-{id}`?),
  * checks what can be checked without writing (items, the shipping and fee items, the customer group when a customer must be made), then
- * creates the header, the lines one by one, and compares the total when F&O gives one. The header and the lines are separate calls and not
- * one transaction (documented), so the header carries a marker (`WC-123 (3 lines)` in the order name) and a pass cut off anywhere is
- * repeated: lines already there are checked and kept, never added twice. The order is left open; nothing is confirmed or invoiced.
+ * creates the header, the lines one by one, reads the lines back, and compares the total. The header and the lines are separate calls and
+ * not one transaction (documented), so a pass cut off anywhere is repeated: lines already there are checked and kept, never added twice.
+ * The order name is the marker: `WC-123 (syncing)` while the order is being made, `WC-123 (3 lines)` only after the lines were read back
+ * and the total was checked. An order whose total failed the check, or could not be read, keeps the first name, is never linked by
+ * findExisting() and is checked again by the next send(). The order is left open; nothing is confirmed or invoiced.
  */
 final class FoOrderSender {
 
@@ -37,6 +41,11 @@ final class FoOrderSender {
 	 * Longest order name (the usual F&O length).
 	 */
 	private const NAME_MAX = 60;
+
+	/**
+	 * Longest sales order number (the F&O sales id is 20 characters).
+	 */
+	private const NUMBER_MAX = 20;
 
 	/**
 	 * Takes the objects and settings this class works with.
@@ -100,7 +109,7 @@ final class FoOrderSender {
 		if ( $plan instanceof ConnectorError ) {
 			return SendResult::failure( $plan );
 		}
-		$date   = 'today' === $this->options->shippingDate() || '' === $order->orderDate ? gmdate( 'Y-m-d' ) : $order->orderDate;
+		$date   = FoLine::stamp( 'today' === $this->options->shippingDate() || '' === $order->orderDate ? Dates::today() : $order->orderDate );
 		$header = $this->header( $ref );
 		$work   = false;
 		if ( null === $header ) {
@@ -108,8 +117,16 @@ final class FoOrderSender {
 			if ( $customer instanceof ConnectorError ) {
 				return SendResult::failure( $customer );
 			}
-			$header = $this->fo->create( 'SalesOrderHeadersV2', $this->headerBody( $order, $ref, (string) ( $customer['row']['CustomerAccount'] ?? '' ), $date, count( $plan ) ) );
-			$work   = true;
+			try {
+				$header = $this->fo->create( 'SalesOrderHeadersV2', $this->headerBody( $order, $ref, (string) ( $customer['row']['CustomerAccount'] ?? '' ), $date ) );
+			} catch ( ApiException $exception ) {
+				$refusal = $this->numberingRefusal( $exception );
+				if ( null === $refusal ) {
+					throw $exception;
+				}
+				return SendResult::failure( $refusal );
+			}
+			$work = true;
 		}
 		$number = (string) ( $header['SalesOrderNumber'] ?? '' );
 		if ( '' === $number ) {
@@ -120,35 +137,131 @@ final class FoOrderSender {
 			return SendResult::failure( Failures::currencyDiffers( $this->system, $order->currency, $came ) );
 		}
 		$existing = $this->lines( $number );
+		$wrote    = false;
 		foreach ( $plan as $index => $line ) {
 			if ( isset( $existing[ $index ] ) ) {
 				if ( ! $line->matches( $existing[ $index ], $order->currency ) ) {
-					return SendResult::failure( Failures::invalid( $this->system, 'sales order', __( 'The sales order in Finance and Operations was changed after it was created: its lines are not the ones the shop sent. Delete the order there and try again.', 'estasoft-erp-crm-sync-engine' ), 'lines differ' ) );
+					return SendResult::failure( $this->changed() );
 				}
 				continue;
 			}
 			$this->fo->create( 'SalesOrderLines', $line->body( $number, $order->currency, $date, $this->options->warehouse(), $this->options->site() ) );
-			$work = true;
+			$wrote = true;
 		}
-		if ( self::markerCount( (string) ( $header['SalesOrderName'] ?? '' ), $ref ) !== count( $plan ) ) {
+		if ( $wrote ) {
+			// F&O may price a line from its own agreements: read the lines back and compare them with what was sent.
+			$stored = $this->lines( $number );
+			foreach ( $plan as $index => $line ) {
+				if ( ! isset( $stored[ $index ] ) || ! $line->matches( $stored[ $index ], $order->currency ) ) {
+					return SendResult::failure( $this->stored() );
+				}
+			}
+		}
+		$work  = $work || $wrote;
+		$fresh = $this->header( $ref ) ?? $header;
+		$found = isset( $fresh['OrderTotalAmount'] ) ? Amounts::minor( $fresh['OrderTotalAmount'], $order->currency ) : null;
+		$check = $this->checkTotal( $found, $order );
+		if ( $check['error'] instanceof ConnectorError ) {
+			// The order keeps its first name: it is not finished and is not linked on the next try.
+			return SendResult::failure( $check['error'] );
+		}
+		if ( self::markerCount( (string) ( $fresh['SalesOrderName'] ?? '' ), $ref ) !== count( $plan ) ) {
 			$this->fo->update( 'SalesOrderHeadersV2', array( 'SalesOrderNumber' => $number ), array( 'SalesOrderName' => self::name( $ref, count( $plan ) ) ) );
 			$work = true;
 		}
-		$fresh = $this->header( $ref ) ?? $header;
-		$found = isset( $fresh['OrderTotalAmount'] ) ? Amounts::minor( $fresh['OrderTotalAmount'], $order->currency ) : null;
-		$check = TotalCheck::compare(
+		$result = $this->ref( $fresh, $order->currency, $check['warning'] );
+		return $work ? SendResult::created( $result ) : SendResult::existing( $result );
+	}
+
+	/**
+	 * Compare the total F&O worked out with the shop's. A total F&O does not give (the column may stay empty for an order made over OData) is
+	 * not a pass: the order is refused unless the connection accepts differences.
+	 *
+	 * @param int|null  $found Total in minor units, or null when F&O gave none.
+	 * @param OrderData $order Order.
+	 * @return array{error:ConnectorError|null,warning:string}
+	 */
+	private function checkTotal( ?int $found, OrderData $order ): array {
+		$expected = $order->expectedMinor();
+		$fail     = 'fail' === $this->options->totalMismatch();
+		if ( ( null === $found || 0 === $found ) && null !== $expected && 0 !== $expected ) {
+			$shop = Amounts::text( $expected, $order->currency ) . ' ' . $order->currency;
+			if ( $fail ) {
+				return array(
+					'error'   => Failures::invalid(
+						$this->system,
+						'total',
+						sprintf(
+							/* translators: %s: the shop total with its currency. */
+							__( 'Finance and Operations gave no total for this order, so it could not be compared with the shop total of %s and the order was not marked as finished. Check the order there. If this system never fills in the order total for orders made this way, set the option total_mismatch to warn.', 'estasoft-erp-crm-sync-engine' ),
+							$shop
+						),
+						'total unreadable'
+					),
+					'warning' => '',
+				);
+			}
+			return array(
+				'error'   => null,
+				'warning' => sprintf(
+					/* translators: %s: the shop total with its currency. */
+					__( 'Finance and Operations gave no total, so the order could not be compared with the shop total of %s.', 'estasoft-erp-crm-sync-engine' ),
+					$shop
+				),
+			);
+		}
+		return TotalCheck::compare(
 			$found,
-			$order->expectedMinor(),
+			$expected,
 			$order->currency,
-			'fail' === $this->options->totalMismatch(),
+			$fail,
 			$this->system,
 			__( 'Check the sales tax groups of the customer and of the items, then delete the order in Finance and Operations and try again.', 'estasoft-erp-crm-sync-engine' )
 		);
-		if ( $check['error'] instanceof ConnectorError ) {
-			return SendResult::failure( $check['error'] );
+	}
+
+	/**
+	 * The refusal for an order whose lines were changed after the connector made them.
+	 */
+	private function changed(): ConnectorError {
+		return Failures::invalid( $this->system, 'sales order', __( 'The sales order in Finance and Operations was changed after it was created: its lines are not the ones the shop sent. Delete the order there and try again.', 'estasoft-erp-crm-sync-engine' ), 'lines differ' );
+	}
+
+	/**
+	 * The refusal for lines that F&O stored differently from what was sent (its own price or quantity rules).
+	 */
+	private function stored(): ConnectorError {
+		return Failures::invalid( $this->system, 'sales order', __( 'Finance and Operations stored the lines differently from what the shop sent (a price or quantity of its own may have replaced it). Check the lines and the price agreements there, delete the order and try again.', 'estasoft-erp-crm-sync-engine' ), 'lines stored differently' );
+	}
+
+	/**
+	 * The refusal when F&O would not create an order without a sales order number, or null when the failure is something else.
+	 *
+	 * @param ApiException $exception The failed call.
+	 */
+	private function numberingRefusal( ApiException $exception ): ?ConnectorError {
+		$response = $exception->response();
+		if ( 'automatic' !== $this->options->orderNumbering() || 400 !== $exception->status() || null === $response ) {
+			return null;
 		}
-		$result = $this->ref( $fresh, $order->currency, $check['warning'] );
-		return $work ? SendResult::created( $result ) : SendResult::existing( $result );
+		if ( 1 !== preg_match( '/SalesOrderNumber|sales order number|number sequence/i', MicrosoftErrors::message( $response ) ) ) {
+			return null;
+		}
+		return Failures::invalid(
+			$this->system,
+			'order_numbering',
+			__( 'Finance and Operations would not create the sales order without a sales order number: the number sequence of this legal entity is probably manual. Set the option order_numbering to shop_reference, or make the sequence automatic, then try again.', 'estasoft-erp-crm-sync-engine' ),
+			'order number required'
+		);
+	}
+
+	/**
+	 * The order name while the order is being made (see the class description).
+	 *
+	 * @param string $ref WC-123.
+	 */
+	public static function pendingName( string $ref ): string {
+		return Text::cut( sprintf( '%s (syncing)', $ref ), self::NAME_MAX );
 	}
 
 	/**
@@ -251,20 +364,22 @@ final class FoOrderSender {
 	 * @param OrderData $order    Order.
 	 * @param string    $ref      WC-123.
 	 * @param string    $customer Customer account.
-	 * @param string    $date     Requested shipping date.
-	 * @param int       $lines    Number of lines.
+	 * @param string    $date     Requested shipping date, as written by FoLine::stamp().
 	 * @return array<string,mixed>
 	 */
-	private function headerBody( OrderData $order, string $ref, string $customer, string $date, int $lines ): array {
+	private function headerBody( OrderData $order, string $ref, string $customer, string $date ): array {
 		$body = array(
 			'CustomersOrderReference'       => $ref,
-			'SalesOrderName'                => self::name( $ref, $lines ),
+			'SalesOrderName'                => self::pendingName( $ref ),
 			'OrderingCustomerAccountNumber' => $customer,
 			'InvoiceCustomerAccountNumber'  => $customer,
 			'CurrencyCode'                  => $order->currency,
 			'RequestedShippingDate'         => $date,
 			'RequestedReceiptDate'          => $date,
 		);
+		if ( 'shop_reference' === $this->options->orderNumbering() ) {
+			$body['SalesOrderNumber'] = Text::cut( $ref, self::NUMBER_MAX );
+		}
 		if ( $order->pricesIncludeTax ) {
 			$body['ArePricesIncludingSalesTax'] = 'Yes';
 		}

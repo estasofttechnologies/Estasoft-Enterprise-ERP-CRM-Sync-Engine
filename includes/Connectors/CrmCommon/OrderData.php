@@ -34,6 +34,7 @@ final class OrderData {
 	 * @param string                                                  $discountCodes  Coupon codes.
 	 * @param string                                                  $paymentReference Payment transaction id.
 	 * @param string                                                  $shippingTaxCode  Tax code of the shipping line, may be empty.
+	 * @param string                                                  $paidDate         Date the order was paid, Y-m-d, UTC; empty when it is not paid.
 	 */
 	public function __construct(
 		public readonly string $reference,
@@ -51,6 +52,7 @@ final class OrderData {
 		public readonly string $discountCodes = '',
 		public readonly string $paymentReference = '',
 		public readonly string $shippingTaxCode = '',
+		public readonly string $paidDate = '',
 	) {
 	}
 

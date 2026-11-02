@@ -129,7 +129,7 @@ Customers: `partner.*` only; the contact gets `ContactNumber` `WC-{customer id}`
 `send()` for an order item. Every pass starts from a read and does only what is missing.
 
 1. Check the payload before any request: customer name, product lines, whole-number minor units, a price for every line.
-2. Find the invoice: `GET /Invoices?where=Type=="ACCREC" AND Reference=="WC-{id}"` with `page` and `pageSize=100`, all pages [documented parameters; filter syntax `[inferred]`]. A `DELETED` invoice is ignored; a `VOIDED` one stops the item with SYNC-VAL-002 (the merchant voided it on purpose; creating a second one could double the revenue).
+2. Find the invoice: `GET /Invoices?where=Type=="ACCREC" AND Reference=="WC-{id}"` with `page` and `pageSize=100`, all pages [documented parameters; filter syntax `[inferred]`]. A `DELETED` invoice is ignored for the result, but its id is remembered for the key in section 8; a `VOIDED` one stops the item with SYNC-VAL-002 (the merchant voided it on purpose; creating a second one could double the revenue).
 3. If none exists: read `GET /Organisation` (base currency, region) and, when the order currency differs, `GET /Currencies` (the currency must be enabled in Xero, else SYNC-VAL-002 naming it). Resolve the items (one `GET /Items?where=Code=="A" OR Code=="B"` per 20 SKUs; an item that is not sold, or no match, follows `unknown_sku`), then the contact (below). All of this happens before anything is created.
 4. Create the invoice as `DRAFT` with `PUT /Invoices?summarizeErrors=true&unitdp=4&allowBackorders=...` and the header `Idempotency-Key` (see section 8). The answer is checked for `HasErrors`/`ValidationErrors`.
 5. Read back the currency and the total. A currency other than the order's, or a total that differs from `total - excluded_total` by more than one minor unit, is `SYNC-VAL-002` naming both totals; with `total_mismatch = fail` the draft is deleted (status `DELETED`) first. Nothing is approved before this check.
@@ -146,7 +146,7 @@ Contacts: `GET /Contacts?searchTerm={email}` (documented: case-insensitive acros
 ## 8. Duplicate protection
 
 - Reference field: Invoice `Reference` = `WC-{order id}`; credit note `Reference` = `WC-{refund id}` (a refund and an order never share an id). Searched before every create (section 7 step 2).
-- Optional `Idempotency-Key` header, 128 characters at most, accepted on POST/PUT [documented in the OpenAPI file]. The retention time and the answer to a reused key with a different body are not documented, so it is only an extra layer. The key is `wc-{connection}-{reference}-{step}-{first 16 hex of sha1 of the try number and the body}`: the same body in the same try replays, a corrected body or the next try (the queue item's `attempt`) gets a new key, so a retry after a deleted draft is not handed the answer about the deleted draft. Across tries the duplicate protection is the reference, searched before every create.
+- Optional `Idempotency-Key` header, 128 characters at most, accepted on POST/PUT [documented in the OpenAPI file]. The retention time and the answer to a reused key with a different body are not documented. The key is `wc-{connection}-{reference}-{step}-{first 16 hex of sha1 of the ids of this order's DELETED drafts and the body}`. The queue item's `attempt` is not part of it: a retry after a time-out or a lost answer sends the same key with the same body, so Xero can replay the first create instead of making a second invoice (references are not unique in Xero, so the search alone cannot be trusted to see an invoice created a moment ago). The key changes only when the body changes (a corrected order) or after the connector itself deleted a draft of this reference (the deleted invoice's id goes into the hash), so a retry after that deletion is not handed the answer about the deleted draft. The payment key is built the same way from the payment body, which names the invoice. The refund's credit note follows the same rule.
 - `findExisting()` and `send()` return a reference only for records `send()` finished or can safely finish (see above).
 
 ## 9. Taxes
@@ -172,6 +172,8 @@ A refund item finds the order's invoice (`WC-{order id}`; not found: SYNC-VAL-00
 - Tracking is not available (Xero has no delivery records), prices are not read, webhooks are not used (they need a public endpoint and a signing key).
 
 ## 13. Rate limits and pacing
+
+The circuit breaker's health probe (`ping()`) is one `GET /Organisation`, made fresh every time (nothing is answered from what an earlier read cached); it is false on any failure. Test connection makes several reads, the probe does not.
 
 Limits per organisation: 5 concurrent calls, 60 a minute, 5,000 a day (1,000 on Starter); per app 10,000 a minute [documented]. The connector runs one call at a time, about one per second (`requestsPerMinute` 55, `requestsPerDay` 1,000), and stops with SYNC-RATE-001 and the wait when the daily cap is used up or Xero answers 429 (the `Retry-After` value is obeyed). Test connection shows `X-DayLimit-Remaining` when Xero sends it. One order costs about 6 to 9 calls (find invoice, find contact, items, organisation, create, approve), so the Starter tier covers roughly 110 orders a day.
 
@@ -214,13 +216,13 @@ Note for the owner: `docs/spec/scope-update.md` item 4 says Xero has "no stock o
 
 - The guides at `developer.xero.com/documentation/...` could not be fetched (shell page). The `where` filter syntax used (`Type=="ACCREC" AND Reference=="WC-1"`, `Reference.StartsWith("WC-")`, `Date>=DateTime(2026,1,1)`) follows the filter style of the OpenAPI descriptions and common SDK usage, not a page read.
 - Whether `Reference` is filtered server-side efficiently, and whether string comparison in `where` is case-sensitive.
-- The behaviour of `Idempotency-Key` (retention, reuse with a different body).
+- The behaviour of `Idempotency-Key` (retention, reuse with a different body, whether a replay returns the first answer to a request that timed out on our side). The retry-after-time-out protection rests on it whenever the search for the reference does not yet show the first invoice.
 - Whether `DELETED` can be set on a draft created by the same app in every organisation, and what Xero does with a draft that already has an attachment or a payment.
 - Multi-decimal currencies (KWD, BHD, OMR): `unitdp=4` allows three decimals on the unit price, but how Xero rounds a line amount to the currency is not documented; the total check reports any difference.
 - Whether the access token's scopes can be read (not attempted; a missing scope shows as SYNC-AUTH-004 when the call is made).
 - The name-conflict message of contacts is matched on the words "already" and "assigned"; the exact text is not documented.
 - Starter-tier numbers come from the research file and `faq/limits`; the cap used (1,000) is the Starter value.
-- Privacy URL: `https://www.xero.com/legal/privacy/` was not on the fetch allow-list; the URL is the one Xero links from its site.
+- Terms URL opened and confirmed ("Xero Developer Platform Terms & Conditions"). Privacy URL `https://www.xero.com/legal/privacy/` is listed by a web search as "Privacy notice" but was not opened; the Australian page (`/au/about/legal/privacy/`) was opened and is Xero's privacy notice.
 - No live Xero organisation was available. All behaviour above the wire is tested against `FakeXeroServer` and fixtures written from the OpenAPI examples.
 
 ## 17. Manual smoke test (real account, no secrets in the repository)

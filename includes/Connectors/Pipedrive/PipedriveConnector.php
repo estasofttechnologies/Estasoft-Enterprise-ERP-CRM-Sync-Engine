@@ -17,6 +17,7 @@ use Estasoft\SyncEngine\Connectors\CrmCommon\CrmFields;
 use Estasoft\SyncEngine\Connectors\CrmCommon\CrmMappings;
 use Estasoft\SyncEngine\Connectors\CrmCommon\CrmOptions;
 use Estasoft\SyncEngine\Connectors\CrmCommon\OrderData;
+use Estasoft\SyncEngine\Connectors\CrmCommon\ReferenceField;
 use Estasoft\SyncEngine\Connectors\CrmCommon\Summary;
 use Estasoft\SyncEngine\Connectors\CrmCommon\Text;
 use Estasoft\SyncEngine\Connectors\Support\ApiException;
@@ -67,7 +68,7 @@ final class PipedriveConnector extends AbstractSalesConnector {
 	 * @return array<int,string>
 	 */
 	protected function optionKeys(): array {
-		return array( 'pipeline_id', 'stage_id', 'lines', 'unknown_sku', 'mark_won', 'total_mismatch' );
+		return array( 'pipeline_id', 'stage_id', 'lines', 'unknown_sku', 'mark_won', 'total_mismatch', 'reference_field' );
 	}
 
 	/**
@@ -141,7 +142,8 @@ final class PipedriveConnector extends AbstractSalesConnector {
 	}
 
 	/**
-	 * Test connection: the user, the company and what the token may read.
+	 * Test connection: the user, the company, what the token may read, and the deal field that carries the order reference (created when it
+	 * is missing and the user may manage custom fields; otherwise the deal title stays the key and the test says so).
 	 *
 	 * @param Connection $connection Connection.
 	 */
@@ -163,7 +165,53 @@ final class PipedriveConnector extends AbstractSalesConnector {
 		);
 		$missing                   = array_keys( array_filter( $permissions, static fn( bool $allowed ): bool => ! $allowed ) );
 		$error                     = array() === $missing ? null : $this->noPermission( str_replace( 'read_', 'read ', (string) $missing[0] ) );
+		if ( null === $error ) {
+			$detected += $this->referenceSetup( $api, $this->options( $connection ), $permissions );
+		}
 		return new TestResult( null === $error, 'Pipedrive API v2', '' !== $company ? $company : 'Pipedrive', array(), $permissions, $error, $detected );
+	}
+
+	/**
+	 * Find or create the reference field, and report which key the connector will use.
+	 *
+	 * @param PipedriveApi       $api          API.
+	 * @param CrmOptions         $options      Options.
+	 * @param array<string,bool> &$permissions Permission list; gets `create_reference_field`.
+	 * @return array<string,string> Facts for `detected`.
+	 */
+	private function referenceSetup( PipedriveApi $api, CrmOptions $options, array &$permissions ): array {
+		$typed = $options->text( 'reference_field' );
+		if ( '' !== $typed ) {
+			// The merchant chose: a field of their own (its key), or `title` on purpose. Nothing is created and nothing is warned about.
+			$own = 'title' !== Text::lower( $typed ) && 'name' !== Text::lower( $typed ) && ReferenceField::valid( $typed );
+			return array( 'reference_mode' => $own ? 'field' : 'name' );
+		}
+		$made                                  = ( new PipedriveSetup( $api ) )->referenceField();
+		$permissions['create_reference_field'] = null !== $made;
+		if ( null === $made ) {
+			return array(
+				'reference_mode' => 'name',
+				'warning'        => 'reference_field',
+			);
+		}
+		return array(
+			'reference_mode'         => 'field',
+			ReferenceField::DETECTED => $made['field'],
+		);
+	}
+
+	/**
+	 * Cheap health probe: one read of the signed-in user.
+	 *
+	 * @param Connection $connection Connection.
+	 */
+	public function ping( Connection $connection ): bool {
+		try {
+			return array() !== $this->pipedrive( $connection )->me();
+		} catch ( \Throwable $throwable ) {
+			unset( $throwable );
+			return false;
+		}
 	}
 
 	/**
@@ -225,12 +273,16 @@ final class PipedriveConnector extends AbstractSalesConnector {
 	public function listForReconcile( Connection $connection, \DateTimeImmutable $from ): array|ConnectorError {
 		try {
 			$found = array();
-			foreach ( $this->pipedrive( $connection )->dealsUpdatedSince( $from->setTimezone( new \DateTimeZone( 'UTC' ) )->format( 'Y-m-d\TH:i:s\Z' ) ) as $deal ) {
-				$title = (string) ( $deal['title'] ?? '' );
-				if ( 1 !== preg_match( '/^WC-\d+$/', $title ) || isset( $found[ $title ] ) ) {
+			$ref   = $this->reference( $connection );
+			$since = $from->setTimezone( new \DateTimeZone( 'UTC' ) )->format( 'Y-m-d\TH:i:s\Z' );
+			foreach ( $this->pipedrive( $connection )->dealsUpdatedSince( $since, $ref->dedicated ? $ref->field : '' ) as $deal ) {
+				$values    = array( $ref->name => $deal['title'] ?? '' );
+				$custom    = $deal['custom_fields'] ?? array();
+				$reference = $ref->readFrom( ( $ref->dedicated && is_array( $custom ) ? array( $ref->field => $custom[ $ref->field ] ?? '' ) : array() ) + $values );
+				if ( '' === $reference || isset( $found[ $reference ] ) ) {
 					continue;
 				}
-				$found[ $title ] = $this->dealRef( $connection, $deal, $title, true );
+				$found[ $reference ] = $this->dealRef( $connection, $deal, $reference, true );
 			}
 			return $found;
 		} catch ( \Throwable $throwable ) {
@@ -246,7 +298,7 @@ final class PipedriveConnector extends AbstractSalesConnector {
 	 */
 	protected function findOrder( Connection $connection, Item $item ): ExternalRef|ConnectorError|null {
 		$api  = $this->pipedrive( $connection );
-		$deal = $this->findDeal( $api, $item->clientReference() );
+		$deal = $this->findDeal( $api, $this->reference( $connection ), $item->clientReference() );
 		if ( null === $deal || ! $this->hasNote( $api, (string) $deal['id'], $item->clientReference() ) ) {
 			return null;
 		}
@@ -262,7 +314,7 @@ final class PipedriveConnector extends AbstractSalesConnector {
 	protected function findRefund( Connection $connection, Item $item ): ExternalRef|ConnectorError|null {
 		$api   = $this->pipedrive( $connection );
 		$order = 1 === preg_match( '/^order:(\d+)$/', $item->partitionKey, $parts ) ? 'WC-' . $parts[1] : '';
-		$deal  = '' === $order ? null : $this->findDeal( $api, $order );
+		$deal  = '' === $order ? null : $this->findDeal( $api, $this->reference( $connection ), $order );
 		if ( null === $deal ) {
 			return null;
 		}
@@ -284,7 +336,8 @@ final class PipedriveConnector extends AbstractSalesConnector {
 		}
 		$api     = $this->pipedrive( $connection );
 		$options = $this->options( $connection );
-		$deal    = $this->findDeal( $api, $order->reference );
+		$ref     = $this->reference( $connection );
+		$deal    = $this->findDeal( $api, $ref, $order->reference );
 		if ( null !== $deal && $this->hasNote( $api, (string) $deal['id'], $order->reference ) ) {
 			return SendResult::existing( $this->dealRef( $connection, $api->deal( (string) $deal['id'] ) ?? $deal, $order->reference, false ) );
 		}
@@ -295,7 +348,7 @@ final class PipedriveConnector extends AbstractSalesConnector {
 		}
 		$resumed = null !== $deal;
 		if ( null === $deal ) {
-			$deal = $api->create( 'deals', $this->dealBody( $api, $options, $order ) );
+			$deal = $api->create( 'deals', $this->dealBody( $api, $options, $order, $ref ) );
 		}
 		$dealId = (string) ( $deal['id'] ?? '' );
 		if ( '' === $dealId ) {
@@ -355,7 +408,7 @@ final class PipedriveConnector extends AbstractSalesConnector {
 			return SendResult::failure( $refund );
 		}
 		$api  = $this->pipedrive( $connection );
-		$deal = $this->findDeal( $api, $refund->orderRef );
+		$deal = $this->findDeal( $api, $this->reference( $connection ), $refund->orderRef );
 		if ( null === $deal ) {
 			/* translators: 1: order reference */
 			return SendResult::failure( $this->invalid( 'order', sprintf( __( 'The order %s is not in Pipedrive yet.', 'estasoft-erp-crm-sync-engine' ), $refund->orderRef ) ) );
@@ -447,13 +500,39 @@ final class PipedriveConnector extends AbstractSalesConnector {
 	}
 
 	/**
-	 * The oldest deal titled with the reference.
+	 * The properties that carry the reference: the custom field Test connection found or made (or the merchant's own), then the title.
 	 *
-	 * @param PipedriveApi $api       API.
-	 * @param string       $reference WC-number.
+	 * @param Connection $connection Connection.
+	 */
+	private function reference( Connection $connection ): ReferenceField {
+		return ReferenceField::choose( $connection, $this->options( $connection ), 'reference_field', 'title' );
+	}
+
+	/**
+	 * The oldest deal carrying the reference: in the custom field first, then (the documented fallback, which also finds a deal made before
+	 * the field existed) in the title. The custom field is searched through the item search over custom fields (it cannot say which field
+	 * matched), so each hit is read and its field compared.
+	 *
+	 * @param PipedriveApi   $api       API.
+	 * @param ReferenceField $ref       Fields that carry the reference.
+	 * @param string         $reference WC-number.
 	 * @return array<string,mixed>|null
 	 */
-	private function findDeal( PipedriveApi $api, string $reference ): ?array {
+	private function findDeal( PipedriveApi $api, ReferenceField $ref, string $reference ): ?array {
+		if ( $ref->dedicated ) {
+			$hits = $api->search( 'deal', 'custom_fields', $reference );
+			usort( $hits, static fn( array $a, array $b ): int => (int) ( $a['id'] ?? 0 ) <=> (int) ( $b['id'] ?? 0 ) );
+			foreach ( $hits as $hit ) {
+				if ( ! isset( $hit['id'] ) ) {
+					continue;
+				}
+				$deal   = $api->deal( (string) $hit['id'] );
+				$custom = null === $deal ? null : ( $deal['custom_fields'] ?? null );
+				if ( null !== $deal && is_array( $custom ) && Text::same( is_scalar( $custom[ $ref->field ] ?? null ) ? (string) $custom[ $ref->field ] : '', $reference ) ) {
+					return $deal;
+				}
+			}
+		}
 		return $this->oldest( $api->search( 'deal', 'title', $reference ), 'title', $reference );
 	}
 
@@ -545,12 +624,13 @@ final class PipedriveConnector extends AbstractSalesConnector {
 	/**
 	 * Body of a new deal; creates the person and organization first.
 	 *
-	 * @param PipedriveApi $api     API.
-	 * @param CrmOptions   $options Options.
-	 * @param OrderData    $order   Order.
+	 * @param PipedriveApi   $api     API.
+	 * @param CrmOptions     $options Options.
+	 * @param OrderData      $order   Order.
+	 * @param ReferenceField $ref     Fields that carry the reference.
 	 * @return array<string,mixed>
 	 */
-	private function dealBody( PipedriveApi $api, CrmOptions $options, OrderData $order ): array {
+	private function dealBody( PipedriveApi $api, CrmOptions $options, OrderData $order, ReferenceField $ref ): array {
 		$orgId = null;
 		if ( '' !== $order->contact['company'] ) {
 			$org   = $this->oldest( $api->search( 'organization', 'name', $order->contact['company'] ), 'name', $order->contact['company'] );
@@ -571,9 +651,12 @@ final class PipedriveConnector extends AbstractSalesConnector {
 			'person_id' => (int) $id,
 			'value'     => Amounts::number( $order->totalMinor, $order->currency ),
 			'currency'  => $order->currency,
-			'add_time'  => $order->date . 'T00:00:00Z',
 			'status'    => 'open',
 		);
+		// No add_time: Pipedrive documents it as "Requires admin user API token", and the order date is in the summary note.
+		if ( $ref->dedicated ) {
+			$body['custom_fields'] = array( $ref->field => $order->reference );
+		}
 		if ( null !== $orgId && '' !== $orgId ) {
 			$body['org_id'] = (int) $orgId;
 		}

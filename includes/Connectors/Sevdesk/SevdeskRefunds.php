@@ -81,7 +81,7 @@ final class SevdeskRefunds {
 		$warnings = array();
 		if ( null !== $existing ) {
 			$read    = $this->readCredit( $api, (string) $existing['id'] ) ?? $existing;
-			$problem = $this->documents->check( $read, $refund->expectedTotal(), $options, $warnings );
+			$problem = $this->documents->check( $read, $refund->expectedTotal(), $options, $warnings, $refund->rows(), $this->creditDate( $refund ) );
 			return null !== $problem ? SendResult::failure( $problem ) : SendResult::existing( $this->documents->ref( $read, $warnings ) );
 		}
 		$rate      = $this->invoiceRate( $api, (string) $invoice['id'] );
@@ -92,7 +92,7 @@ final class SevdeskRefunds {
 		$userId  = $this->reference->userId( $api );
 		$ruleId  = PayloadReader::text( $invoice['taxRule']['id'] ?? '' );
 		$ruleId  = '' === $ruleId ? '1' : $ruleId;
-		$date    = LocalDate::dmy( '' !== $refund->date ? $refund->date : $refund->orderDate, $timezone );
+		$date    = LocalDate::dmy( $this->creditDate( $refund ), $timezone );
 		$credit  = array(
 			'objectName'           => 'CreditNote',
 			'mapAll'               => true,
@@ -129,7 +129,7 @@ final class SevdeskRefunds {
 			return SendResult::failure( Refusal::value( SevdeskConnector::LABEL, 'creditNote', __( 'sevDesk did not return the new credit note.', 'estasoft-erp-crm-sync-engine' ), 'no credit note id' ) );
 		}
 		$read    = $this->readCredit( $api, $id ) ?? array( 'id' => $id );
-		$problem = $this->documents->check( $read, $refund->expectedTotal(), $options, $warnings );
+		$problem = $this->documents->check( $read, $refund->expectedTotal(), $options, $warnings, $refund->rows(), $this->creditDate( $refund ) );
 		if ( null !== $problem ) {
 			$api->delete( 'CreditNote/' . rawurlencode( $id ), array(), null, array( 'allow' => array( 404 ) ) );
 			return SendResult::failure( $problem );
@@ -286,6 +286,15 @@ final class SevdeskRefunds {
 			}
 		}
 		return $bp;
+	}
+
+	/**
+	 * The date (UTC text) a credit note is dated: the refund's, else the order's.
+	 *
+	 * @param RefundPayload $refund Refund.
+	 */
+	private function creditDate( RefundPayload $refund ): string {
+		return '' !== $refund->date ? $refund->date : $refund->orderDate;
 	}
 
 	/**

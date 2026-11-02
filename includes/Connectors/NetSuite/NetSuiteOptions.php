@@ -66,10 +66,10 @@ final class NetSuiteOptions {
 	}
 
 	/**
-	 * Whether billing and delivery addresses are put on the sales order.
+	 * Whether billing and delivery addresses are put on the sales order. Off by default: whether NetSuite takes address subrecords in a REST create is not verified.
 	 */
 	public function sendAddresses(): bool {
-		return $this->options->flag( 'send_addresses', true );
+		return $this->options->flag( 'send_addresses', false );
 	}
 
 	/**

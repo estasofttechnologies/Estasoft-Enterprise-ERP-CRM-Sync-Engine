@@ -101,6 +101,26 @@ final class Sage200ConnectionTest extends Sage200TestCase {
 		$this->assertSame( ErrorCode::Auth007, $this->connector()->test( $none )->error->code );
 	}
 
+	public function test_the_subscription_key_is_optional_and_the_header_is_sent_only_when_it_is_filled(): void {
+		$this->server->requireKey = false;
+		$secrets                  = $this->server->signedIn( $this->kit->clock->now()->getTimestamp() );
+		unset( $secrets['subscription_key'] );
+		$none   = $this->kit->connection( 'sage200', array( 'client_id' => FakeSage200Server::CLIENT_ID, 'site_id' => FakeSage200Server::SITE, 'company_id' => FakeSage200Server::COMPANY ), $secrets, 13 );
+		$result = $this->connector()->test( $none );
+
+		$this->assertTrue( $result->ok, (string) $result->error?->message() );
+		foreach ( $this->server->calls as $call ) {
+			$this->assertArrayNotHasKey( 'ocp-apim-subscription-key', array_change_key_case( $call['headers'], CASE_LOWER ) );
+		}
+		$fields = array_column( $this->connector()->credentialFields(), null, 'name' );
+		$this->assertFalse( $fields['subscription_key']->required );
+		$this->assertTrue( $fields['subscription_key']->secret );
+
+		$this->server->calls = array();
+		$this->assertTrue( $this->connector()->test( $this->connection() )->ok );
+		$this->assertSame( FakeSage200Server::SUBSCRIPTION_KEY, array_change_key_case( $this->server->calls[0]['headers'], CASE_LOWER )['ocp-apim-subscription-key'] );
+	}
+
 	public function test_a_wrong_site_or_company_says_to_sign_in_again_and_choose_them(): void {
 		$connection = $this->kit->connection(
 			'sage200',
@@ -184,7 +204,9 @@ final class Sage200ConnectionTest extends Sage200TestCase {
 	}
 
 	public function test_ping_is_cheap_and_never_throws(): void {
-		$this->assertTrue( $this->connector()->ping( $this->connection() ) );
+		$connection = $this->connection();
+		$this->assertTrue( $this->connector()->ping( $connection ) );
+		$this->assertSame( 1, $this->kit->http->count(), 'One cheap call, not the whole Test connection.' );
 		$this->server->failNext( 'GET', '#/tax_codes$#', FakeHttpClient::status( 500, 'boom' ) );
 		$this->assertFalse( $this->connector()->ping( $this->connection() ) );
 	}
@@ -204,10 +226,10 @@ final class Sage200ConnectionTest extends Sage200TestCase {
 
 	public function test_the_flags_say_what_the_connector_really_does(): void {
 		$flags = $this->connector()->capabilities();
-		foreach ( array( Capability::Orders, Capability::Customers, Capability::Refunds, Capability::Reconciliation, Capability::ShadowLookup ) as $on ) {
+		foreach ( array( Capability::Orders, Capability::Customers, Capability::Refunds, Capability::ShadowLookup ) as $on ) {
 			$this->assertTrue( $flags[ $on->value ], $on->value );
 		}
-		foreach ( array( Capability::StockIn, Capability::TrackingIn, Capability::InvoiceReadback, Capability::PricesIn, Capability::Webhooks ) as $off ) {
+		foreach ( array( Capability::Reconciliation, Capability::StockIn, Capability::TrackingIn, Capability::InvoiceReadback, Capability::PricesIn, Capability::Webhooks ) as $off ) {
 			$this->assertFalse( $flags[ $off->value ], $off->value );
 		}
 		$this->assertSame( array( EntityType::Order, EntityType::Refund, EntityType::Customer ), $this->connector()->supportedEntities() );

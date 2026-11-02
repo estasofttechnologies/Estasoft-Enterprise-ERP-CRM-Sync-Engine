@@ -80,13 +80,14 @@ final class PayloadReader {
 		$shipping = (array) ( $payload['shipping'] ?? array() );
 		$discount = (array) ( $payload['discount'] ?? array() );
 		$payment  = (array) ( $payload['payment'] ?? array() );
+		$paidAt   = $this->text( $payload['paid_at'] ?? '' );
 
 		return new OrderData(
 			$item->clientReference(),
 			$currency,
 			$this->date( $payload['date'] ?? '' ),
 			$this->text( $payload['note'] ?? '' ),
-			'' !== $this->text( $payload['paid_at'] ?? '' ),
+			'' !== $paidAt,
 			max( 0, $total - max( 0, $excluded ) ),
 			$this->flag( $payload['prices_include_tax'] ?? false ),
 			$contact,
@@ -96,7 +97,8 @@ final class PayloadReader {
 			abs( $this->minor( $discount['total'] ?? 0 ) ?? 0 ),
 			$this->text( $discount['codes'] ?? '' ),
 			$this->text( $payment['reference'] ?? '' ),
-			$this->text( $shipping['tax_code'] ?? '' )
+			$this->text( $shipping['tax_code'] ?? '' ),
+			'' !== $paidAt ? $this->date( $paidAt ) : ''
 		);
 	}
 

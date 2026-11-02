@@ -35,6 +35,15 @@ final class SageX3ConnectionTest extends SageX3TestCase {
 		$this->assertSame( 'SOH.$create', $template[0]['query']['representation'] );
 	}
 
+	public function test_the_test_fails_without_a_total_property_unless_the_person_chose_to_continue_with_a_warning(): void {
+		$failed = $this->connector()->test( $this->connection( array( 'total_property' => '' ) ) );
+		$this->assertFalse( $failed->ok );
+		$this->assertSame( 'total_property', $failed->error->context['field'] );
+		$this->assertSame( 0, $this->kit->http->count() );
+
+		$this->assertTrue( $this->connector()->test( $this->connection( array( 'total_property' => '', 'total_mismatch' => 'warn' ) ) )->ok );
+	}
+
 	public function test_a_class_the_folder_does_not_expose_is_named(): void {
 		unset( $this->server->classes['SORDER'] );
 		$result = $this->connector()->test( $this->connection() );
@@ -105,7 +114,7 @@ final class SageX3ConnectionTest extends SageX3TestCase {
 	}
 
 	public function test_a_connection_without_a_password_is_auth_001_before_any_request(): void {
-		$connection = $this->kit->connection( 'sagex3', array( 'address' => FakeSageX3Server::ADDRESS, 'folder' => 'SEED', 'username' => 'u', 'customer_code' => 'WEB001' ), array(), 9 );
+		$connection = $this->kit->connection( 'sagex3', array( 'address' => FakeSageX3Server::ADDRESS, 'folder' => 'SEED', 'username' => 'u', 'customer_code' => 'WEB001', 'total_property' => 'ORDINVATI' ), array(), 9 );
 
 		$this->assertSame( ErrorCode::Auth001, $this->connector()->test( $connection )->error->code );
 		$this->assertSame( 0, $this->kit->http->count() );
@@ -127,7 +136,9 @@ final class SageX3ConnectionTest extends SageX3TestCase {
 	}
 
 	public function test_ping_is_cheap_and_never_throws(): void {
-		$this->assertTrue( $this->connector()->ping( $this->connection() ) );
+		$connection = $this->connection();
+		$this->assertTrue( $this->connector()->ping( $connection ) );
+		$this->assertSame( 1, $this->kit->http->count(), 'One cheap call, not the whole Test connection.' );
 		$this->assertFalse( $this->connector()->ping( $this->connection( array(), 'wrong-password-0000' ) ) );
 	}
 

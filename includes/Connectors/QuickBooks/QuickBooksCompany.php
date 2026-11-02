@@ -72,6 +72,16 @@ final class QuickBooksCompany {
 	}
 
 	/**
+	 * One fresh read of the company record for a health probe; what is cached is not trusted.
+	 *
+	 * @throws ApiException On a failed call.
+	 */
+	public function probe(): void {
+		$this->info = null;
+		$this->info();
+	}
+
+	/**
 	 * Company preferences.
 	 *
 	 * @return array<string,mixed>

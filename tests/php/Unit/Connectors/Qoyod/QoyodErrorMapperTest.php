@@ -59,11 +59,22 @@ final class QoyodErrorMapperTest extends TestCase {
 		$this->assertNull( $this->map( 500, '' ) );
 	}
 
-	public function test_lines_without_a_tax_get_the_zero_code_so_the_products_default_tax_is_not_added(): void {
+	public function test_a_line_without_a_tax_is_refused_unless_the_merchant_chose_a_code(): void {
 		$lines = new QoyodLines( new QoyodAmounts() );
-		$built = $lines->build( array( array( 'item' => '3', 'name' => 'Fee', 'quantity' => 1.0, 'total_minor' => 500, 'tax_code' => '', 'tax_amount' => null ) ), 'SAR', false, 'tax_id', '1', array() );
-		$this->assertSame( '2', $built['lines'][0]['tax_id'] );
-		$percent = $lines->build( array( array( 'item' => '3', 'name' => 'Fee', 'quantity' => 1.0, 'total_minor' => 500, 'tax_code' => '', 'tax_amount' => null ) ), 'SAR', false, 'tax_percent', '1', array( '2' => array( 'name' => 'VAT 0%', 'rate_bp' => 0 ) ) );
+		$row   = array( 'item' => '3', 'name' => 'Fee', 'quantity' => 1.0, 'total_minor' => 500, 'tax_code' => '', 'tax_amount' => null );
+		$taxes = array( '2' => array( 'name' => 'VAT 0%', 'rate_bp' => 0 ), '3' => array( 'name' => 'Exempt', 'rate_bp' => 0 ) );
+
+		$refused = $lines->build( array( $row ), 'SAR', false, 'tax_id', '1', $taxes );
+		$this->assertInstanceOf( ConnectorError::class, $refused );
+		$this->assertSame( ErrorCode::Val002, $refused->code );
+		$this->assertSame( 'lines[].tax_code', $refused->context['field'] );
+		$this->assertStringContainsString( 'Fee', $refused->context['reason'] );
+
+		$zero = $lines->build( array( $row ), 'SAR', false, 'tax_id', '1', $taxes, QoyodLines::ZERO_RATED );
+		$this->assertSame( '2', $zero['lines'][0]['tax_id'] );
+		$exempt = $lines->build( array( $row ), 'SAR', false, 'tax_id', '1', $taxes, QoyodLines::EXEMPT );
+		$this->assertSame( '3', $exempt['lines'][0]['tax_id'] );
+		$percent = $lines->build( array( $row ), 'SAR', false, 'tax_percent', '1', $taxes, QoyodLines::ZERO_RATED );
 		$this->assertSame( '0.00', $percent['lines'][0]['tax_percent'] );
 	}
 

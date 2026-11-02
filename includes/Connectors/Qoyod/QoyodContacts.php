@@ -44,7 +44,7 @@ final class QoyodContacts {
 		if ( '' === $email ) {
 			return null;
 		}
-		foreach ( $this->pager->all( $api, 'customers', array( 'q' => array( 'email_cont' => $email ) ), 'contacts' ) as $row ) {
+		foreach ( $this->pager->all( $api, 'customers', array( 'q' => array( 'email_cont' => $email ) ), 'contacts', static fn( array $row ): bool => str_contains( strtolower( QoyodPayloadReader::text( $row['email'] ?? '' ) ), $email ) ) as $row ) {
 			if ( strtolower( QoyodPayloadReader::text( $row['email'] ?? '' ) ) === $email ) {
 				return $row;
 			}

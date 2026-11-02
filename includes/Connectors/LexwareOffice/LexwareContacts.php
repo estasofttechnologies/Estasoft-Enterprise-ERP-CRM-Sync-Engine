@@ -81,33 +81,31 @@ final class LexwareContacts {
 	 * @throws ApiException On failure.
 	 */
 	public function resolve( ApiClient $api, array $customer, Options $options ): array|ConnectorError {
-		$policy = $options->choice( 'customer_policy' );
-		if ( 'always_create' !== $policy ) {
-			$matches = $this->findByEmail( $api, $customer['email'] );
-			if ( array() !== $matches ) {
-				if ( count( $matches ) > 1 && $options->is( 'duplicate_customer', 'fail' ) ) {
-					return Refusal::value(
-						LexwareOfficeConnector::LABEL,
-						'customer.email',
-						__( 'More than one contact has this email address. Merge them in Lexware Office or set the duplicate setting to oldest.', 'estasoft-erp-crm-sync-engine' ),
-						'duplicate customer'
-					);
-				}
-				$first = $matches[0];
-				return array(
-					'id'              => (string) $first['id'],
-					'created'         => false,
-					'address_differs' => $this->addressDiffers( $first, $customer ),
-				);
-			}
-			if ( 'match_only' === $policy ) {
+		$policy  = $options->choice( 'customer_policy' );
+		$matches = $this->findByEmail( $api, $customer['email'] );
+		if ( array() !== $matches ) {
+			if ( count( $matches ) > 1 && $options->is( 'duplicate_customer', 'fail' ) ) {
 				return Refusal::value(
 					LexwareOfficeConnector::LABEL,
 					'customer.email',
-					__( 'Lexware Office has no contact with this email address and the customer setting is match only.', 'estasoft-erp-crm-sync-engine' ),
-					'no matching contact'
+					__( 'More than one contact has this email address. Merge them in Lexware Office or set the duplicate setting to oldest.', 'estasoft-erp-crm-sync-engine' ),
+					'duplicate customer'
 				);
 			}
+			$first = $matches[0];
+			return array(
+				'id'              => (string) $first['id'],
+				'created'         => false,
+				'address_differs' => $this->addressDiffers( $first, $customer ),
+			);
+		}
+		if ( 'match_only' === $policy ) {
+			return Refusal::value(
+				LexwareOfficeConnector::LABEL,
+				'customer.email',
+				__( 'Lexware Office has no contact with this email address and the customer setting is match only.', 'estasoft-erp-crm-sync-engine' ),
+				'no matching contact'
+			);
 		}
 		$body = $this->body( $customer );
 		if ( $body instanceof ConnectorError ) {

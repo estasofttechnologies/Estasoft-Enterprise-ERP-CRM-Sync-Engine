@@ -101,27 +101,27 @@ final class QuickBooksDocuments {
 
 	/**
 	 * Remove the unchecked marker from the private note. A sparse update needs the document's current SyncToken; when QuickBooks says the token is
-	 * stale (error 5010: the answer in hand is older than the document, for example a replayed answer), the document is read again and the update
-	 * is tried once more.
+	 * stale (error 5010: the answer in hand is older than the document, for example a replayed answer) or that the object is not found (610), the document is read
+	 * again: if it is still there the update is tried once more, if it is gone the answer in hand was a replay about a document that was deleted.
 	 *
 	 * @param string              $entity   invoice or creditmemo.
 	 * @param array<string,mixed> $document The document as last returned.
-	 * @return array<string,mixed> The updated document.
+	 * @return array<string,mixed>|null The updated document, or null when QuickBooks no longer has it.
 	 *
 	 * @throws ApiException On a failed call.
 	 */
-	public function markChecked( string $entity, array $document ): array {
+	public function markChecked( string $entity, array $document ): ?array {
 		$id = QuickBooksPayloadReader::text( $document['Id'] ?? '' );
 		try {
 			return $this->clean( $entity, $document );
 		} catch ( ApiException $stale ) {
-			if ( ! QuickBooksErrors::has( $stale->response(), '5010' ) ) {
+			if ( ! QuickBooksErrors::has( $stale->response(), '5010' ) && ! QuickBooksErrors::has( $stale->response(), '610' ) ) {
 				throw $stale;
 			}
 		}
 		$fresh = $this->fetch( $entity, $id );
 		if ( null === $fresh ) {
-			throw $stale;
+			return null;
 		}
 		return self::isUnchecked( $fresh ) ? $this->clean( $entity, $fresh ) : $fresh;
 	}

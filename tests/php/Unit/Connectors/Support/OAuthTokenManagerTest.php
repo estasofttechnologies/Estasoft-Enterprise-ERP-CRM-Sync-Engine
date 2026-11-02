@@ -11,6 +11,7 @@ namespace Estasoft\SyncEngine\Tests\Unit\Connectors\Support;
 
 require_once dirname( __DIR__, 3 ) . '/Support/ApiWpFunctions.php';
 
+use Estasoft\SyncEngine\Connectors\Support\Auth\OAuth2Auth;
 use Estasoft\SyncEngine\Connectors\Support\OAuth\OAuthConfig;
 use Estasoft\SyncEngine\Connectors\Support\OAuth\OAuthException;
 use Estasoft\SyncEngine\Connectors\Support\OAuth\OAuthProvider;
@@ -381,6 +382,101 @@ final class OAuthTokenManagerTest extends TestCase {
 		$this->kit->clock->advance( 11 );
 		$this->assertNotSame( $first, $this->kit->tokens->accessToken( $this->kit->storage->load( 1 ), $this->provider() ), 'Fewer than 30 seconds left.' );
 		$this->assertSame( 2, $this->kit->http->count() );
+	}
+
+	/* ------------------------------------------------------------ minimum token age */
+
+	private function youngConfig( int $minAge = 570 ): OAuthConfig {
+		return new OAuthConfig( authorizeUrl: '', tokenUrl: self::TOKEN_URL, minTokenAgeSeconds: $minAge, allowedHosts: array( 'login.vendor.test' ) );
+	}
+
+	private function exactLike(): Connection {
+		$connection = $this->kit->connection( 'vendor', array( 'client_id' => 'c' ), array( 'client_secret' => self::SECRET, OAuthTokenManager::REFRESH_TOKEN => self::REFRESH ) );
+		$this->kit->http->route( 'POST', '#/oauth/token$#', fn() => FakeHttpClient::json( array( 'access_token' => 'exact-' . $this->kit->http->count(), 'refresh_token' => self::REFRESH, 'expires_in' => 600 ) ) );
+		$this->kit->tokens->refreshNow( $connection, $this->provider( $this->youngConfig() ) ); // Issued now: a 600 second token.
+		return $connection;
+	}
+
+	public function test_a_vendor_that_refuses_an_early_refresh_is_not_asked_before_the_minimum_age(): void {
+		$this->exactLike();
+		$provider = $this->provider( $this->youngConfig() );
+		$first    = $this->kit->storage->load( 1 )->secret( OAuthTokenManager::ACCESS_TOKEN );
+		$this->assertSame( 1, $this->kit->http->count() );
+
+		// Without a minimum age a 600 second token is refreshed with 300 seconds left. Here the vendor refuses until 570.
+		foreach ( array( 300, 200, 69 ) as $step ) {
+			$this->kit->clock->advance( $step );
+			$this->assertSame( $first, $this->kit->tokens->accessToken( $this->kit->storage->load( 1 ), $provider ), 'Used as it is, ' . $step . ' seconds on.' );
+		}
+		$this->assertSame( 1, $this->kit->http->count(), 'No refresh at age 569.' );
+
+		$this->kit->clock->advance( 2 ); // Age 571: 29 seconds left, old enough.
+		$second = $this->kit->tokens->accessToken( $this->kit->storage->load( 1 ), $provider );
+		$this->assertNotSame( $first, $second );
+		$this->assertSame( 2, $this->kit->http->count() );
+	}
+
+	public function test_without_a_minimum_age_the_same_token_is_refreshed_at_the_margin(): void {
+		$this->exactLike();
+		$plain = $this->provider( $this->youngConfig( 0 ) );
+		$first = $this->kit->storage->load( 1 )->secret( OAuthTokenManager::ACCESS_TOKEN );
+		$this->kit->clock->advance( 301 ); // 299 seconds left, under the 300 second margin.
+		$this->assertNotSame( $first, $this->kit->tokens->accessToken( $this->kit->storage->load( 1 ), $plain ) );
+		$this->assertSame( 2, $this->kit->http->count() );
+	}
+
+	public function test_a_minimum_age_longer_than_the_life_means_the_token_is_used_until_it_runs_out(): void {
+		$this->exactLike();
+		$provider = $this->provider( $this->youngConfig( 5000 ) );
+		$first    = $this->kit->storage->load( 1 )->secret( OAuthTokenManager::ACCESS_TOKEN );
+		$this->kit->clock->advance( 590 );
+		$this->assertSame( $first, $this->kit->tokens->accessToken( $this->kit->storage->load( 1 ), $provider ) );
+		$this->kit->clock->advance( 15 ); // Run out.
+		$this->assertNotSame( $first, $this->kit->tokens->accessToken( $this->kit->storage->load( 1 ), $provider ) );
+		$this->assertSame( 2, $this->kit->http->count() );
+	}
+
+	public function test_a_401_before_the_minimum_age_is_not_answered_with_a_refresh_and_after_it_is(): void {
+		$connection = $this->exactLike();
+		$auth       = new OAuth2Auth( $this->provider( $this->youngConfig() ), $this->kit->tokens );
+		$first      = $this->kit->storage->load( 1 )->secret( OAuthTokenManager::ACCESS_TOKEN );
+
+		$this->kit->clock->advance( 200 );
+		$this->assertFalse( $auth->onUnauthorized( $this->kit->storage->load( 1 ) ), 'The vendor would refuse: the request is not repeated.' );
+		$this->assertSame( 1, $this->kit->http->count(), 'And no token request was made.' );
+		$this->assertSame( $first, $this->kit->storage->load( 1 )->secret( OAuthTokenManager::ACCESS_TOKEN ) );
+		$this->assertFalse( $this->kit->tokens->mayRefreshNow( $this->kit->storage->load( 1 ), $this->provider( $this->youngConfig() ) ) );
+		$this->assertSame( $first, $this->kit->tokens->refreshNow( $this->kit->storage->load( 1 ), $this->provider( $this->youngConfig() ) ), 'refreshNow hands back the token in hand.' );
+		$this->assertSame( 1, $this->kit->http->count() );
+
+		$this->kit->clock->advance( 375 ); // Age 575.
+		$this->assertTrue( $this->kit->tokens->mayRefreshNow( $this->kit->storage->load( 1 ), $this->provider( $this->youngConfig() ) ) );
+		$this->assertTrue( $auth->onUnauthorized( $this->kit->storage->load( 1 ) ) );
+		$this->assertSame( 2, $this->kit->http->count() );
+		$this->assertNotSame( $first, $this->kit->storage->load( 1 )->secret( OAuthTokenManager::ACCESS_TOKEN ) );
+		unset( $connection );
+	}
+
+	public function test_a_vendor_without_a_minimum_age_still_refreshes_on_a_401(): void {
+		$this->exactLike();
+		$auth = new OAuth2Auth( $this->provider( $this->youngConfig( 0 ) ), $this->kit->tokens );
+		$this->kit->clock->advance( 10 );
+		$this->assertTrue( $auth->onUnauthorized( $this->kit->storage->load( 1 ) ) );
+		$this->assertSame( 2, $this->kit->http->count() );
+	}
+
+	public function test_a_waiting_worker_reuses_a_young_token_that_the_other_one_stored_even_inside_the_margin(): void {
+		$connection = $this->signedIn( 10 );
+		$this->kit->lock->busy = 1;
+		$now                   = $this->kit->clock->now()->getTimestamp();
+		// Stored by the other worker 400 seconds ago: 200 left of 600, inside the 300 second margin but younger than 570.
+		$fresh                      = array( OAuthTokenManager::ACCESS_TOKEN => 'other-worker-young', OAuthTokenManager::EXPIRES_AT => (string) ( $now + 200 ), OAuthTokenManager::LIFETIME => '600' );
+		$this->kit->storage->onLoad = function () use ( $fresh ): void {
+			$this->kit->storage->onLoad = null;
+			$this->kit->storage->save( 1, $fresh );
+		};
+		$this->assertSame( 'other-worker-young', $this->kit->tokens->accessToken( $connection, $this->provider( $this->youngConfig() ) ) );
+		$this->assertSame( 0, $this->kit->http->count() );
 	}
 
 	public function test_the_margin_is_five_minutes_for_a_long_token_and_half_the_life_for_a_short_one(): void {

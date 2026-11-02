@@ -93,7 +93,7 @@ Canonical field to NetSuite field (target paths are what the mapping screen show
 | Canonical (source) | Payload path | NetSuite field |
 | --- | --- | --- |
 | `order.client_ref` (queue item, `WC-{id}`) | `client_ref` | `externalId` and `otherRefNum` |
-| `order.created_at` | `order_date` | `tranDate` (date part, UTC) |
+| `order.created_at` | `order_date` | `tranDate` (date part, in the store's time zone) |
 | `order.currency` | `currency` | `currency.id` (found by `currency.symbol`) |
 | `order.note`, payment reference | `note`, `payment.reference` | `memo`: note, then "Payment reference: ...", cut with an ellipsis and a warning to 950 characters, then the last line `Shop total 59.97 AED` (section 6) |
 | `order.total`, `order.excluded_total` | `total` | Not sent as a field; written as the last line of `memo` and compared with the order total |
@@ -110,7 +110,7 @@ Canonical field to NetSuite field (target paths are what the mapping screen show
 Refund payload: `order_ref` (`WC-{order id}`), `date`, `reason`, `amount`, `refund_line[].{product, quantity, amount}`.
 Customer payload: the `partner.*` paths above.
 
-Options (connection settings, key `options`): `documents` (`order`, `order_invoice`), `customer_policy` (`match_or_create`, `match_only`), `total_mismatch` (`fail`, `warn`), `sku_field` (`itemid` default), `send_addresses` (on by default), `shipping_item`, `fee_item`, `discount_item`, `refund_item` (item ids), `subsidiary`.
+Options (connection settings, key `options`): `documents` (`order`, `order_invoice`), `customer_policy` (`match_or_create`, `match_only`), `total_mismatch` (`fail`, `warn`), `sku_field` (`itemid` default), `send_addresses` (off by default: whether NetSuite takes address subrecords in a REST create is not verified, section 13), `shipping_item`, `fee_item`, `discount_item`, `refund_item` (item ids), `subsidiary`.
 
 Required in the default mapping: client reference, customer email, customer name, product and quantity of every line. Money is an integer in minor units inside the plugin; the connector writes decimals with the currency's exponent (KWD, BHD, OMR three decimals, JPY none) from exact decimal strings.
 
@@ -126,7 +126,7 @@ The client reference `WC-{order id}` is the `externalId` of the sales order and 
 - Credit memos: the transform makes the record, then a `PATCH` sets `externalId` and `otherRefNum` to `WC-{refund id}`. The connector searches by that external id or by the memo `[WC-{refund id}]` (SuiteQL on `transaction`, type `CustCred`) before it transforms, so a PATCH that was lost is still found.
 - `X-NetSuite-idempotency-key` exists only for asynchronous batch requests [documented]; it is not used.
 
-Unfinished and wrong records: `findExisting()` returns a reference only when `send()` would have nothing left to do for the order (order exists; with `documents = order_invoice` also the invoice exists). The engine links whatever `findExisting()` returns without calling `send()`, and `findExisting()` has no payload, so the shop's total is written as the last line of the order's `memo` ("Shop total 59.97 AED"). `findExisting()` compares it with the order's `total` and currency and returns SYNC-VAL-002 instead of a reference when they differ and `total_mismatch = fail`; editing the memo by hand switches that comparison off for that order. The wrong order stays in NetSuite for a person; the connector never deletes a record.
+Unfinished and wrong records: `findExisting()` returns a reference only when `send()` would have nothing left to do for the order (order exists; with `documents = order_invoice` also the invoice exists). The engine links whatever `findExisting()` returns without calling `send()`, and `findExisting()` has no payload, so the shop's total is written as the last line of the order's `memo` ("Shop total 59.97 AED"). `findExisting()` compares it with the order's `total` and currency and returns SYNC-VAL-002 instead of a reference when they differ and `total_mismatch = fail`; editing the memo by hand switches that comparison off for that order. The wrong order stays in NetSuite for a person; the connector never deletes an order. It deletes only a credit memo that this pass made and that failed its check (section 8).
 
 ## 7. Taxes, currency and prices
 
@@ -134,7 +134,7 @@ Unfinished and wrong records: `findExisting()` returns a reference only when `se
 - Total check: after the order exists, `GET /record/v1/salesOrder/{id}?fields=id,tranId,total,currency,tranDate,memo,externalId` is compared with `order.total - order.excluded_total` in minor units; a difference of one minor unit is rounding. More: the default option `total_mismatch = fail` stops the order, so a legacy-tax account or a wrong nexus never syncs wrong money (and `findExisting()` keeps reporting it, section 6). `warn` lets it go on with a warning in the result.
 - Prices: NetSuite item lines take a price before tax. A payload with `prices_include_tax` set is refused with SYNC-VAL-002 naming the reason; the WooCommerce reader supplies prices before tax by default.
 - Currency: the order is created in the order's currency (`currency.id` found by ISO code through SuiteQL on `currency`). After creation the currency is read back and a different one fails the order. A customer that does not hold the currency makes NetSuite refuse the order; the message is SYNC-VAL-002 with NetSuite's text. The exchange rate is NetSuite's own.
-- Date: `tranDate` is the order date (UTC date). The invoice made by the transform gets the same date in the transform body. [inferred: the transform body accepts `tranDate`.]
+- Date: `tranDate` is the order date in the store's time zone (the WordPress setting): a Gulf shop at UTC+4 would otherwise get the previous day between midnight and 4 a.m., which can be the wrong tax period at month end. The invoice made by the transform gets the same date in the transform body. [inferred: the transform body accepts `tranDate`.]
 
 ## 8. Order, invoice and refund flow
 
@@ -155,6 +155,8 @@ A sales order that needs approval before it can be billed makes the transform fa
 
 Refund: the order must exist in NetSuite and needs an invoice (`documents = order_invoice`, or one made in NetSuite). Without an order the item fails with SYNC-VAL-002 on `order_ref`; without an invoice with SYNC-VAL-002 "NetSuite has no invoice for this order, so there is nothing to credit". The credit memo is made with `POST invoice/{id}/!transform/creditMemo` with the refund's lines in `item.items` (`item.id`, `quantity`, `amount`), `memo` `[WC-{refund id}] reason` and `tranDate`; a `PATCH` then sets `externalId` and `otherRefNum` to `WC-{refund id}`. A refund with no lines is one line for the amount with the item in the option `refund_item`; without that option it fails with SYNC-VAL-002. The credit memo is found again by external id or memo before a retry. Credit memos are not applied to the invoice automatically.
 
+Read-back: the transform page does not say whether the lines in the body replace the lines copied from the invoice or are added to them, so the credit memo is read back (`foreigntotal`, `currency`) and compared with the refund amount (one minor unit tolerated). A difference with `total_mismatch = fail` removes the memo again (`DELETE /record/v1/creditMemo/{id}` [inferred]) and fails the item with SYNC-VAL-002 naming both amounts; if the delete is refused the memo stays and the message says so. A memo that was only found (made by an earlier pass) is checked but never deleted. The refund total is also the last line of the memo ("Shop total 19.99 AED"), so `findExisting()` returns the error instead of linking a wrong memo. With `warn` the memo is kept and the difference is a warning.
+
 Payments: not built. NetSuite can record customer payments, but the REST fields for a payment against an invoice and the deposit account mapping are not documented on the pages read.
 
 ## 9. Reading from NetSuite
@@ -163,7 +165,7 @@ Payments: not built. NetSuite can record customer payments, but the REST fields 
 - `lookupProduct`, `searchProducts`: SuiteQL on `item` by `itemid` (or `sku_field`) and display name; paged.
 - `listTaxCodes` / `listTaxes`: none (empty list), see section 7.
 - `fetchInvoice($ref)`: the latest invoice created from the sales order: number, status (`A` open, `B` paid in full), totals, issue date. No tax-authority status exists in this API call; `authority_status` is empty.
-- `listForReconcile($from)`: sales orders with `externalid` starting `WC-` and a transaction date from the day on, with totals and the sum of credit memos with `otherrefnum` equal to the order reference; paged through `offset` until `hasMore` is false.
+- `listForReconcile($from)`: sales orders with `externalid` starting `WC-` and a transaction date from the day before `from` on (the dates are the shop's own, not UTC), with totals and the sum of credit memos with `otherrefnum` equal to the order reference; paged through `offset` until `hasMore` is false.
 - Webhooks: none (NetSuite has none natively).
 
 ## 10. Rate limits and pacing
@@ -213,7 +215,8 @@ Plan or licence gate SYNC-AUTH-006 and SYNC-AUTH-007 are never produced: no NetS
 - The REST API browser pages are scripts and could not be read: names of fields not shown in the pages of section 1 (`shippingCost`, `billingAddress`, `shippingAddress`, `vatRegNumber`, line `description`, `currency` on customers, the exact casing of `otherRefNum`) are [inferred] from SuiteScript record names.
 - Whether `GET /record/v1/{type}/eid:{id}` is accepted for reading (only the upsert `PUT` form is on a page read) and whether `PUT .../eid:` answers 204 or 201 with a `Location` header.
 - SuiteQL column names on `transaction` (`type`, `externalid`, `otherrefnum`, `createdfrom`, `trandate`, `foreigntotal`, `status`), `item` (`itemid`, `displayname`, `isinactive`, `upccode`), `customer` (`email`, `isinactive`) and `currency` (`symbol`) are [third-party].
-- That the transform body accepts `tranDate`, `externalId` and `item.items` overrides for salesOrder to invoice and invoice to creditMemo. The page shows `memo`, `enddate`, `billdate` and `item.items` for the first and `apply` for the second.
+- That the transform body accepts `tranDate`, `externalId` and `item.items` overrides for salesOrder to invoice and invoice to creditMemo. The page shows `memo`, `enddate`, `billdate` and `item.items` for the first and `apply` for the second. Whether `item.items` replaces or adds to the copied lines is not stated; the connector therefore checks the total of every credit memo it makes (section 8).
+- That `DELETE /record/v1/creditMemo/{id}` is allowed for a credit memo made this way (used only to take back a memo that failed the check).
 - Whether creating addresses as part of a sales order is accepted (REST does not support updating subrecords).
 - That the signed assertion is accepted by NetSuite: the ES256 and PS256 signatures are produced by the base (`JwtAssertion`) and verified there against local keys, not against NetSuite.
 - The maximum page size of SuiteQL and the `hasMore` field (the page read does not show them; the connector pages with `limit=200` until a page comes back short or `hasMore` is false).

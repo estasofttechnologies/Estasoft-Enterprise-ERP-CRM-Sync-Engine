@@ -215,6 +215,39 @@ final class SuiteCrmAuthAndReadsTest extends SuiteCrmTestCase {
 		$this->assertSame( array( 'read_aos_products' ), $with->missingPermissions() );
 	}
 
+	public function test_test_connection_warns_about_an_empty_default_currency_and_about_matching_orders_by_the_editable_name(): void {
+		$bare = $this->connector->test( $this->connection( array( 'options' => array() ) ) );
+		$this->assertTrue( $bare->ok, 'A warning is not a failure.' );
+		$text = implode( ' ', $bare->detected['warnings'] );
+		$this->assertCount( 2, $bare->detected['warnings'] );
+		$this->assertStringContainsString( 'base_currency', $text );
+		$this->assertStringContainsString( 'reference_field', $text );
+		$this->server->customFields['Opportunities'] = array( 'wc_reference_c' );
+		$set = $this->connector->test( $this->connection( $this->options( array( 'reference_field' => 'wc_reference_c' ) ), array(), 2 ) );
+		$this->assertTrue( $set->ok, (string) $set->error?->message() );
+		$this->assertSame( array(), $set->detected['warnings'], 'Both are set: nothing to warn about.' );
+	}
+
+	public function test_test_connection_fails_for_a_reference_field_the_server_does_not_have(): void {
+		$result = $this->connector->test( $this->connection( $this->options( array( 'reference_field' => 'wc_reference_c' ) ) ) );
+		$this->assertFalse( $result->ok );
+		$this->assertSame( ErrorCode::Val002, $result->error->code );
+		$this->assertSame( 'reference_field', $result->error->context['field'] );
+		$this->assertStringContainsString( 'wc_reference_c', $result->error->context['reason'] );
+		$bad = $this->connector->test( $this->connection( $this->options( array( 'reference_field' => 'a b' ) ), array(), 2 ) );
+		$this->assertFalse( $bad->ok );
+		$this->assertSame( 'reference_field', $bad->error->context['field'] );
+	}
+
+	public function test_ping_is_one_read_of_the_current_user_and_not_the_whole_test_connection(): void {
+		$this->assertTrue( $this->connector->ping( $this->connection() ) );
+		$this->assertCount( 1, $this->logged( '#^GET /legacy/Api/V8/#' ) );
+		$this->assertCount( 1, $this->logged( '#^GET /legacy/Api/V8/current-user$#' ) );
+		$this->server->fail( 'GET', '#current-user#', $this->server->error( 500, 'Server Error', 'down' ) );
+		$this->assertFalse( $this->connector->ping( $this->connection( array(), array(), 2 ) ) );
+		$this->assertFalse( $this->connector->ping( $this->connection( array(), array( 'client_secret' => 'wrong-secret-0000' ), 3 ) ) );
+	}
+
 	public function test_the_text_of_an_error_is_cut_and_has_no_secret_token_or_host(): void {
 		$this->server->fail( 'POST', '#/V8/module\?#', $this->server->error( 400, 'Bad Request', 'Fault at crm.example.test with ' . FakeSuiteCrmServer::CLIENT_SECRET . ' and crm-access-1 ' . str_repeat( 'x', 400 ) ) );
 		list( $item, $payload ) = $this->order( '2060' );

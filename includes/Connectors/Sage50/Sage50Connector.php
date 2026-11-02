@@ -131,9 +131,9 @@ final class Sage50Connector extends LedgerExportConnector {
 	/**
 	 * A short look at the file and, for the U.S. edition, the order of the fields for the import template.
 	 *
-	 * @param array<int,array{item_id:int,order:string,row:array<string,mixed>}> $first    The first rows.
-	 * @param array{orders:int,lines:int,lost:int}                               $stats    Counts.
-	 * @param array<string,mixed>                                                $settings The file's settings.
+	 * @param array<int,array{item_id:int,order:string,row:array<string,mixed>}>                $first    The first rows.
+	 * @param array{orders:int,lines:int,lost:int,lost_orders:int,lost_lines:array<int,string>} $stats Counts, and which orders have characters the file cannot hold.
+	 * @param array<string,mixed>                                                               $settings The file's settings.
 	 */
 	protected function preview( array $first, array $stats, array $settings ): string {
 		$charset = $this->charsetFor( $settings );
@@ -153,10 +153,15 @@ final class Sage50Connector extends LedgerExportConnector {
 		}
 		if ( $stats['lost'] > 0 ) {
 			$lines[] = sprintf(
-				/* translators: %d: number of characters */
-				_n( '%d character cannot be written in Windows-1252 and becomes a question mark.', '%d characters cannot be written in Windows-1252 and become question marks.', $stats['lost'], 'estasoft-erp-crm-sync-engine' ),
-				$stats['lost']
+				/* translators: 1: number of characters, 2: number of orders */
+				_n( '%1$d character cannot be written in Windows-1252 and becomes a question mark (%2$d orders).', '%1$d characters cannot be written in Windows-1252 and become question marks (%2$d orders).', $stats['lost'], 'estasoft-erp-crm-sync-engine' ),
+				$stats['lost'],
+				$stats['lost_orders']
 			);
+			$lines = array_merge( $lines, $stats['lost_lines'] );
+			if ( $stats['lost_orders'] > count( $stats['lost_lines'] ) ) {
+				$lines[] = '...';
+			}
 		}
 		$lines[] = '';
 		$lines[] = Sage50Csv::line( $this->headings( $settings ) );
@@ -245,13 +250,13 @@ final class Sage50Connector extends LedgerExportConnector {
 			new CredentialField( 'untaxed_code', __( 'Tax code for lines without tax', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'UK default T0.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
 			new CredentialField( 'fee_tax_code', __( 'Tax code for fees', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Fees carry no rate. Name the tax code for fees that have tax.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
 			new CredentialField( 'adjustment_account', __( 'Account for other refund amounts', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Nominal code (UK) or G/L account (US) for refund amounts that belong to no product.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
-			new CredentialField( 'header_row', __( 'Heading row', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'The first row holds the field names. If your import takes no heading row, choose No.', 'estasoft-erp-crm-sync-engine' ), 'yes', 'select', $yesno, 'advanced' ),
+			new CredentialField( 'header_row', __( 'Heading row', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Leave it on No unless you have confirmed that your Sage 50 import skips the first row: no source says the UK import does, and a heading row it does not skip is read as an order.', 'estasoft-erp-crm-sync-engine' ), 'no', 'select', $yesno, 'advanced' ),
 			new CredentialField(
 				'encoding',
 				__( 'File encoding', 'estasoft-erp-crm-sync-engine' ),
 				false,
 				false,
-				__( 'Windows-1252 is the ANSI text Sage 50 reads. UTF-8 keeps Arabic and other scripts; Sage 50 reading it is not verified.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Windows-1252 is the ANSI text Sage 50 reads. It cannot hold Arabic and other scripts: each such character becomes a question mark, and the export lists them in its notes file. UTF-8 keeps every script; Sage 50 reading it is not verified.', 'estasoft-erp-crm-sync-engine' ),
 				'windows-1252',
 				'select',
 				array(

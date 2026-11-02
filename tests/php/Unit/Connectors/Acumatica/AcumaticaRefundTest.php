@@ -11,6 +11,7 @@ namespace Estasoft\SyncEngine\Tests\Unit\Connectors\Acumatica;
 
 use Estasoft\SyncEngine\Domain\EntityType;
 use Estasoft\SyncEngine\Domain\ErrorCode;
+use Estasoft\SyncEngine\Tests\Support\FakeAcumaticaServer;
 
 final class AcumaticaRefundTest extends AcumaticaTestCase {
 
@@ -96,6 +97,28 @@ final class AcumaticaRefundTest extends AcumaticaTestCase {
 		$this->assertSame( 'Open', $result->ref->extra['status'] );
 		$this->assertSame( 1, $this->server->count( 'POST', '#/ReleaseSalesInvoice$#' ) );
 		$this->assertSame( 1, $this->server->count( 'GET', '#/ReleaseSalesInvoice/status/#' ), 'The Location is polled until the action is done.' );
+	}
+
+	public function test_a_status_address_on_another_server_is_not_followed_and_gets_no_credentials(): void {
+		$this->placeOrder();
+		$this->server->releaseLocation = 'https://evil.example.test/entity/Default/24.200.001/SalesInvoice/ReleaseSalesInvoice/status/1';
+		$result                        = $this->sendRefund( array( 'refund_state' => 'release' ) );
+
+		$this->assertFalse( $result->isSuccess() );
+		$this->assertSame( ErrorCode::Val002, $result->error->code );
+		$this->assertSame( 'location', $result->error->context['field'] );
+		$hosts = array_map( static fn( array $request ): string => (string) wp_parse_url( $request['url'], PHP_URL_HOST ), $this->kit->http->requests );
+		$this->assertNotContains( 'evil.example.test', $hosts );
+		$this->assertSame( 0, $this->server->count( 'GET', '#/status/#' ) );
+	}
+
+	public function test_a_status_address_with_a_full_url_on_the_same_server_is_followed(): void {
+		$this->placeOrder();
+		$this->server->releaseLocation = FakeAcumaticaServer::ADDRESS . '/entity/Default/24.200.001/SalesInvoice/ReleaseSalesInvoice/status/{token}';
+		$this->server->releaseDelay    = 0;
+		$result                        = $this->sendRefund( array( 'refund_state' => 'release' ) );
+
+		$this->assertTrue( $result->isSuccess(), $this->why( $result ) );
 	}
 
 	public function test_a_release_that_is_still_running_is_noted_and_finished_on_the_next_pass(): void {

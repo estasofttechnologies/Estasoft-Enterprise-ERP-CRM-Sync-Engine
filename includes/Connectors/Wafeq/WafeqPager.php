@@ -33,6 +33,33 @@ final class WafeqPager {
 	public const PAGE_SIZE = 100;
 
 	/**
+	 * One page of a list: the first page of a path, or the page a `next` address names.
+	 *
+	 * @param ApiClient           $api   Client.
+	 * @param string              $path  List path such as `items/`.
+	 * @param string|null         $next  The `next` address of the previous page, or null for the first page.
+	 * @param array<string,mixed> $query Filters of the first page.
+	 * @return array{rows:array<int,array<string,mixed>>,next:string} `next` is empty on the last page.
+	 *
+	 * @throws ApiException When the request fails.
+	 */
+	public function page( ApiClient $api, string $path, ?string $next = null, array $query = array() ): array {
+		$response = null === $next ? $api->get( $path, $query + array( 'page_size' => self::PAGE_SIZE ) ) : $api->get( $next );
+		$json     = $response->json();
+		$rows     = array();
+		foreach ( (array) ( $json['results'] ?? array() ) as $row ) {
+			if ( is_array( $row ) ) {
+				$rows[] = $row;
+			}
+		}
+		$after = $json['next'] ?? null;
+		return array(
+			'rows' => $rows,
+			'next' => is_string( $after ) ? $after : '',
+		);
+	}
+
+	/**
 	 * All rows of a list.
 	 *
 	 * @param ApiClient           $api   Client.

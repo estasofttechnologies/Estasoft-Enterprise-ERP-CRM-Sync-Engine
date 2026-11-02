@@ -12,6 +12,7 @@ namespace Estasoft\SyncEngine\Connectors\Holded;
 defined( 'ABSPATH' ) || exit;
 
 use Estasoft\SyncEngine\Connectors\Support\AbstractApiConnector;
+use Estasoft\SyncEngine\Connectors\Support\ApiClient;
 use Estasoft\SyncEngine\Connectors\Support\ApiResponse;
 use Estasoft\SyncEngine\Connectors\Support\Auth\AuthStrategy;
 use Estasoft\SyncEngine\Connectors\Support\Auth\HeaderKeyAuth;
@@ -47,6 +48,13 @@ final class HoldedConnector extends AbstractApiConnector {
 	 * Name used in messages.
 	 */
 	public const LABEL = 'Holded';
+
+	/**
+	 * Call quota.
+	 *
+	 * @var HoldedQuota
+	 */
+	private HoldedQuota $quota;
 
 	/**
 	 * Shared amount helper.
@@ -93,18 +101,22 @@ final class HoldedConnector extends AbstractApiConnector {
 	/**
 	 * Set up with what it depends on.
 	 *
-	 * @param ConnectorDependencies $deps Shared services.
+	 * @param ConnectorDependencies $deps  Shared services.
+	 * @param HoldedIndexStore|null $store Where the indexes and the call quota are kept between requests (transients by default).
 	 */
-	public function __construct( ConnectorDependencies $deps ) {
+	public function __construct( ConnectorDependencies $deps, ?HoldedIndexStore $store = null ) {
 		parent::__construct( $deps );
+		$store          = $store ?? new HoldedTransientStore();
 		$this->errors   = new HoldedErrorMapper();
-		$pager          = new HoldedPager( $this->errors );
+		$this->quota    = new HoldedQuota( $deps->clock, $store );
+		$pager          = new HoldedPager( $this->errors, $this->quota );
+		$index          = new HoldedIndex( $pager, $deps->clock, $store );
 		$ids            = new HoldedIds();
 		$dates          = new HoldedDates( $deps->clock );
 		$this->amounts  = new HoldedAmounts();
-		$this->catalog  = new HoldedCatalog( $pager, $deps->clock );
-		$this->contacts = new HoldedContacts( $pager, $deps->clock );
-		$docs           = new HoldedDocuments( $pager, $ids );
+		$this->catalog  = new HoldedCatalog( $index );
+		$this->contacts = new HoldedContacts( $pager, $index, $this->quota );
+		$docs           = new HoldedDocuments( $pager, $ids, $this->quota );
 		$lines          = new HoldedLines( $this->amounts );
 		$totals         = new HoldedTotals( $this->amounts );
 		$this->orders   = new HoldedOrderSender( $docs, $this->contacts, $this->catalog, $lines, $totals, $this->amounts, $ids, $dates );
@@ -207,16 +219,43 @@ final class HoldedConnector extends AbstractApiConnector {
 	}
 
 	/**
+	 * The client of a connection, bound to it so the quota guard knows whose calls it counts.
+	 *
+	 * @param Connection $connection Connection.
+	 */
+	private function client( Connection $connection ): ApiClient {
+		$api = $this->api( $connection );
+		$this->quota->bind( $api, $connection->id );
+		return $api;
+	}
+
+	/**
+	 * Cheap health probe: one page of the warehouse list.
+	 *
+	 * @param Connection $connection Connection.
+	 */
+	public function ping( Connection $connection ): bool {
+		try {
+			$this->client( $connection )->get( 'invoicing/v1/warehouse', array( 'page' => 1 ) );
+			return true;
+		} catch ( \Throwable $throwable ) {
+			unset( $throwable );
+			return false;
+		}
+	}
+
+	/**
 	 * Test connection: the warehouses, whether contacts can be read, and what is left of the call quota.
 	 *
 	 * @param Connection $connection Connection.
 	 */
 	protected function identify( Connection $connection ): TestResult {
-		$api      = $this->api( $connection );
+		$api      = $this->client( $connection );
 		$options  = HoldedOptions::fromConnection( $connection );
 		$response = $api->get( 'invoicing/v1/warehouse', array( 'page' => 1 ) );
-		$json     = $response->json();
-		$refusal  = $this->errors->answer( $json );
+		$this->quota->note( $api, $response );
+		$json    = $response->json();
+		$refusal = $this->errors->answer( $json );
 		if ( null !== $refusal ) {
 			return new TestResult( false, 'API v1', self::LABEL, array(), array( 'read_warehouses' => false ), $refusal );
 		}
@@ -287,7 +326,7 @@ final class HoldedConnector extends AbstractApiConnector {
 	 * @param Item       $item       Item.
 	 */
 	public function findExisting( Connection $connection, Item $item ): ExternalRef|ConnectorError|null {
-		$api = $this->api( $connection );
+		$api = $this->client( $connection );
 		return match ( $item->entityType ) {
 			EntityType::Order  => $this->orders->find( $api, $connection, $item ),
 			EntityType::Refund => $this->refunds->find( $api, $item ),
@@ -303,7 +342,7 @@ final class HoldedConnector extends AbstractApiConnector {
 	 * @param array<string,mixed> $payload    Mapped payload.
 	 */
 	public function send( Connection $connection, Item $item, array $payload ): SendResult {
-		$api = $this->api( $connection );
+		$api = $this->client( $connection );
 		return match ( $item->entityType ) {
 			EntityType::Order    => $this->orders->send( $api, $connection, $item, $payload ),
 			EntityType::Refund   => $this->refunds->send( $api, $connection, $item, $payload ),
@@ -349,7 +388,7 @@ final class HoldedConnector extends AbstractApiConnector {
 				)
 			);
 		}
-		$api      = $this->api( $connection );
+		$api      = $this->client( $connection );
 		$existing = $this->contacts->find( $api, $connection->id, $customer['email'] );
 		if ( null !== $existing ) {
 			return SendResult::existing( $this->contactRef( $existing ) );
@@ -368,7 +407,7 @@ final class HoldedConnector extends AbstractApiConnector {
 	 * @param string     $email      Email.
 	 */
 	public function lookupCustomer( Connection $connection, string $email ): ExternalRef|ConnectorError|null {
-		$found = $this->contacts->find( $this->api( $connection ), $connection->id, $email );
+		$found = $this->contacts->find( $this->client( $connection ), $connection->id, $email );
 		return null === $found ? null : $this->contactRef( $found );
 	}
 
@@ -379,7 +418,7 @@ final class HoldedConnector extends AbstractApiConnector {
 	 * @param string     $sku        SKU.
 	 */
 	public function lookupProduct( Connection $connection, string $sku ): ExternalRef|ConnectorError|null {
-		$found = $this->catalog->productBySku( $this->api( $connection ), $connection->id, $sku );
+		$found = $this->catalog->productBySku( $this->client( $connection ), $connection->id, $sku );
 		return null === $found ? null : $this->productRef( $found );
 	}
 
@@ -392,7 +431,7 @@ final class HoldedConnector extends AbstractApiConnector {
 	 */
 	public function searchProducts( Connection $connection, string $query ): array|ConnectorError {
 		$refs = array();
-		foreach ( $this->catalog->search( $this->api( $connection ), $connection->id, $query ) as $product ) {
+		foreach ( $this->catalog->search( $this->client( $connection ), $connection->id, $query ) as $product ) {
 			$refs[] = $this->productRef( $product );
 		}
 		return $refs;

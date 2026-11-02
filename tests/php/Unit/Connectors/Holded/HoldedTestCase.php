@@ -16,6 +16,7 @@ use Estasoft\SyncEngine\Domain\EntityType;
 use Estasoft\SyncEngine\Domain\Item;
 use Estasoft\SyncEngine\Domain\ItemState;
 use Estasoft\SyncEngine\Tests\Support\ApiTestKit;
+use Estasoft\SyncEngine\Tests\Support\FakeHoldedIndexStore;
 use Estasoft\SyncEngine\Tests\Support\FakeHoldedServer;
 use PHPUnit\Framework\TestCase;
 
@@ -34,9 +35,15 @@ abstract class HoldedTestCase extends TestCase {
 	 */
 	protected FakeHoldedServer $server;
 
+	/**
+	 * Where the indexes and the call quota are kept (in memory here, transients in the engine).
+	 */
+	protected FakeHoldedIndexStore $store;
+
 	protected function setUp(): void {
 		parent::setUp();
 		$this->kit    = ApiTestKit::make();
+		$this->store  = new FakeHoldedIndexStore();
 		$this->server = new FakeHoldedServer();
 		$this->server->install( $this->kit->http );
 	}
@@ -50,7 +57,7 @@ abstract class HoldedTestCase extends TestCase {
 	 * The connector as the registry hands it out.
 	 */
 	protected function connector(): GuardedConnector {
-		return GuardedConnector::wrap( new HoldedConnector( $this->kit->deps ) );
+		return GuardedConnector::wrap( new HoldedConnector( $this->kit->deps, $this->store ) );
 	}
 
 	/**

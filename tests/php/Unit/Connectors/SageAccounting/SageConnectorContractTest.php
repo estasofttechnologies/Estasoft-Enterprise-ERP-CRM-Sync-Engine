@@ -121,6 +121,21 @@ final class SageConnectorContractTest extends ApiConnectorContractTestCase {
 		$this->assertSame( 37035, $this->totalMinorOf( $connector->findExisting( $kwd, $three ) ) );
 	}
 
+	public function test_ping_is_one_fresh_call_every_time_and_false_when_the_vendor_refuses(): void {
+		$connector  = $this->apiConnector();
+		$connection = $this->workingConnection();
+
+		$this->assertTrue( $connector->ping( $connection ) );
+		$this->assertCount( 1, $this->kit->http->requests, 'The probe is one request, not the several of a connection test: ' . implode( ' ', array_column( $this->kit->http->requests, 'url' ) ) );
+		$this->assertSame( 'GET', $this->kit->http->requests[0]['method'] );
+		$this->assertStringContainsString( 'businesses', $this->kit->http->requests[0]['url'] );
+
+		$this->assertTrue( $connector->ping( $connection ) );
+		$this->assertCount( 2, $this->kit->http->requests, 'A second probe is a second request: nothing is answered from what an earlier call cached.' );
+
+		$this->assertFalse( $connector->ping( $this->brokenConnection() ) );
+	}
+
 	protected function failNextWrite( string $kind, int $seconds = 0 ): void {
 		$this->sage->failNextWrite( $kind, $seconds );
 	}

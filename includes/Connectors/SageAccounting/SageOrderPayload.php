@@ -38,7 +38,6 @@ final class SageOrderPayload {
 	 * @param int|null                       $totalMinor       Total the shop expects Sage to show (order total less the part left out), or null.
 	 * @param string                         $paymentReference Payment reference (transaction id).
 	 * @param string                         $paymentDate      Day the order was paid, or empty when it is not paid.
-	 * @param int                            $attempt          Tries the queue made so far; part of the idempotency id so a retry never gets the answer about a draft that was deleted.
 	 */
 	private function __construct(
 		public readonly string $clientRef,
@@ -55,7 +54,6 @@ final class SageOrderPayload {
 		public readonly ?int $totalMinor,
 		public readonly string $paymentReference,
 		public readonly string $paymentDate,
-		public readonly int $attempt = 0,
 	) {
 	}
 
@@ -126,8 +124,7 @@ final class SageOrderPayload {
 			SagePayloadReader::flag( $payload['prices_include_tax'] ?? null, false ),
 			$total,
 			SagePayloadReader::text( $paymentBlock['reference'] ?? '' ),
-			SagePayloadReader::day( $paymentBlock['date'] ?? '' ),
-			$item->attempt
+			SagePayloadReader::day( $paymentBlock['date'] ?? '' )
 		);
 	}
 

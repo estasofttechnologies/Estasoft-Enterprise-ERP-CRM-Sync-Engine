@@ -90,6 +90,10 @@ final class SageX3OrderSender {
 		if ( '' === $this->settings->get( 'customer_code' ) ) {
 			return SendResult::failure( Problems::refused( $this->system, 'customer_code', __( 'Enter the customer code that should receive the web orders in the connection settings.', 'estasoft-erp-crm-sync-engine' ) ) );
 		}
+		$unchecked = $this->totalUnchecked();
+		if ( $unchecked instanceof ConnectorError ) {
+			return SendResult::failure( $unchecked );
+		}
 		$existing = $this->find( $payload->clientRef );
 		$location = '';
 		if ( null === $existing ) {
@@ -109,6 +113,23 @@ final class SageX3OrderSender {
 		}
 		$ref = $this->reference( $order, $location, $payload->currency, $warnings );
 		return null === $existing ? SendResult::created( $ref ) : SendResult::existing( $ref );
+	}
+
+	/**
+	 * The refusal for a connection that cannot compare totals, unless the person chose to continue with a warning.
+	 *
+	 * Prices from the folder's price lists may differ from the shop's unnoticed, so an order is not sent while the total cannot be read back.
+	 */
+	public function totalUnchecked(): ?ConnectorError {
+		if ( '' !== $this->settings->get( 'total_property' ) || ! ( new TotalCheck( $this->options, $this->amounts, $this->system ) )->isStrict() ) {
+			return null;
+		}
+		return Problems::refused(
+			$this->system,
+			'total_property',
+			__( 'Enter the property that holds the order total in "total_property", so the total can be compared with the shop. Or choose "Continue with a warning" for totals that differ, and accept that prices from the folder\'s price lists can differ unnoticed.', 'estasoft-erp-crm-sync-engine' ),
+			'total not verifiable'
+		);
 	}
 
 	/**
@@ -296,12 +317,25 @@ final class SageX3OrderSender {
 			);
 		}
 		$total = $this->totalOf( $order );
+		$check = new TotalCheck( $this->options, $this->amounts, $this->system );
 		if ( null === $total ) {
-			$warnings[] = __( 'No total was compared with the shop: set the "total_property" setting to the property that holds the order total.', 'estasoft-erp-crm-sync-engine' );
+			if ( $check->isStrict() ) {
+				return Problems::refused(
+					$this->system,
+					'total_property',
+					sprintf(
+						/* translators: 1: order number, 2: property name. */
+						__( 'Order %1$s was made but its answer has no "%2$s" value, so the total could not be compared with the shop. The order stays in Sage X3; check the property name, or choose "Continue with a warning".', 'estasoft-erp-crm-sync-engine' ),
+						$this->numberOf( $order, '' ),
+						$this->settings->get( 'total_property' )
+					),
+					'total missing'
+				);
+			}
+			$warnings[] = __( 'No total was compared with the shop: the answer has no value in the "total_property" property.', 'estasoft-erp-crm-sync-engine' );
 			return null;
 		}
-		$check = new TotalCheck( $this->options, $this->amounts, $this->system );
-		$diff  = $check->difference( $payload->totalMinor, $total, $payload->currency, $this->numberOf( $order, '' ) );
+		$diff = $check->difference( $payload->totalMinor, $total, $payload->currency, $this->numberOf( $order, '' ) );
 		if ( null === $diff ) {
 			return null;
 		}

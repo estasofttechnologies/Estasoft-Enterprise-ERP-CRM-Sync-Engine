@@ -4,7 +4,9 @@
  *
  * Shapes follow pipedrive.readme.io and developers.pipedrive.com: API v2 persons/organizations/deals/products with cursor paging
  * (additional_data.next_cursor), GET /api/v2/itemSearch, v1 notes with start and more_items_in_collection, error bodies
- * {success:false, error, error_info, errorCode}.
+ * {success:false, error, error_info, errorCode}. Also: deals take `custom_fields` (an object keyed by the field's generated key), the item search
+ * can search custom fields, deal fields are listed and created under /api/v2/dealFields (a user without the right gets 403), and `add_time` on
+ * a deal needs an admin API token (the v1 spec says "Requires admin user API token"; the fake answers 403 to anyone else).
  *
  * @package Estasoft\SyncEngine
  */
@@ -55,6 +57,28 @@ final class FakePipedrive extends FakeSalesServer {
 	 * When true a PATCH cannot change a deal's value.
 	 */
 	public bool $lockValue = false;
+
+	/**
+	 * Whether the token belongs to an admin user (add_time on a deal needs one).
+	 */
+	public bool $isAdmin = false;
+
+	/**
+	 * Whether the user may create custom fields.
+	 */
+	public bool $canCreateFields = true;
+
+	/**
+	 * Whether a deal refuses a custom field key that does not exist.
+	 */
+	public bool $strictFields = false;
+
+	/**
+	 * Deal custom fields: key => name.
+	 *
+	 * @var array<string,string>
+	 */
+	public array $dealFields = array();
 
 	/**
 	 * Collections the token may not read.
@@ -110,6 +134,9 @@ final class FakePipedrive extends FakeSalesServer {
 		if ( '/api/v1/users/me' === $path ) {
 			return $this->json( array( 'success' => true, 'data' => array( 'id' => 1, 'name' => 'Sync User', 'company_name' => 'Example Trading LLC', 'company_domain' => 'example', 'default_currency' => 'AED' ) ) );
 		}
+		if ( '/api/v2/dealFields' === $path ) {
+			return 'GET' === $method ? $this->listDealFields() : $this->createDealField( $body );
+		}
 		if ( '/api/v2/itemSearch' === $path ) {
 			return $this->itemSearch( $query );
 		}
@@ -154,12 +181,45 @@ final class FakePipedrive extends FakeSalesServer {
 		return $id;
 	}
 
+	private function listDealFields(): HttpResponse {
+		$rows = array();
+		foreach ( $this->dealFields as $key => $name ) {
+			$rows[] = array( 'field_name' => $name, 'field_code' => $key, 'field_type' => 'varchar', 'is_custom_field' => true );
+		}
+		return $this->json( array( 'success' => true, 'data' => $rows, 'additional_data' => array( 'next_cursor' => null ) ) );
+	}
+
+	/**
+	 * @param array<string,mixed> $body Body.
+	 */
+	private function createDealField( array $body ): HttpResponse {
+		if ( ! $this->canCreateFields ) {
+			return $this->json( array( 'success' => false, 'error' => 'You do not have permission to manage custom fields', 'errorCode' => 403 ), 403 );
+		}
+		if ( empty( $body['field_name'] ) || empty( $body['field_type'] ) ) {
+			return $this->invalid( 'field_name and field_type are required' );
+		}
+		$key = sha1( 'deal-field-' . $body['field_name'] );
+		$this->dealFields[ $key ] = (string) $body['field_name'];
+		return $this->json( array( 'success' => true, 'data' => array( 'field_name' => $body['field_name'], 'field_code' => $key, 'field_type' => $body['field_type'], 'is_custom_field' => true ) ), 201 );
+	}
+
 	/**
 	 * @param string              $collection Collection.
 	 * @param array<string,mixed> $body       Body.
 	 */
 	private function create( string $collection, array $body ): HttpResponse {
 		if ( 'deals' === $collection ) {
+			if ( isset( $body['add_time'] ) && ! $this->isAdmin ) {
+				return $this->json( array( 'success' => false, 'error' => 'add_time requires an admin user API token', 'errorCode' => 403 ), 403 );
+			}
+			if ( $this->strictFields ) {
+				foreach ( array_keys( (array) ( $body['custom_fields'] ?? array() ) ) as $key ) {
+					if ( ! isset( $this->dealFields[ $key ] ) ) {
+						return $this->invalid( 'custom field ' . $key . ' does not exist' );
+					}
+				}
+			}
 			if ( empty( $body['title'] ) ) {
 				return $this->invalid( 'title is required' );
 			}
@@ -228,6 +288,14 @@ final class FakePipedrive extends FakeSalesServer {
 		$hits   = array();
 		foreach ( $this->live( $map[ $type ] ?? 'deals' ) as $row ) {
 			foreach ( $fields as $field ) {
+				if ( 'custom_fields' === $field ) {
+					foreach ( (array) ( $row['custom_fields'] ?? array() ) as $custom ) {
+						if ( is_scalar( $custom ) && '' !== (string) $custom && ( $exact ? strtolower( (string) $custom ) === $term : str_contains( strtolower( (string) $custom ), $term ) ) ) {
+							$hits[ $row['id'] ] = $row;
+						}
+					}
+					continue;
+				}
 				$values = 'email' === $field ? array_map( static fn( array $e ): string => (string) $e['value'], (array) ( $row['emails'] ?? array() ) ) : array( (string) ( $row[ $field ] ?? '' ) );
 				foreach ( $values as $value ) {
 					$value = strtolower( $value );

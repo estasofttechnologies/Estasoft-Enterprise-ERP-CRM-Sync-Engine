@@ -193,8 +193,32 @@ final class ExportServiceFlowTest extends TestCase {
 		} elseif ( 'datev-export' === $id ) {
 			$this->assertCount( 4, explode( "\r\n", rtrim( $text, "\r\n" ) ) );
 		} else {
-			$this->assertCount( 1 + 3 + 1, explode( "\r\n", rtrim( $text, "\r\n" ) ) );
+			$this->assertCount( 3 + 1, explode( "\r\n", rtrim( $text, "\r\n" ) ), 'Three rows for the sale, one for the credit note, and no heading row by default.' );
 		}
+	}
+
+	/**
+	 * Characters the file cannot hold are listed in the second file of the export (Notes), next to the masters list, and can be downloaded.
+	 */
+	public function test_notes_file_is_stored_with_the_export(): void {
+		$deps      = FakeExportKit::deps( $this->dir );
+		$connector = new DatevConnector( $deps );
+		$conn      = FakeExportKit::connection( 'datev-export', array( 'consultant_number' => 29098, 'client_number' => 55003 ) );
+		$service   = new ExportService( $deps->exports, static fn( int $id ): ?AbstractExportConnector => $connector, $this->queue(), null, null, static fn( int $id ): ?Connection => $conn );
+		$payload   = FakeExportKit::order( '1001' );
+		$payload['document']['currency'] = 'EUR';
+		$payload['customer']['name']     = 'ليلى حداد';
+		foreach ( array_keys( $payload['line'] ) as $i ) {
+			$payload['line'][ $i ]['tax_code'] = '8400';
+		}
+		$payload['shipping'][0]['tax_code'] = '8400';
+		$connector->send( $conn, FakeExportKit::item( 11, '1001' ), $payload );
+		$stored = $service->create( 7 );
+		$this->assertSame( array( 'Masters list', 'Notes' ), array_column( $stored->attachments, 'name' ) );
+		$notes = $service->download( $stored->id, 2 );
+		$this->assertNotNull( $notes );
+		$this->assertStringStartsWith( 'text/plain', $notes['mime'] );
+		$this->assertStringContainsString( 'Order 1001: ', (string) file_get_contents( $notes['path'] ) );
 	}
 
 	/**

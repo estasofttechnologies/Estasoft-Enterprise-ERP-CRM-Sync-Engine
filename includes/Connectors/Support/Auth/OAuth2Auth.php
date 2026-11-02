@@ -65,14 +65,14 @@ final class OAuth2Auth implements AuthStrategy {
 	}
 
 	/**
-	 * The system answered 401: get a new token once.
+	 * The system answered 401: get a new token once, unless the vendor does not accept a refresh yet.
 	 *
 	 * @param Connection $connection Connection.
 	 * @return bool True when a new token was obtained and the request should be sent again.
 	 */
 	public function onUnauthorized( Connection $connection ): bool {
-		if ( null === $this->tokens ) {
-			return false;
+		if ( null === $this->tokens || ! $this->tokens->mayRefreshNow( $connection, $this->provider ) ) {
+			return false; // A vendor that refuses a refresh of a young token (Exact Online): a 401 before that age is not answered with a refresh.
 		}
 		$this->tokens->refreshNow( $connection, $this->provider );
 		return true;

@@ -310,7 +310,7 @@ final class ApiClient {
 	}
 
 	/**
-	 * Build the URL.
+	 * Build the URL. An absolute URL is accepted only when it is on the connection's own server (see HostPolicy::assertFollowable()).
 	 *
 	 * @param string              $path  Path or absolute URL.
 	 * @param array<string,mixed> $query Query parameters.
@@ -318,7 +318,13 @@ final class ApiClient {
 	 * @throws ApiException When the address is refused.
 	 */
 	private function url( string $path, array $query ): string {
-		$url = ( str_starts_with( $path, 'https://' ) || str_starts_with( $path, 'http://' ) ) ? $path : rtrim( $this->baseUrl, '/' ) . '/' . ltrim( $path, '/' );
+		$absolute = str_starts_with( $path, 'https://' ) || str_starts_with( $path, 'http://' );
+		$url      = $absolute ? $path : rtrim( $this->baseUrl, '/' ) . '/' . ltrim( $path, '/' );
+		if ( $absolute ) {
+			// A link the other side sent (next page, Location) must stay on this connection's server; a hostile one is refused here, before
+			// the request is built and so before any credential is added to it.
+			$this->policy->assertFollowable( $url, $this->baseUrl, $this->system );
+		}
 		$this->policy->assert( $url, $this->system );
 		$filtered = array_filter( $query, static fn( $value ): bool => null !== $value );
 		if ( array() !== $filtered ) {

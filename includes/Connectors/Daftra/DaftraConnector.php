@@ -330,6 +330,21 @@ final class DaftraConnector extends AbstractApiConnector {
 	}
 
 	/**
+	 * Cheap health probe: the one call that names the account.
+	 *
+	 * @param Connection $connection Connection.
+	 */
+	public function ping( Connection $connection ): bool {
+		try {
+			$this->api( $connection )->get( 'site_info.json' );
+			return true;
+		} catch ( \Throwable $throwable ) {
+			unset( $throwable );
+			return false;
+		}
+	}
+
+	/**
 	 * Fields for the mapping screens.
 	 *
 	 * @param string $mappingType orders, customers, products or refunds.

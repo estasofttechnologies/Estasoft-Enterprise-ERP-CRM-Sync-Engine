@@ -36,7 +36,6 @@ final class XeroOrderPayload {
 	 * @param int|null                       $totalMinor       Total the shop expects Xero to show (order total less the part left out), or null.
 	 * @param string                         $paymentReference Payment reference (transaction id).
 	 * @param string                         $paymentDate      Day the order was paid, or empty when it is not paid.
-	 * @param int                            $attempt          Tries the queue made so far; part of the idempotency key so a retry never gets the answer about a draft that was deleted.
 	 */
 	private function __construct(
 		public readonly string $clientRef,
@@ -51,7 +50,6 @@ final class XeroOrderPayload {
 		public readonly ?int $totalMinor,
 		public readonly string $paymentReference,
 		public readonly string $paymentDate,
-		public readonly int $attempt = 0,
 	) {
 	}
 
@@ -105,8 +103,7 @@ final class XeroOrderPayload {
 			XeroPayloadReader::flag( $payload['prices_include_tax'] ?? null, false ),
 			$total,
 			XeroPayloadReader::text( $paymentBlock['reference'] ?? '' ),
-			XeroPayloadReader::day( $paymentBlock['date'] ?? '' ),
-			$item->attempt
+			XeroPayloadReader::day( $paymentBlock['date'] ?? '' )
 		);
 	}
 

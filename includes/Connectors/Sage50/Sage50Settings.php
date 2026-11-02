@@ -108,7 +108,7 @@ final class Sage50Settings implements ExportSettings {
 	 * Whether the first row holds the field names.
 	 */
 	public function headerRow(): bool {
-		return $this->options->flag( 'header_row', true );
+		return $this->options->flag( 'header_row', false );
 	}
 
 	/**

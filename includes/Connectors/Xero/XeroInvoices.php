@@ -29,12 +29,31 @@ final class XeroInvoices {
 	private const PREFERRED = array( 'PAID', 'AUTHORISED', 'SUBMITTED', 'DRAFT' );
 
 	/**
+	 * Ids of deleted documents seen by the last search, by reference.
+	 *
+	 * @var array<string,array<int,string>>
+	 */
+	private array $dead = array();
+
+	/**
 	 * Set up with what it depends on.
 	 *
 	 * @param ApiClient  $api    Client for the connection.
 	 * @param XeroPaging $paging Paging helper.
 	 */
 	public function __construct( private readonly ApiClient $api, private readonly XeroPaging $paging = new XeroPaging() ) {
+	}
+
+	/**
+	 * Ids of the documents with a reference that were deleted, as the last search for that reference saw them. They go into the idempotency key of the next create, so
+	 * a create that follows the connector's own deletion of a draft is not answered with the deleted draft, while a plain retry (same body, nothing deleted) keeps the
+	 * same key and gets the first answer.
+	 *
+	 * @param string $reference Reference such as WC-1042.
+	 * @return array<int,string>
+	 */
+	public function deadIds( string $reference ): array {
+		return $this->dead[ $reference ] ?? array();
 	}
 
 	/**
@@ -227,12 +246,14 @@ final class XeroInvoices {
 	private function pick( array $rows, string $reference ): ?array {
 		$live   = array();
 		$voided = false;
+		$dead   = array();
 		foreach ( $rows as $row ) {
 			if ( ( $row['Reference'] ?? '' ) !== $reference ) {
 				continue;
 			}
 			$status = (string) ( $row['Status'] ?? '' );
 			if ( 'DELETED' === $status ) {
+				$dead[] = XeroPayloadReader::text( $row['InvoiceID'] ?? ( $row['CreditNoteID'] ?? '' ) );
 				continue;
 			}
 			if ( 'VOIDED' === $status ) {
@@ -241,6 +262,8 @@ final class XeroInvoices {
 			}
 			$live[] = $row;
 		}
+		sort( $dead );
+		$this->dead[ $reference ] = array_values( array_filter( array_unique( $dead ), static fn( string $id ): bool => '' !== $id ) );
 		if ( array() === $live ) {
 			return $voided ? array( 'voided' => true ) : null;
 		}

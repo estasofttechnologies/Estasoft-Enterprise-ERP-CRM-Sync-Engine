@@ -86,15 +86,55 @@ final class DaftraRefundFlowTest extends DaftraTestCase {
 		$this->assertInstanceOf( ExternalRef::class, $connector->findExisting( $this->connection(), $this->refundItem() ) );
 	}
 
-	public function test_find_existing_looks_only_at_credit_notes_of_the_last_seven_days(): void {
+	public function test_a_credit_note_is_found_however_long_after_it_was_made(): void {
 		$this->syncOrder();
 		$connector = $this->connector();
-		$connector->send( $this->connection(), $this->refundItem(), $this->oneMug() );
-		$before = count( $this->kit->http->requests );
-		$this->assertNotNull( $connector->findExisting( $this->connection(), $this->refundItem() ) );
-		$lists = array_values( array_filter( array_slice( $this->kit->http->requests, $before ), static fn( array $request ): bool => str_contains( $request['url'], 'credit_notes.json' ) ) );
+		$first     = $connector->send( $this->connection(), $this->refundItem(), $this->refundPayload() );
+		$this->assertTrue( $first->isSuccess() );
+		$this->kit->clock->advance( 90 * 86400 );
+
+		$found = $connector->findExisting( $this->connection(), $this->refundItem() );
+		$this->assertInstanceOf( ExternalRef::class, $found );
+		$this->assertSame( $first->ref->id, $found->id );
+		$retry = $connector->send( $this->connection(), $this->refundItem(), $this->refundPayload() );
+		$this->assertTrue( $retry->alreadyExisted );
+		$this->assertCount( 1, $this->server->all( 'credit_notes' ), 'A retry months later does not make a second credit note.' );
+	}
+
+	public function test_credit_notes_are_listed_by_the_client_of_the_invoice_and_never_by_a_date(): void {
+		$this->syncOrder();
+		$this->connector()->send( $this->connection(), $this->refundItem(), $this->refundPayload() );
+		$lists = $this->requests( 'GET', '#/api2/credit_notes\.json\?#' );
 		$this->assertNotEmpty( $lists );
-		$this->assertStringContainsString( 'created_from=2026-10-26', $lists[0]['url'] );
+		foreach ( $lists as $request ) {
+			$this->assertStringContainsString( 'client_id=' . $this->server->all( 'invoices' )[0]['client_id'], $request['url'] );
+			$this->assertStringNotContainsString( 'created_from', $request['url'] );
+			$this->assertStringNotContainsString( 'date_from', $request['url'] );
+		}
+	}
+
+	public function test_a_credit_note_of_another_client_with_the_same_reference_is_not_ours(): void {
+		$this->syncOrder();
+		$this->server->tables['credit_notes'][900] = array( 'id' => 900, 'no' => 'CN-9', 'po_number' => 'WC-R-501', 'client_id' => 999, 'currency_code' => 'SAR', 'summary_total' => 1, 'created' => '2026-11-02', '_items' => array() );
+		$result = $this->connector()->send( $this->connection(), $this->refundItem(), $this->refundPayload() );
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$this->assertFalse( $result->alreadyExisted );
+	}
+
+	public function test_find_existing_follows_the_link_the_engine_stored_and_needs_no_search(): void {
+		$this->syncOrder();
+		$first  = $this->connector()->send( $this->connection(), $this->refundItem(), $this->refundPayload() );
+		$linked = new Item( 1, 1, EntityType::Refund, '501', 'refunded', 'order:10490', 'k', \Estasoft\SyncEngine\Domain\ItemState::Synced, externalId: $first->ref->id );
+		$before = count( $this->kit->http->requests );
+		$found  = $this->connector()->findExisting( $this->connection(), $linked );
+		$this->assertInstanceOf( ExternalRef::class, $found );
+		$this->assertSame( 1, count( $this->kit->http->requests ) - $before );
+	}
+
+	public function test_find_existing_without_a_known_order_is_null_and_asks_nothing_about_credit_notes(): void {
+		$odd    = new Item( 1, 1, EntityType::Refund, '501', 'refunded', 'refund:501', 'k', \Estasoft\SyncEngine\Domain\ItemState::Syncing );
+		$this->assertNull( $this->connector()->findExisting( $this->connection(), $odd ) );
+		$this->assertCount( 0, $this->kit->http->requests );
 	}
 
 	public function test_a_lost_answer_does_not_create_a_second_credit_note(): void {

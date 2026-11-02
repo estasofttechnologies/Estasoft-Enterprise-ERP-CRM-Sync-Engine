@@ -189,7 +189,12 @@ final class WafeqRefundSender {
 		if ( '' !== $options->placeOfSupply() ) {
 			$body['place_of_supply'] = $options->placeOfSupply();
 		}
-		$created = $this->docs->createCreditNote( $api, $body, $this->ids->idempotencyKey( $item, 'credit-note' ) );
+		try {
+			$created = $this->docs->createCreditNote( $api, $body, $this->ids->idempotencyKey( $item, 'credit-note' ) );
+		} catch ( ApiException $exception ) {
+			$this->catalog->itemRefused( $exception, $connection->id );
+			throw $exception;
+		}
 		if ( $created instanceof ConnectorError ) {
 			return $created;
 		}

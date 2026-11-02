@@ -115,6 +115,56 @@ final class SapS4HanaOrderFlowTest extends SapS4HanaTestCase {
 		$this->assertNull( $next, 'Nothing is left to be taken for the finished order.' );
 	}
 
+	public function test_an_order_that_was_only_found_is_never_deleted_by_a_pass_that_did_not_make_it(): void {
+		$this->server->refuseDelete = true;
+		$item                       = $this->item( '1030' );
+		$first                      = $this->connector->send( $this->connection( array( 'price_condition' => 'ZZ99' ) ), $item, $this->payload() );
+		$this->assertFalse( $first->isSuccess() );
+		$this->assertCount( 1, $this->server->all( 'A_SalesOrder' ) );
+		$this->server->refuseDelete = false;
+		$deletesBefore              = count( $this->calls( 'DELETE', ')' ) );
+		$second                     = $this->connector->send( $this->connection(), $item, $this->payload() );
+		$this->assertFalse( $second->isSuccess(), 'The found order has the wrong net amount.' );
+		$this->assertStringContainsString( 'not made by this pass', json_encode( $second->error->context ) );
+		$this->assertCount( 1, $this->server->all( 'A_SalesOrder' ), 'It is still there for a person.' );
+		$this->assertCount( $deletesBefore, $this->calls( 'DELETE', ')' ), 'No delete was sent.' );
+	}
+
+	public function test_with_a_total_field_the_shop_net_amount_is_written_and_a_wrong_order_is_not_linked_by_findexisting(): void {
+		$options                    = array( 'total_field' => 'YY1_ShopNet_SDH' );
+		$this->server->refuseDelete = true;
+		$item                       = $this->item( '1031' );
+		$this->connector->send( $this->connection( $options + array( 'price_condition' => 'ZZ99' ) ), $item, $this->payload() );
+		$body = json_decode( (string) $this->calls( 'POST', '/A_SalesOrder' )[0]['body'], true );
+		$this->assertSame( 'Shop net 63.00 AED', $body['YY1_ShopNet_SDH'] );
+		$found = $this->connector->findExisting( $this->connection( $options ), $item );
+		$this->assertInstanceOf( \Estasoft\SyncEngine\Contract\ConnectorError::class, $found, 'The engine would link a reference; it must get the error.' );
+		$this->assertSame( ErrorCode::Val002, $found->code );
+		$this->assertStringContainsString( '120.00', json_encode( $found->context ) );
+		$select = $this->calls( 'GET', '/A_SalesOrder' );
+		$this->assertStringContainsString( 'YY1_ShopNet_SDH', rawurldecode( (string) end( $select )['url'] ) );
+	}
+
+	public function test_a_right_order_with_a_total_field_is_linked_and_without_the_field_nothing_is_compared(): void {
+		$options = array( 'total_field' => 'YY1_ShopNet_SDH' );
+		$item    = $this->item( '1032' );
+		$this->assertTrue( $this->connector->send( $this->connection( $options ), $item, $this->payload() )->isSuccess() );
+		$this->assertInstanceOf( ExternalRef::class, $this->connector->findExisting( $this->connection( $options ), $item ) );
+		$this->server->refuseDelete = true;
+		$other                      = $this->item( '1033' );
+		$this->connector->send( $this->connection( array( 'price_condition' => 'ZZ99' ) ), $other, $this->payload() );
+		$this->assertInstanceOf( ExternalRef::class, $this->connector->findExisting( $this->connection(), $other ), 'Documented limit: with no total_field there is nothing to compare.' );
+		$noField = json_decode( (string) $this->calls( 'POST', '/A_SalesOrder' )[1]['body'], true );
+		$this->assertArrayNotHasKey( 'YY1_ShopNet_SDH', $noField );
+	}
+
+	public function test_a_total_field_name_that_is_not_a_plain_property_name_is_ignored(): void {
+		$result = $this->connector->send( $this->connection( array( 'total_field' => 'x"; drop' ) ), $this->item( '1034' ), $this->payload() );
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$body = json_decode( (string) $this->calls( 'POST', '/A_SalesOrder' )[0]['body'], true );
+		$this->assertArrayNotHasKey( 'x"; drop', $body );
+	}
+
 	public function test_with_total_mismatch_warn_the_order_stays_and_the_difference_is_a_warning(): void {
 		$result = $this->connector->send( $this->connection( array( 'price_condition' => 'ZZ99', 'total_mismatch' => 'warn' ) ), $this->item( '1008' ), $this->payload() );
 		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );

@@ -70,6 +70,17 @@ abstract class ErpnextTestCase extends TestCase {
 	}
 
 	/**
+	 * A queue item of an event other than created.
+	 *
+	 * @param EntityType $type  Type.
+	 * @param string     $id    Entity id.
+	 * @param string     $event created, paid, updated, refunded, cancelled or delivered.
+	 */
+	protected function itemOf( EntityType $type, string $id, string $event ): Item {
+		return new Item( 1, 1, $type, $id, $event, $type->value . ':' . $id, hash( 'sha256', $id . $event ), ItemState::Syncing );
+	}
+
+	/**
 	 * A mapped order payload.
 	 *
 	 * @param array<string,mixed> $override Values to merge over the default.

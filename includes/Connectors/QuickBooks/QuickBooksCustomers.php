@@ -29,14 +29,17 @@ final class QuickBooksCustomers {
 	}
 
 	/**
-	 * The customer with an email address.
+	 * The customer with an email address. In a company that uses more than one currency a customer has one currency that cannot be changed, so a customer is only
+	 * the one wanted when its currency is the order's (a customer with no currency is in the home currency).
 	 *
-	 * @param string $email Email.
+	 * @param string      $email    Email.
+	 * @param string|null $currency Currency the customer must have, or null to take the customer whatever its currency.
+	 * @param string      $home     Home currency of the company (the currency of a customer that names none).
 	 * @return array<string,mixed>|null
 	 *
 	 * @throws ApiException On a failed call.
 	 */
-	public function findByEmail( string $email ): ?array {
+	public function findByEmail( string $email, ?string $currency = null, string $home = '' ): ?array {
 		$wanted = strtolower( trim( $email ) );
 		if ( '' === $wanted ) {
 			return null;
@@ -50,39 +53,65 @@ final class QuickBooksCustomers {
 			$rows = $this->api->select( 'Customer', 'DisplayName = ' . QuickBooksApi::quote( $email ) );
 		}
 		foreach ( $rows as $customer ) {
-			if ( strtolower( trim( QuickBooksPayloadReader::text( $customer['PrimaryEmailAddr']['Address'] ?? '' ) ) ) === $wanted ) {
-				return $customer;
+			if ( strtolower( trim( QuickBooksPayloadReader::text( $customer['PrimaryEmailAddr']['Address'] ?? '' ) ) ) !== $wanted ) {
+				continue;
 			}
+			if ( null !== $currency ) {
+				$own = strtoupper( QuickBooksPayloadReader::text( $customer['CurrencyRef']['value'] ?? '' ) );
+				if ( ( '' !== $own ? $own : strtoupper( $home ) ) !== strtoupper( $currency ) ) {
+					continue;
+				}
+			}
+			return $customer;
 		}
 		return null;
 	}
 
 	/**
-	 * The customer for a purchase: the one with that email, or a new one.
+	 * The customer for a purchase: the one with that email (and currency), or a new one. A new customer is made in the order's currency when the company uses more than
+	 * one. A name that is taken (error 6240) is tried again with the email after it, and then with the currency too.
 	 *
 	 * @param array<string,string> $partner  Billing customer fields.
 	 * @param array<string,string> $delivery Delivery address fields.
 	 * @param array<int,string>    $warnings Receives notes about values that were cut.
+	 * @param string               $currency Currency of the order.
+	 * @param string               $home     Home currency of the company.
+	 * @param bool                 $multi    Whether the company uses more than one currency.
 	 * @return array<string,mixed>
 	 *
 	 * @throws ApiException On a failed call.
 	 */
-	public function resolve( array $partner, array $delivery, array &$warnings ): array {
-		$found = $this->findByEmail( $partner['email'] ?? '' );
+	public function resolve( array $partner, array $delivery, array &$warnings, string $currency = '', string $home = '', bool $multi = false ): array {
+		$found = $this->findByEmail( $partner['email'] ?? '', $multi ? $currency : null, $home );
 		if ( null !== $found ) {
 			return $found;
 		}
 		$customer = $this->body( $partner, $delivery, $warnings );
-		try {
-			return $this->create( $customer );
-		} catch ( ApiException $exception ) {
-			if ( ! QuickBooksErrors::has( $exception->response(), '6240' ) ) {
-				throw $exception;
+		if ( $multi && '' !== $currency ) {
+			$customer['CurrencyRef'] = array( 'value' => $currency );
+		}
+		$email = $partner['email'] ?? '';
+		$name  = (string) $customer['DisplayName'];
+		$names = array(
+			$name,
+			QuickBooksPayloadReader::limit( $name, max( 1, 500 - mb_strlen( $email ) - 3 ) ) . ' (' . $email . ')',
+		);
+		if ( $multi && '' !== $currency ) {
+			$names[] = QuickBooksPayloadReader::limit( $name, max( 1, 500 - mb_strlen( $email ) - 8 ) ) . ' (' . $email . ', ' . $currency . ')';
+		}
+		$last = count( $names ) - 1;
+		foreach ( $names as $index => $try ) {
+			$customer['DisplayName'] = $try;
+			try {
+				return $this->create( $customer );
+			} catch ( ApiException $exception ) {
+				if ( $index === $last || ! QuickBooksErrors::has( $exception->response(), '6240' ) ) {
+					throw $exception;
+				}
 			}
 		}
-		$email                   = $partner['email'] ?? '';
-		$customer['DisplayName'] = QuickBooksPayloadReader::limit( (string) $customer['DisplayName'], max( 1, 500 - mb_strlen( $email ) - 3 ) ) . ' (' . $email . ')';
-		return $this->create( $customer );
+		$failure = QuickBooksErrors::exception( QuickBooksErrors::refused( 'DisplayName', __( 'QuickBooks has no free name for this customer.', 'estasoft-erp-crm-sync-engine' ) ) );
+		throw $failure;
 	}
 
 	/**

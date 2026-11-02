@@ -169,11 +169,12 @@ final class SapS4HanaGateway {
 	 * @param string $service Service name.
 	 * @param string $entity  Entity set.
 	 * @param string $key     Key value.
+	 * @param string $keyName Name of the key property (read to get the ETag).
 	 * @return bool True when it is gone; false when it could not be deleted.
 	 */
-	public function delete( string $service, string $entity, string $key ): bool {
+	public function delete( string $service, string $entity, string $key, string $keyName = 'SalesOrder' ): bool {
 		try {
-			$found = $this->one( $service, $entity, $key, array( 'select' => 'SalesOrder' ) );
+			$found = $this->one( $service, $entity, $key, array( 'select' => $keyName ) );
 			if ( null === $found ) {
 				return true;
 			}

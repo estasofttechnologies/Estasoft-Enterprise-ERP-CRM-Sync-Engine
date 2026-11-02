@@ -50,6 +50,27 @@ final class FakeMyobServer {
 	public bool $emailFilter = true;
 
 	/**
+	 * Whether eq on the email in the filter is case sensitive (MYOB's page does not say).
+	 *
+	 * @var bool
+	 */
+	public bool $emailCaseSensitive = false;
+
+	/**
+	 * Minor units a payment leaves on the invoice's balance although MYOB answered 201 (0 for a payment that clears the balance).
+	 *
+	 * @var int
+	 */
+	public int $paymentShortfall = 0;
+
+	/**
+	 * Whether the invoice disappears when a payment is recorded (a read-back that finds nothing).
+	 *
+	 * @var bool
+	 */
+	public bool $invoiceGoneAfterPayment = false;
+
+	/**
 	 * The user name and password the file asks for, or null when it asks for none.
 	 *
 	 * @var string|null
@@ -537,17 +558,19 @@ final class FakeMyobServer {
 	 * @return array<int,array<string,mixed>>|HttpResponse
 	 */
 	private function filter( array $rows, string $filter, array $fields, string $entity ): array|HttpResponse {
-		if ( 1 === preg_match( "/^Addresses\\/any\\(a: a\\/Email eq '((?:[^']|'')*)'\\)$/", $filter, $m ) ) {
+		if ( 1 === preg_match( "/^Addresses\\/any\\((\\w+): \\1\\/Email eq '((?:[^']|'')*)'\\)$/", $filter, $m ) ) {
 			if ( ! $this->emailFilter || 'Customer' !== $entity ) {
 				return $this->error( 501, 'NotImplemented', 'The filter is not supported.' );
 			}
-			$wanted = strtolower( str_replace( "''", "'", $m[1] ) );
+			$wanted = str_replace( "''", "'", $m[2] );
+			$exact  = $this->emailCaseSensitive;
 			return array_values(
 				array_filter(
 					$rows,
-					static function ( array $row ) use ( $wanted ): bool {
+					static function ( array $row ) use ( $wanted, $exact ): bool {
 						foreach ( (array) ( $row['Addresses'] ?? array() ) as $address ) {
-							if ( strtolower( (string) ( $address['Email'] ?? '' ) ) === $wanted ) {
+							$actual = (string) ( $address['Email'] ?? '' );
+							if ( $exact ? $actual === $wanted : 0 === strcasecmp( $actual, $wanted ) ) {
 								return true;
 							}
 						}
@@ -764,11 +787,26 @@ final class FakeMyobServer {
 	 */
 	private function postPayment( ApiFakeRequest $request ): HttpResponse {
 		$body = $request->json();
+		$known = array( 'UID', 'DepositTo', 'Account', 'Customer', 'ReceiptNumber', 'Date', 'AmountReceived', 'AmountReceivedForeign', 'PaymentMethod', 'Memo', 'Invoices', 'TransactionID', 'ForeignCurrency', 'CurrencyExchangeRate', 'URI', 'RowVersion' );
+		foreach ( array_keys( $body ) as $field ) {
+			if ( ! in_array( $field, $known, true ) ) {
+				return $this->error( 400, 'SerializationError', 'The field ' . $field . ' is not part of a customer payment.', '', 50 );
+			}
+		}
+		if ( 1 !== preg_match( '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', (string) ( $body['Date'] ?? '' ) ) ) {
+			return $this->error( 400, 'Required', 'The date is missing or not YYYY-MM-DD HH:MM:SS.', '', 100 );
+		}
+		if ( mb_strlen( (string) ( $body['Memo'] ?? '' ) ) > 255 ) {
+			return $this->error( 400, 'ValidationError', 'The memo is too long.', 'Maximum 255 characters', 100 );
+		}
 		if ( ! isset( $this->store['Customer'][ (string) ( $body['Customer']['UID'] ?? '' ) ] ) ) {
 			return $this->error( 400, 'NotFound', 'The customer was not found.', '', 150 );
 		}
 		if ( ! in_array( $body['DepositTo'] ?? '', array( 'Account', 'UndepositedFunds' ), true ) || ( 'Account' === $body['DepositTo'] && ! isset( $this->store['Account'][ (string) ( $body['Account']['UID'] ?? '' ) ] ) ) ) {
 			return $this->error( 400, 'Required', 'The deposit account is missing.', '', 100 );
+		}
+		if ( ! is_numeric( $body['AmountReceived'] ?? null ) ) {
+			return $this->error( 400, 'Required', 'The amount received is missing.', '', 100 );
 		}
 		$applied = 0.0;
 		foreach ( (array) ( $body['Invoices'] ?? array() ) as $row ) {
@@ -776,19 +814,26 @@ final class FakeMyobServer {
 			if ( null === $invoice ) {
 				return $this->error( 400, 'NotFound', 'The invoice was not found.', '', 150 );
 			}
+			if ( ! in_array( $row['Type'] ?? '', array( 'Invoice', 'Order' ), true ) || ! is_numeric( $row['AmountApplied'] ?? null ) ) {
+				return $this->error( 400, 'Required', 'An invoice row needs a Type and an AmountApplied.', '', 100 );
+			}
 			if ( (float) $row['AmountApplied'] > (float) $invoice['BalanceDueAmount'] + 0.0001 ) {
 				return $this->error( 400, 'ValidationError', 'The payment is more than the balance.', '', 100 );
 			}
 			$applied += (float) $row['AmountApplied'];
 		}
-		if ( abs( $applied - (float) ( $body['AmountPaid'] ?? 0 ) ) > 0.0001 ) {
-			return $this->error( 400, 'ValidationError', 'The amount paid does not equal the amounts applied.', '', 100 );
+		if ( abs( $applied - (float) $body['AmountReceived'] ) > 0.0001 ) {
+			return $this->error( 400, 'ValidationError', 'The amount received does not equal the amounts applied.', '', 100 );
 		}
 		foreach ( (array) $body['Invoices'] as $row ) {
 			$invoice                                       = $this->store['Invoice'][ (string) $row['UID'] ];
-			$invoice['BalanceDueAmount']                   = $this->decimal( $this->minor( (float) $invoice['BalanceDueAmount'] ) - $this->minor( (float) $row['AmountApplied'] ) );
-			$invoice['Status']                             = 0.0 === (float) $invoice['BalanceDueAmount'] ? 'Closed' : $invoice['Status'];
+			$left                                          = max( 0, $this->minor( (float) $invoice['BalanceDueAmount'] ) - $this->minor( (float) $row['AmountApplied'] ) + $this->paymentShortfall );
+			$invoice['BalanceDueAmount']                   = $this->decimal( $left );
+			$invoice['Status']                             = 0 === $left ? 'Closed' : $invoice['Status'];
 			$this->store['Invoice'][ (string) $row['UID'] ] = $invoice;
+			if ( $this->invoiceGoneAfterPayment ) {
+				unset( $this->store['Invoice'][ (string) $row['UID'] ] );
+			}
 		}
 		$uid                           = $this->uid();
 		$this->store['Payment'][ $uid ] = $body + array( 'UID' => $uid );

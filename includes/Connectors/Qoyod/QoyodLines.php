@@ -29,10 +29,16 @@ final class QoyodLines {
 	public const TAX_TOLERANCE = 1;
 
 	/**
-	 * Qoyod's standard tax code for VAT 0 percent, used for a row that carries no tax. A line that names no tax gets the default tax of its
-	 * product in Qoyod, which would add tax the shop never charged.
+	 * Qoyod's standard tax code for VAT 0 percent [third-party]. A line that names no tax gets the default tax of its product in Qoyod, which
+	 * would add tax the shop never charged, so a row always carries a code; a row the shop gave none is refused unless the merchant chose
+	 * this code or the exempt code for such rows.
 	 */
-	public const NO_TAX = '2';
+	public const ZERO_RATED = '2';
+
+	/**
+	 * Qoyod's standard code for tax-exempt sales [third-party].
+	 */
+	public const EXEMPT = '3';
 
 	/**
 	 * Set up with what it depends on.
@@ -51,9 +57,10 @@ final class QoyodLines {
 	 * @param string                                           $taxField  tax_id or tax_percent.
 	 * @param string                                           $branch    Branch id for every line.
 	 * @param array<int|string,array{name:string,rate_bp:int}> $taxes    Known tax codes with their rates.
+	 * @param string                                           $untaxed  Code for a row that has no tax code and no tax amount, or an empty string to refuse such a row.
 	 * @return array{lines:array<int,array<string,mixed>>,net_minor:int}|ConnectorError
 	 */
-	public function build( array $rows, string $currency, bool $inclusive, string $taxField, string $branch, array $taxes ): array|ConnectorError {
+	public function build( array $rows, string $currency, bool $inclusive, string $taxField, string $branch, array $taxes, string $untaxed = '' ): array|ConnectorError {
 		$exponent = $this->amounts->exponent( $currency );
 		$lines    = array();
 		$sum      = 0;
@@ -67,7 +74,10 @@ final class QoyodLines {
 				}
 			}
 			if ( '' === $code ) {
-				$code = self::NO_TAX;
+				if ( '' === $untaxed ) {
+					return $this->untaxed( (string) $row['name'] );
+				}
+				$code = $untaxed;
 			}
 			$percent = null;
 			if ( 'tax_percent' === $taxField ) {
@@ -168,6 +178,30 @@ final class QoyodLines {
 				'unit'        => $sign * ( $unit + 1 ),
 				'description' => $description,
 			),
+		);
+	}
+
+	/**
+	 * SYNC-VAL-002 for a row that has no tax and no instruction what to do with such rows.
+	 *
+	 * @param string $name Name of the row.
+	 */
+	private function untaxed( string $name ): ConnectorError {
+		return new ConnectorError(
+			ErrorCode::Val002,
+			array(
+				'system' => QoyodConnector::LABEL,
+				'field'  => 'lines[].tax_code',
+				'reason' => sprintf(
+					/* translators: %s: name of the line. */
+					__( 'The line "%s" has no tax code. Map its tax under Tax mapping, or choose in the connection settings whether lines without tax are zero-rated (code 2) or exempt (code 3).', 'estasoft-erp-crm-sync-engine' ),
+					$name
+				),
+			),
+			null,
+			null,
+			null,
+			'untaxed row'
 		);
 	}
 

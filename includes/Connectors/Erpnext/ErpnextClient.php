@@ -11,6 +11,7 @@ namespace Estasoft\SyncEngine\Connectors\Erpnext;
 
 defined( 'ABSPATH' ) || exit;
 
+use Estasoft\SyncEngine\Connectors\ErpCommon\Problems;
 use Estasoft\SyncEngine\Connectors\Support\ApiClient;
 use Estasoft\SyncEngine\Connectors\Support\ApiException;
 
@@ -30,6 +31,12 @@ final class ErpnextClient {
 	 * Most rows a list helper collects before it stops (a safety limit; callers filter on the server).
 	 */
 	public const MAX_ROWS = 5000;
+
+	/**
+	 * Most rows a read of a whole period collects. It is the cap of the reconciliation service itself; a period with more rows is refused
+	 * with a message instead of being cut short.
+	 */
+	public const LARGE = 20000;
 
 	/**
 	 * Set up with the services it uses.
@@ -83,6 +90,38 @@ final class ErpnextClient {
 				break;
 			}
 			$start += $size;
+		}
+		return $rows;
+	}
+
+	/**
+	 * Every row that matches, however many pages: a read whose result must be complete (the nightly check, shipments).
+	 *
+	 * @param string                      $doctype DocType name.
+	 * @param array<int,array<int,mixed>> $filters Filters.
+	 * @param array<int,string>           $fields  Fields to return.
+	 * @param string                      $orderBy Order.
+	 * @return array<int,array<string,mixed>>
+	 *
+	 * @throws ApiException On failure, and when more than LARGE rows match (the list would be incomplete).
+	 */
+	public function complete( string $doctype, array $filters, array $fields, string $orderBy = '' ): array {
+		$rows = $this->rows( $doctype, $filters, $fields, $orderBy, self::LARGE + 1 );
+		if ( count( $rows ) > self::LARGE ) {
+			$exception = new ApiException(
+				Problems::refused(
+					ErpnextConnector::LABEL,
+					'window',
+					sprintf(
+						/* translators: 1: row limit, 2: DocType name. */
+						__( 'ERPNext has more than %1$d %2$s records in the period asked for, so the list would be incomplete. Ask for a shorter period.', 'estasoft-erp-crm-sync-engine' ),
+						self::LARGE,
+						$doctype
+					),
+					'too many rows'
+				)
+			);
+			throw $exception;
 		}
 		return $rows;
 	}

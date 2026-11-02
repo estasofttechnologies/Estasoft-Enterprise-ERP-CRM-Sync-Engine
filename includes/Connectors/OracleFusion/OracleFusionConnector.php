@@ -255,7 +255,10 @@ final class OracleFusionConnector extends AbstractApiConnector {
 		$kit->orders->requireUnit();
 		if ( EntityType::Refund === $item->entityType ) {
 			$memo = $kit->refunds->find( $item->clientReference() );
-			return null === $memo ? null : $kit->refunds->reference( $memo );
+			if ( null === $memo ) {
+				return null;
+			}
+			return $kit->refunds->checkMarked( $memo, $kit->total ) ?? $kit->refunds->reference( $memo );
 		}
 		$invoice = $kit->orders->find( $item->clientReference() );
 		if ( null === $invoice ) {
@@ -412,13 +415,21 @@ final class OracleFusionConnector extends AbstractApiConnector {
 			return SendResult::failure( $refund );
 		}
 		$kit->orders->requireUnit();
-		$memo = $kit->refunds->find( $refund->reference );
-		if ( null !== $memo ) {
-			return SendResult::existing( $kit->refunds->reference( $memo ) );
-		}
 		$warnings = new Warnings();
-		$created  = $kit->refunds->reference( $kit->refunds->create( $refund, $warnings ) );
-		return SendResult::created( $warnings->any() ? new ExternalRef( $created->id, $created->ref, $created->url, array( 'warnings' => $warnings->all() ) ) : $created );
+		$expected = $kit->refunds->expected( $refund );
+		$memo     = $kit->refunds->find( $refund->reference );
+		$existed  = null !== $memo;
+		$memo     = $memo ?? $kit->refunds->create( $refund, $warnings );
+		$currency = strtoupper( (string) ( $memo['OrderCurrency'] ?? ( $memo['InvoiceCurrencyCode'] ?? '' ) ) );
+		$error    = $kit->refunds->check( $memo, $expected, $currency, $kit->total, $warnings );
+		if ( null !== $error ) {
+			return SendResult::failure( $error );
+		}
+		$ref = $kit->refunds->reference( $memo );
+		if ( $warnings->any() ) {
+			$ref = new ExternalRef( $ref->id, $ref->ref, $ref->url, array( 'warnings' => $warnings->all() ) );
+		}
+		return $existed ? SendResult::existing( $ref ) : SendResult::created( $ref );
 	}
 
 	/**

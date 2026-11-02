@@ -16,6 +16,7 @@ use Estasoft\SyncEngine\Connectors\ErpCommon\Options;
 use Estasoft\SyncEngine\Connectors\ErpCommon\Problems;
 use Estasoft\SyncEngine\Connectors\ErpCommon\RefundPayload;
 use Estasoft\SyncEngine\Connectors\ErpCommon\Text;
+use Estasoft\SyncEngine\Connectors\ErpCommon\TotalCheck;
 use Estasoft\SyncEngine\Connectors\Support\ApiException;
 use Estasoft\SyncEngine\Contract\ConnectorError;
 use Estasoft\SyncEngine\Contract\ExternalRef;
@@ -70,12 +71,84 @@ final class Sage300RefundSender {
 	 */
 	public function send( Item $item, RefundPayload $payload ): SendResult {
 		unset( $item );
-		$existing = $this->find( $payload->clientRef );
-		if ( null !== $existing ) {
-			return SendResult::existing( $this->reference( $existing ) );
+		$unchecked = $this->unchecked();
+		if ( $unchecked instanceof ConnectorError ) {
+			return SendResult::failure( $unchecked );
 		}
-		$created = $this->create( $payload );
-		return $created instanceof ConnectorError ? SendResult::failure( $created ) : SendResult::created( $this->reference( $created ) );
+		$existing = $this->find( $payload->clientRef );
+		if ( null === $existing ) {
+			$created = $this->create( $payload );
+			if ( $created instanceof ConnectorError ) {
+				return SendResult::failure( $created );
+			}
+			$note = $created;
+		} else {
+			$note = $existing;
+		}
+		$warnings = array();
+		$problem  = $this->verify( $note, $payload, $warnings );
+		if ( $problem instanceof ConnectorError ) {
+			return SendResult::failure( $problem );
+		}
+		$ref = $this->reference( $note, $warnings );
+		return null === $existing ? SendResult::created( $ref ) : SendResult::existing( $ref );
+	}
+
+	/**
+	 * The refusal for a connection that cannot compare credit note totals, unless the person chose to continue with a warning.
+	 *
+	 * The property that holds the total of a credit note is not documented, so it is a setting; without it the credit note would be made
+	 * with whatever prices Sage 300 puts on it.
+	 */
+	public function unchecked(): ?ConnectorError {
+		if ( '' !== $this->options->text( 'refund_total_property' ) || ! ( new TotalCheck( $this->options, $this->amounts, $this->system ) )->isStrict() ) {
+			return null;
+		}
+		return Problems::refused(
+			$this->system,
+			'refund_total_property',
+			__( 'Enter the property that holds the total of a credit note in "refund_total_property", so the credit note can be compared with the refund. Or choose "Continue with a warning" for totals that differ, and accept that refunds are not compared.', 'estasoft-erp-crm-sync-engine' ),
+			'refund total not verifiable'
+		);
+	}
+
+	/**
+	 * Compare the total of a credit note with the refund.
+	 *
+	 * @param array<string,mixed> $note     Credit note record.
+	 * @param RefundPayload       $payload  The refund.
+	 * @param array<int,string>   $warnings Receives warnings.
+	 *
+	 * @throws ApiException On failure.
+	 */
+	private function verify( array $note, RefundPayload $payload, array &$warnings ): ?ConnectorError {
+		$name  = $this->options->text( 'refund_total_property' );
+		$check = new TotalCheck( $this->options, $this->amounts, $this->system );
+		$total = '' !== $name && isset( $note[ $name ] ) && is_numeric( $note[ $name ] ) ? abs( (float) $note[ $name ] ) : null;
+		if ( null === $total ) {
+			if ( $check->isStrict() ) {
+				return Problems::refused(
+					$this->system,
+					'refund_total_property',
+					__( 'The credit note was made but its answer has no value in the "refund_total_property" property, so it could not be compared with the refund. It stays in Sage 300; check the property name, or choose "Continue with a warning".', 'estasoft-erp-crm-sync-engine' ),
+					'refund total missing'
+				);
+			}
+			$warnings[] = __( 'The credit note total was not compared with the refund.', 'estasoft-erp-crm-sync-engine' );
+			return null;
+		}
+		$customer = trim( (string) ( $note['CustomerNumber'] ?? '' ) );
+		$known    = '' === $customer ? null : $this->lookups->customer( $customer );
+		$currency = null === $known ? '' : $known['currency'];
+		$diff     = $check->difference( $payload->amountMinor, $total, $currency, trim( (string) ( $note['CreditDebitNoteNumber'] ?? $payload->clientRef ) ) );
+		if ( null === $diff ) {
+			return null;
+		}
+		if ( $check->isStrict() ) {
+			return $check->error( $diff, __( 'The credit note stays in Sage 300. Delete it there after fixing the tax setup; the next try makes a new one.', 'estasoft-erp-crm-sync-engine' ) );
+		}
+		$warnings[] = $diff['message'];
+		return null;
 	}
 
 	/**
@@ -98,12 +171,13 @@ final class Sage300RefundSender {
 	/**
 	 * The record for a credit note.
 	 *
-	 * @param array<string,mixed> $note Credit note record.
+	 * @param array<string,mixed> $note     Credit note record.
+	 * @param array<int,string>   $warnings Warnings to carry.
 	 */
-	private function reference( array $note ): ExternalRef {
+	private function reference( array $note, array $warnings = array() ): ExternalRef {
 		$number = isset( $note['CreditDebitNoteNumber'] ) && is_scalar( $note['CreditDebitNoteNumber'] ) ? trim( (string) $note['CreditDebitNoteNumber'] ) : '';
 		$id     = isset( $note['CreditDebitNoteUniquifier'] ) && is_scalar( $note['CreditDebitNoteUniquifier'] ) && '' !== (string) $note['CreditDebitNoteUniquifier'] ? (string) $note['CreditDebitNoteUniquifier'] : ( '' !== $number ? $number : trim( (string) ( $note['Reference'] ?? '' ) ) );
-		return new ExternalRef( $id, '' !== $number ? $number : $id, null, array() );
+		return new ExternalRef( $id, '' !== $number ? $number : $id, null, array() === $warnings ? array() : array( 'warnings' => $warnings ) );
 	}
 
 	/**

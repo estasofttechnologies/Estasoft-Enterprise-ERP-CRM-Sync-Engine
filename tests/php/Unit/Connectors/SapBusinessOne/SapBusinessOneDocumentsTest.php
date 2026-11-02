@@ -95,20 +95,68 @@ final class SapBusinessOneDocumentsTest extends SapBusinessOneTestCase {
 	}
 
 	public function test_a_refund_is_a_credit_note_with_its_own_reference_and_the_order_named_in_the_remarks(): void {
-		$this->connector->send( $this->connection(), $this->item( '2004' ), $this->payload() );
+		$this->connector->send( $this->connection( $this->invoiceOptions() ), $this->item( '2004' ), $this->payload() );
 		$refund = $this->item( '501', EntityType::Refund );
-		$this->assertNull( $this->connector->findExisting( $this->connection(), $refund ) );
-		$result = $this->connector->send( $this->connection(), $refund, $this->refundPayload() );
+		$this->assertNull( $this->connector->findExisting( $this->connection( $this->invoiceOptions() ), $refund ) );
+		$result = $this->connector->send( $this->connection( $this->invoiceOptions() ), $refund, $this->refundPayload() );
 		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
 		$note = array_values( $this->server->all( 'CreditNotes' ) )[0];
 		$this->assertSame( 'WC-501', $note['NumAtCard'] );
-		$this->assertSame( 'Refund WC-501 of order WC-2004: Damaged', $note['Comments'] );
+		$this->assertSame( "Refund WC-501 of order WC-2004: Damaged\nShop total 19.99 AED", $note['Comments'], 'The refund total is the last line, so findExisting() can check it.' );
 		$this->assertSame( 19.99, $note['DocumentLines'][0]['LineTotal'] );
 		$this->assertSame( 1999, $result->ref->extra['total_minor'] );
-		$again = $this->connector->send( $this->connection(), $refund, $this->refundPayload() );
+		$again = $this->connector->send( $this->connection( $this->invoiceOptions() ), $refund, $this->refundPayload() );
 		$this->assertTrue( $again->alreadyExisted );
 		$this->assertCount( 1, $this->server->all( 'CreditNotes' ) );
-		$this->assertInstanceOf( ExternalRef::class, $this->connector->findExisting( $this->connection(), $refund ) );
+		$this->assertInstanceOf( ExternalRef::class, $this->connector->findExisting( $this->connection( $this->invoiceOptions() ), $refund ) );
+	}
+
+	public function test_ping_is_one_cheap_call_after_the_sign_in(): void {
+		$this->assertTrue( $this->connector->ping( $this->connection() ) );
+		$calls = array_filter( $this->kit->http->requests, static fn( array $request ): bool => ! str_contains( $request['url'], '/Login' ) );
+		$this->assertCount( 1, $calls, 'One read, not the probes of Test connection.' );
+	}
+
+	public function test_a_refund_for_an_order_with_no_invoice_is_refused_unless_the_merchant_allows_it(): void {
+		$this->connector->send( $this->connection(), $this->item( '2004' ), $this->payload() );
+		$refused = $this->connector->send( $this->connection(), $this->item( '505', EntityType::Refund ), $this->refundPayload() );
+		$this->assertSame( ErrorCode::Val002, $refused->error->code );
+		$this->assertStringContainsString( 'refund_without_invoice', json_encode( $refused->error->context ) );
+		$this->assertSame( array(), $this->server->all( 'CreditNotes' ) );
+		$allowed = $this->connector->send( $this->connection( array( 'refund_without_invoice' => 'yes' ) ), $this->item( '505', EntityType::Refund ), $this->refundPayload() );
+		$this->assertTrue( $allowed->isSuccess(), (string) $allowed->error?->message() );
+	}
+
+	public function test_a_credit_note_whose_total_differs_from_the_refund_is_cancelled_and_never_reported_as_synced(): void {
+		$this->connector->send( $this->connection( $this->invoiceOptions() ), $this->item( '2004' ), $this->payload() );
+		$this->server->creditNoteSurcharge = 5.0;
+		$refund                            = $this->item( '506', EntityType::Refund );
+		$result                            = $this->connector->send( $this->connection( $this->invoiceOptions() ), $refund, $this->refundPayload() );
+		$this->assertFalse( $result->isSuccess() );
+		$this->assertSame( ErrorCode::Val002, $result->error->code );
+		$context = json_encode( $result->error->context );
+		$this->assertStringContainsString( '20.99', $context, 'What SAP shows.' );
+		$this->assertStringContainsString( '19.99', $context, 'What the shop refunded.' );
+		$this->assertStringContainsString( 'was cancelled', $context );
+		$note = array_values( $this->server->all( 'CreditNotes' ) )[0];
+		$this->assertSame( 'tYES', $note['Cancelled'] );
+		$this->server->creditNoteSurcharge = 0.0;
+		$retry                             = $this->connector->send( $this->connection( $this->invoiceOptions() ), $refund, $this->refundPayload() );
+		$this->assertTrue( $retry->isSuccess(), 'A cancelled credit note does not count, so the next pass makes a right one.' );
+	}
+
+	public function test_a_credit_note_that_cannot_be_cancelled_stays_and_findexisting_keeps_reporting_it(): void {
+		$this->connector->send( $this->connection( $this->invoiceOptions() ), $this->item( '2004' ), $this->payload() );
+		$this->server->creditNoteSurcharge = 5.0;
+		$this->server->refuseCancel        = true;
+		$refund                            = $this->item( '507', EntityType::Refund );
+		$result                            = $this->connector->send( $this->connection( $this->invoiceOptions() ), $refund, $this->refundPayload() );
+		$this->assertStringContainsString( 'stays in SAP', json_encode( $result->error->context ) );
+		$found = $this->connector->findExisting( $this->connection( $this->invoiceOptions() ), $refund );
+		$this->assertInstanceOf( \Estasoft\SyncEngine\Contract\ConnectorError::class, $found );
+		$again = $this->connector->send( $this->connection( $this->invoiceOptions() ), $refund, $this->refundPayload() );
+		$this->assertFalse( $again->isSuccess(), 'A found credit note with a wrong total is not reported as synced, and not cancelled by a pass that did not make it.' );
+		$this->assertCount( 1, $this->server->all( 'CreditNotes' ) );
 	}
 
 	public function test_a_refund_for_an_order_that_is_not_in_sap_is_refused_before_anything_is_made(): void {
@@ -118,13 +166,13 @@ final class SapBusinessOneDocumentsTest extends SapBusinessOneTestCase {
 	}
 
 	public function test_an_amount_only_refund_needs_the_refund_item_option(): void {
-		$this->connector->send( $this->connection(), $this->item( '2004' ), $this->payload() );
+		$this->connector->send( $this->connection( $this->invoiceOptions() ), $this->item( '2004' ), $this->payload() );
 		$payload = $this->refundPayload();
 		unset( $payload['refund_line'] );
-		$refused = $this->connector->send( $this->connection(), $this->item( '503', EntityType::Refund ), $payload );
+		$refused = $this->connector->send( $this->connection( $this->invoiceOptions() ), $this->item( '503', EntityType::Refund ), $payload );
 		$this->assertSame( ErrorCode::Val002, $refused->error->code );
 		$this->server->addItem( 'REFUND', 'Refund' );
-		$ok = $this->connector->send( $this->connection( array( 'refund_item' => 'REFUND' ) ), $this->item( '503', EntityType::Refund ), $payload );
+		$ok = $this->connector->send( $this->connection( $this->invoiceOptions() +  array( 'refund_item' => 'REFUND' ) ), $this->item( '503', EntityType::Refund ), $payload );
 		$this->assertTrue( $ok->isSuccess(), (string) $ok->error?->message() );
 	}
 
@@ -161,8 +209,8 @@ final class SapBusinessOneDocumentsTest extends SapBusinessOneTestCase {
 	}
 
 	public function test_the_nightly_check_lists_orders_with_totals_refunds_and_email(): void {
-		$this->connector->send( $this->connection(), $this->item( '2006' ), $this->payload() );
-		$this->connector->send( $this->connection(), $this->item( '504', EntityType::Refund ), $this->refundPayload( array( 'order_ref' => 'WC-2006' ) ) );
+		$this->connector->send( $this->connection( $this->invoiceOptions() ), $this->item( '2006' ), $this->payload() );
+		$this->connector->send( $this->connection( $this->invoiceOptions() ), $this->item( '504', EntityType::Refund ), $this->refundPayload( array( 'order_ref' => 'WC-2006' ) ) );
 		$list = $this->connector->listForReconcile( $this->connection(), new \DateTimeImmutable( '2026-01-01T00:00:00Z' ) );
 		$this->assertArrayHasKey( 'WC-2006', $list );
 		$this->assertSame( 5997, $list['WC-2006']->extra['total_minor'] );
@@ -194,7 +242,7 @@ final class SapBusinessOneDocumentsTest extends SapBusinessOneTestCase {
 		$this->assertCount( 251, $list );
 		$urls = implode( "\n", array_map( static fn( array $request ): string => rawurldecode( $request['url'] ), $this->kit->http->requests ) );
 		$this->assertStringContainsString( '/b1s/v1/Orders', $urls );
-		$this->assertStringContainsString( "DocDate ge '2026-01-01'", $urls );
+		$this->assertStringContainsString( "DocDate ge '2025-12-31'", $urls, 'The window starts a day early, because documents carry the shop\'s own date.' );
 	}
 
 	public function test_lookups_find_a_customer_an_item_and_search_items(): void {

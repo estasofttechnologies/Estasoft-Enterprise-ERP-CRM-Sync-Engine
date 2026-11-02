@@ -144,14 +144,19 @@ final class ZohoCrmConnectorTest extends TestCase {
 		$this->assertTrue( $this->connector->send( $this->connection( array( 'pipeline' => 'Standard (Standard)' ) ), $item, $payload )->isSuccess() );
 	}
 
-	public function test_a_custom_reference_field_is_searched_and_the_name_stays_readable(): void {
+	public function test_a_field_the_merchant_made_is_searched_first_and_the_name_carries_the_reference_too(): void {
 		list( $item, $payload ) = SalesFixtures::order( '131', array( 'currency' => 'AED' ) );
 		$connection             = $this->connection( array( 'reference_field' => 'Woo_Order' ) );
 		$this->connector->send( $connection, $item, $payload );
 		$deal = $this->zoho->all( 'Deals' )[0];
 		$this->assertSame( 'WC-131', $deal['Woo_Order'] );
-		$this->assertSame( 'Order 131', $deal['Deal_Name'] );
+		$this->assertSame( 'WC-131', $deal['Deal_Name'], 'The name is the documented fallback key.' );
 		$this->assertNotNull( $this->connector->findExisting( $connection, $item ) );
+
+		$this->zoho->rows['Deals'][ $deal['id'] ]['Deal_Name'] = 'Mugs for Dana';
+		$again = $this->connector->send( $connection, $item, $payload );
+		$this->assertTrue( $again->alreadyExisted, 'A renamed deal is still found.' );
+		$this->assertCount( 1, $this->zoho->all( 'Deals' ) );
 	}
 
 	public function test_contacts_are_found_by_email_and_a_duplicate_answer_gives_the_existing_one(): void {
@@ -312,6 +317,208 @@ final class ZohoCrmConnectorTest extends TestCase {
 			foreach ( array( FakeZohoCrm::ACCESS, FakeZohoCrm::REFRESH, FakeZohoCrm::SECRET ) as $secret ) {
 				$this->assertStringNotContainsString( $secret, $request['url'] );
 			}
+		}
+	}
+
+	/**
+	 * @return array<int,array<string,mixed>>
+	 */
+	private function standardPipeline(): array {
+		return array( array( 'display_value' => 'Standard (Standard)', 'actual_value' => 'Standard (Standard)', 'default' => true ) );
+	}
+
+	public function test_a_reconciliation_reads_each_deals_own_currency_so_a_kuwaiti_dinar_deal_is_not_lost(): void {
+		$this->zoho->multiCurrency = true;
+		$this->zoho->addDeal( 'WC-9001', 37.035, 'KWD' );
+		$this->zoho->addDeal( 'WC-9002', 10.5, 'AED' );
+		$this->zoho->addDeal( 'WC-9003', 1999.0, 'JPY' );
+		$list = $this->connector->listForReconcile( $this->connection(), new \DateTimeImmutable( '2026-01-01T00:00:00Z' ) );
+
+		$this->assertSame( 37035, $list['WC-9001']->extra['total_minor'], 'Three decimals, read with the deal currency.' );
+		$this->assertSame( 'KWD', $list['WC-9001']->extra['currency'] );
+		$this->assertSame( 1050, $list['WC-9002']->extra['total_minor'] );
+		$this->assertSame( 1999, $list['WC-9003']->extra['total_minor'], 'No decimals for yen.' );
+	}
+
+	public function test_a_single_currency_organisation_reads_amounts_in_its_own_currency_without_asking_for_the_currency_column(): void {
+		$this->zoho->addDeal( 'WC-9101', 12.5 );
+		$list = $this->connector->listForReconcile( $this->connection(), new \DateTimeImmutable( '2026-01-01T00:00:00Z' ) );
+		$this->assertSame( 1250, $list['WC-9101']->extra['total_minor'] );
+		$this->assertSame( 'AED', $list['WC-9101']->extra['currency'] );
+		$this->assertSame( 1, $this->zoho->countCalls( 'POST /crm/v8/coql' ), 'mc_status said no, so the column was never asked for.' );
+	}
+
+	public function test_when_the_organisation_does_not_say_the_query_asks_for_the_currency_and_falls_back_once(): void {
+		$this->zoho->reportsMultiCurrency = false;
+		$this->zoho->addDeal( 'WC-9201', 12.5 );
+		$list = $this->connector->listForReconcile( $this->connection(), new \DateTimeImmutable( '2026-01-01T00:00:00Z' ) );
+		$this->assertSame( 1250, $list['WC-9201']->extra['total_minor'] );
+		$this->assertSame( 2, $this->zoho->countCalls( 'POST /crm/v8/coql' ), 'The refused query and the one without the column.' );
+
+		$this->zoho->multiCurrency = true;
+		$this->zoho->addDeal( 'WC-9202', 37.035, 'KWD' );
+		$again = $this->connector->listForReconcile( $this->connection(), new \DateTimeImmutable( '2026-01-01T00:00:00Z' ) );
+		$this->assertSame( 37035, $again['WC-9202']->extra['total_minor'] );
+	}
+
+	public function test_test_connection_chooses_the_only_pipeline_and_deals_carry_it(): void {
+		$this->zoho->pipelines = $this->standardPipeline();
+		$test                  = $this->connector->test( $this->connection() );
+		$this->assertTrue( $test->ok, (string) $test->error?->message() );
+		$this->assertTrue( $test->permissions['read_pipelines'] );
+		$this->assertSame( 'Standard (Standard)', $test->detected['pipeline'] );
+
+		list( $item, $payload ) = SalesFixtures::order( '180', array( 'currency' => 'AED' ) );
+		$this->assertTrue( $this->connector->send( $this->connection( array( 'detected' => $test->detected ) ), $item, $payload )->isSuccess() );
+		$this->assertSame( 'Standard (Standard)', $this->zoho->all( 'Deals' )[0]['Pipeline'] );
+	}
+
+	public function test_test_connection_picks_the_default_pipeline_but_asks_when_there_are_several_and_none_is_the_default(): void {
+		$this->zoho->pipelines = array(
+			array( 'display_value' => 'Sales (Sales)', 'actual_value' => 'Sales (Sales)', 'default' => false ),
+			array( 'display_value' => 'Web shop (Web shop)', 'actual_value' => 'Web shop (Web shop)', 'default' => true ),
+		);
+		$this->assertSame( 'Web shop (Web shop)', $this->connector->test( $this->connection() )->detected['pipeline'] );
+
+		$this->zoho->pipelines[1]['default'] = false;
+		$ambiguous                           = $this->connector->test( $this->connection() );
+		$this->assertFalse( $ambiguous->ok );
+		$this->assertSame( 'pipeline', $ambiguous->error->context['field'] );
+		$this->assertStringContainsString( 'Sales (Sales), Web shop (Web shop)', $ambiguous->error->context['reason'] );
+
+		$chosen = $this->connector->test( $this->connection( array( 'pipeline' => 'web shop (web shop)' ) ) );
+		$this->assertTrue( $chosen->ok, 'A named pipeline is accepted whatever its case.' );
+		$this->assertArrayNotHasKey( 'pipeline', $chosen->detected, 'The merchant chose; nothing is stored.' );
+
+		$unknown = $this->connector->test( $this->connection( array( 'pipeline' => 'Nope' ) ) );
+		$this->assertFalse( $unknown->ok );
+		$this->assertStringContainsString( 'Sales (Sales)', $unknown->error->context['reason'] );
+	}
+
+	public function test_an_account_without_pipelines_needs_none_and_a_missing_scope_is_a_soft_warning(): void {
+		$none = $this->connector->test( $this->connection() );
+		$this->assertTrue( $none->ok );
+		$this->assertArrayNotHasKey( 'pipeline', $none->detected );
+
+		$this->zoho->pipelines      = $this->standardPipeline();
+		$this->zoho->deniedSettings = array( 'pipeline' );
+		$soft                       = $this->connector->test( $this->connection() );
+		$this->assertTrue( $soft->ok, 'The test still passes; the person is told what is missing.' );
+		$this->assertContains( 'read_pipelines', $soft->missingPermissions() );
+	}
+
+	public function test_a_deal_without_a_pipeline_in_an_account_that_has_them_says_what_to_do(): void {
+		$this->zoho->pipelines  = $this->standardPipeline();
+		list( $item, $payload ) = SalesFixtures::order( '181', array( 'currency' => 'AED' ) );
+		$result                 = $this->connector->send( $this->connection(), $item, $payload );
+		$this->assertSame( ErrorCode::Val002, $result->error->code );
+		$this->assertSame( 'Pipeline', $result->error->context['field'] );
+		$this->assertStringContainsString( 'pipeline name', $result->error->context['reason'] );
+		$this->assertCount( 0, $this->zoho->all( 'Deals' ) );
+	}
+
+	public function test_test_connection_makes_the_reference_field_once_and_every_deal_carries_it_beside_the_name(): void {
+		$this->zoho->strictFields = true;
+		$first                    = $this->connector->test( $this->connection() );
+		$this->assertTrue( $first->ok, (string) $first->error?->message() );
+		$this->assertTrue( $first->permissions['create_reference_field'] );
+		$this->assertSame( 'Woo_Order_Ref', $first->detected['reference_field'] );
+		$this->assertSame( 'field', $first->detected['reference_mode'] );
+		$this->assertArrayNotHasKey( 'warning', $first->detected );
+		$this->assertSame( array( 'Woo_Order_Ref' => 'Woo Order Ref' ), $this->zoho->customFields );
+
+		$this->connector->test( $this->connection() );
+		$this->assertSame( 1, $this->zoho->countCalls( 'POST /crm/v8/settings/fields' ), 'The second test finds it.' );
+
+		$connection             = $this->connection( array( 'detected' => $first->detected ) );
+		list( $item, $payload ) = SalesFixtures::order( '182', array( 'currency' => 'AED' ) );
+		$sent                   = $this->connector->send( $connection, $item, $payload );
+		$this->assertTrue( $sent->isSuccess(), (string) $sent->error?->message() );
+		$deal = $this->zoho->all( 'Deals' )[0];
+		$this->assertSame( 'WC-182', $deal['Woo_Order_Ref'] );
+		$this->assertSame( 'WC-182', $deal['Deal_Name'] );
+	}
+
+	public function test_a_rep_who_renames_the_deal_does_not_break_replays_refunds_or_reconciliation(): void {
+		$this->zoho->strictFields = true;
+		$detected                 = $this->connector->test( $this->connection() )->detected;
+		$connection               = $this->connection( array( 'detected' => $detected ) );
+		list( $order, $payload )  = SalesFixtures::order( '183', array( 'currency' => 'AED' ) );
+		$first                    = $this->connector->send( $connection, $order, $payload );
+		$this->zoho->rows['Deals'][ $first->ref->id ]['Deal_Name'] = 'Dana - big mug order';
+
+		$replay = $this->connector->send( $connection, $order, $payload );
+		$this->assertTrue( $replay->alreadyExisted );
+		$this->assertCount( 1, $this->zoho->all( 'Deals' ), 'No second deal.' );
+		$this->assertSame( $first->ref->id, $this->connector->findExisting( $connection, $order )->id );
+
+		list( $refund, $rpayload ) = SalesFixtures::refund( '55', '183', array( 'currency' => 'AED' ) );
+		$this->assertTrue( $this->connector->send( $connection, $refund, $rpayload )->isSuccess() );
+		$this->assertSame( $first->ref->id, $this->connector->findExisting( $connection, $refund )->extra['deal_id'] );
+
+		$list = $this->connector->listForReconcile( $connection, new \DateTimeImmutable( '2026-01-01T00:00:00Z' ) );
+		$this->assertArrayHasKey( 'WC-183', $list, 'The reference field is read, not the new name.' );
+	}
+
+	public function test_a_deal_made_before_the_field_existed_is_still_found_by_its_name(): void {
+		$legacy = $this->zoho->addDeal( 'WC-184', 50.0 );
+		$this->zoho->addDeal( 'Website redesign', 999.0 );
+		$connection             = $this->connection( array( 'detected' => array( 'reference_field' => 'Woo_Order_Ref' ) ) );
+		list( $item, $payload ) = SalesFixtures::order( '184', array( 'currency' => 'AED' ) );
+		$this->zoho->rows['Notes']['9'] = array( 'id' => '9', 'Note_Title' => 'WC-184', 'Parent' => $legacy, '_deleted' => false, 'Created_Time' => '2026-01-01T00:00:00+00:00' );
+		$result = $this->connector->send( $connection, $item, $payload );
+		$this->assertTrue( $result->alreadyExisted );
+		$this->assertSame( $legacy, $result->ref->id );
+		$this->assertCount( 2, $this->zoho->all( 'Deals' ) );
+		$this->assertArrayHasKey( 'WC-184', $this->connector->listForReconcile( $connection, new \DateTimeImmutable( '2026-01-01T00:00:00Z' ) ) );
+	}
+
+	public function test_when_the_field_cannot_be_made_the_name_stays_the_key_and_the_test_says_so(): void {
+		$this->zoho->strictFields     = true;
+		$this->zoho->fieldsCreatable = false;
+		$test                        = $this->connector->test( $this->connection() );
+		$this->assertTrue( $test->ok, 'Orders still work; only the safer key is missing.' );
+		$this->assertFalse( $test->permissions['create_reference_field'] );
+		$this->assertSame( array( 'create_reference_field' ), $test->missingPermissions() );
+		$this->assertSame( 'name', $test->detected['reference_mode'] );
+		$this->assertSame( 'reference_field', $test->detected['warning'] );
+		$this->assertArrayNotHasKey( 'reference_field', $test->detected );
+
+		list( $item, $payload ) = SalesFixtures::order( '185', array( 'currency' => 'AED' ) );
+		$this->assertTrue( $this->connector->send( $this->connection( array( 'detected' => $test->detected ) ), $item, $payload )->isSuccess(), 'Nothing is written to a field that does not exist.' );
+		$this->assertSame( 'WC-185', $this->zoho->all( 'Deals' )[0]['Deal_Name'] );
+
+		$this->zoho->fieldsCreatable = true;
+		$this->zoho->fieldCap        = 0;
+		$this->assertFalse( $this->connector->test( $this->connection() )->permissions['create_reference_field'], 'An edition at its field cap is the same answer.' );
+
+		$this->zoho->deniedSettings = array( 'fields' );
+		$scope                      = $this->connector->test( $this->connection() );
+		$this->assertTrue( $scope->ok );
+		$this->assertFalse( $scope->permissions['create_reference_field'] );
+	}
+
+	public function test_naming_the_deal_name_on_purpose_creates_nothing_and_warns_about_nothing(): void {
+		$test = $this->connector->test( $this->connection( array( 'reference_field' => 'name' ) ) );
+		$this->assertTrue( $test->ok );
+		$this->assertSame( 0, $this->zoho->countCalls( 'POST /crm/v8/settings/fields' ) );
+		$this->assertArrayNotHasKey( 'create_reference_field', $test->permissions );
+		$this->assertArrayNotHasKey( 'warning', $test->detected );
+		$this->assertSame( 'name', $test->detected['reference_mode'] );
+	}
+
+	public function test_ping_is_one_cheap_call_and_false_for_a_refused_sign_in(): void {
+		$this->assertTrue( $this->connector->ping( $this->connection() ) );
+		$this->assertSame( array( 'GET /crm/v8/org' ), $this->zoho->calls );
+
+		$this->zoho->failNextWrite( 'auth' );
+		$this->assertFalse( $this->connector->ping( $this->connection() ) );
+	}
+
+	public function test_the_sign_in_asks_for_the_scopes_that_read_pipelines_and_make_the_field(): void {
+		$scopes = $this->inner->oauthProvider()->config( $this->connection() )->scopeString();
+		foreach ( array( 'ZohoCRM.settings.pipeline.READ', 'ZohoCRM.settings.layouts.READ', 'ZohoCRM.settings.fields.READ', 'ZohoCRM.settings.fields.CREATE' ) as $scope ) {
+			$this->assertStringContainsString( $scope, $scopes );
 		}
 	}
 }

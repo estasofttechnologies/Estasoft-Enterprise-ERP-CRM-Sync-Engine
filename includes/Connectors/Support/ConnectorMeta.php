@@ -38,6 +38,9 @@ final class ConnectorMeta {
 	 * @param bool                  $merchantHost    True when the merchant types the address (ERPNext, SuiteCRM, SAP B1, Sage 300, Acumatica, Odoo-style).
 	 *                                               Private and loopback addresses are then refused unless the filter estasoft_sync_allow_private_hosts allows them.
 	 * @param string                $contractVersion Contract version the connector was written for.
+	 * @param string|null           $pingPath        A path under the base address that answers 2xx for a working connection (a cheap read: the account, the current user, one
+	 *                                               record). The circuit-breaker probe (`ping()`) is then one GET of it. Without one the probe runs the whole
+	 *                                               identify() (several calls). Declare one, or override ping().
 	 */
 	public function __construct(
 		public readonly string $id,
@@ -51,6 +54,7 @@ final class ConnectorMeta {
 		public readonly array $hosts = array(),
 		public readonly bool $merchantHost = false,
 		public readonly string $contractVersion = ConnectorInterface::CONTRACT_VERSION,
+		public readonly ?string $pingPath = null,
 	) {
 	}
 

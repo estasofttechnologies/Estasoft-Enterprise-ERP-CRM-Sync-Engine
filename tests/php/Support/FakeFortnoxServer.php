@@ -45,6 +45,14 @@ final class FakeFortnoxServer {
 	public float $totalFactor = 1.0;
 
 	/**
+	 * Rounding of the company to whole units: '' none, 'in_total' (Total holds the rounded amount) or 'beside_total' (Total is the exact amount
+	 * and RoundOff names the rounding). The list of documents never carries RoundOff.
+	 *
+	 * @var string
+	 */
+	public string $rounding = '';
+
+	/**
 	 * Customers by number.
 	 *
 	 * @var array<string,array<string,mixed>>
@@ -311,6 +319,12 @@ final class FakeFortnoxServer {
 			$doc            = $record + array( 'DocumentNumber' => $number );
 			$doc['Currency'] = (string) ( $record['Currency'] ?? 'SEK' );
 			$doc['Total']    = $total;
+			if ( '' !== $this->rounding ) {
+				$whole           = round( $total );
+				$doc['RoundOff'] = round( $whole - $total, 2 );
+				$doc['Total']    = 'in_total' === $this->rounding ? $whole : $total;
+				$total           = $doc['Total'];
+			}
 			$doc['Cancelled'] = false;
 			if ( $invoice ) {
 				$doc['Booked']  = false;
@@ -340,6 +354,13 @@ final class FakeFortnoxServer {
 		if ( isset( $query['fromdate'] ) ) {
 			$rows = array_values( array_filter( $rows, static fn( array $row ): bool => (string) ( $row[ $invoice ? 'InvoiceDate' : 'OrderDate' ] ?? '' ) >= (string) $query['fromdate'] ) );
 		}
+		$rows = array_map(
+			static function ( array $row ): array {
+				unset( $row['RoundOff'] );
+				return $row;
+			},
+			$rows
+		);
 		return $this->listing( $rows, $many, $query, array( 'externalinvoicereference1' => 'ExternalInvoiceReference1' ) );
 	}
 

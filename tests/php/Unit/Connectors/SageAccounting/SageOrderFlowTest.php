@@ -131,27 +131,87 @@ final class SageOrderFlowTest extends SageTestCase {
 		$this->assertCount( 1, $this->creates() );
 	}
 
-	public function test_a_total_that_differs_from_the_shops_deletes_the_draft_and_releases_nothing(): void {
+	public function test_a_total_that_differs_from_the_shops_asks_sage_to_void_the_draft_and_says_plainly_that_it_stays_when_sage_does_not(): void {
 		$result = $this->send( '1049', array( 'total' => 9999 ) );
 
 		$this->assertFalse( $result->isSuccess() );
 		$this->assertSame( ErrorCode::Val002, $result->error->code );
 		$this->assertStringContainsString( '99.99', $result->error->message() );
 		$this->assertStringContainsString( '100.80', $result->error->message() );
-		$this->assertCount( 0, $this->sage->store['invoice'], 'The wrong draft was deleted.' );
-		$this->assertSame( array(), $this->sage->calls( 'POST', '/sales_invoices/[^/]+/release' ) );
+		$this->assertStringContainsString( 'still in Sage', $result->error->message(), 'The guide documents voiding from UNPAID only; the draft stayed, and the message says so.' );
+		$this->assertSame( 'DRAFT', $this->sage->byReference( 'invoice', 'WC-1049' )['status']['id'] );
+		$this->assertSame( array(), $this->sage->calls( 'POST', '/sales_invoices/[^/]+/release' ), 'Nothing was released.' );
+		$delete = $this->sage->calls( 'DELETE', '/sales_invoices/[^/]+' );
+		$this->assertCount( 1, $delete );
+		$this->assertSame( array( 'void_reason' => 'Created with the wrong total by the WooCommerce sync' ), $delete[0]->json(), 'The guide: the body must include a single param, void_reason.' );
+
+		$again = $this->send( '1049', array( 'total' => 9999 ) );
+		$this->assertFalse( $again->isSuccess() );
+		$this->assertStringContainsString( 'still in Sage', $again->error->message() );
+		$this->assertCount( 1, $this->creates(), 'The draft that is still there is found; a second one is not made.' );
+		$this->assertCount( 1, $this->sage->calls( 'DELETE', '/sales_invoices/[^/]+' ), 'A draft found on a later pass is not touched.' );
 	}
 
-	public function test_the_next_try_after_a_deleted_draft_makes_a_good_invoice_with_a_new_idempotency_id(): void {
-		$this->send( '1050', array( 'total' => 9999 ) );
+	public function test_a_draft_sage_will_not_void_is_released_by_the_next_pass_when_the_total_is_right(): void {
+		$this->send( '1049', array( 'total' => 9999 ) );
 
-		$retry = $this->send( '1050', array(), null, 1 );
+		$retry = $this->send( '1049' );
+
+		$this->assertTrue( $retry->isSuccess(), (string) $retry->error?->message() );
+		$this->assertTrue( $retry->alreadyExisted );
+		$this->assertCount( 1, $this->sage->store['invoice'] );
+		$this->assertSame( 'UNPAID', $this->sage->byReference( 'invoice', 'WC-1049' )['status']['id'] );
+	}
+
+	public function test_when_sage_voids_the_draft_the_next_create_has_a_new_idempotency_id_that_includes_the_voided_id(): void {
+		$this->sage->draftsCanBeVoided = true;
+		$result                        = $this->send( '1050', array( 'total' => 9999 ) );
+
+		$this->assertFalse( $result->isSuccess() );
+		$this->assertStringNotContainsString( 'still in Sage', $result->error->message() );
+		$voided = $this->sage->byReference( 'invoice', 'WC-1050' );
+		$this->assertSame( 'VOID', $voided['status']['id'] );
+		$this->assertSame( 'Created with the wrong total by the WooCommerce sync', $voided['void_reason'] );
+
+		$retry = $this->send( '1050' );
 
 		$this->assertTrue( $retry->isSuccess(), (string) $retry->error?->message() );
 		$this->assertFalse( $retry->alreadyExisted );
+		$this->assertCount( 2, $this->sage->store['invoice'], 'The voided one stays in Sage; a new one was made.' );
 		$ids = array_map( static fn( $r ): string => (string) $r->json()['sales_invoice']['idempotency_id'], $this->creates() );
 		$this->assertCount( 2, $ids );
-		$this->assertNotSame( $ids[0], $ids[1], 'The second try must not get the answer about the draft the first try deleted.' );
+		$this->assertNotSame( $ids[0], $ids[1] );
+		$third = $this->send( '1050' );
+		$this->assertTrue( $third->alreadyExisted );
+	}
+
+	public function test_a_retry_after_a_time_out_sends_the_same_idempotency_id_and_gets_the_first_invoice_not_a_second(): void {
+		$this->sage->addContact( 'Layla Haddad', 'layla@example.test' );
+		$this->sage->loseNextAnswer = true;
+		$this->assertFalse( $this->send( '1051' )->isSuccess() );
+		$this->sage->hideDocuments = 1;
+
+		$retry = $this->send( '1051', array(), null, 3 );
+
+		$this->assertTrue( $retry->isSuccess(), (string) $retry->error?->message() );
+		$this->assertCount( 1, $this->sage->store['invoice'], 'The search did not see the first invoice yet; the same idempotency id made Sage answer with it.' );
+		$ids = array_map( static fn( $r ): string => (string) $r->json()['sales_invoice']['idempotency_id'], $this->creates() );
+		$this->assertCount( 2, $ids );
+		$this->assertSame( $ids[0], $ids[1], 'A later queue attempt does not change the id.' );
+	}
+
+	public function test_a_replayed_answer_about_a_draft_that_a_person_deleted_is_seen_to_be_dead_and_a_new_idempotency_id_is_used(): void {
+		$this->sage->addContact( 'Layla Haddad', 'layla@example.test' );
+		$this->sage->loseNextAnswer = true;
+		$this->assertFalse( $this->send( '1052' )->isSuccess() );
+		unset( $this->sage->store['invoice'][ $this->sage->byReference( 'invoice', 'WC-1052' )['id'] ] );
+
+		$retry = $this->send( '1052' );
+
+		$this->assertTrue( $retry->isSuccess(), (string) $retry->error?->message() );
+		$this->assertFalse( $retry->alreadyExisted );
+		$this->assertCount( 1, $this->sage->store['invoice'] );
+		$this->assertCount( 3, $this->creates(), 'The first create, the same request again (Sage replayed the deleted draft), and a new one.' );
 	}
 
 	public function test_warn_mode_keeps_the_invoice_and_reports_the_difference(): void {
@@ -162,12 +222,102 @@ final class SageOrderFlowTest extends SageTestCase {
 		$this->assertNotEmpty( $result->ref->extra['warnings'] );
 	}
 
-	public function test_prices_that_include_tax_are_refused_before_any_request(): void {
-		$result = $this->send( '1052', array( 'prices_include_tax' => true ) );
+	/**
+	 * An order whose prices include tax, sent from a business in a country.
+	 *
+	 * @param string              $id      Order id.
+	 * @param string              $country Country code.
+	 * @param array<string,mixed> $merge   Values merged over the payload.
+	 * @return \Estasoft\SyncEngine\Contract\SendResult
+	 */
+	private function sendInclusive( string $id, string $country, array $merge = array() ) {
+		$this->sage->country = $country;
+		$connection          = $this->connect( array(), 20 + strlen( $country ), array( 'country' => $country ) );
+		return $this->connector->send(
+			$connection,
+			$this->item( $id ),
+			$this->payload( $id, array_replace_recursive( array( 'prices_include_tax' => true, 'order_line' => array( array( 'price_unit' => 5040 ) ) ), $merge ) )
+		);
+	}
+
+	public function test_in_the_uk_ireland_and_france_prices_with_tax_are_sent_with_the_flag_and_no_tax_amount_and_sage_works_the_tax_out(): void {
+		foreach ( array( 'gb', 'ie', 'fr' ) as $index => $country ) {
+			$id     = (string) ( 1100 + $index );
+			$result = $this->sendInclusive( $id, $country );
+
+			$this->assertTrue( $result->isSuccess(), $country . ': ' . (string) $result->error?->message() );
+			$line = $this->creates()[ $index ]->json()['sales_invoice']['invoice_lines'][0];
+			$this->assertTrue( $line['unit_price_includes_tax'], $country );
+			$this->assertSame( '50.40', $line['unit_price'], $country );
+			$this->assertArrayNotHasKey( 'tax_amount', $line, $country . ': Sage works it out.' );
+			$this->assertSame( 10080, $result->ref->extra['total_minor'], $country );
+			$this->assertSame( '16.80', $this->sage->byReference( 'invoice', 'WC-' . $id )['tax_amount'], $country );
+		}
+	}
+
+	public function test_shipping_that_includes_tax_is_converted_to_net_because_it_has_no_flag(): void {
+		$result = $this->sendInclusive( '1103', 'gb', array( 'shipping' => array( 'total' => 1200, 'tax' => 'GB_STANDARD' ), 'total' => 11280 ) );
+
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$body = $this->creates()[0]->json()['sales_invoice'];
+		$this->assertSame( '10.00', $body['shipping_net_amount'], '12.00 with 20 percent in it is 10.00 and 2.00.' );
+		$this->assertSame( '2.00', $body['shipping_tax_amount'] );
+		$this->assertSame( 11280, $result->ref->extra['total_minor'] );
+	}
+
+	public function test_in_canada_prices_with_tax_are_converted_to_net_and_the_tax_amount_is_sent(): void {
+		$result = $this->sendInclusive( '1104', 'ca' );
+
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$line = $this->creates()[0]->json()['sales_invoice']['invoice_lines'][0];
+		$this->assertArrayNotHasKey( 'unit_price_includes_tax', $line, 'The flag does not apply in Canada and Spain.' );
+		$this->assertSame( '2', $line['quantity'] );
+		$this->assertSame( '42.00', $line['unit_price'], '100.80 with 20 percent in it is 84.00 net, 42.00 each.' );
+		$this->assertSame( '16.80', $line['tax_amount'] );
+		$this->assertSame( 10080, $result->ref->extra['total_minor'] );
+	}
+
+	public function test_in_spain_prices_are_converted_to_net_and_no_tax_amount_is_sent_at_all(): void {
+		$result = $this->sendInclusive( '1105', 'es' );
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$line = $this->creates()[0]->json()['sales_invoice']['invoice_lines'][0];
+		$this->assertArrayNotHasKey( 'tax_amount', $line, 'A Spanish business may not send one.' );
+		$this->assertSame( '42.00', $line['unit_price'] );
+		$this->assertSame( 10080, $result->ref->extra['total_minor'] );
+
+		$without = $this->connector->send( $this->connect( array(), 31, array( 'country' => 'es' ) ), $this->item( '1106' ), $this->payload( '1106' ) );
+		$this->assertTrue( $without->isSuccess(), (string) $without->error?->message() );
+		$this->assertArrayNotHasKey( 'tax_amount', $this->creates()[1]->json()['sales_invoice']['invoice_lines'][0], 'Also for prices without tax.' );
+		$this->assertSame( 10080, $without->ref->extra['total_minor'] );
+	}
+
+	public function test_a_converted_line_that_cannot_add_up_exactly_is_off_by_a_cent_and_the_check_allows_one_cent_a_line(): void {
+		$result = $this->sendInclusive( '1107', 'ca', array( 'order_line' => array( array( 'quantity' => 3, 'price_unit' => 1999 ) ), 'total' => 5997 ) );
+
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$line = $this->creates()[0]->json()['sales_invoice']['invoice_lines'][0];
+		$this->assertSame( '3', $line['quantity'] );
+		$this->assertSame( '16.66', $line['unit_price'], '59.97 with 20 percent in it: net 49.975 rounds to 49.98, 16.66 each.' );
+		$this->assertSame( 5998, $result->ref->extra['total_minor'], 'One cent more than the shop: no net and tax add up to 59.97.' );
+	}
+
+	public function test_a_converted_line_whose_net_does_not_divide_by_the_quantity_is_sent_as_one_line_of_the_whole_net(): void {
+		$result = $this->sendInclusive( '1108', 'ca', array( 'order_line' => array( array( 'quantity' => 3, 'price_unit' => 333, 'name' => 'Pen' ) ), 'total' => 999 ) );
+
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$line = $this->creates()[0]->json()['sales_invoice']['invoice_lines'][0];
+		$this->assertSame( '1', $line['quantity'] );
+		$this->assertSame( 'Pen (3)', $line['description'] );
+		$this->assertSame( '8.33', $line['unit_price'], '9.99 with 20 percent in it is 8.325 net, rounded away from zero.' );
+		$this->assertSame( 1000, $result->ref->extra['total_minor'], '8.33 + 1.67: one cent more than the shop, inside the one cent a line the check allows.' );
+	}
+
+	public function test_a_total_far_from_the_shops_is_still_caught_for_prices_with_tax(): void {
+		$result = $this->sendInclusive( '1109', 'gb', array( 'total' => 9000 ) );
 
 		$this->assertFalse( $result->isSuccess() );
 		$this->assertSame( ErrorCode::Val002, $result->error->code );
-		$this->assertSame( array(), $this->sage->server->received );
+		$this->assertStringContainsString( '90.00', $result->error->message() );
 	}
 
 	public function test_an_order_in_another_currency_is_stopped_before_anything_is_created(): void {

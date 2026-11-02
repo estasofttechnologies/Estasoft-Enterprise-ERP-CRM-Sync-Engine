@@ -34,6 +34,15 @@ final class QuickBooksOrderFlowTest extends QuickBooksTestCase {
 		$this->assertSame( 'WC-1042', $invoice['PrivateNote'], 'The unchecked marker is gone once the total was read back.' );
 	}
 
+	/**
+	 * The create calls for invoices, in order.
+	 *
+	 * @return array<int,\Estasoft\SyncEngine\Tests\Support\ApiFakeRequest>
+	 */
+	private function creates(): array {
+		return array_values( array_filter( $this->qbo->writes(), static fn( $r ): bool => isset( $r->query['requestid'] ) && '/v3/company/' . FakeQuickBooksServer::REALM . '/invoice' === $r->path ) );
+	}
+
 	public function test_the_invoice_is_made_with_a_marker_and_a_second_call_removes_it(): void {
 		$this->send( '1043' );
 
@@ -159,17 +168,36 @@ final class QuickBooksOrderFlowTest extends QuickBooksTestCase {
 		$this->assertCount( 1, $deletes );
 	}
 
-	public function test_a_deleted_invoice_is_ignored_and_the_next_try_makes_a_good_one_with_a_new_request_id(): void {
-		$this->send( '1049', array( 'total' => 9999 ) );
+	public function test_a_retry_after_a_time_out_sends_the_same_request_id_and_gets_the_first_invoice_not_a_second(): void {
+		$this->qbo->addCustomer( 'Layla Haddad', 'layla@example.test', array( 'CurrencyRef' => array( 'value' => 'GBP' ) ) );
+		$this->qbo->loseNextAnswer = true;
+		$this->assertFalse( $this->send( '1049' )->isSuccess() );
+		$this->qbo->hideInvoices = 1;
 
-		$result = $this->send( '1049', array(), null, 1 );
+		$retry = $this->send( '1049', array(), null, 3 );
+
+		$this->assertTrue( $retry->isSuccess(), (string) $retry->error?->message() );
+		$this->assertCount( 1, $this->qbo->store['Invoice'], 'The search did not see the first invoice yet; the same request id made QuickBooks answer with it.' );
+		$ids = array_map( static fn( $r ): string => (string) $r->query['requestid'], $this->creates() );
+		$this->assertCount( 2, $ids );
+		$this->assertSame( $ids[0], $ids[1], 'A later queue attempt does not change the request id.' );
+	}
+
+	public function test_after_a_wrong_invoice_was_deleted_the_replayed_answer_is_seen_to_be_dead_and_a_new_request_id_is_used(): void {
+		$this->send( '1049', array( 'total' => 9999 ) );
+		$this->assertCount( 0, $this->qbo->store['Invoice'], 'The wrong invoice was deleted.' );
+
+		$result = $this->send( '1049' );
 
 		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
 		$this->assertFalse( $result->alreadyExisted );
 		$this->assertCount( 1, $this->qbo->store['Invoice'] );
-		$ids = array_map( static fn( $r ): string => (string) $r->query['requestid'], array_values( array_filter( $this->qbo->writes(), static fn( $r ): bool => isset( $r->query['requestid'] ) && '/v3/company/' . FakeQuickBooksServer::REALM . '/invoice' === $r->path ) ) );
-		$this->assertCount( 2, $ids );
-		$this->assertNotSame( $ids[0], $ids[1], 'The second try must not get the answer about the invoice the first try deleted.' );
+		$ids = array_map( static fn( $r ): string => (string) $r->query['requestid'], $this->creates() );
+		$this->assertCount( 3, $ids, 'The first create, the same request again (QuickBooks replayed the deleted invoice), and a new one.' );
+		$this->assertSame( $ids[0], $ids[1] );
+		$this->assertNotSame( $ids[1], $ids[2], 'The id of the deleted invoice makes the third request a new one.' );
+		$third = $this->send( '1049' );
+		$this->assertTrue( $third->alreadyExisted );
 	}
 
 	public function test_warn_mode_keeps_the_invoice_and_reports_the_difference(): void {
@@ -211,23 +239,60 @@ final class QuickBooksOrderFlowTest extends QuickBooksTestCase {
 		$this->assertCount( $before, $this->qbo->writes(), 'Nothing was sent.' );
 	}
 
-	public function test_a_foreign_currency_is_sent_when_multicurrency_is_on_and_stopped_when_it_is_off(): void {
-		$usd = $this->send( '1054', array( 'currency' => 'USD' ) );
-		$this->assertTrue( $usd->isSuccess(), (string) $usd->error?->message() );
-		$this->assertSame( 'USD', $this->qbo->byNumber( 'Invoice', 'WC-1054' )['CurrencyRef']['value'] );
-		$this->assertSame( 'USD', $usd->ref->extra['currency'] );
-
+	public function test_when_the_company_uses_more_than_one_currency_every_document_and_new_customer_names_its_currency_the_home_one_too(): void {
 		$home = $this->send( '1055' );
-		$this->assertTrue( $home->isSuccess() );
-		$this->assertArrayNotHasKey( 'CurrencyRef', $this->qbo->writes()[ count( $this->qbo->writes() ) - 2 ]->json(), 'The home currency is not named.' );
+		$this->assertTrue( $home->isSuccess(), (string) $home->error?->message() );
+		$this->assertSame( 'GBP', $this->qbo->byNumber( 'Invoice', 'WC-1055' )['CurrencyRef']['value'] );
+		$this->assertSame( 'GBP', array_values( $this->qbo->store['Customer'] )[0]['CurrencyRef']['value'], 'The customer is made in the order\'s currency; QuickBooks cannot change it later.' );
+		$this->assertSame( 'GBP', $this->creates()[0]->json()['CurrencyRef']['value'] );
+	}
 
+	public function test_a_customer_is_reused_only_in_the_same_currency_and_a_customer_with_no_currency_is_in_the_home_currency(): void {
+		$this->qbo->addCustomer( 'Old Name', 'layla@example.test' );
+		$gbp = $this->send( '1056' );
+		$this->assertTrue( $gbp->isSuccess(), (string) $gbp->error?->message() );
+		$this->assertCount( 1, $this->qbo->store['Customer'], 'A customer with no CurrencyRef is a home currency customer: reused for a GBP order.' );
+
+		$usd = $this->send( '1057', array( 'currency' => 'USD' ) );
+		$this->assertTrue( $usd->isSuccess(), (string) $usd->error?->message() );
+		$names = array_column( $this->qbo->store['Customer'], 'DisplayName' );
+		$this->assertCount( 2, $this->qbo->store['Customer'], 'The customer with that email is in GBP; a USD order gets a customer of its own.' );
+		$this->assertContains( 'Layla Haddad', $names );
+		$usdCustomer = array_values( array_filter( $this->qbo->store['Customer'], static fn( array $c ): bool => 'USD' === ( $c['CurrencyRef']['value'] ?? '' ) ) )[0];
+		$this->assertSame( $usdCustomer['Id'], $this->qbo->byNumber( 'Invoice', 'WC-1057' )['CustomerRef']['value'] );
+
+		$again = $this->send( '1058', array( 'currency' => 'USD' ) );
+		$this->assertTrue( $again->isSuccess(), (string) $again->error?->message() );
+		$this->assertCount( 2, $this->qbo->store['Customer'], 'The next USD order finds the USD customer.' );
+		$back = $this->send( '1059' );
+		$this->assertTrue( $back->isSuccess() );
+		$this->assertCount( 2, $this->qbo->store['Customer'], 'And the next GBP order finds the GBP one.' );
+	}
+
+	public function test_a_name_taken_by_a_customer_in_another_currency_is_tried_again_with_the_email_and_then_the_currency(): void {
+		$this->qbo->addCustomer( 'Layla Haddad', 'someone.else@example.test', array( 'CurrencyRef' => array( 'value' => 'GBP' ) ) );
+		$this->qbo->addCustomer( 'Layla Haddad (layla@example.test)', 'third@example.test', array( 'CurrencyRef' => array( 'value' => 'GBP' ) ) );
+
+		$result = $this->send( '1060' );
+
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$this->assertContains( 'Layla Haddad (layla@example.test, GBP)', array_column( $this->qbo->store['Customer'], 'DisplayName' ) );
+	}
+
+	public function test_a_foreign_currency_is_stopped_when_multicurrency_is_off_and_nothing_names_a_currency_then(): void {
 		$this->qbo->multiCurrency = false;
 		$connection               = $this->connect( array(), 9 );
-		$before                   = count( $this->qbo->writes() );
-		$stopped                  = $this->connector->send( $connection, $this->item( '1056' ), $this->payload( '1056', array( 'currency' => 'AED' ) ) );
+
+		$stopped = $this->connector->send( $connection, $this->item( '1061' ), $this->payload( '1061', array( 'currency' => 'AED' ) ) );
 		$this->assertFalse( $stopped->isSuccess() );
 		$this->assertStringContainsString( 'multicurrency is off', $stopped->error->message() );
-		$this->assertCount( $before, $this->qbo->writes() );
+		$this->assertSame( array(), $this->qbo->writes() );
+
+		$home = $this->connector->send( $connection, $this->item( '1062' ), $this->payload( '1062' ) );
+		$this->assertTrue( $home->isSuccess(), (string) $home->error?->message() );
+		$this->assertArrayNotHasKey( 'CurrencyRef', array_values( $this->qbo->store['Customer'] )[0] );
+		$this->assertArrayNotHasKey( 'CurrencyRef', $this->qbo->calls( 'POST', '/customer' )[0]->json() );
+		$this->assertArrayNotHasKey( 'CurrencyRef', $this->qbo->calls( 'POST', '/invoice' )[0]->json() );
 	}
 
 	public function test_without_custom_transaction_numbers_nothing_is_sent_and_the_setting_is_named(): void {

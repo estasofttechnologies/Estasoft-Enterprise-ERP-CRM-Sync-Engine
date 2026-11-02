@@ -37,6 +37,7 @@ class AcmeConnector extends AbstractApiConnector {
 			rateLimit: new RateLimitHints( requestsPerSecond: 5.0, requestsPerMinute: 300, requestsPerDay: 5000 ),
 			hosts: array( 'api.acme.test' ),         // every host the plugin contacts; '*.acme.test' allowed
 			merchantHost: false,                     // true when the merchant types the address (hosts then stays empty)
+			pingPath: '/me',                         // one cheap GET that answers 2xx for a working connection; the circuit-breaker probe uses it
 		);
 	}
 	protected function baseUrl( Connection $c ): string { return 'https://api.acme.test/v1'; }
@@ -61,7 +62,9 @@ $response = $this->api( $connection )->post( '/invoices', array(), $body, array(
 $response->json();  $response->status();  $response->header( 'X-Rate' );  $response->body();  $response->retryAfterSeconds();
 ```
 
-`get/post/put/patch/delete( $path, $query = [], $body = null, $options = [] )`. Options: `format` (`json` default, `form`, `xml`, `raw`), `content_type`, `accept`, `headers`, `timeout` (1 to 30), `allow` (statuses returned as normal answers: `array( 404 )`), `idempotency_key`, `action` (what a 403 refused, for the message). A path may be an absolute `https://` next-page link; it must still be on a declared host. The client never retries; the queue does.
+`get/post/put/patch/delete( $path, $query = [], $body = null, $options = [] )`. Options: `format` (`json` default, `form`, `xml`, `raw`), `content_type`, `accept`, `headers`, `timeout` (1 to 30), `allow` (statuses returned as normal answers: `array( 404 )`), `idempotency_key`, `action` (what a 403 refused, for the message). A path may be an absolute `https://` link the other side sent (a next page, a `Location` header). It is accepted only when its scheme, host and port equal the connection's base address, or its host is one of the connector's declared fixed hosts (https, the usual port or the base port); anything else is refused with SYNC-VAL-002 before the request is built, so no credential is ever applied to a request for a stranger's address. A merchant-typed host follows links on its own origin only. The client never retries; the queue does.
+
+The circuit-breaker probe, `ping()`, is one `GET` of `meta()->pingPath` when the connector declares one, and falls back to `identify()` (often four to six calls) when it does not. **Every connector should declare `pingPath` (a cheap read: the account, the current user, one record) or override `ping()`.** A probe that fails for any reason, including a 404 on a wrong path, is `false`.
 
 What it does for you: https and host check (`HostPolicy`), authentication, pacing shared by all workers (`RateLimitHints`; a wait of more than 5 seconds stops with SYNC-RATE-001 and the wait; a daily cap stops until midnight UTC), the 30 second cap, a 5 MB answer cap, JSON/form/XML encoding (`Xml::encode`), `Retry-After` in seconds or as a date, and redaction of keys, tokens, secrets, tenant ids and hosts from every message.
 
@@ -106,7 +109,7 @@ A token that lives 300 seconds or less is not refreshed on every call: the margi
 
 Token errors: `invalid_grant` on a refresh is SYNC-AUTH-002 (the connection becomes `needs_reconnect` and the existing notification fires); on a sign-in code SYNC-AUTH-003; `invalid_client` is SYNC-AUTH-001 (the connection is paused), or SYNC-AUTH-005 when the vendor says the secret expired; 5xx, 429 and time-outs change nothing and are retried. Tokens live in the connection secrets under `oauth_access_token`, `oauth_refresh_token`, `oauth_expires_at`, `oauth_refresh_expires_at`. `credential_expires_at` follows the refresh token (from the answer, else `refreshTokenLifetimeDays`), so the existing key-expiry warning works. The scheduled task `estasoft_sync_refresh_tokens` (every 5 minutes) refreshes tokens that expire within 10 minutes.
 
-The extra values of the vendor's redirect (QuickBooks `realmId`, MYOB `businessId`) are saved under `$connection->config( 'oauth_callback' )` before `organisations()` is called. `OAuthConfig( refreshOnDemand: true )` suits tokens that live minutes (the scheduled task then only keeps the refresh token alive). A connector that can also connect without a sign-in page (a signed token) defines `requiresSignIn( Connection ): bool`; when it says false, `POST /connections` tests and activates it at once. `limitsFor( Connection )` gives plan-dependent rate caps.
+The extra values of the vendor's redirect (QuickBooks `realmId`, MYOB `businessId`) are saved under `$connection->config( 'oauth_callback' )` before `organisations()` is called. `OAuthConfig( minTokenAgeSeconds: 570 )` is for a vendor that refuses a refresh before the token is that old (Exact Online refuses before 570 seconds for its 600 second tokens): the time to refresh is the later of "the margin before expiry" and "the minimum age", a token younger than that is used as it is until it runs out, a 401 before that age is not answered with a refresh (`OAuth2Auth::onUnauthorized()` returns false, `OAuthTokenManager::mayRefreshNow()` says so; `refreshNow()` hands back the token in hand), and the scheduled task leaves it alone. A connector with its own 401 handler should ask `mayRefreshNow()` first. `OAuthConfig( refreshOnDemand: true )` suits tokens that live minutes (the scheduled task then only keeps the refresh token alive). A connector that can also connect without a sign-in page (a signed token) defines `requiresSignIn( Connection ): bool`; when it says false, `POST /connections` tests and activates it at once. `limitsFor( Connection )` gives plan-dependent rate caps.
 
 `organisations( Connection ): array` returns `array{id,name}[]` (the tenants the signed-in person can use; a vendor without that idea returns one entry); `selectOrganisation( Connection, $id ): array` returns the config keys to store (`tenant_id`, ...).
 
@@ -167,7 +170,7 @@ Files live in `wp-content/uploads/estasoft-sync/exports/{random 32 hex}/files/{c
 
 ## 6. Catalog
 
-`GET /catalog` rows: `name, type, regions, connector, connection_method, needs, available, verified, variants, hosts, terms_url, privacy_url, developer_url, steps, wave, credential_fields, can_sign_in, auth_style`. The last three are built from your connector at request time (`credentialFields()`, whether it is a sign-in connector, `AuthStyle`) so the Connect screen draws without a second request; they are the same on every `variants` entry, which has its own connector. A system that is not available has no fields. A secret field never carries a default, so do not rely on one. `available` is computed: the connector is registered and the document does not say `available: false`. `variants` is `[{ id, label, available, connection_method?, hosts?, terms_url?, privacy_url?, developer_url?, steps? }]` for the two rows that hold several products. You never edit `includes/Catalog/catalog.php`: run `php bin/generate-catalog-from-docs.php` after writing the front matter of your document (it also rewrites `docs/connectors/README.md`; `--check` fails when either file is out of date, `--strict` also fails on a broken step rule).
+`GET /catalog` rows: `name, type, regions, connector, connection_method, needs, available, unavailable_reason, verified, variants, hosts, terms_url, privacy_url, developer_url, steps, wave, credential_fields, can_sign_in, auth_style`. The last three are built from your connector at request time (`credentialFields()`, whether it is a sign-in connector, `AuthStyle`) so the Connect screen draws without a second request; they are the same on every `variants` entry, which has its own connector. A system that is not available has no fields; its `unavailable_reason` (empty when the document gives none) says why, apart from the hand-written `needs`, which stays as written. An entry of `hosts` that starts with `*.` is a pattern. A secret field never carries a default, so do not rely on one. `available` is computed: the connector is registered and the document does not say `available: false`. `variants` is `[{ id, label, available, connection_method?, hosts?, terms_url?, privacy_url?, developer_url?, steps? }]` for the two rows that hold several products. You never edit `includes/Catalog/catalog.php`: run `php bin/generate-catalog-from-docs.php` after writing the front matter of your document (it also rewrites `docs/connectors/README.md`; `--check` fails when either file is out of date, `--strict` also fails on a broken step rule).
 
 ## 7. Tests
 
@@ -199,8 +202,9 @@ name: Acme Books
 catalog_row: Acme Books          # exact name of the catalog row
 connection_method: own_app       # key | own_app | cloud_app | server_login | export_file | none
 available: true                  # false only when the connector cannot be chosen
+unavailable_reason: ...          # with available: false: why (one sentence); the screen shows it beside the hand-written `needs`
 verified: false                  # always false: no live account test
-hosts: [api.acme.test, login.acme.test]   # every host the plugin contacts (empty for a merchant-typed address)
+hosts: [api.acme.test, "*.acme-cloud.test"]   # every host the plugin contacts (empty for a merchant-typed address); "*." is a pattern: any subdomain
 terms_url: https://...
 privacy_url: https://...
 developer_url: https://...       # where the merchant makes an app or a key
@@ -208,7 +212,7 @@ variants: []                     # only for rows that hold several products
 ---
 ```
 
-The sections of `vendors-contract.md` follow (Sources, **How the merchant connects**, Authentication, Data sent and when, Objects and field mapping, Duplicate protection, Taxes, Payments, Refunds, Read-back, Rate limits, Error mapping, Capabilities, Not verified, Manual smoke test). The numbered list under "How the merchant connects" becomes `steps` of the catalog: **at most 6 steps, each 140 characters or fewer**; a step may use `` `code` `` for values to copy. The generator warns when a document breaks the rule.
+The sections of `vendors-contract.md` follow (Sources, **How the merchant connects**, Authentication, Data sent and when, Objects and field mapping, Duplicate protection, Taxes, Payments, Refunds, Read-back, Rate limits, Error mapping, Capabilities, Not verified, Manual smoke test). The numbered list under "How the merchant connects" becomes `steps` of the catalog: **at most 6 steps, each 140 characters or fewer**; a step may use `` `code` `` for values to copy. The generator warns when a document breaks the rule. It also warns when a `hosts` entry is not a host name or a clean pattern (a pattern is `*.` followed by a domain of two labels, such as `*.oraclecloud.com`; not `*.com`, not `a.*.com`, no scheme, path or port) and when a document says `available: false` without an `unavailable_reason`. Hosts are written to the catalog in lower case and a pattern keeps its `*.`, so the screens can tell it from a single host.
 
 ## 9. Checks before you report
 

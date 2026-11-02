@@ -54,6 +54,11 @@ final class ExactConnector extends AbstractApiConnector implements OAuthConnecto
 	public const LABEL = 'Exact Online';
 
 	/**
+	 * Seconds old a 600 second access token must be before Exact Online accepts a refresh (9 minutes 30). Asked sooner, the refresh is refused.
+	 */
+	public const MIN_TOKEN_AGE = 570;
+
+	/**
 	 * Option keys read from a connection.
 	 *
 	 * @var array<int,string>
@@ -156,7 +161,8 @@ final class ExactConnector extends AbstractApiConnector implements OAuthConnecto
 			extraAuthorizeParams: array( 'force_login' => '0' ),
 			refreshTokenLifetimeDays: 30,
 			accessTokenFallbackSeconds: 600,
-			allowedHosts: ExactRegions::allHosts()
+			allowedHosts: ExactRegions::allHosts(),
+			minTokenAgeSeconds: self::MIN_TOKEN_AGE
 		);
 	}
 

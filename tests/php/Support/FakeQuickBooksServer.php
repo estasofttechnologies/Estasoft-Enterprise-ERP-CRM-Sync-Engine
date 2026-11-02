@@ -133,6 +133,13 @@ final class FakeQuickBooksServer {
 	public int $hideInvoices = 0;
 
 	/**
+	 * Number of credit memo queries that answer "none found" although the credit memo exists.
+	 *
+	 * @var int
+	 */
+	public int $hideCreditMemos = 0;
+
+	/**
 	 * Answer every call with "no access to this company" (error 120).
 	 *
 	 * @var bool
@@ -496,6 +503,10 @@ final class FakeQuickBooksServer {
 			--$this->hideInvoices;
 			$rows = array();
 		}
+		if ( 'CreditMemo' === $entity && $this->hideCreditMemos > 0 ) {
+			--$this->hideCreditMemos;
+			$rows = array();
+		}
 		if ( 'Item' === $entity || 'Customer' === $entity || 'TaxCode' === $entity ) {
 			$rows = array_values( array_filter( $rows, static fn( array $r ): bool => false !== ( $r['Active'] ?? true ) ) );
 		}
@@ -575,6 +586,9 @@ final class FakeQuickBooksServer {
 		if ( false !== strpos( $name, ':' ) || mb_strlen( (string) ( $body['FamilyName'] ?? '' ) ) > 15 || mb_strlen( (string) ( $body['GivenName'] ?? '' ) ) > 25 ) {
 			return $this->fault( 400, '2050', 'String length is either too short or too long', 'The name is too long or has a colon', 'ValidationFault', 'DisplayName' );
 		}
+		if ( isset( $body['CurrencyRef'] ) && ! $this->multiCurrency ) {
+			return $this->fault( 400, '6000', 'Business Validation Error', 'Multicurrency is not enabled, so a customer cannot have a currency.', 'ValidationFault', 'CurrencyRef' );
+		}
 		foreach ( $this->store['Customer'] as $customer ) {
 			if ( 0 === strcasecmp( (string) $customer['DisplayName'], $name ) ) {
 				return $this->fault( 400, '6240', 'Duplicate Name Exists Error', 'The name supplied already exists. : Another customer, vendor or employee is already using this name.', 'ValidationFault', 'DisplayName' );
@@ -614,6 +628,10 @@ final class FakeQuickBooksServer {
 		$currency = (string) ( $body['CurrencyRef']['value'] ?? $this->home );
 		if ( $currency !== $this->home && ! $this->multiCurrency ) {
 			return $this->fault( 400, '2020', 'Required param missing, need to supply the required value for the API', 'Multicurrency is off', 'ValidationFault', 'CurrencyRef' );
+		}
+		$own = strtoupper( (string) ( $customer['CurrencyRef']['value'] ?? $this->home ) );
+		if ( $this->multiCurrency && $own !== strtoupper( $currency ) ) {
+			return $this->fault( 400, '6000', 'Business Validation Error', 'The currency of the transaction does not match the currency of the customer.', 'ValidationFault', 'CurrencyRef' );
 		}
 		$number = (string) ( $body['DocNumber'] ?? '' );
 		if ( '' !== $number && null !== $this->byNumber( $entity, $number ) && $this->customNumbers ) {

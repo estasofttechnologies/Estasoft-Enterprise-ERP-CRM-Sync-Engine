@@ -193,6 +193,32 @@ final class BusinessCentralOrderTest extends BusinessCentralTestCase {
 		$this->assertStringContainsString( '62.97 AED', $result->error->message() );
 	}
 
+	public function test_an_order_that_failed_its_total_check_is_never_linked_by_a_retry(): void {
+		$item    = $this->orderItem( '1030' );
+		$payload = $this->payload( array( 'prices_include_tax' => true, 'total' => 5997 ) );
+		$failed  = $this->connector->send( $this->connection, $item, $payload );
+		$this->assertSame( ErrorCode::Val002, $failed->error->code );
+		$this->assertNull( $this->connector->findExisting( $this->connection, $item ), 'The draft has no completion marker.' );
+		$lines = $this->linesOfOnly( 'salesOrders' );
+		$this->assertCount( 1, $lines, 'The product line only; the marker is the last thing written.' );
+
+		// The same wrong-money draft is checked again on every try and refused again, never reported as synced.
+		$again = $this->connector->send( $this->connection, $item, $payload );
+		$this->assertSame( ErrorCode::Val002, $again->error->code );
+		$this->assertNull( $this->connector->findExisting( $this->connection, $item ) );
+		$this->assertCount( 1, $this->bc->all( 'salesOrders' ), 'No second draft.' );
+
+		// A person fixes the customer and deletes the draft, as the message says; the next try makes a right one and finishes it.
+		$this->bc->pricesIncludeTax    = true;
+		$this->bc->data['salesOrders'] = array();
+		$this->bc->lines               = array();
+		$done                          = $this->connector->send( $this->connection, $item, $payload );
+		$this->assertTrue( $done->isSuccess(), (string) $done->error?->message() );
+		$this->assertCount( 1, $this->bc->all( 'salesOrders' ) );
+		$this->assertCount( 2, $this->linesOfOnly( 'salesOrders' ), 'The line and the marker.' );
+		$this->assertNotNull( $this->connector->findExisting( $this->connection, $item ) );
+	}
+
 	public function test_a_difference_of_one_minor_unit_is_rounding(): void {
 		$result = $this->connector->send( $this->connection, $this->orderItem( '1018' ), $this->payload( array( 'total' => 6296 ) ) );
 		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );

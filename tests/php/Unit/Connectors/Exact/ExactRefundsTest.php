@@ -79,6 +79,47 @@ final class ExactRefundsTest extends ExactTestCase {
 		$this->assertCount( 1, $this->server->invoices );
 	}
 
+	public function test_a_credit_note_that_exact_books_as_a_positive_amount_is_never_accepted_and_the_document_is_removed(): void {
+		$this->server->creditAmountPositive = true;
+		$connection = $this->connection();
+		list( $item, $payload ) = $this->order( '3020' );
+		$this->connector->send( $connection, $item, $payload );
+		list( $refund, $refundPayload ) = $this->refund( '3021', '3020' );
+		$result = $this->connector->send( $connection, $refund, $refundPayload );
+		$this->assertSame( ErrorCode::Val002, $result->error->code );
+		$this->assertStringContainsString( 'not negative', $result->error->context['reason'] );
+		$this->assertStringContainsString( 'removed', $result->error->context['reason'] );
+		$this->assertCount( 1, $this->server->invoices, 'Only the invoice is left.' );
+		$this->assertNull( $this->connector->findExisting( $connection, $refund ) );
+	}
+
+	public function test_the_total_option_cannot_make_a_positive_credit_note_acceptable(): void {
+		$this->server->creditAmountPositive = true;
+		$connection = $this->connection( array( 'options' => array( 'total_mismatch' => 'warn' ) ) );
+		list( $item, $payload ) = $this->order( '3022' );
+		$this->connector->send( $connection, $item, $payload );
+		list( $refund, $refundPayload ) = $this->refund( '3023', '3022' );
+		$result = $this->connector->send( $connection, $refund, $refundPayload );
+		$this->assertFalse( $result->isSuccess() );
+		$this->assertSame( ErrorCode::Val002, $result->error->code );
+	}
+
+	public function test_a_positive_credit_note_that_could_not_be_removed_is_not_found_as_finished_and_the_retry_fails_without_a_second_one(): void {
+		$this->server->creditAmountPositive = true;
+		$this->server->allowDelete          = false;
+		$connection = $this->connection();
+		list( $item, $payload ) = $this->order( '3024' );
+		$this->connector->send( $connection, $item, $payload );
+		list( $refund, $refundPayload ) = $this->refund( '3025', '3024' );
+		$first = $this->connector->send( $connection, $refund, $refundPayload );
+		$this->assertStringContainsString( 'deleted there by a person', $first->error->context['reason'] );
+		$this->assertCount( 2, $this->server->invoices );
+		$this->assertNull( $this->connector->findExisting( $connection, $refund ), 'Not accepted as finished.' );
+		$again = $this->connector->send( $connection, $refund, $refundPayload );
+		$this->assertSame( ErrorCode::Val002, $again->error->code );
+		$this->assertCount( 2, $this->server->invoices, 'No second credit note.' );
+	}
+
 	public function test_a_refund_amount_that_exact_computes_differently_fails(): void {
 		$connection = $this->connection();
 		list( $item, $payload ) = $this->order( '3010' );

@@ -80,7 +80,7 @@ final class LexwareRefunds {
 		$existing = $this->search->find( $api, 'creditnote', $contactId, $marker, $refund->date, $timezone );
 		$warnings = array();
 		if ( null !== $existing ) {
-			$problem = $this->documents->checkTotal( $existing, $refund->expectedTotal(), $options, $warnings );
+			$problem = $this->documents->checkTotal( $existing, $refund->expectedTotal(), $options, $warnings, $refund->rows(), $this->creditDate( $refund ) );
 			return null !== $problem ? SendResult::failure( $problem ) : SendResult::existing( $this->documents->ref( $existing, 'credit-notes', $warnings ) );
 		}
 		$linked = $this->canLink( $invoice );
@@ -88,7 +88,7 @@ final class LexwareRefunds {
 		if ( $items instanceof ConnectorError ) {
 			return SendResult::failure( $items );
 		}
-		$date = LocalDate::midnightWithOffset( '' !== $refund->date ? $refund->date : $refund->orderDate, $timezone );
+		$date = LocalDate::midnightWithOffset( $this->creditDate( $refund ), $timezone );
 		$text = 'Gutschrift ' . $marker . ' zu Bestellung ' . $refund->orderRef;
 		if ( ! $linked && '' !== PayloadReader::text( $invoice['voucherNumber'] ?? '' ) ) {
 			$text .= ' (Rechnung ' . PayloadReader::text( $invoice['voucherNumber'] ) . ')';
@@ -123,7 +123,7 @@ final class LexwareRefunds {
 		if ( ! $linked ) {
 			$warnings[] = 'not_linked';
 		}
-		$problem = $this->documents->checkTotal( $document, $refund->expectedTotal(), $options, $warnings );
+		$problem = $this->documents->checkTotal( $document, $refund->expectedTotal(), $options, $warnings, $refund->rows(), $this->creditDate( $refund ) );
 		if ( null !== $problem ) {
 			return SendResult::failure( $problem );
 		}
@@ -253,6 +253,15 @@ final class LexwareRefunds {
 			}
 		}
 		return $bp;
+	}
+
+	/**
+	 * The date (UTC text) a credit note is dated: the refund's, else the order's.
+	 *
+	 * @param RefundPayload $refund Refund.
+	 */
+	private function creditDate( RefundPayload $refund ): string {
+		return '' !== $refund->date ? $refund->date : $refund->orderDate;
 	}
 
 	/**

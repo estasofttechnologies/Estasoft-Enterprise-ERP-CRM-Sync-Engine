@@ -90,7 +90,7 @@ final class OracleFusionKit {
 		$this->gateway = new OracleFusionGateway( $api );
 		$this->items   = new OracleFusionItems( $this->gateway );
 		$this->orders  = new OracleFusionOrders( $this->gateway, $this->items, $options, $this->amounts, new ShopTotalMarker( $this->amounts ), $system );
-		$this->refunds = new OracleFusionRefunds( $this->gateway, $this->orders, $options, $this->amounts, $system );
+		$this->refunds = new OracleFusionRefunds( $this->gateway, $this->orders, $options, $this->amounts, new ShopTotalMarker( $this->amounts ), $system );
 		$this->reader  = new OracleFusionReader( $this->gateway, $this->orders, $options, $system );
 		$this->total   = new TotalCheck( $this->amounts, $system, $options->totalMismatch() );
 	}

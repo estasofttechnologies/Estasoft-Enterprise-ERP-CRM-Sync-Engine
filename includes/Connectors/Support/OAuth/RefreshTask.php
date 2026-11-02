@@ -130,6 +130,9 @@ final class RefreshTask {
 			$refreshEnds = (int) $connection->secret( OAuthTokenManager::REFRESH_EXPIRES );
 			return $refreshEnds > 0 && $refreshEnds - $now <= self::KEEP_ALIVE_DAYS * 86400;
 		}
+		if ( ! $this->tokens->mayRefreshNow( $connection, $provider ) ) {
+			return false; // The vendor refuses to refresh a token this young; a later run, or the next call, will.
+		}
 		// Ten minutes before the end, or half of the life of a token that lives less than twenty minutes.
 		$lifetime = $this->tokens->lifetime( $connection );
 		$window   = $lifetime > 0 ? min( self::WINDOW, intdiv( $lifetime, 2 ) ) : self::WINDOW;

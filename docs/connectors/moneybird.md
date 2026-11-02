@@ -6,8 +6,8 @@ connection_method: key
 available: true
 verified: false
 hosts: [moneybird.com]
-terms_url: https://www.moneybird.com/terms-and-conditions/     # not verified by fetch (page not reachable from the build session)
-privacy_url: https://www.moneybird.com/privacy/               # not verified by fetch (page not reachable from the build session)
+terms_url: https://www.moneybird.nl/terms/                      # fetched 2026-11-02 (Algemene voorwaarden Moneybird B.V., version 7.0 of 1 July 2026; article 5 says Moneybird is not responsible for software used with its API)
+privacy_url: https://www.moneybird.nl/privacy/                 # fetched 2026-11-02 (privacyverklaring, version 6 of July 2025)
 developer_url: https://moneybird.com/user/applications/new    # named on https://developer.moneybird.com/authentication (fetched 2026-11-02); a login page
 variants: []
 ---
@@ -97,9 +97,9 @@ Tax rate id per line, ledger account id per line (option `sales_ledger_account`,
 
 ## 6. Duplicate protection
 
-`reference` = `WC-{order id}`, searched before every create with `GET /{adm}/sales_invoices/find_by_reference/{reference}.json` [documented; answers the invoice, or 404 `{"error": "Sales invoice with reference: ... was not found", "symbolic": {"reference": "not_found"}}`]. Credit invoices carry `WC-{refund id}` (set by the connector right after they are made, section 9).
+`reference` = `WC-{order id}`, searched before every create with `GET /{adm}/sales_invoices/find_by_reference/{reference}.json` [documented; answers the invoice, or 404 `{"error": "Sales invoice with reference: ... was not found", "symbolic": {"reference": "not_found"}}`]. Nothing documents that `find_by_reference` finds **drafts** (its sibling `find_by_invoice_id` never does, because a draft has no invoice id [documented]), nor which document it returns when an invoice and its credit invoice share a reference. So a miss, or an answer of the wrong kind (a credit invoice when an invoice is wanted, and the reverse), is checked against the list endpoint, `GET /{adm}/sales_invoices.json?filter=reference:WC-{id}&page=n&per_page=100` (`filter` is a comma-separated list of `key:value` terms [documented for the synchronisation call]; that `reference` is a list filter key is [inferred], section 16), keeping documents whose reference is exactly the wanted one. That costs one more call for every new order. Credit invoices carry `WC-{refund id}` (set by the connector right after they are made, section 9).
 
-`findExisting` reports an invoice only when `send()` finished it for the chosen options: a draft is finished in `draft` mode; in `sent` mode only a non-draft one; with a payment wanted only a paid one. Otherwise `send()` carries on from the invoice's state (check totals, send, pay). Replays: create-invoice is never repeated; send and pay steps read the state first (`state`, `total_unpaid`) and run only when missing. A timeout after `POST /sales_invoices.json` is an unknown outcome, so the next pass finds the draft by its reference.
+`findExisting` reports an invoice only when `send()` finished it for the chosen options: a draft is finished in `draft` mode; in `sent` mode only a non-draft one; with a payment wanted only a paid one. Otherwise `send()` carries on from the invoice's state (check totals, send, pay). `findExisting` asks for an invoice for an order item and for a credit invoice for a refund item. Replays: create-invoice is never repeated; send and pay steps read the state first (`state`, `total_unpaid`) and run only when missing. A timeout after `POST /sales_invoices.json` is an unknown outcome, so the next pass finds the draft by its reference.
 
 Weakness: the reference is a visible field; a person who edits it breaks the link and a retry creates another invoice.
 
@@ -110,22 +110,22 @@ Weakness: the reference is a visible field; a person who edits it breaks the lin
 3. Taxes. The tax mapping code is a Moneybird tax rate id (digits); `listTaxCodes` returns the active sales tax rates (`GET tax_rates.json` with `filter=tax_rate_type:sales_invoice,active:true`; a filter replaces the defaults entirely [documented]) with their `percentage`. A code that is not a sales tax rate of this administration stops the order with SYNC-MAP-002. `prices_are_incl_tax` follows the payload; prices are never converted by the connector (Moneybird does it).
 4. Create the draft: `POST sales_invoices.json`. Read it back: `currency`, `total_price_excl_tax`, `total_price_incl_tax`, `state`.
 5. Currency: the read-back `currency` must equal the order's. A different currency (an administration that does not offer it) deletes the draft and fails with SYNC-VAL-002 naming both.
-6. Total check: `total_price_incl_tax` against `total - excluded_total` in minor units, tolerance one unit. More: option `total_mismatch` `fail` (default) deletes the draft (`DELETE`, only a draft this pass created) and fails with SYNC-VAL-002 naming both totals; `warn` goes on with a warning.
-7. `invoice_state = sent`: `PATCH send_invoice.json` with `{"sales_invoice_sending": {"delivery_method": "Manual", "sending_scheduled": false}}`, which makes the invoice open and gives it its number without e-mailing the customer [recalled]. The state is read back; the date is written once at creation (`invoice_date` is the order date; whether sending rewrites it is checked on read-back and warned about).
+6. Total check: `total_price_incl_tax` against `total - excluded_total` in minor units. WooCommerce rounds the tax of each line and Moneybird the tax of each rate group, so the default tolerance is one minor unit per document row (lines, shipping, fees), at most 10 (ten lines of 0.99 EUR at 21 % differ by 2 cents); the option `total_tolerance` (0 to 50; empty means the default) replaces it. More: option `total_mismatch` `fail` (default) deletes the draft (`DELETE`, only a draft this pass created) and fails with SYNC-VAL-002 naming both totals; `warn` goes on with a warning.
+7. `invoice_state = sent`: `PATCH send_invoice.json` with `{"sales_invoice_sending": {"delivery_method": "Manual", "sending_scheduled": false}}`, which makes the invoice open and gives it its number without e-mailing the customer [recalled]. The state is read back; the date is written once at creation (`invoice_date` is the order date). The read-back `invoice_date` is compared with the day sent, after creation and again after sending; if it is another day the result carries the warning `date_differs`. The date is never written back.
 8. Payment (option `payment_account` = a financial account id, and the order is paid, and the invoice is open): `total_unpaid` is read first; when it is 0 nothing is booked; else `POST payments.json` with `{"payment": {"payment_date", "price", "financial_account_id"}}` [recalled].
 
 ## 8. Customers
 
-`lookupCustomer( email )`: `GET contacts.json?query=<email>&per_page=100` paged to the end, keeping contacts whose `email` or `send_invoices_to_email` equals the address (case-insensitive) [the contact response carries both, documented]. Several matches: option `duplicate_customer` `oldest` (smallest id, default) or `fail`. None: create, per `customer_policy` (`match_or_create`, `match_only`, `always_create`). The customer number (`customer_id`) is left to Moneybird.
+`lookupCustomer( email )`: `GET contacts.json?query=<email>&per_page=100` paged to the end, keeping contacts whose `email` or `send_invoices_to_email` equals the address (case-insensitive) [the contact response carries both, documented]. Several matches: option `duplicate_customer` `oldest` (smallest id, default) or `fail`. None: create, per `customer_policy` (`match_or_create`, `match_only`, `always_create`; the invoice search is by reference, not by contact, so a new contact per pass cannot hide an invoice). The customer number (`customer_id`) is left to Moneybird.
 
 ## 9. Refunds
 
 `duplicate_creditinvoice` [documented]: `PATCH /{adm}/sales_invoices/{id}/duplicate_creditinvoice.json` with the body `{}` creates a draft credit invoice that copies the original (`original_sales_invoice_id` set, description referencing the original number); an optional `detail_ids` limits it to some lines.
 
-1. Find the original (`find_by_reference( WC-{order id} )`). Missing: SYNC-VAL-002 "the order has no invoice in Moneybird". A draft original is refused too: a draft has no invoice number to credit.
-2. Find an existing credit invoice for this refund (`find_by_reference( WC-{refund id} )`). Found: done.
-3. Only a refund of the whole order (amount equal to the invoice's `total_price_incl_tax`, tolerance one minor unit) is created: SYNC-VAL-002 "Moneybird credit invoices copy whole lines; this refund covers part of the order. Create the credit invoice in Moneybird and skip this item." for any other refund. Partial refunds through `detail_ids` need a reliable match between WooCommerce refund lines and invoice lines, which Moneybird's data does not give (no SKU on lines without a product).
-4. Duplicate, then `PATCH sales_invoices/{credit id}.json` with `{"sales_invoice": {"reference": "WC-{refund id}"}}` [recalled]. The two calls cannot be one step: if the connection fails between them, the draft credit invoice has no reference and the next pass makes another; the extra draft is deleted by a person. This is a known gap (section 16).
+1. Find an existing credit invoice for this refund (a credit invoice with the reference `WC-{refund id}`, section 6). Found: carry on from its state (send when asked), done.
+2. Find the original (an invoice, not a credit invoice, with the reference `WC-{order id}`). Missing: SYNC-VAL-002 "the order has no invoice in Moneybird". A draft original is refused too: a draft has no invoice number to credit.
+3. Only a refund of the whole order (amount equal to the invoice's `total_price_incl_tax`, within the tolerance of section 7 step 6 for the invoice's number of lines) is created: SYNC-VAL-002 "Moneybird credit invoices copy whole lines; this refund covers part of the order. Create the credit invoice in Moneybird and skip this item." for any other refund. Partial refunds through `detail_ids` need a reliable match between WooCommerce refund lines and invoice lines, which Moneybird's data does not give (no SKU on lines without a product).
+4. Duplicate, then `PATCH sales_invoices/{credit id}.json` with `{"sales_invoice": {"reference": "WC-{refund id}"}}` [recalled]. The copy keeps the original's reference (the example in the documentation shows the credit invoice with the same reference as its source, though the page does not say it is copied). The two calls cannot be one step, so before duplicating the connector lists the documents that carry the order's reference and adopts a **draft credit invoice that points at the original** (`original_sales_invoice_id`): the copy a pass made before its second call failed. Only that one is adopted, once, and it gets the refund's reference; no second copy is made. A draft credit invoice a person made by hand from the same original would be adopted the same way.
 5. `refund_state = sent` sends it like an invoice (`delivery_method` `Manual`); the credit invoice's payment is not registered (`register_payment_creditinvoice` exists [third-party] but a refund is the money going back through the shop's payment provider).
 
 ## 10. Payments
@@ -157,7 +157,7 @@ Opt-in, section 7 step 8. Refunds record no payment.
 
 ## 13. Rate limits and pacing
 
-150 requests per 5 minutes per IP address (50 per 5 minutes on `/reports/`, not used) [documented]. The limit is per IP: a shared host's other applications count too. `rateLimitHints()` returns 0.5 requests per second, 30 per minute, concurrency 1 (interval 2 s). 429 → SYNC-RATE-001; Moneybird documents no `Retry-After`, so the wait is `Retry-After` when sent, else 30 seconds. A full order is about 6 to 9 calls, i.e. 15 to 20 seconds of pacing; a burst of orders queues behind it.
+150 requests per 5 minutes per IP address (50 per 5 minutes on `/reports/`, not used) [documented]. The limit is per IP: a shared host's other applications count too. `rateLimitHints()` returns 0.4 requests per second, 24 per minute, concurrency 1 (interval 2.5 s): 120 calls in 5 minutes, below the 150, so other applications on the same address have room. `ping()` is one call, `GET /{adm}/workflows.json` (it also proves the administration number). 429 → SYNC-RATE-001. A 429 carries `Retry-After`, `RateLimit-Limit`, `RateLimit-Remaining` and `RateLimit-Reset` [documented, https://developer.moneybird.com/introduction, fetched 2026-11-02], so the wait is the `Retry-After` value, else 30 seconds. A full order is about 7 to 10 calls, i.e. 18 to 25 seconds of pacing; a burst of orders queues behind it.
 
 ## 14. Error mapping
 
@@ -173,7 +173,7 @@ Moneybird returns the error in the body in the request's format: `{"error": "...
 | 404 on `find_by_reference`, `products/identifier` | normal "not found" | |
 | 404 elsewhere | SYNC-VAL-002 | record deleted between steps |
 | 400, 405, 406, 422 | SYNC-VAL-002 | short sanitised reason with the field names |
-| 429 | SYNC-RATE-001 | |
+| 429 | SYNC-RATE-001 | the `Retry-After` seconds, else 30 |
 | 500 | SYNC-NET-002 | retry |
 | Unknown SKU, tax rate not a sales rate, missing email | SYNC-MAP-001, SYNC-MAP-002, SYNC-MAP-003 | before sending |
 
@@ -200,14 +200,14 @@ Capability record: `order_document` `invoice`, `refund_document` `credit_note`, 
 
 - The request bodies of create, update, send and payment (the sales invoice page lists them without detail; the field names above are recalled from the API): `details_attributes` keys, `amount` and `price` string formats, `prices_are_incl_tax`, `currency`, `workflow_id`, `document_style_id`, `sales_invoice_sending`, `delivery_method` `Manual`, `payment` keys.
 - Whether `currency` can be set on create and which currencies an administration offers.
-- Whether sending rewrites `invoice_date`.
+- Whether sending rewrites `invoice_date` (the connector now compares and warns, `date_differs`, but does not write it back).
 - Whether `email` is writable on a contact (documented only as a response field), whether `include_archived` should be set when matching.
 - The 422 error body shape.
 - Whether a draft can always be deleted by `DELETE`, and that deleting has no side effect on the invoice number sequence.
-- `Retry-After` on 429 (not documented), and what 403 "IP blacklisted" looks like in practice.
-- Sales invoice list filter keys and the changelog (scope changes on contacts and ledger accounts in June 2026: the research says they were swapped; if the contacts call answers 401 for a token that has `sales_invoices` and `settings`, add the scope the answer names). The authentication page says contacts need one of `sales_invoices`, `documents`, `estimates`, `bank`, `settings` [documented, 2026-11-02].
-- Partial refunds: whether `original_sales_invoice_id` can be sent on create and which sign the amounts take; the loss window between `duplicate_creditinvoice` and setting its reference.
-- Terms and privacy URLs (not fetched).
+- What 403 "IP blacklisted" looks like in practice.
+- Whether `find_by_reference` finds drafts and which document it returns when an invoice and its credit invoice share a reference (undocumented; the list cross-check of section 6 covers both). The `reference` key of the list filter and the `page` / `per_page` parameters of `GET sales_invoices.json` (the page read does not document list parameters). Sales invoice list filter keys and the changelog (scope changes on contacts and ledger accounts in June 2026: the research says they were swapped; if the contacts call answers 401 for a token that has `sales_invoices` and `settings`, add the scope the answer names). The authentication page says contacts need one of `sales_invoices`, `documents`, `estimates`, `bank`, `settings` [documented, 2026-11-02].
+- Partial refunds: whether `original_sales_invoice_id` can be sent on create and which sign the amounts take. That `duplicate_creditinvoice` keeps the original's reference (the example suggests it; the page does not say so): if it does not, the adoption of a draft copy by its reference does not find an orphan and a failed second call can still leave an extra draft credit invoice for a person to delete.
+- Terms: version 7.0 of 1 July 2026 and the privacy statement (version 6) were fetched; only article 5 (API and third-party software) was read for this connector, not the whole text.
 
 ## 17. Manual smoke test (real administration, no secrets in the repository)
 

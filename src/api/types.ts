@@ -290,11 +290,13 @@ export interface CatalogEntry {
 	needs: string;
 	/** True when a connector for this system (or one of its variants) is installed. */
 	available: boolean;
+	/** Why a system that is not available cannot be chosen yet (set when its document says `available: false`); empty otherwise. Shown next to the hand-written `needs`. Always sent by the server. */
+	unavailable_reason?: string;
 	/** False until the connector has been tried on a real account. Always sent by the server. */
 	verified?: boolean;
 	/** Rows that hold several products (Sage 200, 300 and X3) list them here; each has its own connector id. Always sent by the server. */
 	variants?: CatalogVariant[];
-	/** Every host the plugin contacts for this system (for the external services disclosure). Always sent by the server. */
+	/** Every host the plugin contacts for this system (for the external services disclosure). An entry that starts with `*.` is a pattern: any subdomain of it (a system that gives each customer a host of its own). Always sent by the server. */
 	hosts?: string[];
 	terms_url?: string;
 	privacy_url?: string;
@@ -318,6 +320,8 @@ export interface CatalogVariant {
 	label: string;
 	/** True when this connector is installed. Always sent by the server. */
 	available?: boolean;
+	/** Only when the variant's document says why it cannot be chosen yet. */
+	unavailable_reason?: string;
 	/** Empty when the variant is not available. Always sent by the server. */
 	credential_fields?: CredentialFieldDef[];
 	/** Always sent by the server. */

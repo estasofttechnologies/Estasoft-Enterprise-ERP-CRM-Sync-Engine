@@ -120,6 +120,22 @@ final class FakeOracleFusionServer {
 	public string $status = 'Complete';
 
 	/**
+	 * Whether this pod wants NEGATIVE credit memo lines to credit the customer. When false, positive lines credit (the total comes out
+	 * negative); when true, positive lines book a debit (the total comes out positive). The Oracle pages do not say which a pod does.
+	 */
+	public bool $creditLinesNegative = false;
+
+	/**
+	 * Whether completing a credit memo (PATCH InvoiceStatus Complete) is refused.
+	 */
+	public bool $refuseCompletion = false;
+
+	/**
+	 * Whether DELETE of a credit memo is refused.
+	 */
+	public bool $refuseMemoDelete = false;
+
+	/**
 	 * When set, invoices are saved in this currency whatever was asked.
 	 */
 	public ?string $forceCurrency = null;
@@ -169,6 +185,13 @@ final class FakeOracleFusionServer {
 	 * Next id.
 	 */
 	private int $next = 0;
+
+	/**
+	 * Net amount (signed, before tax) of every record by id.
+	 *
+	 * @var array<string,int>
+	 */
+	private array $nets = array();
 
 	/**
 	 * Conversion helper.
@@ -257,7 +280,10 @@ final class FakeOracleFusionServer {
 		if ( 'GET' === $method ) {
 			return isset( $m[2] ) ? $this->one( $m[1], $m[2] ) : $this->list( $m[1], $query, $request );
 		}
-		if ( 'POST' !== $method || isset( $m[2] ) ) {
+		if ( 'DELETE' === $method && isset( $m[2] ) ) {
+			return $this->remove( $m[1], $m[2] );
+		}
+		if ( ! in_array( $method, array( 'POST', 'PATCH' ), true ) || ( 'POST' === $method ) === isset( $m[2] ) ) {
 			return $this->error( 405, 'Method not allowed.' );
 		}
 		if ( 0 !== strcasecmp( $this->header( $request, 'content-type' ), 'application/vnd.oracle.adf.resourceitem+json' ) ) {
@@ -266,7 +292,8 @@ final class FakeOracleFusionServer {
 		if ( array() !== $this->failures ) {
 			return array_shift( $this->failures );
 		}
-		return $this->create( $m[1], json_decode( (string) $request['body'], true ) ?: array() );
+		$body = json_decode( (string) $request['body'], true ) ?: array();
+		return 'PATCH' === $method ? $this->change( $m[1], $m[2], $body ) : $this->create( $m[1], $body );
 	}
 
 	/**
@@ -497,23 +524,69 @@ final class FakeOracleFusionServer {
 			$net += $this->amounts->lineTotal( (int) $this->amounts->fromWire( $line['UnitSellingPrice'], $currency ), (string) $line['Quantity'] );
 		}
 		$net  += (int) $this->amounts->fromWire( $body['FreightAmount'] ?? 0, $currency );
-		$gross = $net + (int) round( $net * $this->taxRate / 100 );
+		$sign  = $credit && ! $this->creditLinesNegative ? -1 : 1;
+		$net  *= $sign;
+		$draft = $credit && 'Incomplete' === ( $body['InvoiceStatus'] ?? '' );
+		$gross = $draft ? $net : $net + (int) round( $net * $this->taxRate / 100 );
 		++$this->next;
 		$id  = (string) ( 300000000000000 + $this->next );
 		$row = array(
 			'CustomerTransactionId' => (int) $id,
 			'TransactionNumber'     => ( $credit ? 'CM-' : 'INV-' ) . $this->next,
-			'InvoiceStatus'         => $this->status,
+			'InvoiceStatus'         => $credit ? (string) ( $body['InvoiceStatus'] ?? $this->status ) : $this->status,
 			'InvoiceCurrencyCode'   => $currency,
-		) + array_diff_key( $body, array( $lines => true ) );
+		) + array_diff_key( $body, array( $lines => true, 'InvoiceStatus' => true ) );
+		$this->nets[ $id ] = $net;
 		if ( $this->showsTotal ) {
-			$row['TotalAmount'] = $this->amounts->toNumber( $credit ? -$gross : $gross, $currency );
+			$row['TotalAmount'] = $this->amounts->toNumber( $gross, $currency );
 			if ( ! $credit ) {
 				$row['InvoiceBalanceAmount'] = $row['TotalAmount'];
 			}
 		}
 		$this->data[ $resource ][ $id ] = $row;
 		return FakeHttpClient::json( $row, 201 );
+	}
+
+	/**
+	 * Complete a credit memo: the status changes and the tax is added to the total.
+	 *
+	 * @param string              $resource Resource.
+	 * @param string              $id       Id.
+	 * @param array<string,mixed> $body     Attributes to change.
+	 */
+	private function change( string $resource, string $id, array $body ): HttpResponse {
+		$row = $this->data[ $resource ][ $id ] ?? null;
+		if ( 'receivablesCreditMemos' !== $resource || null === $row ) {
+			return $this->error( 404, 'The resource was not found.' );
+		}
+		if ( $this->refuseCompletion ) {
+			return $this->error( 400, 'The credit memo cannot be completed: required accounting setup is missing.', '/InvoiceStatus' );
+		}
+		if ( 'Complete' === ( $body['InvoiceStatus'] ?? '' ) && 'Incomplete' === $row['InvoiceStatus'] ) {
+			$net                              = $this->nets[ $id ] ?? 0;
+			$row['InvoiceStatus']             = 'Complete';
+			$row['TotalAmount']               = $this->amounts->toNumber( $net + (int) round( $net * $this->taxRate / 100 ), (string) $row['InvoiceCurrencyCode'] );
+			$this->data[ $resource ][ $id ]   = $row;
+		}
+		return FakeHttpClient::json( $row );
+	}
+
+	/**
+	 * Delete a record: only an Incomplete credit memo can go.
+	 *
+	 * @param string $resource Resource.
+	 * @param string $id       Id.
+	 */
+	private function remove( string $resource, string $id ): HttpResponse {
+		$row = $this->data[ $resource ][ $id ] ?? null;
+		if ( 'receivablesCreditMemos' !== $resource || null === $row ) {
+			return $this->error( 404, 'The resource was not found.' );
+		}
+		if ( $this->refuseMemoDelete || 'Incomplete' !== $row['InvoiceStatus'] ) {
+			return $this->error( 400, 'The transaction cannot be deleted.' );
+		}
+		unset( $this->data[ $resource ][ $id ] );
+		return new HttpResponse( 204 );
 	}
 
 	/**

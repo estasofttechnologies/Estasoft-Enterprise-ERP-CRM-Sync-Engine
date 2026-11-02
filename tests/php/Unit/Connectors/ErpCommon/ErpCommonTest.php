@@ -14,6 +14,7 @@ use Estasoft\SyncEngine\Connectors\ErpCommon\Options;
 use Estasoft\SyncEngine\Connectors\ErpCommon\OrderPayload;
 use Estasoft\SyncEngine\Connectors\ErpCommon\PayloadReader;
 use Estasoft\SyncEngine\Connectors\ErpCommon\RefundPayload;
+use Estasoft\SyncEngine\Connectors\ErpCommon\SameOrigin;
 use Estasoft\SyncEngine\Connectors\ErpCommon\SiteAddress;
 use Estasoft\SyncEngine\Connectors\ErpCommon\TaxPricing;
 use Estasoft\SyncEngine\Connectors\ErpCommon\TotalCheck;
@@ -230,5 +231,30 @@ final class ErpCommonTest extends TestCase {
 		$this->assertSame( array( 'A', 'B' ), PayloadReader::taxCodes( array( ' A ', 'B', 'A', '' ) ) );
 		$this->assertSame( array(), PayloadReader::taxCodes( '' ) );
 		$this->assertSame( array(), PayloadReader::rows( 'x' ) );
+	}
+
+	public function test_an_address_from_the_server_is_followed_only_on_the_same_origin(): void {
+		$site = 'https://erp.example.test/AcumaticaDB';
+
+		$this->assertSame( 'https://erp.example.test/a/b?c=1', SameOrigin::resolve( '/a/b?c=1', $site ), 'A path is read as being on the origin.' );
+		$this->assertSame( 'https://erp.example.test:443/x', SameOrigin::resolve( 'https://erp.example.test:443/x', $site ), 'The default port is the same port.' );
+		$this->assertSame( 'https://ERP.example.test/x', SameOrigin::resolve( 'https://ERP.example.test/x', $site ), 'Host names are compared without regard to case.' );
+		$this->assertSame( 'https://erp.example.test:8443/y', SameOrigin::resolve( '/y', 'https://erp.example.test:8443/inst' ) );
+		foreach ( array(
+			'https://evil.example.test/x',
+			'https://erp.example.test.evil.test/x',
+			'http://erp.example.test/x',
+			'https://erp.example.test:8443/x',
+			'//evil.example.test/x',
+			'https://user:pw@erp.example.test/x',
+			'https://erp.example.test@evil.test/x',
+			'javascript:alert(1)',
+			'ftp://erp.example.test/x',
+			"/x\r\nHost: evil.test",
+			'',
+		) as $bad ) {
+			$this->assertNull( SameOrigin::resolve( $bad, $site ), $bad );
+		}
+		$this->assertNull( SameOrigin::resolve( '/x', 'not a url' ) );
 	}
 }

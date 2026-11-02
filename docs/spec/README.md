@@ -56,6 +56,10 @@ Community and the "about 8 official connectors" cap (decisions), section 3 (phas
 | [../release/SUBMISSION-NOTES.md](../release/SUBMISSION-NOTES.md) | Text to paste into the WordPress.org submission and reviewer replies, and reviewer test instructions. |
 | [../release/GUIDELINES-AUDIT.md](../release/GUIDELINES-AUDIT.md) | The 18 plugin guidelines, how the plugin meets each, and the vendor trademark list. |
 | [../release/ASSETS.md](../release/ASSETS.md) | Icon, banner and screenshot specifications and their current status. |
+| [../release/EXTERNAL-SERVICES.md](../release/EXTERNAL-SERVICES.md) | Every service the plugin can contact: hosts, data sent, when, terms and privacy links (generated from the connector documents). |
+| [../release/PLUGIN-CHECK-NOTES.md](../release/PLUGIN-CHECK-NOTES.md) | What the Plugin Check categories were approximated with, the result of each, and what only the real Plugin Check can verify. |
+| [../release/SMOKE-TEST.md](../release/SMOKE-TEST.md) | Result of installing the release zip into a fresh WordPress and exercising it (written by `bin/smoke-install.sh`). |
+| [../release/OWNER-ACTIONS.md](../release/OWNER-ACTIONS.md) | The short list of what only the owner can do before and after submission. |
 
 ## Keeping this folder honest
 

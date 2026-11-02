@@ -261,7 +261,7 @@ final class QuickBooksConnector extends AbstractApiConnector implements OAuthCon
 	 */
 	public function ping( Connection $connection ): bool {
 		try {
-			$this->servicesFor( $connection )->company->info();
+			$this->servicesFor( $connection )->company->probe();
 			return true;
 		} catch ( \Throwable $throwable ) {
 			unset( $throwable );

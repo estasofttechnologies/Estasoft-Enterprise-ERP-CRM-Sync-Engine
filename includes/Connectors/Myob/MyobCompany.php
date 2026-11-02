@@ -116,6 +116,16 @@ final class MyobCompany {
 	}
 
 	/**
+	 * One fresh read of the list of company files for a health probe; what is cached is not trusted.
+	 *
+	 * @throws ApiException On a failed call.
+	 */
+	public function probe(): void {
+		$this->files = null;
+		$this->files();
+	}
+
+	/**
 	 * The entry of this connection's company file in the list.
 	 *
 	 * @return array<string,mixed>|null

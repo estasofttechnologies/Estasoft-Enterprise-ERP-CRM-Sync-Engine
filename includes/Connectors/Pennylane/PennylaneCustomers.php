@@ -21,7 +21,7 @@ use Estasoft\SyncEngine\Contract\ConnectorError;
 /**
  * Pennylane's customer filter fields are `id`, `customer_type`, `ledger_account_id`, `name` (prefix only), `external_reference` and `reg_no`; email is
  * not filterable [documented]. A returning buyer is therefore recognised by the external reference this connector writes: `WC-C-` and 16 hex
- * characters of the hash of the lower-case email. Customers the merchant typed by hand are not found. A company customer and an individual customer are
+ * characters of the hash of the customer type and the lower-case email (a company and a person with the same email are two customers). Customers the merchant typed by hand are not found. A company customer and an individual customer are
  * different resources; the right one is always created, and a customer is never updated (calling the wrong update endpoint corrupts the record
  * [documented]).
  */
@@ -36,13 +36,27 @@ final class PennylaneCustomers {
 	}
 
 	/**
-	 * The external reference for an email (or, with `always_create`, for one order).
+	 * The external reference for an email and a customer type (or, with `always_create`, for one order).
 	 *
-	 * @param string $email Email.
-	 * @param string $salt  Added to the hash when every order gets its own customer.
+	 * @param string $email   Email.
+	 * @param bool   $company True for a company customer, false for an individual.
+	 * @param string $salt    Added to the hash when every order gets its own customer.
 	 */
-	public function referenceFor( string $email, string $salt = '' ): string {
-		return 'WC-C-' . substr( hash( 'sha256', strtolower( trim( $email ) ) . ( '' === $salt ? '' : '|' . $salt ) ), 0, 16 );
+	public function referenceFor( string $email, bool $company = false, string $salt = '' ): string {
+		return 'WC-C-' . substr( hash( 'sha256', ( $company ? 'company' : 'individual' ) . '|' . strtolower( trim( $email ) ) . ( '' === $salt ? '' : '|' . $salt ) ), 0, 16 );
+	}
+
+	/**
+	 * The customer this connector made for an email, whichever type it is: the individual customer first, then the company customer.
+	 *
+	 * @param ApiClient $api   Client.
+	 * @param string    $email Email.
+	 * @return array<string,mixed>|null
+	 *
+	 * @throws ApiException On failure.
+	 */
+	public function findByEmail( ApiClient $api, string $email ): ?array {
+		return $this->find( $api, $this->referenceFor( $email, false ) ) ?? $this->find( $api, $this->referenceFor( $email, true ) );
 	}
 
 	/**
@@ -92,7 +106,8 @@ final class PennylaneCustomers {
 				'created' => false,
 			);
 		}
-		$reference = $this->referenceFor( $customer['email'], 'always_create' === $policy ? $clientRef : '' );
+		$company   = '' !== $customer['company'];
+		$reference = $this->referenceFor( $customer['email'], $company, 'always_create' === $policy ? $clientRef : '' );
 		$found     = $this->find( $api, $reference );
 		if ( null !== $found ) {
 			return array(
@@ -103,7 +118,6 @@ final class PennylaneCustomers {
 		if ( 'match_only' === $policy ) {
 			return Refusal::value( PennylaneConnector::LABEL, 'customer.email', __( 'Pennylane has no customer for this buyer and the customer setting is match only.', 'estasoft-erp-crm-sync-engine' ), 'no matching customer' );
 		}
-		$company = '' !== $customer['company'];
 		$created = $api->post( $company ? 'company_customers' : 'individual_customers', array(), $this->body( $customer, $reference, $company ) )->json();
 		$id      = PayloadReader::text( $created['id'] ?? '' );
 		if ( '' === $id ) {

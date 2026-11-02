@@ -154,7 +154,7 @@ final class QoyodRefundSender {
 		if ( $rows instanceof ConnectorError ) {
 			return $rows;
 		}
-		$built = $this->lines->build( $rows, $options->currency(), false, $options->taxField(), $branch, $this->catalog->standardTaxes() );
+		$built = $this->lines->build( $rows, $options->currency(), false, $options->taxField(), $branch, $this->catalog->standardTaxes(), $options->untaxedCode() );
 		if ( $built instanceof ConnectorError ) {
 			return $built;
 		}

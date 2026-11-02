@@ -49,7 +49,7 @@ final class LexwareErrorMapper {
 		if ( 406 === $status ) {
 			$issues = $this->issues( $response );
 			$joined = implode( ', ', $issues );
-			if ( 1 === preg_match( '/tax/i', $joined ) ) {
+			if ( 1 === preg_match( '/taxRatePercentage/i', $joined ) ) {
 				return new ConnectorError(
 					ErrorCode::Map002,
 					array(

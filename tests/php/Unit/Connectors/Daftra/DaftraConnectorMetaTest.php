@@ -194,6 +194,16 @@ final class DaftraConnectorMetaTest extends DaftraTestCase {
 		}
 	}
 
+	public function test_ping_is_one_cheap_call_and_says_no_for_a_wrong_key(): void {
+		$connector = $this->connector();
+		$this->assertTrue( $connector->ping( $this->connection() ) );
+		$this->assertCount( 1, $this->kit->http->requests );
+		$this->assertStringEndsWith( '/api2/site_info.json', $this->kit->http->requests[0]['url'] );
+		$this->assertFalse( $connector->ping( $this->connection( array(), 'dft-wrong-key-0123456789', 2 ) ) );
+		$this->assertFalse( $connector->ping( $this->connection( array( 'subdomain' => 'a/b' ) ) ) );
+		$this->assertCount( 2, $this->kit->http->requests, 'A bad account name never leaves the server.' );
+	}
+
 	public function test_a_list_that_never_ends_stops_with_an_error_instead_of_looping(): void {
 		$this->kit->http->route(
 			'GET',

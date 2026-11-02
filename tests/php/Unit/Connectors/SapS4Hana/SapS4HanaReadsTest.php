@@ -17,6 +17,12 @@ use Estasoft\SyncEngine\Tests\Support\FakeHttpClient;
 
 final class SapS4HanaReadsTest extends SapS4HanaTestCase {
 
+	public function test_ping_is_one_cheap_call_after_the_sign_in(): void {
+		$this->assertTrue( $this->connector->ping( $this->connection() ) );
+		$calls = array_filter( $this->kit->http->requests, static fn( array $request ): bool => ! str_contains( $request['url'], 'oauth2/token' ) );
+		$this->assertCount( 1, $calls, 'One read, not the probes of Test connection.' );
+	}
+
 	public function test_a_product_is_found_by_its_number_and_an_unknown_one_is_null(): void {
 		$found = $this->connector->lookupProduct( $this->connection(), 'CS-MUG-01' );
 		$this->assertInstanceOf( ExternalRef::class, $found );

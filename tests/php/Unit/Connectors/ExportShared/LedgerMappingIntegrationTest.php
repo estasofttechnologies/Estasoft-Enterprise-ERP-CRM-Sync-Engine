@@ -268,7 +268,7 @@ final class LedgerMappingIntegrationTest extends TestCase {
 		$text = mb_convert_encoding( $bytes, 'UTF-8', 'Windows-1252' );
 		$rows = array_map( static fn( string $line ): array => str_getcsv( $line, ',', '"', '' ), explode( "\r\n", rtrim( $text, "\r\n" ) ) );
 		$sum  = 0;
-		foreach ( array_slice( $rows, 1 ) as $row ) {
+		foreach ( $rows as $row ) {
 			$sum += 'uk' === $options['edition'] ? (int) str_replace( '.', '', $row[7] ) + (int) str_replace( '.', '', $row[9] ) : abs( (int) str_replace( '.', '', $row[16] ) );
 		}
 		return $sum;

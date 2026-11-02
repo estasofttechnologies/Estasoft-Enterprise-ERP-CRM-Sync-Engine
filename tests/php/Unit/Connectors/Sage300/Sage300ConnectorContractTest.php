@@ -45,6 +45,7 @@ final class Sage300ConnectorContractTest extends ApiConnectorContractTestCase {
 				'company'         => FakeSage300Server::COMPANY,
 				'username'        => FakeSage300Server::USER,
 				'customer_number' => '1200',
+				'refund_total_property' => 'NoteTotal',
 			),
 			array( 'password' => $password ),
 			$id
