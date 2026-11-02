@@ -9,6 +9,7 @@ import type { TransportRequest } from '../../src/api/client';
 import { NowContext } from '../../src/app/NowContext';
 import type { InvoiceRow } from '../../src/api/types';
 import { TimeLeft } from '../../src/screens/invoices/Invoices';
+import type { Wrap } from './helpers';
 import {
 	answer,
 	expectHeading,
@@ -331,6 +332,45 @@ describe( 'Dashboard', () => {
 } );
 
 describe( 'Logs', () => {
+	it( 'only asks the REST route for ranges it accepts, and starts on everything kept', async () => {
+		const seen: string[] = [];
+		const { user } = await renderApp( {
+			route: '/logs',
+			boot: { capabilities: { manage: true, configure: false } },
+			wrap: ( inner ) => async ( req ) => {
+				if ( req.route === '/logs' && req.method === 'GET' ) {
+					seen.push( req.query.range ?? '' );
+				}
+				return inner( req );
+			},
+		} );
+		await expectHeading( 'Logs' );
+		expect( screen.getByLabelText( 'Range' ) ).toHaveValue( 'all' );
+		for ( const label of [
+			'Last hour',
+			'Last 24 hours',
+			'Last 7 days',
+			'Last 30 days',
+			'Everything kept',
+		] ) {
+			await user.selectOptions( screen.getByLabelText( 'Range' ), label );
+		}
+		await waitFor( () => expect( seen.length ).toBeGreaterThan( 4 ) );
+		expect( new Set( seen ) ).toEqual(
+			new Set( [ 'all', '1h', '24h', '7d', '30d' ] )
+		);
+		expect( screen.queryByText( /could not be loaded/i ) ).toBeNull();
+	} );
+
+	it( 'falls back to everything kept for a range an old link carries', async () => {
+		await renderApp( {
+			route: '/logs?range=14d',
+			boot: { capabilities: { manage: true, configure: false } },
+		} );
+		await expectHeading( 'Logs' );
+		expect( screen.getByLabelText( 'Range' ) ).toHaveValue( 'all' );
+	} );
+
 	it( 'takes the retention from the settings, not from the range', async () => {
 		const { user } = await renderApp( {
 			route: '/logs',
@@ -1204,5 +1244,67 @@ describe( 'Connection picker on Mapping', () => {
 		expect(
 			seen.every( ( query ) => query.connection_id === undefined )
 		).toBe( true );
+	} );
+} );
+
+describe( 'Screens that need a connection, before one exists', () => {
+	function notConnected( seen: string[] ): Wrap {
+		return ( inner ) => {
+			const patched = patchJson(
+				( req ) => req.method === 'GET' && req.route === '/status',
+				( data ) => ( { ...data, mode: 'not_connected' } )
+			)( inner );
+			return async ( req ) => {
+				seen.push( `${ req.method } ${ req.route }` );
+				return patched( req );
+			};
+		};
+	}
+
+	it.each( [
+		[ '/mapping', /^GET \/(mappings|tax-map|products)/ ],
+		[ '/mapping/tax', /^GET \/(mappings|tax-map|products)/ ],
+		[ '/mapping/products', /^GET \/(mappings|tax-map|products)/ ],
+		[ '/stock', /^GET \/stock/ ],
+	] )(
+		'%s explains that a system must be connected and asks the server for nothing that would answer 409',
+		async ( route, forbidden ) => {
+			const seen: string[] = [];
+			await renderApp( {
+				route,
+				boot: { capabilities: { manage: true, configure: true } },
+				wrap: notConnected( seen ),
+			} );
+			expect(
+				await screen.findByRole( 'heading', {
+					name: 'Connect a system first',
+				} )
+			).toBeInTheDocument();
+			expect(
+				screen.getByRole( 'button', { name: 'Start setup' } )
+			).toBeInTheDocument();
+			expect( seen.filter( ( call ) => forbidden.test( call ) ) ).toEqual(
+				[]
+			);
+		}
+	);
+} );
+
+describe( 'Counts in the dashboard notes', () => {
+	it( 'groups the digits of the reconciliation numbers like the rest of the app', async () => {
+		await renderApp( {
+			route: '/',
+			boot: { capabilities: { manage: true, configure: true } },
+		} );
+		await expectHeading( 'Dashboard' );
+		expect(
+			await screen.findByText( /of 2,104 orders from the last 7 days/ )
+		).toBeInTheDocument();
+		expect(
+			screen.getByText( '2,104 orders from the last 7 days' )
+		).toBeInTheDocument();
+		expect(
+			screen.getByText( '2,101 match, 3 differ, 1 repaired' )
+		).toBeInTheDocument();
 	} );
 } );

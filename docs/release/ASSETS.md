@@ -35,7 +35,7 @@ Rules that WordPress.org enforces or reviewers check:
 | `icon-256x256.png` | Present, 256 x 256 PNG. |
 | `banner-772x250.png` | Present, 772 x 250 PNG. Sand and navy; full official name; the line "Checkout never waits." |
 | `banner-1544x500.png` | Present, 1544 x 500 PNG. |
-| `screenshot-1.png` to `screenshot-6.png` | **Pending.** They have to be taken from the finished plugin, not from the static design boards. `readme.txt` already carries the captions, so `php bin/check-readme.php` prints one warning per missing image. |
+| `screenshot-1.png` to `screenshot-6.png` | Present, 1280 x 960 PNG, compressed. Taken in a browser from the finished plugin inside WordPress 6.4.3 with the sample shop of design board S03 (Cedar & Stone Supply). The address in the Connection card on screenshot 1 is a sample one. |
 
 The banner shows an illustrative dashboard (invented orders such as #10494, a made-up shop). It is artwork, not a
 claim about real results. Replace it if a screenshot of the real dashboard is preferred.
@@ -53,10 +53,10 @@ WordPress admin colour scheme, with the admin menu visible. Crop to the content,
 | --- | --- | --- |
 | 1 | The dashboard: what synced, what is waiting, what needs a person | Dashboard, normal state (A02) |
 | 2 | Needs attention: failed orders grouped by cause, fixed in one step | Queue, Needs attention (C02) |
-| 3 | Choose your system from 34, in one list | Setup step 2, Choose a system (B02) |
-| 4 | Preview exactly what your system will receive before anything is sent | Setup step 5, Preview (B05) |
-| 5 | Mapping with versions, preview and rollback | Mapping (E01) |
-| 6 | The order screen box and the Sync column | Order screen box (H02) and orders list column (H03), composed into one image |
+| 3 | Choose your system from 34, in one list | Connections, Add a connection, Choose a system (B02), with Odoo selected |
+| 4 | Preview exactly what your system will receive before anything is sent | Mapping, Preview with a real order, full preview (E01) |
+| 5 | Reconciliation: a nightly check lists every order that differs between WooCommerce and your system, ready to repair | Reconciliation |
+| 6 | Settings: email notifications, performance, access and a readiness check, with no usage tracking | Settings, Notifications |
 
 If the final screens differ from the captions, change the captions in `readme.txt` (and keep the numbering) rather
 than the other way round.

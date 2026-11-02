@@ -100,8 +100,8 @@ In the support forum for this plugin on WordPress.org. Bug reports and connector
 2. Needs attention: failed orders grouped by cause, fixed in one step.
 3. Choose your system from 34, in one list.
 4. Preview exactly what your system will receive before anything is sent.
-5. Mapping with versions, preview and rollback.
-6. The order screen box and the Sync column.
+5. Reconciliation: a nightly check lists every order that differs between WooCommerce and your system, ready to repair.
+6. Settings: email notifications, performance, access and a readiness check, with no usage tracking.
 
 == Changelog ==
 

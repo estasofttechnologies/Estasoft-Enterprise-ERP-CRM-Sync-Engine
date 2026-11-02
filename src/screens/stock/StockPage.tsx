@@ -27,6 +27,7 @@ import {
 	validateWholeNumber,
 } from '../../components/Fields';
 import { KpiGrid } from '../../components/Kpi';
+import { NotConnected } from '../../components/NotConnected';
 import { PageHeader } from '../../components/PageHeader';
 import { ResponsiveTable } from '../../components/ResponsiveTable';
 import { SaveBar } from '../../components/SaveBar';
@@ -47,17 +48,21 @@ export type StockTab = 'stock' | 'tracking' | 'conflicts';
  */
 export function StockPage( { tab }: { tab: StockTab } ) {
 	const system = useSystemName();
-	const { status } = useStatus();
+	const { status, loading: statusLoading } = useStatus();
 	const { notify } = useNotices();
 	const { canManage, canConfigure } = useApp();
+	const notConnected = status?.mode === 'not_connected';
+	// Nothing is asked of the server until the status says a system is connected: its routes answer 409 otherwise.
+	const hold = notConnected || ( status === undefined && statusLoading );
 	const rules = useResource< StockRules >(
 		( signal ) => api.stock.rules( signal ),
-		[]
+		[],
+		{ enabled: ! hold }
 	);
 	const overview = useResource< StockOverview >(
 		( signal ) => api.stock.overview( signal ),
 		[],
-		{ poll: 60000 }
+		{ poll: 60000, enabled: ! hold }
 	);
 	const supported = status?.connection
 		? status.connection.capabilities.stock_in !== false ||
@@ -143,7 +148,8 @@ export function StockPage( { tab }: { tab: StockTab } ) {
 					{ errorText( run.error ) }
 				</Callout>
 			) : null }
-			{ ! supported ? (
+			{ notConnected ? <NotConnected /> : null }
+			{ ! hold && ! supported ? (
 				<EmptyState
 					as="h2"
 					title={ __(
@@ -160,7 +166,7 @@ export function StockPage( { tab }: { tab: StockTab } ) {
 					) }
 				</EmptyState>
 			) : null }
-			{ supported && ( rules.loading || overview.loading ) ? (
+			{ ! hold && supported && ( rules.loading || overview.loading ) ? (
 				<LoadingState
 					rows={ 5 }
 					label={ __(
@@ -169,7 +175,8 @@ export function StockPage( { tab }: { tab: StockTab } ) {
 					) }
 				/>
 			) : null }
-			{ supported &&
+			{ ! hold &&
+			supported &&
 			( ( rules.error && ! rules.data ) ||
 				( overview.error && ! overview.data ) ) ? (
 				<ErrorState
@@ -180,7 +187,7 @@ export function StockPage( { tab }: { tab: StockTab } ) {
 					} }
 				/>
 			) : null }
-			{ supported && rules.data && overview.data ? (
+			{ ! hold && supported && rules.data && overview.data ? (
 				tab === 'stock' ? (
 					<StockTabView
 						rules={ rules.data }

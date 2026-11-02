@@ -64,7 +64,8 @@ export interface LogQuery {
 	level?: 'info' | 'warning' | 'error';
 	search?: string;
 	connection_id?: number;
-	range?: 'hour' | 'today' | '7d' | '14d';
+	/** The values the REST route accepts; `all` means everything that is kept. */
+	range?: '1h' | '24h' | '7d' | '30d' | 'all';
 	page?: number;
 	per_page?: number;
 }

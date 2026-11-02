@@ -103,6 +103,33 @@ describe( 'app frame', () => {
 		).not.toBeInTheDocument();
 	} );
 
+	it( 'moves focus to the page heading when a notice is dismissed from the keyboard', async () => {
+		// The dismiss button leaves the page with its notice; focus must not fall back to the top of the document.
+		const { user } = await renderApp( {
+			boot: {
+				notices: [
+					{
+						id: 'welcome',
+						kind: 'success',
+						text: 'ESTASOFT SYNC is active.',
+						dismissible: true,
+					},
+				],
+			},
+		} );
+		await screen.findByText( 'ESTASOFT SYNC is active.' );
+		const button = screen.getByRole( 'button', { name: /Close|Dismiss/i } );
+		button.focus();
+		expect( button ).toHaveFocus();
+		await user.keyboard( '{Enter}' );
+		expect(
+			screen.queryByText( 'ESTASOFT SYNC is active.' )
+		).not.toBeInTheDocument();
+		expect(
+			screen.getByRole( 'heading', { level: 1, name: 'Dashboard' } )
+		).toHaveFocus();
+	} );
+
 	it( 'explains the missing permission to someone without the view-and-operate capability', async () => {
 		await renderApp( {
 			boot: { capabilities: { manage: false, configure: false } },

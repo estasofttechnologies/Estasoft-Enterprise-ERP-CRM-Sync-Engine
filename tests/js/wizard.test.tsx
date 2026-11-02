@@ -1,6 +1,7 @@
 import {
 	expectHeading,
 	expectNoA11yViolations,
+	patchJson,
 	renderApp,
 	resetApp,
 	screen,
@@ -31,6 +32,46 @@ async function fillOdoo(
 }
 
 describe( 'Setup wizard', () => {
+	it( 'runs the store checks by itself the first time, and never calls an empty result a pass', async () => {
+		// The server has no result yet: an empty list, no time, and the checks count as blocking.
+		let runs = 0;
+		const { user } = await renderApp( {
+			scenario: 'first_run',
+			route: '/setup',
+			wrap: ( inner ) => {
+				const never = patchJson(
+					( req ) =>
+						req.method === 'GET' && req.route === '/readiness',
+					( data ) => ( {
+						...data,
+						ran_at: null,
+						checks: [],
+						blocked: true,
+					} )
+				)( inner );
+				return async ( req ) => {
+					if (
+						req.method === 'POST' &&
+						req.route === '/readiness/run'
+					) {
+						runs += 1;
+					}
+					return never( req );
+				};
+			},
+		} );
+		await expectHeading( 'Set up ESTASOFT SYNC' );
+		expect(
+			await screen.findByText( /worth fixing, 7 passed/ )
+		).toBeInTheDocument();
+		expect( runs ).toBe( 1 );
+		expect( screen.queryByText( 'Everything passed.' ) ).toBeNull();
+		expect(
+			await screen.findByRole( 'button', { name: 'Continue' } )
+		).toBeEnabled();
+		expect( user ).toBeDefined();
+	} );
+
 	it( 'starts at step 1 with the store checks, and lets Continue through when nothing needs fixing', async () => {
 		const { user, server } = await renderApp( {
 			scenario: 'first_run',

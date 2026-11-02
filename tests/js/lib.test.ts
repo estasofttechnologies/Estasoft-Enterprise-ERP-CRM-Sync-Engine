@@ -390,6 +390,32 @@ describe( 'mapping rules', () => {
 			removed: [],
 		} );
 		expect( nextRuleId( live ) ).toBe( 'r4' );
+	} );
+
+	it( 'does not call a step changed because the server added an empty list of arguments', () => {
+		const started = rule( 'r1', {
+			transforms: [ { type: 'trim' } ],
+		} );
+		const cleaned = rule( 'r1', {
+			transforms: [
+				// PHP sends an empty array of arguments as `[]`.
+				{
+					type: 'trim',
+					args: [] as unknown as Record< string, string >,
+				},
+			],
+		} );
+		expect( diffRules( [ started ], [ cleaned ] ).changed ).toEqual( [] );
+		expect(
+			diffRules(
+				[ started ],
+				[
+					rule( 'r1', {
+						transforms: [ { type: 'trim', args: { mode: 'x' } } ],
+					} ),
+				]
+			).changed
+		).toEqual( [ 'r1' ] );
 		expect( nextRuleId( [ rule( 'r2' ), rule( 'r1' ) ] ) ).toBe( 'r3' );
 	} );
 

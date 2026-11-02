@@ -20,6 +20,7 @@ import { CheckField, SelectField, TextField } from '../../components/Fields';
 import { useFormat } from '../../components/FormatContext';
 import { DateTime } from '../../components/DateTime';
 import { ResponsiveTable } from '../../components/ResponsiveTable';
+import type { Column } from '../../components/ResponsiveTable';
 import { StatusBadge, Tag } from '../../components/StatusBadge';
 import { useAsyncAction } from '../../hooks/useAsyncAction';
 import { useResource } from '../../hooks/useResource';
@@ -138,8 +139,12 @@ export function RuleSetEditor( {
 		draftDiff.changed.length +
 		draftDiff.removed.length;
 
-	// Sample values come from a preview of the first order with the rules as saved.
-	const sampleOrder = sample.orders[ 0 ]?.id ?? null;
+	// Sample values come from a preview of the first order with the rules as saved. The preview route needs
+	// the configure capability, so people who may only manage get no sample column and no request that
+	// would answer 403.
+	const sampleOrder = canConfigure
+		? ( sample.orders[ 0 ]?.id ?? null )
+		: null;
 	const sampleValues = useResource< MappingPreview >(
 		() =>
 			api.mappings.preview( {
@@ -366,107 +371,111 @@ export function RuleSetEditor( {
 						) }
 						rows={ rules }
 						rowKey={ ( rule ) => rule.id }
-						columns={ [
-							{
-								id: 'source',
-								header: __(
-									'WooCommerce field',
-									'estasoft-erp-crm-sync-engine'
-								),
-								primary: true,
-								cell: ( rule ) => (
-									<>
-										<span className="estasoft-sync-strong">
-											{ sourceLabel( rule ) }
-										</span>{ ' ' }
-										{ flag( rule ) }
-									</>
-								),
-							},
-							{
-								id: 'rule',
-								header: __(
-									'Rule',
-									'estasoft-erp-crm-sync-engine'
-								),
-								wide: true,
-								cell: ( rule ) => describeRule( rule ),
-							},
-							{
-								id: 'target',
-								header: sprintf(
-									/* translators: %s: system name */ __(
-										'%s field',
+						columns={ (
+							[
+								{
+									id: 'source',
+									header: __(
+										'WooCommerce field',
 										'estasoft-erp-crm-sync-engine'
 									),
-									system
-								),
-								label: __(
-									'Target field',
-									'estasoft-erp-crm-sync-engine'
-								),
-								cell: ( rule ) => (
-									<span
-										className="estasoft-sync-mono"
-										dir="ltr"
-									>
-										{ rule.target }
-									</span>
-								),
-							},
-							{
-								id: 'sample',
-								header: sprintf(
-									/* translators: %s: order label such as #10490 */ __(
-										'Sample, order %s',
+									primary: true,
+									cell: ( rule ) => (
+										<>
+											<span className="estasoft-sync-strong">
+												{ sourceLabel( rule ) }
+											</span>{ ' ' }
+											{ flag( rule ) }
+										</>
+									),
+								},
+								{
+									id: 'rule',
+									header: __(
+										'Rule',
 										'estasoft-erp-crm-sync-engine'
 									),
-									sample.orders[ 0 ]?.label ?? ''
-								).trim(),
-								label: __(
-									'Sample',
-									'estasoft-erp-crm-sync-engine'
-								),
-								cell: ( rule ) => (
-									<span dir="auto">
-										{ sampleFor( rule ) }
-									</span>
-								),
-							},
-							{
-								id: 'edit',
-								header: __(
-									'Edit',
-									'estasoft-erp-crm-sync-engine'
-								),
-								hideHeader: true,
-								align: 'end',
-								cell: ( rule ) =>
-									canConfigure ? (
-										<Btn
-											small
-											aria-label={ sprintf(
-												/* translators: %s: field name */ __(
-													'Edit the %s rule',
-													'estasoft-erp-crm-sync-engine'
-												),
-												sourceLabel( rule )
-											) }
-											onClick={ () =>
-												setDialog( {
-													kind: 'edit',
-													rule,
-												} )
-											}
+									wide: true,
+									cell: ( rule ) => describeRule( rule ),
+								},
+								{
+									id: 'target',
+									header: sprintf(
+										/* translators: %s: system name */ __(
+											'%s field',
+											'estasoft-erp-crm-sync-engine'
+										),
+										system
+									),
+									label: __(
+										'Target field',
+										'estasoft-erp-crm-sync-engine'
+									),
+									cell: ( rule ) => (
+										<span
+											className="estasoft-sync-mono"
+											dir="ltr"
 										>
-											{ __(
-												'Edit',
-												'estasoft-erp-crm-sync-engine'
-											) }
-										</Btn>
-									) : null,
-							},
-						] }
+											{ rule.target }
+										</span>
+									),
+								},
+								{
+									id: 'sample',
+									header: sprintf(
+										/* translators: %s: order label such as #10490 */ __(
+											'Sample, order %s',
+											'estasoft-erp-crm-sync-engine'
+										),
+										sample.orders[ 0 ]?.label ?? ''
+									).trim(),
+									label: __(
+										'Sample',
+										'estasoft-erp-crm-sync-engine'
+									),
+									cell: ( rule ) => (
+										<span dir="auto">
+											{ sampleFor( rule ) }
+										</span>
+									),
+								},
+								{
+									id: 'edit',
+									header: __(
+										'Edit',
+										'estasoft-erp-crm-sync-engine'
+									),
+									hideHeader: true,
+									align: 'end',
+									cell: ( rule ) =>
+										canConfigure ? (
+											<Btn
+												small
+												aria-label={ sprintf(
+													/* translators: %s: field name */ __(
+														'Edit the %s rule',
+														'estasoft-erp-crm-sync-engine'
+													),
+													sourceLabel( rule )
+												) }
+												onClick={ () =>
+													setDialog( {
+														kind: 'edit',
+														rule,
+													} )
+												}
+											>
+												{ __(
+													'Edit',
+													'estasoft-erp-crm-sync-engine'
+												) }
+											</Btn>
+										) : null,
+								},
+							] as Column< MappingRule >[]
+						 ).filter(
+							( column ) => canConfigure || column.id !== 'sample'
+						) }
 					/>
 				) }
 				<div className="estasoft-sync-card__foot">
@@ -641,42 +650,44 @@ export function RuleSetEditor( {
 				/>
 			</Card>
 
-			<Card
-				title={ __(
-					'Check before you publish',
-					'estasoft-erp-crm-sync-engine'
-				) }
-				description={ sprintf(
-					/* translators: %s: system name */ __(
-						'See exactly what %s would receive for a real order, with your draft rules applied.',
-						'estasoft-erp-crm-sync-engine'
-					),
-					system
-				) }
-			>
-				<Btn
-					disabled={ sample.orders.length === 0 }
-					onClick={ () =>
-						setDialog( {
-							kind: 'preview',
-							orderId: sample.orderId,
-						} )
-					}
-				>
-					{ __(
-						'Preview with a real order',
+			{ canConfigure ? (
+				<Card
+					title={ __(
+						'Check before you publish',
 						'estasoft-erp-crm-sync-engine'
 					) }
-				</Btn>
-				{ sample.orders.length === 0 && ! sample.loading ? (
-					<p className="estasoft-sync-muted">
+					description={ sprintf(
+						/* translators: %s: system name */ __(
+							'See exactly what %s would receive for a real order, with your draft rules applied.',
+							'estasoft-erp-crm-sync-engine'
+						),
+						system
+					) }
+				>
+					<Btn
+						disabled={ sample.orders.length === 0 }
+						onClick={ () =>
+							setDialog( {
+								kind: 'preview',
+								orderId: sample.orderId,
+							} )
+						}
+					>
 						{ __(
-							'No orders yet to preview. Place a test order in WooCommerce first.',
+							'Preview with a real order',
 							'estasoft-erp-crm-sync-engine'
 						) }
-					</p>
-				) : null }
-			</Card>
+					</Btn>
+					{ sample.orders.length === 0 && ! sample.loading ? (
+						<p className="estasoft-sync-muted">
+							{ __(
+								'No orders yet to preview. Place a test order in WooCommerce first.',
+								'estasoft-erp-crm-sync-engine'
+							) }
+						</p>
+					) : null }
+				</Card>
+			) : null }
 
 			{ dialog?.kind === 'edit' ? (
 				<RuleDialog

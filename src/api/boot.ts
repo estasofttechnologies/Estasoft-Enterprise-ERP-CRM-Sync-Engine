@@ -48,6 +48,10 @@ export function normaliseBootData(
 		routes: source?.routes ?? [],
 		notices: source?.notices ?? [],
 		encryptionKeyLine: source?.encryptionKeyLine ?? null,
+		// Only the sizes the queue route offers; anything else (or nothing) leaves the default to the list.
+		perPage: [ 25, 50, 100 ].includes( Number( source?.perPage ) )
+			? Number( source?.perPage )
+			: undefined,
 	};
 }
 

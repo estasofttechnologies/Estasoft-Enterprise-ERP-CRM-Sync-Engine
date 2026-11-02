@@ -80,6 +80,20 @@ export function checkSummary( readiness: Readiness ): string {
 }
 
 /**
+ * Whether the server has never run the checks (it answers with an empty list and no time).
+ *
+ * @param readiness Result of the checks, when loaded.
+ * @return True when there is nothing to show yet and the checks should be run.
+ */
+export function neverRan( readiness: Readiness | undefined ): boolean {
+	return (
+		readiness !== undefined &&
+		readiness.ran_at === null &&
+		readiness.checks.length === 0
+	);
+}
+
+/**
  * The list of checks. Needs fixing stops setup; worth fixing never does.
  *
  * @param props           Readiness result.
@@ -129,6 +143,16 @@ export function ReadinessList( { readiness }: { readiness: Readiness } ) {
  * @return The message.
  */
 export function ReadinessVerdict( { readiness }: { readiness: Readiness } ) {
+	if ( readiness.ran_at === null && readiness.checks.length === 0 ) {
+		return (
+			<Callout tone="info" role="status">
+				{ __(
+					'The checks have not run yet. A check that did not run is not a pass.',
+					'estasoft-erp-crm-sync-engine'
+				) }
+			</Callout>
+		);
+	}
 	const needs = readiness.checks.filter(
 		( check ) => check.status === 'needs_fixing'
 	).length;

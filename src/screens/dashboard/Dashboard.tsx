@@ -12,6 +12,7 @@ import { Card } from '../../components/Card';
 import { DateTime } from '../../components/DateTime';
 import { ErrorState, LoadingState } from '../../components/EmptyState';
 import { useFormat } from '../../components/FormatContext';
+import type { FormatConfig } from '../../lib/format';
 import { Icon } from '../../components/Icon';
 import { KeyValueList } from '../../components/KeyValueList';
 import { PageHeader } from '../../components/PageHeader';
@@ -19,7 +20,12 @@ import { PauseDialog } from '../../components/PauseDialog';
 import { useAsyncAction } from '../../hooks/useAsyncAction';
 import { useResource } from '../../hooks/useResource';
 import { groupRemedy, groupSentence } from '../../lib/attention';
-import { formatFullDateTime, formatSpan, formatTime } from '../../lib/format';
+import {
+	formatFullDateTime,
+	formatNumber,
+	formatSpan,
+	formatTime,
+} from '../../lib/format';
 import {
 	daysPhrase,
 	errorText,
@@ -286,7 +292,8 @@ function NormalDashboard( { status }: { status: Status } ) {
 		status,
 		recon.data,
 		rejected.data?.total ?? 0,
-		rejected.data?.items[ 0 ]?.order_label
+		rejected.data?.items[ 0 ]?.order_label,
+		cfg
 	);
 
 	return (
@@ -673,7 +680,8 @@ function buildNotes(
 	status: Status,
 	recon: ReconOverview | undefined,
 	rejectedCount: number,
-	rejectedOrder: string | undefined
+	rejectedOrder: string | undefined,
+	cfg: FormatConfig
 ): Note[] {
 	const notes: Note[] = [];
 	if ( status.encryption_key_missing ) {
@@ -741,13 +749,13 @@ function buildNotes(
 				open
 			),
 			text: sprintf(
-				/* translators: 1: number of orders that differ, 2: number of orders compared such as "2104 orders", 3: length of the window such as "7 days" */
+				/* translators: 1: number of orders that differ, 2: number of orders compared such as "2,104 orders", 3: length of the window such as "7 days" */
 				__(
-					'WooCommerce and your system disagree on %1$d of %2$s from the last %3$s.',
+					'WooCommerce and your system disagree on %1$s of %2$s from the last %3$s.',
 					'estasoft-erp-crm-sync-engine'
 				),
-				open,
-				ordersPhrase( recon.last_run.compared ),
+				formatNumber( open, cfg.locale ),
+				ordersPhrase( recon.last_run.compared, cfg.locale ),
 				daysPhrase( recon.window_days )
 			),
 			action: __( 'Open Reconciliation', 'estasoft-erp-crm-sync-engine' ),
@@ -861,12 +869,12 @@ function ReconCard( { overview }: { overview: ReconOverview } ) {
 					{
 						label: __( 'Compared', 'estasoft-erp-crm-sync-engine' ),
 						value: sprintf(
-							/* translators: 1: number of orders such as "2104 orders", 2: length of the window such as "7 days" */
+							/* translators: 1: number of orders such as "2,104 orders", 2: length of the window such as "7 days" */
 							__(
 								'%1$s from the last %2$s',
 								'estasoft-erp-crm-sync-engine'
 							),
-							ordersPhrase( run.compared ),
+							ordersPhrase( run.compared, cfg.locale ),
 							daysPhrase( run.window_days )
 						),
 					},
@@ -875,12 +883,12 @@ function ReconCard( { overview }: { overview: ReconOverview } ) {
 						value: sprintf(
 							/* translators: 1: matching count, 2: differing count, 3: repaired count */
 							__(
-								'%1$d match, %2$d differ, %3$d repaired',
+								'%1$s match, %2$s differ, %3$s repaired',
 								'estasoft-erp-crm-sync-engine'
 							),
-							run.matched,
-							run.differences,
-							run.repaired
+							formatNumber( run.matched, cfg.locale ),
+							formatNumber( run.differences, cfg.locale ),
+							formatNumber( run.repaired, cfg.locale )
 						),
 					},
 				] }

@@ -610,6 +610,11 @@
 		inline-size: 100%;
 	}
 
+	// The wide column takes what is left; the column that names the row keeps room for its two lines.
+	td[data-card-role="primary"] {
+		min-inline-size: 9.5rem;
+	}
+
 	.estasoft-sync-table__select {
 		inline-size: 40px;
 	}
@@ -1005,6 +1010,7 @@
 }
 
 .estasoft-sync-timeleft {
+	white-space: nowrap;
 	font-weight: 600;
 	font-variant-numeric: tabular-nums;
 
@@ -1202,6 +1208,18 @@
 		max-inline-size: none;
 	}
 
+	// A dialog is drawn outside the app's own wrapper, so the reset of the WordPress admin margins that the wrapper
+	// applies does not reach it. Without this, text blocks sit a line and a half apart.
+	h2,
+	h3,
+	p,
+	ul,
+	ol,
+	dl,
+	dd {
+		margin: 0;
+	}
+
 	.components-modal__header {
 		border-block-end: 1px solid var(--estasoft-sync-border);
 	}
@@ -1217,6 +1235,8 @@
 	display: flex;
 	flex-direction: column;
 	gap: 14px;
+	// Room under the rule below the title, now that the first block no longer brings a margin of its own.
+	padding-block-start: 16px;
 }
 
 .estasoft-sync-dialog__foot {

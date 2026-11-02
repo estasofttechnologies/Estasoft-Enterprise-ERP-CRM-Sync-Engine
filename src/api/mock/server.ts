@@ -1273,6 +1273,17 @@ export function createMockServer( options: MockOptions = {} ) {
 			/^\/logs$/,
 			( _m, req ) => {
 				const q = req.query;
+				// The real route validates `range` against this list and answers 400 otherwise.
+				if (
+					q.range !== undefined &&
+					! [ '1h', '24h', '7d', '30d', 'all' ].includes( q.range )
+				) {
+					return fail(
+						400,
+						'rest_invalid_param',
+						'Invalid parameter(s): range'
+					);
+				}
 				let list = logs.filter(
 					( entry ) =>
 						( q.level ? entry.level === q.level : true ) &&

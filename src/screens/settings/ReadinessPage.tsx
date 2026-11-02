@@ -1,4 +1,4 @@
-import { useState } from '@wordpress/element';
+import { useEffect, useRef, useState } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 import { api } from '../../api/endpoints';
 import { useApp } from '../../app/AppContext';
@@ -13,6 +13,7 @@ import { errorText } from '../../lib/text';
 import { SupportReportDialog } from '../logs/SupportReportDialog';
 import {
 	checkSummary,
+	neverRan,
 	ReadinessList,
 	ReadinessVerdict,
 } from './ReadinessChecks';
@@ -33,6 +34,16 @@ export function ReadinessPage() {
 		readiness.setData( await api.readiness.run() );
 	} );
 	const data = readiness.data;
+	// Nobody has run the checks yet: run them for the person who opened this page.
+	const autoRan = useRef( false );
+	useEffect( () => {
+		if ( canManage && neverRan( data ) && ! autoRan.current ) {
+			autoRan.current = true;
+			void run.run();
+		}
+		// Only the arrival of the first result matters.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [ data ] );
 	return (
 		<>
 			<Card
