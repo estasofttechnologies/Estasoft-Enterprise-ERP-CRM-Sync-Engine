@@ -165,7 +165,9 @@ final class RuleSanitizer {
 		if ( ! is_scalar( $value ) ) {
 			return '';
 		}
-		$text = (string) preg_replace( '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]+/u', '', (string) $value );
+		// A yes/no value is written the way the canonical model writes it ("true"/"false"), never as "1" and "", so a condition that
+		// compares with a flag such as order.payment.is_cod matches.
+		$text = (string) preg_replace( '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]+/u', '', is_bool( $value ) ? ( $value ? 'true' : 'false' ) : (string) $value );
 		$text = $trim ? trim( $text ) : $text;
 		return function_exists( 'mb_substr' ) ? mb_substr( $text, 0, $length, 'UTF-8' ) : substr( $text, 0, $length );
 	}

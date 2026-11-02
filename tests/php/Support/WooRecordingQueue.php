@@ -64,7 +64,13 @@ class WooRecordingQueue implements QueueGateway {
 		return $this->nextId;
 	}
 
+	/**
+	 * How many times the newest item of an order was asked for.
+	 */
+	public int $lookups = 0;
+
 	public function latestForOrder( int $orderId ): ?array {
+		++$this->lookups;
 		$found = null;
 		foreach ( $this->items as $item ) {
 			if ( (string) $orderId === (string) $item['entity_id'] && 'order' === $item['entity_type'] ) {

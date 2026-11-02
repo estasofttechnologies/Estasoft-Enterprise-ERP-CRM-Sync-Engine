@@ -15,7 +15,10 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * Args: format ("mysql" gives 2026-11-02 07:40:00, "iso" gives 2026-11-02T07:40:00Z, "date" gives 2026-11-02; default mysql),
- * timezone (the zone of text that carries no offset; default UTC). Reads ISO 8601, MySQL dates and Unix timestamps.
+ * timezone (the zone of text that carries no offset; default UTC), output_timezone (the zone the result is written in; default UTC,
+ * "store" for the WordPress time zone, or a zone name such as Asia/Riyadh). Reads ISO 8601, MySQL dates and Unix timestamps. With the
+ * default output zone nothing changes; with another one an order placed at 01:30 in Dubai can give the shop's own date. An "iso" result
+ * in a zone other than UTC carries its offset instead of the letter Z.
  */
 final class DateUtc extends BaseTransform {
 
@@ -27,6 +30,22 @@ final class DateUtc extends BaseTransform {
 		'iso'   => 'Y-m-d\TH:i:s\Z',
 		'date'  => 'Y-m-d',
 	);
+
+	/**
+	 * The zone behind "store" (null reads the WordPress setting).
+	 *
+	 * @var \Closure|null
+	 */
+	private ?\Closure $storeZone;
+
+	/**
+	 * Set up with what it depends on.
+	 *
+	 * @param \Closure|null $storeZone Returns the store's \DateTimeZone; omitted, the WordPress time zone is used (UTC outside WordPress).
+	 */
+	public function __construct( ?\Closure $storeZone = null ) {
+		$this->storeZone = $storeZone;
+	}
 
 	/**
 	 * Transform name.
@@ -50,17 +69,23 @@ final class DateUtc extends BaseTransform {
 		if ( null === $text || '' === Text::trim( $text ) ) {
 			return $value;
 		}
-		$format = self::FORMATS[ $this->text( $args, 'format', 'mysql' ) ] ?? null;
+		$name   = $this->text( $args, 'format', 'mysql' );
+		$format = self::FORMATS[ $name ] ?? null;
 		$zone   = $this->zone( $this->text( $args, 'timezone', 'UTC' ) );
-		if ( null === $format || null === $zone ) {
-			throw new TransformArgumentException( esc_html( $this->missing( null === $format ? 'format' : 'timezone' ) ) );
+		$out    = $this->outputZone( $this->text( $args, 'output_timezone', 'UTC' ) );
+		if ( null === $format || null === $zone || null === $out ) {
+			throw new TransformArgumentException( esc_html( $this->missing( null === $format ? 'format' : ( null === $zone ? 'timezone' : 'output_timezone' ) ) ) );
 		}
 		$date = $this->parse( Text::asciiDigits( Text::trim( $text ) ), $zone );
 		if ( null === $date ) {
 			$context->warn( __( 'A date could not be read and was left empty.', 'estasoft-erp-crm-sync-engine' ) );
 			return '';
 		}
-		return $date->setTimezone( new \DateTimeZone( 'UTC' ) )->format( $format );
+		$moved = $date->setTimezone( $out );
+		if ( 'iso' === $name && 0 !== $moved->getOffset() ) {
+			return $moved->format( 'Y-m-d\TH:i:sP' );
+		}
+		return $moved->format( $format );
 	}
 
 	/**
@@ -77,7 +102,26 @@ final class DateUtc extends BaseTransform {
 		if ( null === $this->zone( $this->text( $args, 'timezone', 'UTC' ) ) ) {
 			$problems[] = $this->missing( 'timezone' );
 		}
+		if ( null === $this->outputZone( $this->text( $args, 'output_timezone', 'UTC' ) ) ) {
+			$problems[] = $this->missing( 'output_timezone' );
+		}
 		return $problems;
+	}
+
+	/**
+	 * The zone the result is written in: UTC, the store's zone, or a named zone.
+	 *
+	 * @param string $name UTC, store or a zone name.
+	 */
+	private function outputZone( string $name ): ?\DateTimeZone {
+		if ( 'store' !== strtolower( $name ) ) {
+			return $this->zone( $name );
+		}
+		if ( null !== $this->storeZone ) {
+			$zone = ( $this->storeZone )();
+			return $zone instanceof \DateTimeZone ? $zone : new \DateTimeZone( 'UTC' );
+		}
+		return function_exists( 'wp_timezone' ) ? wp_timezone() : new \DateTimeZone( 'UTC' );
 	}
 
 	/**

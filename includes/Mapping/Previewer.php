@@ -99,6 +99,18 @@ final class Previewer {
 		$products = $lookups ? new ReadOnlyProductResolver( $this->products, true ) : null;
 		$env      = new MappingEnvironment( $connectionId, $system, $this->taxes, $products );
 
+		$empty = 'customers' === $type ? '' : NothingToSend::reason( $entity, $order );
+		if ( '' !== $empty ) {
+			$errors[] = self::apiError(
+				ErrorCode::Val002,
+				array(
+					'system' => $system,
+					'field'  => __( 'Order lines', 'estasoft-erp-crm-sync-engine' ),
+					'reason' => $empty,
+				)
+			);
+		}
+
 		if ( 'orders' === $type ) {
 			try {
 				$this->taxes->assertBuyerTaxNumber( $connectionId, $order );

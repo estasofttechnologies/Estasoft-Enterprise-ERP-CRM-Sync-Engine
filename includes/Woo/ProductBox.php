@@ -179,26 +179,20 @@ final class ProductBox {
 		if ( ! current_user_can( $this->capability ) ) {
 			return $views;
 		}
-		$count = new \WP_Query(
-			array(
-				'post_type'              => 'product',
-				'post_status'            => array( 'publish', 'draft', 'pending', 'private' ),
-				'fields'                 => 'ids',
-				'posts_per_page'         => 1,
-				'no_found_rows'          => false,
-				'update_post_meta_cache' => false,
-				'update_post_term_cache' => false,
-				'meta_query'             => $this->notMatchedQuery(), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- an admin-only count of products that need attention.
-			)
-		);
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- a read-only list filter.
-		$active                           = isset( $_GET[ self::FILTER ] ) && 'not_matched' === sanitize_key( wp_unslash( $_GET[ self::FILTER ] ) );
+		$active = isset( $_GET[ self::FILTER ] ) && 'not_matched' === sanitize_key( wp_unslash( $_GET[ self::FILTER ] ) );
+
+		// The count is the number of results of the filtered list the page has just run, so no query is added; the link is a plain link
+		// until the filter is used.
+		$main  = $GLOBALS['wp_query'] ?? null;
+		$count = $active && $main instanceof \WP_Query ? sprintf( ' <span class="count">(%s)</span>', esc_html( number_format_i18n( (int) $main->found_posts ) ) ) : '';
+
 		$views['estasoft_sync_unmatched'] = sprintf(
-			'<a href="%1$s"%2$s>%3$s <span class="count">(%4$s)</span></a>',
+			'<a href="%1$s"%2$s>%3$s%4$s</a>',
 			esc_url( add_query_arg( self::FILTER, 'not_matched', admin_url( 'edit.php?post_type=product' ) ) ),
 			$active ? ' class="current" aria-current="page"' : '',
 			esc_html__( 'Not matched', 'estasoft-erp-crm-sync-engine' ),
-			esc_html( number_format_i18n( (int) $count->found_posts ) )
+			$count
 		);
 		return $views;
 	}

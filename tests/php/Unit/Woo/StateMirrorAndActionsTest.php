@@ -12,7 +12,9 @@ namespace Estasoft\SyncEngine\Tests\Unit\Woo;
 use Estasoft\SyncEngine\Tests\Support\WooRecordingQueue;
 use Estasoft\SyncEngine\Tests\Unit\Mapping\Fakes\RecordingLog;
 use Estasoft\SyncEngine\Woo\OrderActions;
+use Estasoft\SyncEngine\Woo\OrderEligibility;
 use Estasoft\SyncEngine\Woo\OrderMeta;
+use Estasoft\SyncEngine\Woo\ProductMeta;
 use Estasoft\SyncEngine\Woo\StateMirror;
 
 final class StateMirrorAndActionsTest extends WooTestCase {
@@ -127,7 +129,7 @@ final class StateMirrorAndActionsTest extends WooTestCase {
 	}
 
 	private function actions(): OrderActions {
-		return new OrderActions( $this->queue, $this->mirror );
+		return new OrderActions( $this->queue, $this->mirror, new OrderEligibility( new ProductMeta() ) );
 	}
 
 	public function test_sync_again_asks_the_queue_to_send_the_latest_data(): void {
@@ -188,5 +190,35 @@ final class StateMirrorAndActionsTest extends WooTestCase {
 	public function test_an_unknown_action_is_a_failure(): void {
 		$this->assertSame( 'failed', $this->actions()->perform( 'delete_everything', $this->order( 10490 ) ) );
 		$this->assertSame( array(), $this->queue->calls );
+	}
+
+	public function test_send_and_sync_again_refuse_a_draft_or_an_unsaved_order(): void {
+		foreach ( array( 'auto-draft', 'checkout-draft', 'trash' ) as $status ) {
+			$order = $this->order( 10490, array( 'status' => $status ) );
+			$this->assertSame( 'unsaved', $this->actions()->perform( 'send', $order ), $status );
+			$this->assertSame( 'unsaved', $this->actions()->perform( 'sync_again', $order ), $status );
+		}
+		$this->assertSame( array(), $this->queue->calls, 'The same checks as the hooks: nothing is queued.' );
+	}
+
+	public function test_send_and_sync_again_refuse_an_order_of_only_excluded_products(): void {
+		$gift  = $this->product( 700, array( 'sku' => 'GIFT' ), array( ProductMeta::EXCLUDE => 'yes' ) );
+		$order = $this->order( 10490, array(), array( 'line_item' => array( $this->line( $gift ) ) ) );
+		$this->assertSame( 'excluded', $this->actions()->perform( 'send', $order ) );
+		$this->assertSame( 'excluded', $this->actions()->perform( 'sync_again', $order ) );
+		$this->assertSame( array(), $this->queue->calls );
+	}
+
+	public function test_send_accepts_an_order_with_some_excluded_products(): void {
+		$gift  = $this->product( 700, array( 'sku' => 'GIFT' ), array( ProductMeta::EXCLUDE => 'yes' ) );
+		$bowl  = $this->product( 701, array( 'sku' => 'BOWL' ) );
+		$order = $this->order( 10490, array(), array( 'line_item' => array( $this->line( $gift ), $this->line( $bowl ) ) ) );
+		$this->assertSame( 'queued', $this->actions()->perform( 'send', $order ) );
+	}
+
+	public function test_retry_skip_and_restore_do_not_need_the_order_to_pass_the_checks(): void {
+		$order = $this->order( 10490, array( 'status' => 'trash' ), array(), array( OrderMeta::STATE => 'failed' ) );
+		$this->queue->addOrderItem( 8, 10490, 'failed' );
+		$this->assertSame( 'retried', $this->actions()->perform( 'retry', $order ) );
 	}
 }

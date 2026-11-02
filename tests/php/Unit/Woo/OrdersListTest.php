@@ -9,17 +9,17 @@ declare(strict_types=1);
 
 namespace Estasoft\SyncEngine\Tests\Unit\Woo;
 
-use Estasoft\SyncEngine\Tests\Support\WooFixedClock;
 use Estasoft\SyncEngine\Tests\Support\WooRecordingQueue;
 use Estasoft\SyncEngine\Tests\Support\WooRegistry;
 use Estasoft\SyncEngine\Tests\Unit\Mapping\Fakes\RecordingLog;
 use Estasoft\SyncEngine\Woo\ActionNotices;
 use Estasoft\SyncEngine\Woo\OrderActions;
+use Estasoft\SyncEngine\Woo\OrderEligibility;
 use Estasoft\SyncEngine\Woo\OrderMeta;
 use Estasoft\SyncEngine\Woo\OrdersList;
+use Estasoft\SyncEngine\Woo\ProductMeta;
 use Estasoft\SyncEngine\Woo\StateChip;
 use Estasoft\SyncEngine\Woo\StateMirror;
-use Estasoft\SyncEngine\Woo\TimeLabel;
 
 final class OrdersListTest extends WooTestCase {
 
@@ -31,11 +31,9 @@ final class OrdersListTest extends WooTestCase {
 		$this->queue = new WooRecordingQueue();
 		$orders      = new OrderMeta();
 		$this->list  = new OrdersList(
-			$this->queue,
 			$orders,
-			new OrderActions( $this->queue, new StateMirror( $orders, $this->queue, new RecordingLog() ) ),
+			new OrderActions( $this->queue, new StateMirror( $orders, $this->queue, new RecordingLog() ), new OrderEligibility( new ProductMeta() ) ),
 			new StateChip(),
-			new TimeLabel( new WooFixedClock( '2026-11-02 11:45:00' ) ),
 			'estasoft_sync_manage'
 		);
 	}
@@ -63,12 +61,10 @@ final class OrdersListTest extends WooTestCase {
 		}
 	}
 
-	public function test_the_cell_of_a_retrying_order_shows_the_next_try(): void {
+	public function test_the_cell_of_a_retrying_order_says_retrying(): void {
 		$order = $this->order( 10489, array(), array(), array( OrderMeta::STATE => 'retrying' ) );
-		$this->queue->addOrderItem( 3, 10489, 'retrying', array( 'next_attempt_at' => '2026-11-02T11:41:00Z' ) );
-		$html = $this->list->cell( $order );
+		$html  = $this->list->cell( $order );
 		$this->assertStringContainsString( 'Retrying', $html );
-		$this->assertStringContainsString( 'Today 11:41', $html );
 	}
 
 	public function test_the_cell_of_an_order_never_queued_is_a_dash_with_a_reading_for_screen_readers(): void {
@@ -158,15 +154,44 @@ final class OrdersListTest extends WooTestCase {
 		$this->assertStringContainsString( 'class="current" aria-current="page"', $views['estasoft_sync_failed'] );
 		$this->assertStringNotContainsString( 'current', $views['estasoft_sync_waiting'] );
 		$this->assertStringContainsString( 'estasoft_sync_state=waiting', $views['estasoft_sync_waiting'] );
-		$this->assertCount( 4, WooRegistry::$orderQueries );
+		$this->assertCount( 5, WooRegistry::$orderQueries, 'Failed, waiting, skipped, every order, and orders with any state.' );
 		$this->assertSame( 1, WooRegistry::$orderQueries[0]['limit'], 'Counting asks for one row and the total.' );
 	}
 
-	public function test_counts_are_kept_for_a_minute(): void {
+	public function test_orders_not_synced_yet_are_counted_without_asking_for_a_missing_meta_key(): void {
+		WooRegistry::$ordersResult = (object) array( 'total' => 5 );
+		$this->list->addViews( array() );
+		foreach ( WooRegistry::$orderQueries as $query ) {
+			foreach ( $query['meta_query'] ?? array() as $clause ) {
+				$this->assertNotSame( 'NOT EXISTS', $clause['compare'], 'NOT EXISTS makes the database look at every order.' );
+			}
+		}
+		$stored = WooRegistry::$transients['estasoft_sync_order_view_counts'];
+		$this->assertSame( 0, $stored['not_synced'], 'Every order minus the orders that have a state.' );
+	}
+
+	public function test_counts_are_kept_for_five_minutes(): void {
 		WooRegistry::$ordersResult = (object) array( 'total' => 5 );
 		$this->list->addViews( array() );
 		$this->list->addViews( array() );
-		$this->assertCount( 4, WooRegistry::$orderQueries, 'The second call used the stored counts.' );
+		$this->assertCount( 5, WooRegistry::$orderQueries, 'The second call used the stored counts.' );
+		$this->assertSame( 300, WooRegistry::$transientTtls['estasoft_sync_order_view_counts'] );
+	}
+
+	public function test_a_bulk_action_clears_the_stored_counts(): void {
+		WooRegistry::$ordersResult = (object) array( 'total' => 5 );
+		$this->list->addViews( array() );
+		$this->assertArrayHasKey( 'estasoft_sync_order_view_counts', WooRegistry::$transients );
+		$this->list->handleBulkActions( 'https://example.test/wp-admin/admin.php?page=wc-orders', 'estasoft_sync_retry', array() );
+		$this->assertArrayNotHasKey( 'estasoft_sync_order_view_counts', WooRegistry::$transients );
+	}
+
+	public function test_a_page_of_orders_asks_the_queue_nothing(): void {
+		foreach ( array( 'queued', 'retrying', 'failed', 'synced' ) as $position => $state ) {
+			$this->list->cell( $this->order( 100 + $position, array(), array(), array( OrderMeta::STATE => $state ) ) );
+		}
+		$this->assertSame( array(), $this->queue->calls );
+		$this->assertSame( 0, $this->queue->lookups, 'No queue query per row.' );
 	}
 
 	public function test_bulk_actions_are_offered_to_people_who_may_use_them(): void {

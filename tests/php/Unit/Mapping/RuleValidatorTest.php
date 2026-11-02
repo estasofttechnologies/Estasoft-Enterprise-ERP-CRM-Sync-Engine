@@ -178,11 +178,62 @@ final class RuleValidatorTest extends TestCase {
 					),
 					'required'   => true,
 					'error_code' => 'SYNC-MAP-003',
-					'when'       => array( 'source' => 'customer.is_guest', 'equals' => '' ),
+					'when'       => array( 'source' => 'customer.is_guest', 'equals' => 'false' ),
 				),
 			),
 			$clean
 		);
+	}
+
+	public function test_meta_fields_that_look_like_payment_or_visitor_data_are_refused_on_save(): void {
+		foreach ( array( '_stripe_source_id', '_payment_token', '_paypal_transaction_secret', '_card_last4', '_customer_ip_address', '_wc_stripe_intent', '_nonce', 'api_key', '_cvv' ) as $key ) {
+			$this->assertSame(
+				array( 'bad:source:source_blocked' ),
+				$this->problems( array( Presets::rule( 'bad', 'partner.name', 'meta.' . $key ) ) ),
+				$key
+			);
+		}
+		$this->assertSame(
+			array( 'bad:when:when_blocked' ),
+			$this->problems( array( Presets::rule( 'bad', 'partner.name', 'billing.first_name', array(), false, null, array( 'source' => 'meta._payment_token', 'equals' => 'x' ) ) ) )
+		);
+	}
+
+	public function test_ordinary_meta_fields_are_still_allowed(): void {
+		foreach ( array( '_gift_message', '_billing_vat_number', '_delivery_slot', '_discard_reason', '_pan_number', 'order_comments' ) as $key ) {
+			$this->assertSame( array(), $this->problems( array( Presets::rule( 'ok', 'partner.name', 'meta.' . $key ) ) ), $key );
+		}
+	}
+
+	public function test_the_blocked_words_can_be_changed_with_a_filter(): void {
+		$this->assertTrue( \Estasoft\SyncEngine\Mapping\Support\MetaKeyPolicy::isBlocked( '_gift_card_pin' ), 'card is a blocked word.' );
+		$this->assertFalse( \Estasoft\SyncEngine\Mapping\Support\MetaKeyPolicy::isBlocked( '_carded' ), 'Only whole words count.' );
+		$this->assertTrue( \Estasoft\SyncEngine\Mapping\Support\MetaKeyPolicy::isBlocked( '_WC_Stripe_Customer' ), 'Case does not matter.' );
+	}
+
+	public function test_inbound_rules_may_read_any_field_of_the_connected_system(): void {
+		$problems = $this->engine()->validate( array( Presets::rule( 'q', 'product.stock_quantity', 'meta._token_balance' ) ), array(), false );
+		$this->assertSame( array(), $problems, 'The deny-list protects WooCommerce data; an inbound rule reads the other system.' );
+	}
+
+	public function test_a_yes_no_condition_is_stored_the_way_the_canonical_model_writes_it(): void {
+		$clean = ( new RuleSanitizer() )->clean(
+			array(
+				array( 'id' => 'a', 'target' => 't', 'source' => 'billing.email', 'when' => array( 'source' => 'order.payment.is_cod', 'equals' => true ) ),
+				array( 'id' => 'b', 'target' => 't', 'source' => 'billing.email', 'when' => array( 'source' => 'order.payment.is_cod', 'equals' => false ) ),
+				array( 'id' => 'c', 'target' => 't', 'source' => 'billing.email', 'when' => array( 'source' => 'order.payment.is_cod', 'equals' => 'true' ) ),
+			)
+		);
+		$this->assertSame( array( 'true', 'false', 'true' ), array( $clean[0]['when']['equals'], $clean[1]['when']['equals'], $clean[2]['when']['equals'] ) );
+
+		$engine = $this->engine();
+		$rules  = $clean;
+		$cod    = new \Estasoft\SyncEngine\Mapping\CanonicalOrder( array( 'billing' => array( 'email' => 'a@b.test' ), 'order' => array( 'payment' => array( 'is_cod' => true ) ) ) );
+		$paid   = new \Estasoft\SyncEngine\Mapping\CanonicalOrder( array( 'billing' => array( 'email' => 'a@b.test' ), 'order' => array( 'payment' => array( 'is_cod' => false ) ) ) );
+		$this->assertSame( array( 'a@b.test' ), array( $engine->apply( array( $rules[0] ), $cod )->payload['t'] ), 'A condition on true matches a cash-on-delivery order.' );
+		$this->assertSame( array(), $engine->apply( array( $rules[0] ), $paid )->payload );
+		$this->assertSame( array( 'a@b.test' ), array( $engine->apply( array( $rules[1] ), $paid )->payload['t'] ), 'A condition on false matches the others.' );
+		$this->assertSame( array(), $engine->apply( array( $rules[1] ), $cod )->payload );
 	}
 
 	public function test_the_sanitiser_handles_constants_tables_and_limits(): void {

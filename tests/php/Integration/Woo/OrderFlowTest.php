@@ -11,10 +11,12 @@ namespace Estasoft\SyncEngine\Tests\Integration\Woo;
 
 require_once dirname( __DIR__, 2 ) . '/Support/CoreIntegrationTestCase.php';
 require_once dirname( __DIR__, 2 ) . '/Support/WooFakes.php';
+require_once dirname( __DIR__, 2 ) . '/Support/WooFixedGoLive.php';
 
 use Estasoft\SyncEngine\Core\Queue\ItemProcessor;
 use Estasoft\SyncEngine\Core\Queue\Outcome;
 use Estasoft\SyncEngine\Core\Services;
+use Estasoft\SyncEngine\Domain\EntityType;
 use Estasoft\SyncEngine\Domain\ErrorCode;
 use Estasoft\SyncEngine\Mapping\Adapters\CoreConnectionSource;
 use Estasoft\SyncEngine\Mapping\Adapters\CoreEventLog;
@@ -28,8 +30,12 @@ use Estasoft\SyncEngine\Mapping\SkuMatcher;
 use Estasoft\SyncEngine\Mapping\TaxMap;
 use Estasoft\SyncEngine\Mapping\Transforms\TransformRegistry;
 use Estasoft\SyncEngine\Tests\Support\CoreIntegrationTestCase;
+use Estasoft\SyncEngine\Tests\Support\WooFixedGoLive;
 use Estasoft\SyncEngine\Tests\Support\WooRegistry;
 use Estasoft\SyncEngine\Woo\Adapters\CoreQueueGateway;
+use Estasoft\SyncEngine\Woo\GoLive;
+use Estasoft\SyncEngine\Woo\OrderActions;
+use Estasoft\SyncEngine\Woo\OrderEligibility;
 use Estasoft\SyncEngine\Woo\OrderHooks;
 use Estasoft\SyncEngine\Woo\OrderMeta;
 use Estasoft\SyncEngine\Woo\ProductMeta;
@@ -103,7 +109,7 @@ final class OrderFlowTest extends CoreIntegrationTestCase {
 		$mirror        = new StateMirror( $orders, $this->gateway, $log );
 		$mirror->register();
 		( new QueueDisplay() )->register();
-		$this->hooks = new OrderHooks( $this->gateway, $orders, $products, $mirror, $log, $this->h->clock );
+		$this->hooks = new OrderHooks( $this->gateway, $orders, new OrderEligibility( $products ), $mirror, $log, new GoLive( new WooFixedGoLive( '2026-11-01 08:00:00' ) ) );
 
 		$this->h->connector->script[] = function ( $item, array $payload ): void {
 			$this->sent[] = $payload;
@@ -284,9 +290,55 @@ final class OrderFlowTest extends CoreIntegrationTestCase {
 		$this->h->connector->script[] = function ( $item, array $payload ): void {
 			$this->sent[] = $payload;
 		};
+		$this->assertNotNull( $this->h->state->get( $this->conn, EntityType::Order, '10490' ), 'The first send was remembered.' );
 		$this->assertNotNull( $this->gateway->syncAgain( 10490 ) );
+		$this->assertNull( $this->h->state->get( $this->conn, EntityType::Order, '10490' ), 'Sync again forgot the last-synced hash on the connection that has the order.' );
 		$this->work();
 		$this->assertCount( 1, $this->sent, 'The system received the order again.' );
+	}
+
+	public function test_the_newest_item_of_an_order_is_found_even_when_many_other_orders_share_its_digits(): void {
+		$this->hooks->onClassicCheckout( 10490, array(), $this->order );
+		$target = (int) $this->gateway->latestForOrder( 10490 )['id'];
+		// Forty newer items of other orders whose numbers contain 10490 (a search over text columns matches them all).
+		for ( $i = 0; $i < 40; $i++ ) {
+			$this->h->item( $this->conn, (string) ( 410490 + $i * 1000000 ), 'created', 'order:' . ( 410490 + $i * 1000000 ) );
+		}
+		$found = $this->gateway->latestForOrder( 10490 );
+		$this->assertSame( $target, (int) $found['id'], 'Exactly this order, not a look-alike.' );
+		$this->assertSame( '10490', $found['entity_id'] );
+		$this->assertNull( $this->gateway->latestForOrder( 49 ), 'A number that is only part of other numbers matches nothing.' );
+	}
+
+	public function test_the_newest_of_several_items_of_the_same_order_is_the_one_found(): void {
+		$this->hooks->onClassicCheckout( 10490, array(), $this->order );
+		$this->work();
+		$this->hooks->onPaymentComplete( 10490 );
+		$newest = (int) $this->h->wpdb->get_var( "SELECT MAX(id) FROM {$this->h->tables->queue()} WHERE entity_id = '10490'" ); // phpcs:ignore
+		$this->assertSame( $newest, (int) $this->gateway->latestForOrder( 10490 )['id'] );
+		$this->assertSame( 'paid', $this->gateway->latestForOrder( 10490 )['event'] );
+	}
+
+	public function test_an_order_made_outside_checkout_after_go_live_reaches_the_other_system_on_its_first_status_change(): void {
+		$admin                = $this->placeOrder( 10492 );
+		$admin->props['date_created'] = new \DateTimeImmutable( '2026-11-05 09:00:00', new \DateTimeZone( 'UTC' ) );
+		$this->hooks->onStatusChanged( 10492, 'pending', 'processing', $admin );
+		$this->assertSame( 'queued', $admin->meta[ OrderMeta::STATE ] );
+		$this->assertSame( 'created', $this->gateway->latestForOrder( 10492 )['event'] );
+		$this->assertSame( Outcome::Synced, $this->work() );
+		$this->assertSame( 'synced', $admin->meta[ OrderMeta::STATE ] );
+	}
+
+	public function test_an_order_placed_before_go_live_is_not_queued_but_can_be_sent_by_hand(): void {
+		$old                       = $this->placeOrder( 10493 );
+		$old->props['date_created'] = new \DateTimeImmutable( '2026-10-20 09:00:00', new \DateTimeZone( 'UTC' ) );
+		$this->hooks->onStatusChanged( 10493, 'pending', 'processing', $old );
+		$this->hooks->onPaymentComplete( 10493 );
+		$this->assertNull( $this->gateway->latestForOrder( 10493 ), 'Placed before go-live: not sent.' );
+
+		$actions = new OrderActions( $this->gateway, new StateMirror( new OrderMeta(), $this->gateway, new CoreEventLog( $this->h->logger ) ), new OrderEligibility( new ProductMeta() ) );
+		$this->assertSame( 'queued', $actions->perform( 'send', $old ), 'A person can send it by hand.' );
+		$this->assertSame( 'queued', $old->meta[ OrderMeta::STATE ] );
 	}
 
 	public function test_skipping_from_the_queue_hook_updates_the_order_through_the_generic_hook(): void {

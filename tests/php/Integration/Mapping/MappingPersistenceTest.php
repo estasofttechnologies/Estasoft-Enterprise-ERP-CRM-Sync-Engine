@@ -10,7 +10,9 @@ declare(strict_types=1);
 namespace Estasoft\SyncEngine\Tests\Integration\Mapping;
 
 require_once dirname( __DIR__, 2 ) . '/Support/CoreIntegrationTestCase.php';
+require_once dirname( __DIR__, 2 ) . '/Unit/Mapping/Fakes/FakeConnector.php';
 
+use Estasoft\SyncEngine\Contract\ConnectorRegistry;
 use Estasoft\SyncEngine\Mapping\Adapters\CoreConnectionSource;
 use Estasoft\SyncEngine\Mapping\Adapters\CoreEventLog;
 use Estasoft\SyncEngine\Mapping\Adapters\CoreIdMapStore;
@@ -24,6 +26,7 @@ use Estasoft\SyncEngine\Mapping\SkuMatcher;
 use Estasoft\SyncEngine\Mapping\TaxMap;
 use Estasoft\SyncEngine\Mapping\Transforms\TransformRegistry;
 use Estasoft\SyncEngine\Tests\Support\CoreIntegrationTestCase;
+use Estasoft\SyncEngine\Tests\Unit\Mapping\Fakes\FakeConnector;
 
 final class MappingPersistenceTest extends CoreIntegrationTestCase {
 
@@ -35,12 +38,19 @@ final class MappingPersistenceTest extends CoreIntegrationTestCase {
 		parent::setUp();
 		$this->conn = $this->h->connection();
 		$this->store = new CoreMappingStore( $this->h->mappings );
+
+		// The harness connector offers no fields, and a mapping that cannot be checked is not published; this one offers the fields the rules write.
+		$connector                    = new FakeConnector();
+		$connector->fields['orders'] = array(
+			array( 'path' => 'partner.name', 'label' => 'Name', 'type' => 'text', 'required' => false, 'group' => 'Partner' ),
+			array( 'path' => 'partner.phone', 'label' => 'Phone', 'type' => 'text', 'required' => false, 'group' => 'Partner' ),
+		);
 		$this->service = new MappingService(
 			$this->store,
 			new RuleEngine( TransformRegistry::standard() ),
 			new RuleSanitizer(),
 			new CoreConnectionSource( $this->h->connections ),
-			$this->h->registry,
+			new ConnectorRegistry( array( $connector ) ),
 			new CanonicalFields(),
 			new CoreEventLog( $this->h->logger )
 		);
@@ -81,6 +91,25 @@ final class MappingPersistenceTest extends CoreIntegrationTestCase {
 		} finally {
 			$this->assertNull( $this->store->live( $this->conn, 'orders' ) );
 			$this->assertNotNull( $this->store->draft( $this->conn, 'orders' ) );
+		}
+	}
+
+	public function test_publishing_is_refused_when_the_connector_cannot_describe_its_fields(): void {
+		$bare = new MappingService(
+			$this->store,
+			new RuleEngine( TransformRegistry::standard() ),
+			new RuleSanitizer(),
+			new CoreConnectionSource( $this->h->connections ),
+			$this->h->registry,
+			new CanonicalFields(),
+			new CoreEventLog( $this->h->logger )
+		);
+		$bare->saveDraft( $this->conn, 'orders', $this->rules( 'AE' ), null, 'x' );
+		$this->expectException( \Estasoft\SyncEngine\Mapping\RuleValidationException::class );
+		try {
+			$bare->publish( $this->conn, 'orders', 'x' );
+		} finally {
+			$this->assertNull( $this->store->live( $this->conn, 'orders' ), 'Nothing went live without a field list to check against.' );
 		}
 	}
 

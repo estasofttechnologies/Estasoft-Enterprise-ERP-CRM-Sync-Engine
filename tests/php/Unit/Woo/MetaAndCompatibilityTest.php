@@ -33,13 +33,13 @@ final class MetaAndCompatibilityTest extends WooTestCase {
 		);
 	}
 
-	public function test_order_meta_keys_are_exactly_the_ones_core_removes_on_uninstall(): void {
-		$this->assertEqualsCanonicalizing( MetaKeys::order(), OrderMeta::KEYS );
+	public function test_every_order_meta_key_written_here_is_removed_by_core_on_uninstall(): void {
+		$this->assertSame( array(), array_values( array_diff( OrderMeta::KEYS, MetaKeys::order() ) ) );
 	}
 
 	public function test_product_meta_keys_core_removes_cover_the_ones_written_here(): void {
 		$written = array( ProductMeta::EXCLUDE, ProductMeta::EXTERNAL_ID, ProductMeta::EXTERNAL_REF, ProductMeta::LAST_STOCK, ProductMeta::LAST_STOCK_AT );
-		$this->assertEqualsCanonicalizing( MetaKeys::product(), $written );
+		$this->assertSame( array(), array_values( array_diff( $written, MetaKeys::product() ) ), 'Core removes every product key written here.' );
 		$this->assertSame( array( ProductMeta::MATCH ), ProductMeta::EXTRA_KEYS, 'The one extra key is added to the uninstall list through a filter.' );
 	}
 

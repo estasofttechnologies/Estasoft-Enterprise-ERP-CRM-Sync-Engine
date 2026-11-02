@@ -146,6 +146,16 @@ final class RuleEngine {
 		$sourceValues = $this->sourceValues( $rule, $order );
 		$rows         = $this->rowCount( $rule, $sourceValues, $target );
 
+		if ( 0 === $rows ) {
+			// A list rule with nothing to run over: its source list is empty (a required rule fails), or it only holds constants and no earlier rule made rows for it.
+			if ( $rule->required && $rule->sourceFansOut() ) {
+				$failure = MappingException::requiredMissing( $rule->code() ?? ErrorCode::Val002, $rule->id, $rule->target, $context->messageContext() );
+				throw $failure;
+			}
+			$diagnostics->note( $rule->id, $rule->target, __( 'No rows, so the field is left out.', 'estasoft-erp-crm-sync-engine' ) );
+			return false;
+		}
+
 		if ( null === $rows ) {
 			$plain = $this->plain( $rule, $sourceValues );
 			$value = $this->pipeline( $rule, $plain, $context );
@@ -196,7 +206,9 @@ final class RuleEngine {
 
 	/**
 	 * Number of rows when the rule is a list rule (list target), or null for a single-value rule. A list rule whose sources are all single
-	 * values is applied to every row an earlier rule already created in that list, or to one new row when there is none.
+	 * values is applied to every row an earlier rule already created in that list, or to one new row when there is none. A rule that only
+	 * holds a constant never makes a row of its own: with no rows made by earlier rules it writes nothing, so a list never starts with a
+	 * row that has nothing but a fixed value in it.
 	 *
 	 * @param Rule             $rule         Rule.
 	 * @param array<int,mixed> $sourceValues Values read.
@@ -206,7 +218,8 @@ final class RuleEngine {
 		if ( ! $rule->targetIsList() ) {
 			return null;
 		}
-		$rows = $rule->sourceFansOut() ? 0 : max( 1, $target->rows( $rule->target ) );
+		$existing = $target->rows( $rule->target );
+		$rows     = $rule->sourceFansOut() ? 0 : ( $rule->isConstant ? $existing : max( 1, $existing ) );
 		foreach ( $rule->sources as $position => $path ) {
 			if ( CanonicalOrder::fansOut( $path ) && is_array( $sourceValues[ $position ] ) ) {
 				$rows = max( $rows, count( $sourceValues[ $position ] ) );

@@ -13,7 +13,9 @@ use Estasoft\SyncEngine\Domain\EntityType;
 use Estasoft\SyncEngine\Mapping\CanonicalOrder;
 use Estasoft\SyncEngine\Mapping\Ports\CanonicalSource;
 use Estasoft\SyncEngine\Mapping\Ports\SourceNotFoundException;
+use Estasoft\SyncEngine\Mapping\Support\MetaKeyPolicy;
 use Estasoft\SyncEngine\Mapping\Support\MinorUnits;
+use Estasoft\SyncEngine\Mapping\Support\TaxNumber;
 use Estasoft\SyncEngine\Mapping\Support\Text;
 
 defined( 'ABSPATH' ) || exit;
@@ -21,7 +23,11 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Uses the CRUD layer only (wc_get_order, getters, get_meta); no SQL on posts, post meta or the order tables. Money becomes integer
  * minor units with the order currency's exponent. Card data is never read: only the transaction id and the last four digits, if a
- * gateway keeps them in a known meta key. Lines of products marked "Exclude from syncing" are left out.
+ * gateway keeps them in a known meta key. Lines of products marked "Exclude from syncing" are left out of lines[] and of refund.lines[];
+ * order.total and the other order totals stay the WooCommerce figures, and order.excluded_total / order.excluded_tax say how much of
+ * them belongs to the left-out lines, so a total in the other system is order.total minus order.excluded_total. A refund carries the
+ * same split (refund.excluded_amount, refund.shipping_amount, refund.other_amount). Store fields (meta.<key>) that look like payment,
+ * card, password or visitor data are never returned (MetaKeyPolicy).
  */
 final class WooOrderReader implements CanonicalSource {
 
@@ -91,6 +97,7 @@ final class WooOrderReader implements CanonicalSource {
 		$currency = (string) $order->get_currency();
 		$exponent = MinorUnits::exponent( $currency );
 		$rates    = $this->ratePercents( $order );
+		$excluded = $this->excludedLines( $order, $exponent );
 
 		$customerId = (int) $order->get_customer_id();
 		$methodId   = (string) $order->get_payment_method();
@@ -110,7 +117,10 @@ final class WooOrderReader implements CanonicalSource {
 				'discount_total'   => $this->minor( $order->get_discount_total(), $exponent ),
 				'shipping_total'   => $this->minor( $order->get_shipping_total(), $exponent ),
 				'tax_total'        => $this->minor( $order->get_total_tax(), $exponent ),
-				'buyer_tax_number' => $this->firstMeta( $order, (array) apply_filters( 'estasoft_sync_buyer_tax_number_keys', self::TAX_NUMBER_KEYS ) ),
+				'excluded_count'   => $excluded['count'],
+				'excluded_total'   => $excluded['total'],
+				'excluded_tax'     => $excluded['tax'],
+				'buyer_tax_number' => $this->taxNumber( $order ),
 				'payment'          => array(
 					'method_id'      => $methodId,
 					'method_title'   => (string) $order->get_payment_method_title(),
@@ -184,27 +194,49 @@ final class WooOrderReader implements CanonicalSource {
 		$parent   = $this->loadOrder( (int) $object->get_parent_id() );
 		$exponent = MinorUnits::exponent( (string) $parent->get_currency() );
 
-		$lines = array();
+		$lines      = array();
+		$linesGross = 0;
+		$excluded   = 0;
 		foreach ( $object->get_items( 'line_item' ) as $item ) {
 			if ( ! $item instanceof \WC_Order_Item_Product ) {
 				continue;
 			}
 			$product = $item->get_product();
-			$lines[] = array(
+			$net     = abs( $this->minor( $item->get_total(), $exponent ) );
+			$tax     = abs( $this->minor( $item->get_total_tax(), $exponent ) );
+			if ( $product instanceof \WC_Product && $this->products->isExcluded( $product ) ) {
+				$excluded += $net + $tax;
+				continue;
+			}
+			$linesGross += $net + $tax;
+			$lines[]     = array(
 				'sku'      => $product instanceof \WC_Product ? (string) $product->get_sku() : '',
 				'quantity' => $this->quantity( abs( (float) $item->get_quantity() ) ),
-				'amount'   => abs( $this->minor( $item->get_total(), $exponent ) ),
+				'amount'   => $net,
+				'tax'      => $tax,
 			);
 		}
 
+		$shipping = 0;
+		foreach ( $object->get_items( 'shipping' ) as $item ) {
+			if ( $item instanceof \WC_Order_Item_Shipping ) {
+				$shipping += abs( $this->minor( $item->get_total(), $exponent ) ) + abs( $this->minor( $item->get_total_tax(), $exponent ) );
+			}
+		}
+		$amount = abs( $this->minor( $object->get_amount(), $exponent ) );
+
 		$data           = $this->order( $parent, $metaKeys );
 		$data['refund'] = array(
-			'id'         => (int) $object->get_id(),
-			'order_id'   => (int) $parent->get_id(),
-			'amount'     => abs( $this->minor( $object->get_amount(), $exponent ) ),
-			'reason'     => (string) $object->get_reason(),
-			'created_at' => $this->iso( $object->get_date_created() ),
-			'lines'      => $lines,
+			'id'              => (int) $object->get_id(),
+			'order_id'        => (int) $parent->get_id(),
+			'amount'          => $amount,
+			'reason'          => (string) $object->get_reason(),
+			'created_at'      => $this->iso( $object->get_date_created() ),
+			'lines'           => $lines,
+			// What the lines above do not explain: refunded shipping, the part that belongs to excluded products, and the rest (fees, rounding, a manual amount).
+			'shipping_amount' => $shipping,
+			'excluded_amount' => $excluded,
+			'other_amount'    => max( 0, $amount - $linesGross - $shipping - $excluded ),
 		);
 		return $data;
 	}
@@ -295,6 +327,51 @@ final class WooOrderReader implements CanonicalSource {
 			);
 		}
 		return $lines;
+	}
+
+	/**
+	 * What the left-out product lines add up to.
+	 *
+	 * @param \WC_Order $order    Order.
+	 * @param int       $exponent Currency exponent.
+	 * @return array{count:int,total:int,tax:int} Number of lines, their total with tax, and the tax in it (minor units).
+	 */
+	private function excludedLines( \WC_Order $order, int $exponent ): array {
+		$found = array(
+			'count' => 0,
+			'total' => 0,
+			'tax'   => 0,
+		);
+		foreach ( $order->get_items( 'line_item' ) as $item ) {
+			if ( ! $item instanceof \WC_Order_Item_Product ) {
+				continue;
+			}
+			$product = $item->get_product();
+			if ( ! $product instanceof \WC_Product || ! $this->products->isExcluded( $product ) ) {
+				continue;
+			}
+			$tax            = $this->minor( $item->get_total_tax(), $exponent );
+			$found['count'] = $found['count'] + 1;
+			$found['total'] = $found['total'] + $this->minor( $item->get_total(), $exponent ) + $tax;
+			$found['tax']   = $found['tax'] + $tax;
+		}
+		return $found;
+	}
+
+	/**
+	 * The buyer's tax number in its plain form (see TaxNumber), from the first key that holds one.
+	 *
+	 * @param \WC_Order $order Order.
+	 */
+	private function taxNumber( \WC_Order $order ): string {
+		foreach ( (array) apply_filters( 'estasoft_sync_buyer_tax_number_keys', self::TAX_NUMBER_KEYS ) as $key ) {
+			$value = $order->get_meta( (string) $key, true );
+			$plain = is_scalar( $value ) ? TaxNumber::normalise( (string) $value ) : '';
+			if ( '' !== $plain ) {
+				return $plain;
+			}
+		}
+		return '';
 	}
 
 	/**
@@ -441,7 +518,7 @@ final class WooOrderReader implements CanonicalSource {
 		}
 		$meta = array();
 		foreach ( $metaKeys as $key ) {
-			if ( 1 !== preg_match( '/^[A-Za-z0-9_\-]+$/', $key ) ) {
+			if ( 1 !== preg_match( '/^[A-Za-z0-9_\-]+$/', $key ) || ! MetaKeyPolicy::isAllowed( $key ) ) {
 				continue;
 			}
 			$value = $holder->get_meta( $key, true );

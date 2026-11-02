@@ -136,7 +136,14 @@ if ( ! function_exists( 'get_transient' ) ) {
 }
 if ( ! function_exists( 'set_transient' ) ) {
 	function set_transient( $name, $value, $ttl = 0 ) { // phpcs:ignore
-		WooRegistry::$transients[ $name ] = $value;
+		WooRegistry::$transients[ $name ]    = $value;
+		WooRegistry::$transientTtls[ $name ] = (int) $ttl;
+		return true;
+	}
+}
+if ( ! function_exists( 'delete_transient' ) ) {
+	function delete_transient( $name ) { // phpcs:ignore
+		unset( WooRegistry::$transients[ $name ] );
 		return true;
 	}
 }

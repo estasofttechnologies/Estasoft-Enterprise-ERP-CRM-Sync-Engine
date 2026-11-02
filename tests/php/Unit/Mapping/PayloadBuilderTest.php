@@ -150,6 +150,56 @@ final class PayloadBuilderTest extends TestCase {
 		$this->assertSame( 'WC-10490', $result->payload['reference'] );
 	}
 
+	/**
+	 * The Dubai order with its lines taken away.
+	 *
+	 * @param array<string,mixed> $overrides More values.
+	 * @return array<string,mixed>
+	 */
+	private function withoutLines( array $overrides = array() ): array {
+		$data          = Orders::dubai( $overrides );
+		$data['lines'] = array();
+		return $data;
+	}
+
+	public function test_an_order_with_no_product_lines_fails_with_one_clear_reason_before_any_rule_runs(): void {
+		$this->source->data['order:10490'] = $this->withoutLines();
+		$result                            = $this->builder()->build( $this->item(), $this->connection );
+		$this->assertFalse( $result->isReady() );
+		$this->assertSame( ErrorCode::Val002, $result->error?->code );
+		$this->assertSame( 'Fake rejected a field: Order lines. The order has no products to send.', $result->error?->message() );
+		$this->assertSame( array(), $this->connector->calls );
+	}
+
+	public function test_an_order_whose_products_were_all_left_out_says_so(): void {
+		$this->source->data['order:10490'] = $this->withoutLines( array( 'order' => array( 'excluded_count' => 2, 'excluded_total' => 12000 ) ) );
+		$result                            = $this->builder()->build( $this->item(), $this->connection );
+		$this->assertSame( ErrorCode::Val002, $result->error?->code );
+		$this->assertStringContainsString( 'Every product on the order is marked Exclude from syncing.', $result->error?->message() ?? '' );
+	}
+
+	public function test_an_order_with_no_lines_never_gets_a_phantom_line_with_only_fixed_values(): void {
+		$this->source->data['order:10490'] = $this->withoutLines();
+		$this->store->versions             = array();
+		$this->store->seedLive( 1, 'orders', array( Presets::rule( 'kind', 'order_line[].kind', array( 'const' => 'product' ) ) ) );
+		$result = $this->builder()->build( $this->item(), $this->connection );
+		$this->assertFalse( $result->isReady() );
+		$this->assertArrayNotHasKey( 'order_line', $result->payload );
+	}
+
+	public function test_a_refund_of_only_left_out_products_has_nothing_to_send_but_a_shipping_refund_does(): void {
+		$this->store->seedLive( 1, 'refunds', array( Presets::rule( 'r', 'reference', 'order.client_ref' ) ) );
+		$refund = array( 'id' => 77, 'order_id' => 10490, 'amount' => 1000, 'lines' => array(), 'shipping_amount' => 0, 'excluded_amount' => 1000, 'other_amount' => 0 );
+
+		$this->source->data['refund:77'] = Orders::dubai( array( 'refund' => $refund ) );
+		$result                          = $this->builder()->build( $this->item( EntityType::Refund, '77' ), $this->connection );
+		$this->assertSame( ErrorCode::Val002, $result->error?->code );
+		$this->assertStringContainsString( 'Every refunded product is marked Exclude from syncing.', $result->error?->message() ?? '' );
+
+		$this->source->data['refund:77'] = Orders::dubai( array( 'refund' => array_merge( $refund, array( 'amount' => 3500, 'shipping_amount' => 2500 ) ) ) );
+		$this->assertTrue( $this->builder()->build( $this->item( EntityType::Refund, '77' ), $this->connection )->isReady(), 'A refund of shipping is a real refund.' );
+	}
+
 	public function test_an_unmatched_sku_stops_the_order_with_map_001(): void {
 		$this->store->versions = array();
 		$this->store->seedLive( 1, 'orders', array( Presets::rule( 'p', 'l[].product', 'lines[].sku', array( Presets::transform( 'sku_match' ) ) ) ) );
