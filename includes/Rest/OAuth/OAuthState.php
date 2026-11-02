@@ -59,6 +59,16 @@ final class OAuthState {
 	}
 
 	/**
+	 * Whether a text has the shape of a state this class makes. This says nothing about whether the state is valid; it only keeps
+	 * requests that could never have come from a sign-in away from the store.
+	 *
+	 * @param mixed $state Value of the `state` parameter.
+	 */
+	public static function wellFormed( mixed $state ): bool {
+		return is_string( $state ) && 1 === preg_match( '/^[A-Za-z0-9_\-]{20,128}$/D', $state );
+	}
+
+	/**
 	 * Look at a state without using it.
 	 *
 	 * @param string $state        State from the callback.
@@ -66,7 +76,7 @@ final class OAuthState {
 	 * @return array{user:int,connection:int,verifier:string,route:string}|null Null when unknown, expired or for another connection.
 	 */
 	public function peek( string $state, int $connectionId ): ?array {
-		if ( 1 !== preg_match( '/^[A-Za-z0-9_\-]{20,128}$/', $state ) ) {
+		if ( ! self::wellFormed( $state ) ) {
 			return null;
 		}
 		$entry = $this->store->get( $this->key( $state ) );

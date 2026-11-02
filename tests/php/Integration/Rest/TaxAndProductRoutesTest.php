@@ -14,7 +14,9 @@ require_once dirname( __DIR__, 2 ) . '/Support/RestIntegrationCase.php';
 use Estasoft\SyncEngine\Contract\ConnectorError;
 use Estasoft\SyncEngine\Contract\ConnectorRegistry;
 use Estasoft\SyncEngine\Contract\ExternalRef;
+use Estasoft\SyncEngine\Core\Repositories\LogQuery;
 use Estasoft\SyncEngine\Core\Services;
+use Estasoft\SyncEngine\Core\Support\ValidationException;
 use Estasoft\SyncEngine\Domain\ErrorCode;
 use Estasoft\SyncEngine\Mapping\SkuMatcher;
 use Estasoft\SyncEngine\Rest\Products\ProductMatchService;
@@ -116,6 +118,82 @@ final class TaxAndProductRoutesTest extends RestIntegrationCase {
 		$this->assertSame( 400, $this->call( 'PUT', '/tax-map', array( 'rows' => array( array( 'country' => 'UAE', 'rate_percent' => 5 ) ) ) )->get_status() );
 		$this->assertSame( 400, $this->call( 'PUT', '/tax-map', array( 'rows' => array( array( 'country' => 'AE', 'rate_percent' => 500 ) ) ) )->get_status() );
 		$this->assertNull( $this->call( 'GET', '/tax-map' )->get_data()['rows'][0]['system_code'] );
+	}
+
+	public function test_a_buyer_rule_without_a_country_is_a_422_with_a_message_for_that_rule_and_nothing_is_saved(): void {
+		$this->taxAssembler();
+		$response = $this->call(
+			'PUT',
+			'/tax-map',
+			array(
+				'rows'            => array( array( 'country' => 'AE', 'tax_name' => 'VAT', 'rate_percent' => 5, 'system_code' => '12' ) ),
+				'buyer_tax_rules' => array( array( 'country' => 'SA', 'digits' => 15 ), array( 'country' => 'SAU' ), array( 'digits' => 9 ) ),
+			)
+		);
+		$this->assertSame( 422, $response->get_status() );
+		$this->assertSame( 'rest_invalid_param', $response->get_data()['code'] );
+		$this->assertSame( array( 'buyer_tax_rules.1.country', 'buyer_tax_rules.2.country' ), array_keys( $response->get_data()['data']['fields'] ) );
+		$this->assertSame( 'Enter a two-letter country code, for example SA.', $response->get_data()['data']['fields']['buyer_tax_rules.1.country'] );
+		$this->assertNull( $this->call( 'GET', '/tax-map' )->get_data()['rows'][0]['system_code'], 'the valid row was not saved either' );
+		$this->assertSame( 0, $this->container->get( Services::LOG_REPOSITORY )->query( new LogQuery( 'error' ) )->toArray()['total'], 'a mistake of the person is not an unexpected failure' );
+	}
+
+	public function test_the_assembler_names_each_wrong_row_before_anything_reaches_the_tax_store(): void {
+		$this->taxAssembler();
+		$assembler = $this->container->get( RestModule::TAX_MAP );
+		try {
+			$assembler->save(
+				$this->conn,
+				array(
+					array( 'country' => 'AE', 'rate_percent' => 5 ),
+					array( 'country' => 'UAE', 'rate_percent' => 5 ),
+					array( 'country' => 'SA', 'rate_percent' => 'abc' ),
+					array( 'country' => 'KW', 'rate_percent' => 100.5 ),
+					array( 'rate_percent' => 5 ),
+				),
+				null,
+				'Test'
+			);
+			$this->fail( 'expected a ValidationException' );
+		} catch ( ValidationException $error ) {
+			$this->assertSame(
+				array( 'rows.1.country', 'rows.2.rate_percent', 'rows.3.rate_percent', 'rows.4.country' ),
+				array_keys( $error->errors() )
+			);
+		}
+		$this->assertNull( $assembler->build( $this->conn )['rows'][0]['system_code'] );
+	}
+
+	public function test_a_connector_that_breaks_while_listing_codes_leaves_the_screen_its_rows_and_the_log_the_class_only(): void {
+		$this->container->instance(
+			RestModule::TAX_MAP,
+			new TaxMapAssembler(
+				$this->container->get( 'mapping.tax_map' ),
+				new class() implements TaxSource {
+					public function shopRates(): array {
+						return array( array( 'country' => 'AE', 'tax_class' => '', 'tax_name' => 'VAT', 'rate_percent' => 5 ) );
+					}
+
+					public function ordersLast30Days(): array {
+						return array();
+					}
+				},
+				new ConnectorTaxCodes(
+					$this->container->get( Services::CONNECTION_REPOSITORY ),
+					$this->container->get( Services::CONNECTOR_REGISTRY ),
+					function ( string $class ): void {
+						$this->container->get( Services::LOGGER )->warning( 'The tax codes of the connected system could not be read: ' . $class );
+					}
+				)
+			)
+		);
+		$this->connector->taxesThrow = new \RuntimeException( 'api_key=hunter2 was refused' );
+		$map                         = $this->call( 'GET', '/tax-map' )->get_data();
+		$this->assertCount( 1, $map['rows'] );
+		$this->assertSame( array(), $map['system_codes'] );
+		$logged = (string) wp_json_encode( $this->container->get( Services::LOG_REPOSITORY )->query( new LogQuery( 'warning' ) )->toArray() );
+		$this->assertStringContainsString( 'could not be read: RuntimeException', $logged );
+		$this->assertStringNotContainsString( 'hunter2', $logged );
 	}
 
 	public function test_a_system_that_cannot_be_reached_still_gives_the_tax_screen_its_rows(): void {

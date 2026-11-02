@@ -164,7 +164,7 @@ final class ControllerBehaviourTest extends RestStubCase {
 		);
 		$this->assertSame( 'SYNC-REST-001', $error->get_error_code() );
 		$this->assertStringNotContainsString( 'abc123', $error->get_error_message() );
-		$this->assertSame( array( 'RuntimeException (code 0)' ), $this->reported );
+		$this->assertSame( array( 'RuntimeException' ), $this->reported );
 	}
 
 	public function test_a_repeated_key_replays_the_first_answer_and_runs_the_handler_once(): void {
@@ -210,6 +210,61 @@ final class ControllerBehaviourTest extends RestStubCase {
 		$controller->handle( $handler, $this->request( 'POST', 'k1', '{"a":1}' ), true );
 		$conflict = $controller->handle( $handler, $this->request( 'POST', 'k1', '{"a":2}' ), true );
 		$this->assertSame( array( 'estasoft_sync_idempotency_conflict', 409 ), array( $conflict->get_error_code(), $conflict->get_error_data()['status'] ) );
+	}
+
+	/**
+	 * A request for the idempotency tests.
+	 *
+	 * @param string              $key         Idempotency-Key.
+	 * @param array<string,mixed> $query       Query-string parameters.
+	 * @param array<string,mixed> $routeParams Route parameters.
+	 */
+	private function requestWith( string $key, array $query, array $routeParams = array() ): \WP_REST_Request {
+		$request = $this->request( 'POST', $key );
+		$request->set_query_params( $query );
+		$request->set_url_params( $routeParams );
+		return $request;
+	}
+
+	public function test_the_same_key_with_another_query_or_route_parameter_is_a_conflict_and_never_replays_an_unrelated_answer(): void {
+		$runs       = 0;
+		$handler    = static function () use ( &$runs ): array {
+			++$runs;
+			return array( 'run' => $runs );
+		};
+		$controller = $this->controller( $handler );
+		$controller->handle( $handler, $this->requestWith( 'k1', array( 'connection_id' => '1' ), array( 'id' => '5' ) ), true );
+
+		$otherQuery = $controller->handle( $handler, $this->requestWith( 'k1', array( 'connection_id' => '2' ), array( 'id' => '5' ) ), true );
+		$this->assertSame( array( 'estasoft_sync_idempotency_conflict', 409 ), array( $otherQuery->get_error_code(), $otherQuery->get_error_data()['status'] ) );
+		$extraQuery = $controller->handle( $handler, $this->requestWith( 'k1', array( 'connection_id' => '1', 'dry' => '1' ), array( 'id' => '5' ) ), true );
+		$this->assertSame( 409, $extraQuery->get_error_data()['status'] );
+		$noQuery = $controller->handle( $handler, $this->requestWith( 'k1', array(), array( 'id' => '5' ) ), true );
+		$this->assertSame( 409, $noQuery->get_error_data()['status'] );
+		$otherRoute = $controller->handle( $handler, $this->requestWith( 'k1', array( 'connection_id' => '1' ), array( 'id' => '6' ) ), true );
+		$this->assertSame( 409, $otherRoute->get_error_data()['status'] );
+		$this->assertSame( 1, $runs, 'none of them ran or replayed' );
+	}
+
+	public function test_the_same_key_with_the_same_query_replays_whatever_order_the_parameters_came_in(): void {
+		$runs       = 0;
+		$handler    = static function () use ( &$runs ): array {
+			++$runs;
+			return array( 'run' => $runs );
+		};
+		$controller = $this->controller( $handler );
+		$controller->handle( $handler, $this->requestWith( 'k1', array( 'a' => '1', 'b' => array( 'y' => '2', 'x' => '3' ) ), array( 'id' => '5' ) ), true );
+		$again = $controller->handle( $handler, $this->requestWith( 'k1', array( 'b' => array( 'x' => '3', 'y' => '2' ), 'a' => '1' ), array( 'id' => '5' ) ), true );
+		$this->assertSame( 'true', $again->get_headers()['Idempotent-Replayed'] );
+		$this->assertSame( 1, $runs );
+	}
+
+	public function test_two_queries_that_run_together_into_the_same_text_are_still_different(): void {
+		$handler    = static fn(): array => array();
+		$controller = $this->controller( $handler );
+		$controller->handle( $handler, $this->requestWith( 'k1', array( 'a' => '1', 'b' => '2' ) ), true );
+		$other = $controller->handle( $handler, $this->requestWith( 'k1', array( 'a' => '12' ) ), true );
+		$this->assertSame( 409, $other->get_error_data()['status'] );
 	}
 
 	public function test_a_failed_first_try_is_not_replayed(): void {

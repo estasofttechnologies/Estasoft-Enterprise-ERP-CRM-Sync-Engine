@@ -252,9 +252,10 @@ final class Commands {
 	 */
 	public function retry( array $args, array $assoc_args ): void {
 		unset( $args );
-		$code  = isset( $assoc_args['code'] ) ? trim( (string) $assoc_args['code'] ) : '';
-		$cause = isset( $assoc_args['cause'] ) ? trim( (string) $assoc_args['cause'] ) : '';
-		$ids   = isset( $assoc_args['ids'] ) ? $this->ids( (string) $assoc_args['ids'] ) : array();
+		$code  = trim( $this->textOption( $assoc_args, 'code' ) ?? '' );
+		$cause = trim( $this->textOption( $assoc_args, 'cause' ) ?? '' );
+		$list  = $this->textOption( $assoc_args, 'ids' );
+		$ids   = null === $list ? array() : $this->ids( $list );
 
 		if ( '' === $code && array() === $ids ) {
 			$this->out->fail( __( 'Give --ids with queue item ids, or --code with an error code such as SYNC-MAP-001.', 'estasoft-erp-crm-sync-engine' ), 2 );
@@ -489,6 +490,31 @@ final class Commands {
 	}
 
 	/**
+	 * The text of an option, or null when it was not given.
+	 *
+	 * WP-CLI hands an option written without a value (`--ids`, `--minutes`) over as `true`, which would read as the text "1". That must
+	 * never mean item 1, a pause of one minute or connection 1, so a value that is not text or a number stops the command with exit code 2.
+	 *
+	 * @param array<string,mixed> $assoc Options.
+	 * @param string              $name  Option name.
+	 * @return string|null
+	 */
+	private function textOption( array $assoc, string $name ): ?string {
+		if ( ! array_key_exists( $name, $assoc ) ) {
+			return null;
+		}
+		$value = $assoc[ $name ];
+		if ( is_string( $value ) || is_int( $value ) || is_float( $value ) ) {
+			return (string) $value;
+		}
+		$this->out->fail(
+			/* translators: %s: option name. */
+			sprintf( __( '--%1$s needs a value, for example --%1$s=<value>.', 'estasoft-erp-crm-sync-engine' ), $name ),
+			2
+		);
+	}
+
+	/**
 	 * A whole-number option inside a range; a value outside the range or not a number stops the command with exit code 2.
 	 *
 	 * @param array<string,mixed> $assoc   Options.
@@ -498,10 +524,11 @@ final class Commands {
 	 * @param int                 $max     Largest allowed.
 	 */
 	private function intOption( array $assoc, string $name, int $default, int $min, int $max ): int {
-		if ( ! isset( $assoc[ $name ] ) ) {
+		$raw = $this->textOption( $assoc, $name );
+		if ( null === $raw ) {
 			return $default;
 		}
-		$raw = trim( (string) $assoc[ $name ] );
+		$raw = trim( $raw );
 		if ( 1 !== preg_match( '/^\d+$/', $raw ) || (int) $raw < $min || (int) $raw > $max ) {
 			$this->out->fail(
 				/* translators: 1: option name, 2: smallest value, 3: largest value. */
@@ -519,7 +546,7 @@ final class Commands {
 	 * @param array<int,string>   $allowed Allowed formats.
 	 */
 	private function format( array $assoc, array $allowed ): string {
-		$format = isset( $assoc['format'] ) ? strtolower( (string) $assoc['format'] ) : 'table';
+		$format = strtolower( $this->textOption( $assoc, 'format' ) ?? 'table' );
 		if ( ! in_array( $format, $allowed, true ) ) {
 			/* translators: %s: the allowed formats. */
 			$this->out->fail( sprintf( __( '--format must be one of: %s.', 'estasoft-erp-crm-sync-engine' ), implode( ', ', $allowed ) ), 2 );

@@ -23,7 +23,6 @@ use Estasoft\SyncEngine\Rest\BaseController;
 use Estasoft\SyncEngine\Rest\OAuth\OAuthState;
 use Estasoft\SyncEngine\Rest\OAuth\SignInConnector;
 use Estasoft\SyncEngine\Rest\RestModule;
-use Estasoft\SyncEngine\Rest\Support\Sanitize;
 
 /**
  * `POST /connections/{id}/oauth/start`, `GET /connections/{id}/oauth/callback` and `GET /connections/{id}/oauth/organisations`.
@@ -32,10 +31,18 @@ use Estasoft\SyncEngine\Rest\Support\Sanitize;
  * a one-time `state` bound to the person and the connection (10 minutes), PKCE, and a callback that checks all of it.
  *
  * The callback is a browser redirect from the provider, which carries the login cookie but no REST nonce, so WordPress treats it as
- * logged out. Its permission callback therefore does not look at the cookie: it accepts a valid, unused `state` that belongs to this
- * connection and to a person who still holds `estasoft_sync_configure`. The state is random, single use and short lived.
+ * logged out. Its permission callback therefore does not look at the cookie: it lets a request through when `state` has the shape of
+ * a state this plugin makes. The decision is made inside the callback, which uses the state up (random, single use, ten minutes) and
+ * checks that it belongs to this connection and to a person who still holds `estasoft_sync_configure`. Whatever goes wrong there, the
+ * browser is sent back to the admin screen with `signin=failed`: it never gets JSON, and a visitor who is not signed in learns nothing
+ * (the same redirect for an unknown, used, expired or foreign state, for a connection that does not exist, and for a failed exchange).
  */
 final class OAuthController extends BaseController {
+
+	/**
+	 * Longest authorisation code accepted from the provider.
+	 */
+	public const MAX_CODE_LENGTH = 2048;
 
 	/**
 	 * Register the routes.
@@ -44,26 +51,21 @@ final class OAuthController extends BaseController {
 		$this->add( '/connections/(?P<id>\d+)/oauth/start', 'POST', self::CONFIGURE, $this->start( ... ), array( 'id' => self::idArg() ), false );
 		$this->add( '/connections/(?P<id>\d+)/oauth/organisations', 'GET', self::CONFIGURE, $this->organisations( ... ), array( 'id' => self::idArg() ) );
 
+		// Only `state` is checked by the schema. The other values are read in callback(), where a wrong one ends in the failed redirect
+		// instead of a JSON complaint that a browser would show as text.
 		$this->add(
 			'/connections/(?P<id>\d+)/oauth/callback',
 			'GET',
 			self::STATE,
 			$this->callback( ... ),
 			array(
-				'id'    => self::idArg(),
+				'id'    => array( 'type' => 'integer' ),
 				'state' => array(
 					'type'     => 'string',
 					'required' => true,
 				),
-				'code'  => array(
-					'type'              => 'string',
-					'maxLength'         => 2048,
-					'sanitize_callback' => array( Sanitize::class, 'document' ),
-				),
-				'error' => array(
-					'type'      => 'string',
-					'maxLength' => 200,
-				),
+				'code'  => array(),
+				'error' => array(),
 			),
 			false,
 			fn( \WP_REST_Request $request ): bool|\WP_Error => $this->authorizeCallback( $request )
@@ -105,47 +107,64 @@ final class OAuthController extends BaseController {
 	 * `GET /connections/{id}/oauth/callback`: finish the sign-in and send the browser back to the admin screen with a result flag
 	 * (`signin=ok`, `signin=cancelled` or `signin=failed`) in the hash route.
 	 *
+	 * The state is used up first, whatever follows, so a link cannot be tried twice. A state that is unknown, used, expired, from another
+	 * connection or of a person who may no longer configure ends in `failed`, and so does any error on the way.
+	 *
 	 * @param \WP_REST_Request $request Request.
 	 */
 	public function callback( \WP_REST_Request $request ): \WP_REST_Response {
-		$id    = (int) $request['id'];
-		$saved = $this->state()->consume( (string) $request->get_param( 'state' ), $id );
-		$route = null === $saved ? '/connections/' . $id : $saved['route'];
-		if ( null === $saved ) {
-			return $this->back( $route, 'failed' );
-		}
-		if ( '' !== (string) $request->get_param( 'error' ) || '' === (string) $request->get_param( 'code' ) ) {
-			return $this->back( $route, 'cancelled' );
-		}
 		try {
-			list( $connection, $connector ) = $this->signInConnector( $id );
-			$done                           = $connector->completeSignIn( $connection, (string) $request->get_param( 'code' ), $this->redirectUri( $id ), $saved['verifier'] );
+			return $this->finishSignIn( $request );
 		} catch ( \Throwable $error ) {
 			$this->errors->map( $error ); // Reports an unexpected failure to the log; the person only sees the result flag.
-			return $this->back( $route, 'failed' );
+			return $this->back( '/connections', 'failed' );
 		}
-		return $this->back( $route, true === $done ? 'ok' : 'failed' );
 	}
 
 	/**
-	 * Permission of the callback: a valid state, for this connection, of a person who may still configure.
+	 * Permission of the callback: the `state` must look like one this plugin makes. Everything else is decided in callback(), because
+	 * a refusal here would be JSON in a browser window.
 	 *
 	 * @param \WP_REST_Request $request Request.
 	 * @return true|\WP_Error
 	 */
 	public function authorizeCallback( \WP_REST_Request $request ): bool|\WP_Error {
-		$saved = $this->state()->peek( (string) $request->get_param( 'state' ), (int) $request['id'] );
-		if ( null !== $saved && user_can( $saved['user'], Capabilities::CONFIGURE ) ) {
+		if ( OAuthState::wellFormed( $request->get_param( 'state' ) ) ) {
 			return true;
 		}
 		return new \WP_Error(
 			'rest_forbidden',
-			__( 'This sign-in link has expired or was already used. Start the sign-in again from Connections.', 'estasoft-erp-crm-sync-engine' ),
+			__( 'You do not have permission to do this.', 'estasoft-erp-crm-sync-engine' ),
 			array(
-				'status' => 403,
+				'status' => rest_authorization_required_code(),
 				'class'  => ErrorClass::NeedsPerson->value,
 			)
 		);
+	}
+
+	/**
+	 * The work of the callback.
+	 *
+	 * @param \WP_REST_Request $request Request.
+	 */
+	private function finishSignIn( \WP_REST_Request $request ): \WP_REST_Response {
+		$id    = (int) $request['id'];
+		$saved = $this->state()->consume( (string) $request->get_param( 'state' ), $id );
+		if ( null === $saved || ! user_can( $saved['user'], Capabilities::CONFIGURE ) ) {
+			return $this->back( '/connections', 'failed' );
+		}
+		$route = $saved['route'];
+		$code  = $request->get_param( 'code' );
+		$error = $request->get_param( 'error' );
+		if ( ( null !== $error && '' !== $error ) || null === $code || '' === $code ) {
+			return $this->back( $route, 'cancelled' ); // The person said no at the provider, or came back without a code.
+		}
+		if ( ! is_string( $code ) || strlen( $code ) > self::MAX_CODE_LENGTH ) {
+			return $this->back( $route, 'failed' );
+		}
+		list( $connection, $connector ) = $this->signInConnector( $id );
+		$done                           = $connector->completeSignIn( $connection, $code, $this->redirectUri( $id ), $saved['verifier'] );
+		return $this->back( $route, true === $done ? 'ok' : 'failed' );
 	}
 
 	/**

@@ -91,6 +91,46 @@ final class AdminChromeTest extends RestIntegrationCase {
 		remove_menu_page( 'woocommerce' );
 	}
 
+	public function test_the_menu_entry_follows_the_rule_of_the_routes_so_a_person_who_may_only_configure_still_sees_the_page(): void {
+		global $submenu;
+		$menu = $this->menu( true, 0 );
+		$this->assertSame( 'estasoft_sync_manage', $this->capabilityFor( $menu, 'administrator' ), 'administrators hold both' );
+		$this->assertSame( 'estasoft_sync_manage', $this->capabilityFor( $menu, 'shop_manager' ) );
+		$this->assertSame( 'estasoft_sync_manage', $this->capabilityFor( $menu, 'subscriber' ), 'no access either way; the entry stays hidden' );
+		$this->assertSame( 'estasoft_sync_manage', $this->capabilityFor( $menu, 'anonymous' ) );
+
+		// A role that was given only the configure capability, as an agency might build one.
+		$user = new \WP_User( $this->userId( 'subscriber' ) );
+		$user->add_cap( 'estasoft_sync_configure' );
+		try {
+			$this->actAs( 'subscriber' );
+			$this->assertFalse( current_user_can( 'estasoft_sync_manage' ) );
+			$this->assertSame( 'estasoft_sync_configure', $menu->capability() );
+			$this->assertSame( 200, $this->call( 'GET', '/status' )->get_status(), 'the routes let this person view' );
+
+			add_menu_page( 'WooCommerce', 'WooCommerce', 'manage_woocommerce', 'woocommerce' );
+			$menu->addPage();
+			$entry = array_values( array_filter( (array) ( $submenu['woocommerce'] ?? array() ), static fn( array $item ): bool => 'estasoft-sync' === $item[2] ) );
+			$this->assertCount( 1, $entry );
+			$this->assertTrue( current_user_can( $entry[0][1] ), 'WordPress would show the entry to this person' );
+			remove_submenu_page( 'woocommerce', 'estasoft-sync' );
+			remove_menu_page( 'woocommerce' );
+		} finally {
+			$user->remove_cap( 'estasoft_sync_configure' );
+		}
+	}
+
+	/**
+	 * The capability the menu entry would be registered with for a kind of person.
+	 *
+	 * @param Menu   $menu Menu.
+	 * @param string $kind administrator, shop_manager, subscriber or anonymous.
+	 */
+	private function capabilityFor( Menu $menu, string $kind ): string {
+		$this->actAs( $kind );
+		return $menu->capability();
+	}
+
 	public function test_no_bubble_when_nothing_failed_and_a_singular_label_for_one(): void {
 		$this->assertSame( '', $this->menu( true, 0 )->bubble() );
 		$this->assertStringContainsString( '1 failed order<', $this->menu( true, 1 )->bubble() );

@@ -8,7 +8,7 @@
 | --- | --- |
 | 0 | The command did what was asked. "Nothing to do" is also 0 and prints a warning (retrying nothing, resuming when nothing was paused), so a cron job does not raise an alarm. A worker that stops on SIGTERM, SIGINT, its item limit or its memory limit also exits 0, so a supervisor restarts it. |
 | 1 | The command failed: nothing could be paused, the connected system could not be read, the comparison did not finish, or `readiness` found a check that needs fixing. |
-| 2 | The arguments are wrong: a number outside its range, an unknown format, a malformed id or error code, `retry` with neither `--ids` nor `--code`. Nothing was done. |
+| 2 | The arguments are wrong: a number outside its range, an unknown format, a malformed id or error code, `retry` with neither `--ids` nor `--code`, or an option written without a value (`--ids`, `--minutes=` or `--connection` alone, which WP-CLI would otherwise pass on as "yes" and which must never mean item 1, one minute or connection 1). Nothing was done. |
 
 ## Commands
 

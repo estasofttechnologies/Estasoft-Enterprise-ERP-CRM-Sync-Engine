@@ -20,8 +20,8 @@ use Estasoft\SyncEngine\Mapping\RuleValidationException;
 
 /**
  * The only place that decides which exception becomes which answer. Failures that a person can act on keep their message;
- * everything else becomes the generic answer and is reported once, with the exception class and nothing else, so a secret
- * that an exception might carry never reaches the answer or the log.
+ * everything else becomes the generic answer SYNC-REST-001 and is reported once to the log, with the exception class and nothing
+ * else (no message, code, file or trace), so a secret that an exception might carry never reaches the answer or the log.
  */
 final class ErrorMapper {
 
@@ -65,13 +65,10 @@ final class ErrorMapper {
 		if ( $error instanceof JobException ) {
 			return $this->job( $error );
 		}
-		if ( $error instanceof \OutOfBoundsException ) {
-			return ApiException::notFound( __( 'That could not be found. It may have been removed.', 'estasoft-erp-crm-sync-engine' ) );
-		}
-		if ( $error instanceof \InvalidArgumentException ) {
-			return ApiException::invalid( $error->getMessage() );
-		}
-		( $this->report )( sprintf( '%1$s (code %2$s)', get_class( $error ), (string) $error->getCode() ) );
+		// Anything else is a fault in the code or the server, however harmless its class sounds (a plain InvalidArgumentException or
+		// OutOfBoundsException could come from any library), so it never becomes a 404 or a 422 and its message never leaves the server.
+		// The cases a person causes are checked before the service is called and raise ApiException or ValidationException.
+		( $this->report )( get_class( $error ) );
 		return ApiException::generic();
 	}
 
@@ -109,6 +106,9 @@ final class ErrorMapper {
 				$details[ $key ] = $context[ $key ];
 				unset( $context[ $key ] );
 			}
+		}
+		if ( is_array( $details['test'] ?? null ) ) {
+			unset( $details['test']['detected'] ); // What a connector found out is its own business and is not part of the contract.
 		}
 		$strings = array();
 		foreach ( $context as $name => $value ) {

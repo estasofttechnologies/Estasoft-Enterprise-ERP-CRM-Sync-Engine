@@ -157,19 +157,43 @@ final class ApiErrorsTest extends TestCase {
 		$this->assertSame( array( 'SYNC-INB-001', 401, 'info' ), array( $mapped->apiCode, $mapped->status, $mapped->errorClass ) );
 	}
 
-	public function test_not_found_and_invalid_argument_exceptions_map_to_404_and_422(): void {
-		$this->assertSame( 404, $this->mapper()->map( new \OutOfBoundsException( 'Version 99 does not exist.' ) )->status );
-		$this->assertStringNotContainsString( 'Version 99', $this->mapper()->map( new \OutOfBoundsException( 'Version 99 does not exist.' ) )->getMessage() );
-		$invalid = $this->mapper()->map( new \InvalidArgumentException( 'Each tax row needs a country code.' ) );
-		$this->assertSame( array( 'rest_invalid_param', 422, 'Each tax row needs a country code.' ), array( $invalid->apiCode, $invalid->status, $invalid->getMessage() ) );
+	/**
+	 * @dataProvider plainExceptions
+	 *
+	 * @param \Throwable $error A plain exception any library could throw.
+	 */
+	public function test_a_plain_invalid_argument_or_out_of_bounds_exception_is_not_a_404_or_a_422_and_never_shows_its_message( \Throwable $error ): void {
+		$mapped = $this->mapper()->map( $error );
+		$this->assertSame( array( 'SYNC-REST-001', 500 ), array( $mapped->apiCode, $mapped->status ) );
+		$this->assertStringNotContainsString( 'hunter2', $mapped->getMessage() );
+		$this->assertSame( array( get_class( $error ) ), $this->reported, 'logged, with the class and nothing else' );
+		$this->assertStringNotContainsString( 'hunter2', implode( '', $this->reported ) );
 	}
 
-	public function test_anything_else_is_a_generic_500_that_reports_only_the_class_and_code(): void {
+	/**
+	 * Exceptions that used to be turned into 404 and 422 answers.
+	 *
+	 * @return array<string,array{0:\Throwable}>
+	 */
+	public static function plainExceptions(): array {
+		return array(
+			'out of bounds'    => array( new \OutOfBoundsException( 'Version 99 password=hunter2 does not exist.' ) ),
+			'invalid argument' => array( new \InvalidArgumentException( 'Bad row password=hunter2.' ) ),
+			'logic'            => array( new \LogicException( 'Service password=hunter2 is not registered.' ) ),
+			'type error'       => array( new \TypeError( 'password=hunter2' ) ),
+		);
+	}
+
+	public function test_anything_else_is_a_generic_500_that_reports_only_the_class(): void {
 		$mapped = $this->mapper()->map( new \RuntimeException( 'password=hunter2 at /var/www/wp-config.php', 42 ) );
 		$this->assertSame( array( 'SYNC-REST-001', 500 ), array( $mapped->apiCode, $mapped->status ) );
 		$this->assertStringNotContainsString( 'hunter2', $mapped->getMessage() );
-		$this->assertSame( array( 'RuntimeException (code 42)' ), $this->reported );
-		$this->assertStringNotContainsString( 'hunter2', implode( '', $this->reported ) );
+		$this->assertSame( array( 'RuntimeException' ), $this->reported, 'no message, no code, no file' );
+	}
+
+	public function test_what_a_connector_detected_never_reaches_the_details_of_a_failed_test(): void {
+		$mapped = $this->mapper()->map( new JobException( 'Refused.', 422, ErrorCode::Auth001, array( 'test' => array( 'ok' => false, 'detected' => array( 'token' => 'x' ) ) ) ) );
+		$this->assertSame( array( 'test' => array( 'ok' => false ) ), $mapped->details );
 	}
 
 	public function test_the_default_reporter_ignores_everything(): void {

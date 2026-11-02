@@ -85,17 +85,27 @@ final class ToolsController extends BaseController {
 	/**
 	 * `POST /tools/import`: a preview of the changes, or with `confirm` the changes themselves.
 	 *
+	 * The answer has exactly the shape of the type: `{ preview: string[] }`, or `{ applied: true, drafts: number, skipped: string[] }`
+	 * where `drafts` counts the mapping drafts that were created and `skipped` lists what was left out because it is not connected here.
+	 *
 	 * @param \WP_REST_Request $request Request.
-	 * @return array<string,mixed> `{ preview: string[] }` or `{ applied: true }`.
+	 * @return array{preview:array<int,string>}|array{applied:true,drafts:int,skipped:array<int,string>}
 	 */
 	public function import( \WP_REST_Request $request ): array {
 		/** @var SettingsPorter $porter */
 		$porter = $this->service( JobServices::PORTER );
 		$json   = Sanitize::document( $request->get_param( 'json' ) );
 		if ( rest_sanitize_boolean( $request->get_param( 'confirm' ) ) ) {
-			return $porter->apply( $json, $this->actorId() );
+			$done = $porter->apply( $json, $this->actorId() );
+			return array(
+				'applied' => true,
+				'drafts'  => (int) ( $done['drafts'] ?? 0 ),
+				'skipped' => array_values( array_map( 'strval', (array) ( $done['skipped'] ?? array() ) ) ),
+			);
 		}
-		return $porter->preview( $json );
+		$preview = $porter->preview( $json );
+		$lines   = (array) ( $preview['preview'] ?? array() );
+		return array( 'preview' => array_values( array_map( 'strval', $lines ) ) );
 	}
 
 	/**

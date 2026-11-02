@@ -88,6 +88,8 @@ if ( ! class_exists( 'WP_REST_Request' ) ) {
 		private $params  = array();
 		private $headers = array();
 		private $body    = '';
+		private $query   = array();
+		private $url     = array();
 
 		public function __construct( $method = 'GET', $route = '', $attributes = array() ) {
 			$this->method = strtoupper( (string) $method );
@@ -116,6 +118,22 @@ if ( ! class_exists( 'WP_REST_Request' ) ) {
 
 		public function get_params() {
 			return $this->params;
+		}
+
+		public function set_query_params( $params ) {
+			$this->query = (array) $params;
+		}
+
+		public function get_query_params() {
+			return $this->query;
+		}
+
+		public function set_url_params( $params ) {
+			$this->url = (array) $params;
+		}
+
+		public function get_url_params() {
+			return $this->url;
 		}
 
 		public function set_header( $key, $value ) {

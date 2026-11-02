@@ -11,6 +11,8 @@ namespace Estasoft\SyncEngine\Tests\Integration\Rest;
 
 require_once dirname( __DIR__, 2 ) . '/Support/RestIntegrationCase.php';
 
+use Estasoft\SyncEngine\Contract\ConnectorRegistry;
+use Estasoft\SyncEngine\Contract\TestResult;
 use Estasoft\SyncEngine\Core\Crypto\CryptoException;
 use Estasoft\SyncEngine\Core\Services;
 use Estasoft\SyncEngine\Core\Support\ValidationException;
@@ -18,6 +20,7 @@ use Estasoft\SyncEngine\Domain\ErrorCode;
 use Estasoft\SyncEngine\Jobs\JobException;
 use Estasoft\SyncEngine\Jobs\JobServices;
 use Estasoft\SyncEngine\Tests\Support\RestFake;
+use Estasoft\SyncEngine\Tests\Support\RestFakeConnector;
 use Estasoft\SyncEngine\Tests\Support\RestIntegrationCase;
 
 final class ConnectionsRoutesTest extends RestIntegrationCase {
@@ -182,7 +185,7 @@ final class ConnectionsRoutesTest extends RestIntegrationCase {
 		$json     = (string) wp_json_encode( $response->get_data() );
 		$this->assertSame( 500, $response->get_status() );
 		$this->assertSame( 'SYNC-REST-001', $response->get_data()['code'] );
-		$this->assertSame( 'retry', $response->get_data()['data']['class'] );
+		$this->assertSame( 'info', $response->get_data()['data']['class'] );
 		$this->assertStringNotContainsString( 'LEAKY', $json );
 		$this->assertStringNotContainsString( '/var/www', $json );
 
@@ -203,6 +206,45 @@ final class ConnectionsRoutesTest extends RestIntegrationCase {
 		$this->assertSame( '', $calls[0][0]['secrets']['api_key'] );
 		$this->assertSame( array(), $calls[1][0] );
 		$this->assertSame( 9, $calls[1][1] );
+	}
+
+	/**
+	 * The keys of `ConnectionTestResult` in src/api/types.ts.
+	 */
+	private const TEST_RESULT_KEYS = array( 'ok', 'version', 'company', 'warehouses', 'product_count', 'permissions', 'missing_permissions', 'error' );
+
+	public function test_the_answers_of_a_connection_test_have_exactly_the_keys_of_the_type_and_never_what_the_connector_detected(): void {
+		$connector             = new RestFakeConnector( 'restfake' );
+		$connector->testResult = new TestResult(
+			true,
+			'Fake 1.0',
+			'Cedar & Stone',
+			array( array( 'id' => '3', 'name' => 'Main' ) ),
+			array( 'create_sale_orders' => true ),
+			null,
+			array( 'product_count' => 120, 'transport' => 'jsonrpc', 'token' => 'DETECTED-SECRET', 'nested' => array( 'a' => new \stdClass() ) )
+		);
+		$this->replace( Services::CONNECTOR_REGISTRY, new ConnectorRegistry( array( $connector ) ) );
+		$id = $this->container->get( Services::CONNECTION_REPOSITORY )->create( array( 'connector' => 'restfake', 'type' => 'erp', 'label' => 'Fake' ), array( 'api_key' => self::SECRET ), array() );
+		$this->actAs( 'administrator' );
+
+		foreach ( array( $this->call( 'POST', "/connections/$id/test" ), $this->call( 'POST', '/connections/test', array( 'connector' => 'restfake', 'connection_id' => $id, 'config' => array(), 'secrets' => array() ) ) ) as $response ) {
+			$this->assertSame( 200, $response->get_status(), wp_json_encode( $response->get_data() ) );
+			$this->assertSame( self::TEST_RESULT_KEYS, array_keys( $response->get_data() ) );
+			$this->assertSame( 120, $response->get_data()['product_count'], 'the count the screen shows still comes through' );
+			$this->assertStringNotContainsString( 'DETECTED-SECRET', (string) wp_json_encode( $response->get_data() ) );
+		}
+	}
+
+	public function test_a_failed_test_does_not_carry_what_the_connector_detected_in_its_details(): void {
+		$this->replace(
+			JobServices::CONNECTIONS,
+			new RestFake( array(), array( 'create' => new JobException( 'Refused.', 422, ErrorCode::Auth001, array( 'test' => array( 'ok' => false, 'detected' => array( 'token' => 'DETECTED-SECRET' ) ) ) ) ) )
+		);
+		$this->actAs( 'administrator' );
+		$response = $this->call( 'POST', '/connections', array( 'connector' => 'odoo', 'config' => array( 'address' => 'https://x.test' ), 'secrets' => array( 'api_key' => 'k' ) ) );
+		$this->assertSame( 422, $response->get_status() );
+		$this->assertStringNotContainsString( 'DETECTED-SECRET', (string) wp_json_encode( $response->get_data() ) );
 	}
 
 	public function test_disconnect_answers_with_the_documented_shape(): void {

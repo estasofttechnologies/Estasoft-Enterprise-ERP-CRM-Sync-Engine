@@ -185,6 +185,67 @@ final class CommandsTest extends TestCase {
 		);
 	}
 
+	/**
+	 * @dataProvider bareOptions
+	 *
+	 * @param string               $command Subcommand.
+	 * @param array<string,mixed>  $options Options with one given without a value, as WP-CLI passes it (true).
+	 */
+	public function test_an_option_given_without_a_value_stops_the_command_with_a_usage_error_and_does_nothing( string $command, array $options ): void {
+		$services = array(
+			Services::WORKER           => new RestFake(),
+			Services::QUEUE_SERVICE    => new RestFake(),
+			Services::PAUSE_CONTROLLER => new RestFake(),
+			JobServices::DASHBOARD     => new RestFake(),
+			JobServices::CONNECTIONS   => new RestFake(),
+			JobServices::RECONCILIATION => new RestFake(),
+			JobServices::READINESS     => new RestFake(),
+		);
+		foreach ( $services as $id => $service ) {
+			$this->container->instance( $id, $service );
+		}
+		$this->assertSame( 2, $this->exitCode( fn() => $this->commands()->$command( array(), $options ) ), $command . ' ' . (string) wp_json_encode( $options ) );
+		foreach ( $services as $id => $service ) {
+			$this->assertSame( array(), $service->calls, $id . ' was not touched' );
+		}
+		$name = (string) array_key_first( array_filter( $options, static fn( $value ): bool => ! is_string( $value ) ) );
+		$this->assertSame( array( "--$name needs a value, for example --$name=<value>." ), $this->out->of( 'error' ) );
+	}
+
+	/**
+	 * Options written without a value.
+	 *
+	 * @return array<string,array{0:string,1:array<string,mixed>}>
+	 */
+	public static function bareOptions(): array {
+		return array(
+			'retry --ids'          => array( 'retry', array( 'ids' => true ) ),
+			'retry --code'         => array( 'retry', array( 'code' => true ) ),
+			'retry --cause'        => array( 'retry', array( 'code' => 'SYNC-MAP-001', 'cause' => true ) ),
+			'pause --minutes'      => array( 'pause', array( 'minutes' => true ) ),
+			'pause --connection'   => array( 'pause', array( 'connection' => true ) ),
+			'resume --connection'  => array( 'resume', array( 'connection' => true ) ),
+			'status --connection'  => array( 'status', array( 'connection' => true ) ),
+			'status --format'      => array( 'status', array( 'format' => true ) ),
+			'reconcile --window'   => array( 'reconcile', array( 'window' => true ) ),
+			'reconcile --connection' => array( 'reconcile', array( 'connection' => true ) ),
+			'readiness --format'   => array( 'readiness', array( 'format' => true ) ),
+			'worker --concurrency' => array( 'worker', array( 'concurrency' => true ) ),
+			'worker --max-items'   => array( 'worker', array( 'max-items' => true ) ),
+			'worker --max-memory'  => array( 'worker', array( 'max-memory' => true ) ),
+			'an array'             => array( 'pause', array( 'minutes' => array( '5' ) ) ),
+		);
+	}
+
+	public function test_numbers_given_as_numbers_and_empty_values_are_still_handled_as_before(): void {
+		$pause = new RestFake( array( 'pauseAll' => 1 ) );
+		$this->container->instance( Services::PAUSE_CONTROLLER, $pause );
+		$this->commands()->pause( array(), array( 'minutes' => 30 ) );
+		$this->assertSame( array( array( 30 ) ), $pause->called( 'pauseAll' ), 'WP-CLI can hand over an int from runcommand' );
+		$this->assertSame( 2, $this->exitCode( fn() => $this->commands()->pause( array(), array( 'minutes' => '' ) ) ), 'an empty value is not a number' );
+		$this->assertSame( 2, $this->exitCode( fn() => $this->commands()->pause( array(), array( 'minutes' => 1.5 ) ) ) );
+	}
+
 	public function test_status_prints_a_two_column_table_with_every_connection(): void {
 		$this->container->instance( JobServices::DASHBOARD, new RestFake( array( 'status' => array( 'mode' => 'normal', 'synced_today' => 312, 'waiting' => 14, 'needs_attention' => 5, 'skipped' => 2, 'oldest_waiting_at' => '2026-11-02T10:00:00Z' ) ) ) );
 		$this->container->instance(

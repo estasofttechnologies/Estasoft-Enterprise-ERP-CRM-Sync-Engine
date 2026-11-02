@@ -128,7 +128,13 @@ final class RestModule implements ModuleInterface {
 			static fn( Container $c ): TaxMapAssembler => new TaxMapAssembler(
 				$c->get( 'mapping.tax_map' ),
 				new WooTaxSource( $c->get( self::STORE ) ),
-				new ConnectorTaxCodes( $c->get( Services::CONNECTION_REPOSITORY ), $c->get( Services::CONNECTOR_REGISTRY ) )
+				new ConnectorTaxCodes(
+					$c->get( Services::CONNECTION_REPOSITORY ),
+					$c->get( Services::CONNECTOR_REGISTRY ),
+					static function ( string $class ) use ( $c ): void {
+						$c->get( Services::LOGGER )->warning( 'The tax codes of the connected system could not be read: ' . $class );
+					}
+				)
 			)
 		);
 		$container->set(
