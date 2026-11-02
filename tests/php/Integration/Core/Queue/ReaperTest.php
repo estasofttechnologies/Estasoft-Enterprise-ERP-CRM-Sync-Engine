@@ -70,4 +70,107 @@ final class ReaperTest extends CoreIntegrationTestCase {
 		$this->assertSame( 'SYNC-DUP-001', $row['error_code'], 'found and linked, not created twice' );
 		$this->assertCount( 1, $this->h->connector->documents );
 	}
+
+	/**
+	 * Claim the item and let the worker die: its lock runs out and the reaper runs.
+	 *
+	 * @return int How many items the reaper took back.
+	 */
+	private function dieOnce(): int {
+		$this->assertCount( 1, $this->h->queue->claim( 1, 60, 'dies-' . uniqid() ) );
+		$this->h->clock->advance( 61 );
+		return $this->h->reaper->run();
+	}
+
+	public function test_an_item_that_keeps_killing_its_worker_is_stopped_after_three_times(): void {
+		$conn = $this->h->connection();
+		$id   = $this->h->item( $conn, '10490' );
+
+		$this->assertSame( 1, $this->dieOnce() );
+		$this->assertSame( '1', $this->h->row( $id )['reaps'] );
+		$this->assertSame( 'queued', $this->h->row( $id )['state'] );
+		$this->assertSame( 1, $this->dieOnce() );
+		$this->assertSame( '2', $this->h->row( $id )['reaps'] );
+		$this->assertSame( 'queued', $this->h->row( $id )['state'], 'twice is still worth another try' );
+
+		$this->assertSame( 1, $this->dieOnce() );
+		$row = $this->h->row( $id );
+		$this->assertSame( 'failed', $row['state'], 'the third time it is set aside' );
+		$this->assertSame( '3', $row['reaps'] );
+		$this->assertSame( 'SYNC-LOCK-001', $row['error_code'] );
+		$this->assertStringContainsString( '3 times', (string) $row['error_message'] );
+		$this->assertStringContainsString( 'person', (string) $row['error_message'] );
+		$this->assertSame( 'Worker stopped 3 times', $row['error_cause'] );
+		$this->assertSame( '1', $row['failed_before'] );
+		$this->assertNotNull( $row['finished_at'] );
+		$this->assertNull( $row['locked_by'] );
+		$this->assertNull( $row['locked_until'] );
+		$this->assertSame( '0', $row['attempt'], 'no try was counted for a worker that died' );
+
+		$this->assertSame( array(), $this->h->queue->claim( 5, 60, 'next' ), 'it is not sent again by itself' );
+		$this->assertSame( 0, $this->h->reaper->run() );
+
+		$errors = array_values( array_filter( $this->h->logs->timeline( $id ), static fn( array $e ): bool => 'error' === $e['level'] ) );
+		$this->assertCount( 1, $errors );
+		$this->assertSame( 'SYNC-LOCK-001', $errors[0]['code'] );
+
+		$groups = $this->h->queue->attentionGroups();
+		$this->assertSame( 'SYNC-LOCK-001', $groups[0]['error_code'], 'it shows on Needs attention' );
+		$this->assertSame( array( $id ), $groups[0]['item_ids'] );
+	}
+
+	public function test_a_persons_retry_starts_the_count_again(): void {
+		$conn = $this->h->connection();
+		$id   = $this->h->item( $conn, '10490' );
+		$this->dieOnce();
+		$this->dieOnce();
+		$this->dieOnce();
+		$this->assertSame( 'failed', $this->h->row( $id )['state'] );
+
+		$this->assertNotNull( $this->h->service->retry( $id ) );
+		$row = $this->h->row( $id );
+		$this->assertSame( 'queued', $row['state'] );
+		$this->assertSame( '0', $row['reaps'] );
+		$this->assertNull( $row['error_code'] );
+
+		$this->dieOnce();
+		$this->dieOnce();
+		$this->assertSame( 'queued', $this->h->row( $id )['state'], 'two more is not three' );
+		$this->assertSame( '2', $this->h->row( $id )['reaps'] );
+	}
+
+	public function test_restoring_a_skipped_item_starts_the_count_again(): void {
+		$conn = $this->h->connection();
+		$id   = $this->h->item( $conn, '10490' );
+		$this->dieOnce();
+		$this->dieOnce();
+		$this->h->queue->skip( $id, 'x' );
+		$this->h->queue->restore( $id );
+		$this->assertSame( '0', $this->h->row( $id )['reaps'] );
+	}
+
+	public function test_a_worker_that_lives_long_enough_to_report_clears_the_count(): void {
+		$conn = $this->h->connection();
+		$id   = $this->h->item( $conn, '10490' );
+		$this->dieOnce();
+		$this->dieOnce();
+		$this->assertSame( '2', $this->h->row( $id )['reaps'] );
+
+		$items = $this->h->queue->claim( 1, 60, 'lives' );
+		$this->h->queue->markRetrying( $id, '2026-11-02 14:00:00', 'SYNC-NET-001', 'x', '', 'lives' );
+		$this->assertSame( '0', $this->h->row( $id )['reaps'], 'the item did not kill this one' );
+		$this->assertCount( 1, $items );
+	}
+
+	public function test_the_other_items_of_an_order_wait_behind_a_stopped_item(): void {
+		$conn  = $this->h->connection();
+		$first = $this->h->item( $conn, '10490', 'created' );
+		$next  = $this->h->item( $conn, '10490', 'paid' );
+		$this->dieOnce();
+		$this->dieOnce();
+		$this->dieOnce();
+		$this->assertSame( 'failed', $this->h->row( $first )['state'] );
+		$this->assertSame( array(), $this->h->queue->claim( 5, 60, 'w' ), 'QUE-4: a failed step holds back the later ones' );
+		$this->assertSame( 'queued', $this->h->row( $next )['state'] );
+	}
 }

@@ -25,7 +25,8 @@ use Estasoft\SyncEngine\Domain\ConnectorType;
 /**
  * Reads and writes `estasoft_sync_connections`. Secrets are encrypted before they reach the database and
  * are decrypted only by find() and forConnector(), which exist for sending. Everything else returns data
- * without secrets. A secret is write-only: no method returns one to a screen.
+ * without secrets. A secret is write-only: no method returns one to a screen, and not one character of it either
+ * (no "last four"). The row keeps only a presence flag per secret name.
  */
 final class ConnectionRepository extends Repository {
 
@@ -207,11 +208,15 @@ final class ConnectionRepository extends Repository {
 	 * (merged; an empty string keeps the saved value, null removes it), `settings` (merged and validated),
 	 * `credential_expires_at` (MySQL datetime or null), `credential_warn_days`, `inbound_enabled`.
 	 *
+	 * When the saved secrets were written with another key (the key fingerprint differs) they cannot be read, so they
+	 * cannot be merged. Then every secret that is saved has to be given again (a value) or removed (null); an empty
+	 * string, which means "keep", is refused, so a partial save never leaves unreadable secrets behind.
+	 *
 	 * @param int                 $id      Connection id.
 	 * @param array<string,mixed> $changes Changes.
 	 *
 	 * @throws \OutOfBoundsException When the connection does not exist.
-	 * @throws CryptoException       When secrets are changed and no key is defined.
+	 * @throws CryptoException       When secrets are changed and no key is defined, or only some secrets are sent while the key has changed.
 	 * @throws \Estasoft\SyncEngine\Core\Support\ValidationException When a setting is out of range.
 	 */
 	public function update( int $id, array $changes ): void {
@@ -263,14 +268,16 @@ final class ConnectionRepository extends Repository {
 	 * @param int              $id          Connection id.
 	 * @param ConnectionStatus $status      New status.
 	 * @param string|null      $pausedUntil MySQL datetime (UTC) when a pause ends or the next circuit probe is due.
-	 * @param string|null      $reason      Why it is paused: `person`, `circuit` or `auth`.
+	 * @param string|null      $reason      Why it is paused: `person`, `circuit`, `sign_in` or `key_missing`.
 	 */
 	public function setStatus( int $id, ConnectionStatus $status, ?string $pausedUntil = null, ?string $reason = null ): void {
+		$now  = $this->now();
 		$data = array(
-			'status'        => $status->value,
-			'paused_until'  => ConnectionStatus::Active === $status ? null : $pausedUntil,
-			'paused_reason' => ConnectionStatus::Active === $status ? null : $reason,
-			'updated_at'    => $this->now(),
+			'status'          => $status->value,
+			'paused_until'    => ConnectionStatus::Active === $status ? null : $pausedUntil,
+			'paused_reason'   => ConnectionStatus::Active === $status ? null : $reason,
+			'disconnected_at' => ConnectionStatus::Disconnected === $status ? $now : null,
+			'updated_at'      => $now,
 		);
 		if ( ConnectionStatus::Active === $status ) {
 			$data['breaker_failures'] = 0;
@@ -374,6 +381,7 @@ final class ConnectionRepository extends Repository {
 	 * @param int $id Connection id.
 	 */
 	public function delete( int $id ): void {
+		$now = $this->now();
 		$this->updateById(
 			$this->tables->connections(),
 			array(
@@ -385,7 +393,8 @@ final class ConnectionRepository extends Repository {
 				'paused_reason'         => null,
 				'breaker_failures'      => 0,
 				'credential_expires_at' => null,
-				'updated_at'            => $this->now(),
+				'disconnected_at'       => $now,
+				'updated_at'            => $now,
 			),
 			$id
 		);
@@ -433,11 +442,8 @@ final class ConnectionRepository extends Repository {
 		$config = Json::decode( (string) $row['config_json'] );
 		$hints  = Json::decode( (string) $row['secret_hints_json'] );
 		$secret = array();
-		foreach ( $hints as $name => $last4 ) {
-			$secret[ (string) $name ] = array(
-				'has_value' => true,
-				'last4'     => (string) $last4,
-			);
+		foreach ( array_keys( $hints ) as $name ) {
+			$secret[ (string) $name ] = true;
 		}
 		$reason = $row['paused_reason'] ?? null;
 		return array(
@@ -449,7 +455,7 @@ final class ConnectionRepository extends Repository {
 			'version'               => (string) ( $config['version'] ?? '' ),
 			'address'               => (string) ( $config['address'] ?? '' ),
 			'paused_until'          => Time::iso( self::stringOrNull( $row['paused_until'] ) ),
-			'paused_reason'         => null === $reason ? null : ( 'circuit' === $reason ? 'circuit' : 'person' ),
+			'paused_reason'         => self::publicReason( null === $reason ? null : (string) $reason ),
 			'last_success_at'       => Time::iso( self::stringOrNull( $row['last_success_at'] ) ),
 			'last_failure_at'       => Time::iso( self::stringOrNull( $row['last_failure_at'] ) ),
 			'failures_in_a_row'     => (int) $row['breaker_failures'],
@@ -469,13 +475,29 @@ final class ConnectionRepository extends Repository {
 	}
 
 	/**
+	 * The pause reason as the screens and hooks name it: `person`, `circuit`, `sign_in` or `key_missing`. Rows written by
+	 * the first development builds say `auth`, which was always a sign-in problem.
+	 *
+	 * @param string|null $reason Stored value.
+	 */
+	public static function publicReason( ?string $reason ): ?string {
+		if ( null === $reason || '' === $reason ) {
+			return null;
+		}
+		if ( 'auth' === $reason ) {
+			return 'sign_in';
+		}
+		return in_array( $reason, array( 'circuit', 'sign_in', 'key_missing' ), true ) ? $reason : 'person';
+	}
+
+	/**
 	 * Merge changed secrets over the saved ones.
 	 *
 	 * @param array<string,mixed> $row     Raw row.
 	 * @param array<string,mixed> $changes Name to value; '' keeps, null removes.
 	 * @return array<string,string>
 	 *
-	 * @throws CryptoException When no key is defined.
+	 * @throws CryptoException When no key is defined, or the saved secrets are unreadable and the change is partial.
 	 */
 	private function mergeSecrets( array $row, array $changes ): array {
 		try {
@@ -484,7 +506,15 @@ final class ConnectionRepository extends Repository {
 			if ( null !== $e->errorCode() ) {
 				throw $e;
 			}
-			// The key changed or the data is damaged: the new values replace everything.
+			// The key changed or the data is damaged. The saved values cannot be kept, so the change has to cover every
+			// one of them; otherwise a partial save would silently drop the rest.
+			$saved = array_keys( Json::decode( (string) $row['secret_hints_json'] ) );
+			foreach ( $saved as $name ) {
+				$name = (string) $name;
+				if ( ! array_key_exists( $name, $changes ) || ( null !== $changes[ $name ] && '' === (string) $changes[ $name ] ) ) {
+					throw CryptoException::partialSaveRefused();
+				}
+			}
 			$existing = array();
 		}
 		foreach ( $changes as $name => $value ) {
@@ -515,16 +545,12 @@ final class ConnectionRepository extends Repository {
 	}
 
 	/**
-	 * The last four characters of each secret that is long enough to show them safely.
+	 * Which secrets exist: a presence flag per name, never a character of the value.
 	 *
 	 * @param array<string,string> $secrets Secrets.
-	 * @return array<string,string>
+	 * @return array<string,bool>
 	 */
 	private function hints( array $secrets ): array {
-		$hints = array();
-		foreach ( $secrets as $name => $value ) {
-			$hints[ $name ] = mb_strlen( $value ) >= 12 ? mb_substr( $value, -4 ) : '';
-		}
-		return $hints;
+		return array_fill_keys( array_keys( $secrets ), true );
 	}
 }

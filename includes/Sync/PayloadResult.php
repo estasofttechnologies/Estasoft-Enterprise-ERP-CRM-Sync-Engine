@@ -24,12 +24,15 @@ final class PayloadResult {
 	 * @param ConnectorError|null $error          Pre-send failure.
 	 * @param int|null            $mappingVersion Live mapping version used.
 	 * @param array<int,string>   $notes          Rule notes for previews (for example "tax code mapped").
+	 * @param array<int,string>   $sensitivePaths Field paths of the payload that hold personal data (for example
+	 *                                            `partner.vat`), so the log can remove them from its excerpts.
 	 */
 	public function __construct(
 		public readonly array $payload = array(),
 		public readonly ?ConnectorError $error = null,
 		public readonly ?int $mappingVersion = null,
 		public readonly array $notes = array(),
+		public readonly array $sensitivePaths = array(),
 	) {
 	}
 

@@ -204,4 +204,64 @@ final class QueueClaimTest extends CoreIntegrationTestCase {
 	public function test_claim_with_nothing_waiting_returns_nothing(): void {
 		$this->assertSame( array(), $this->h->queue->claim( 10, 60, 'w' ) );
 	}
+
+	/**
+	 * Make other workers win the race for the rows a claim is about to take: just before the claim's UPDATE runs, a thief takes
+	 * the same rows. This is what happens when several workers look at the same moment.
+	 *
+	 * @param int $times How many of the claim's UPDATE statements are beaten.
+	 * @return \Closure Removes the filter.
+	 */
+	private function stealBeforeTheUpdate( int $times ): \Closure {
+		$count = 0;
+		$steal = function ( string $query ) use ( &$count, $times ): string {
+			if ( $count < $times && 1 === preg_match( '/^UPDATE `?' . preg_quote( $this->h->tables->queue(), '/' ) . "`? SET state = 'syncing', locked_by = 'claimer'.*?\\s+WHERE\\s+id IN \\(([0-9,]+)\\)/s", trim( $query ), $match ) ) {
+				++$count;
+				$this->h->wpdb->query( "UPDATE `{$this->h->tables->queue()}` SET state = 'syncing', locked_by = 'thief', locked_until = '2099-01-01 00:00:00' WHERE id IN ({$match[1]})" ); // phpcs:ignore
+			}
+			return $query;
+		};
+		add_filter( 'query', $steal );
+		return static function () use ( $steal ): void {
+			remove_filter( 'query', $steal );
+		};
+	}
+
+	public function test_a_claim_that_loses_a_race_looks_again_instead_of_reporting_an_empty_queue(): void {
+		// Four lost races take at most 4 x 3 rows, so 24 rows can never all be taken from under it.
+		for ( $i = 1; $i <= 24; ++$i ) {
+			$this->h->item( $this->conn, (string) ( 900 + $i ) );
+		}
+		$undo = $this->stealBeforeTheUpdate( 4 );
+		try {
+			$claimed = $this->h->queue->claim( 3, 60, 'claimer' );
+		} finally {
+			$undo();
+		}
+		$this->assertNotEmpty( $claimed, 'rows were still waiting, so the answer is not empty' );
+		$ids = array_map( static fn( $item ) => $item->id, $claimed );
+		$this->assertSame( $ids, array_map( 'intval', $this->h->wpdb->get_col( "SELECT id FROM `{$this->h->tables->queue()}` WHERE locked_by = 'claimer' ORDER BY id" ) ), 'and what it reports is exactly what it holds' ); // phpcs:ignore
+		$this->assertSame( array(), array_intersect( $ids, array_map( 'intval', $this->h->wpdb->get_col( "SELECT id FROM `{$this->h->tables->queue()}` WHERE locked_by = 'thief'" ) ) ), 'none of the rows the thief took' ); // phpcs:ignore
+	}
+
+	public function test_an_empty_answer_still_means_nothing_is_waiting(): void {
+		$this->assertSame( array(), $this->h->queue->claim( 3, 60, 'claimer' ) );
+		$id = $this->h->item( $this->conn, '1' );
+		$this->h->queue->claim( 1, 60, 'someone' );
+		$this->assertSame( array(), $this->h->queue->claim( 3, 60, 'claimer' ), 'the only item is taken' );
+		$this->assertSame( 'syncing', $this->h->queue->findRow( $id )['state'] );
+	}
+
+	public function test_a_claim_that_always_loses_gives_up_with_an_empty_answer_and_changes_nothing(): void {
+		for ( $i = 1; $i <= 3; ++$i ) {
+			$this->h->item( $this->conn, (string) ( 700 + $i ) );
+		}
+		$undo = $this->stealBeforeTheUpdate( 1000 );
+		try {
+			$this->assertSame( array(), $this->h->queue->claim( 3, 60, 'claimer' ) );
+		} finally {
+			$undo();
+		}
+		$this->assertSame( 0, (int) $this->h->wpdb->get_var( "SELECT COUNT(*) FROM `{$this->h->tables->queue()}` WHERE locked_by = 'claimer'" ) ); // phpcs:ignore
+	}
 }

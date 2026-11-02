@@ -59,6 +59,21 @@ final class Scheduler {
 	public const HOOK_PURGE = 'estasoft_sync_purge_actions';
 
 	/**
+	 * Days a finished Action Scheduler row of this group is kept (PRF-6).
+	 */
+	public const PURGE_AFTER_DAYS = 7;
+
+	/**
+	 * Rows read and deleted per batch when purging.
+	 */
+	private const PURGE_BATCH = 500;
+
+	/**
+	 * Most batches per status in one run, so a huge backlog is worked off over several days instead of in one request.
+	 */
+	private const PURGE_MAX_BATCHES = 20;
+
+	/**
 	 * WP-Cron interval used when Action Scheduler is missing.
 	 */
 	public const CRON_SCHEDULE = 'estasoft_sync_minute';
@@ -309,7 +324,7 @@ final class Scheduler {
 	}
 
 	/**
-	 * Task: delete finished Action Scheduler rows of this group that are more than a day old.
+	 * Task: delete finished Action Scheduler rows of this group that are more than 7 days old (PRF-6), in batches.
 	 *
 	 * @return int Rows deleted.
 	 */
@@ -319,20 +334,26 @@ final class Scheduler {
 		}
 		$deleted = 0;
 		$store   = \ActionScheduler::store();
+		$before  = time() - self::PURGE_AFTER_DAYS * DAY_IN_SECONDS;
 		foreach ( array( 'complete', 'canceled', 'failed' ) as $status ) {
-			$ids = as_get_scheduled_actions(
-				array(
-					'group'        => self::GROUP,
-					'status'       => $status,
-					'date'         => time() - DAY_IN_SECONDS,
-					'date_compare' => '<',
-					'per_page'     => 500,
-				),
-				'ids'
-			);
-			foreach ( (array) $ids as $id ) {
-				$store->delete_action( (string) $id );
-				++$deleted;
+			for ( $batch = 0; $batch < self::PURGE_MAX_BATCHES; ++$batch ) {
+				$ids = (array) as_get_scheduled_actions(
+					array(
+						'group'        => self::GROUP,
+						'status'       => $status,
+						'date'         => $before,
+						'date_compare' => '<',
+						'per_page'     => self::PURGE_BATCH,
+					),
+					'ids'
+				);
+				foreach ( $ids as $id ) {
+					$store->delete_action( (string) $id );
+					++$deleted;
+				}
+				if ( count( $ids ) < self::PURGE_BATCH ) {
+					break;
+				}
 			}
 		}
 		return $deleted;

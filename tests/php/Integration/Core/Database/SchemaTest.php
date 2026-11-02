@@ -14,6 +14,8 @@ require_once dirname( __DIR__, 3 ) . '/Support/CoreIntegrationTestCase.php';
 use Estasoft\SyncEngine\Core\Database\Migrator;
 use Estasoft\SyncEngine\Core\Database\Schema;
 use Estasoft\SyncEngine\Core\Database\Tables;
+use Estasoft\SyncEngine\Core\Database\Upgrades;
+use Estasoft\SyncEngine\Domain\EntityType;
 use Estasoft\SyncEngine\Core\Support\WpOptionStore;
 use Estasoft\SyncEngine\Tests\Support\CoreIntegrationTestCase;
 
@@ -75,7 +77,8 @@ final class SchemaTest extends CoreIntegrationTestCase {
 	 */
 	public static function indexes(): array {
 		return array(
-			'queue claim'          => array( 'queue', 'claim', array( 'state', 'next_attempt_at' ), false ),
+			'queue claim'          => array( 'queue', 'claim', array( 'state', 'next_attempt_at', 'priority' ), false ),
+			'queue unique key'     => array( 'queue', 'connection_key', array( 'connection_id', 'idempotency_key' ), true ),
 			'queue partition'      => array( 'queue', 'partition_order', array( 'connection_id', 'partition_key', 'id' ), false ),
 			'queue lock'           => array( 'queue', 'locked', array( 'state', 'locked_until' ), false ),
 			'queue entity'         => array( 'queue', 'entity', array( 'entity_type', 'entity_id' ), false ),
@@ -86,6 +89,168 @@ final class SchemaTest extends CoreIntegrationTestCase {
 			'logs time'            => array( 'logs', 'ts', array( 'ts' ), false ),
 			'connections status'   => array( 'connections', 'status', array( 'status' ), false ),
 		);
+	}
+
+	public function test_the_columns_of_spec_5_2_and_5_3_exist(): void {
+		$queue = $this->columns( $this->h->tables->queue() );
+		$this->assertSame( 'tinyint(3) unsigned', $queue['priority']['Type'] );
+		$this->assertSame( '5', $queue['priority']['Default'] );
+		$this->assertSame( 'tinyint(3) unsigned', $queue['reaps']['Type'] );
+		$this->assertSame( '0', $queue['reaps']['Default'] );
+		$this->assertSame( 'varchar(500)', $queue['error_message']['Type'] );
+
+		$logs = $this->columns( $this->h->tables->logs() );
+		$this->assertSame( 'datetime(3)', $logs['ts']['Type'] );
+		$this->assertSame( 'varchar(500)', $logs['message']['Type'] );
+
+		$connections = $this->columns( $this->h->tables->connections() );
+		$this->assertArrayHasKey( 'disconnected_at', $connections );
+	}
+
+	public function test_two_items_cannot_share_a_connection_and_a_key(): void {
+		$conn = $this->h->connection();
+		$one  = $this->h->queue->enqueue( $conn, EntityType::Order, '1', 'created', 'order:1', str_repeat( 'a', 64 ) );
+		$this->assertGreaterThan( 0, $one );
+
+		$suppress = $this->h->wpdb->suppress_errors( true );
+		$now      = '2026-11-02 12:00:00';
+		$ok       = $this->h->wpdb->insert(
+			$this->h->tables->queue(),
+			array(
+				'connection_id'   => $conn,
+				'entity_type'     => 'order',
+				'entity_id'       => '1',
+				'event'           => 'created',
+				'partition_key'   => 'order:1',
+				'idempotency_key' => str_repeat( 'a', 64 ),
+				'created_at'      => $now,
+				'updated_at'      => $now,
+			)
+		);
+		$this->h->wpdb->suppress_errors( $suppress );
+		$this->assertFalse( $ok, 'the database itself refuses the second row' );
+
+		$other = $this->h->connection();
+		$this->assertGreaterThan( 0, $this->h->queue->enqueue( $other, EntityType::Order, '1', 'created', 'order:1', str_repeat( 'a', 64 ) ), 'the same key on another connection is fine' );
+	}
+
+	public function test_a_site_on_the_first_schema_is_upgraded_in_place_and_the_upgrade_can_run_again(): void {
+		$queue = $this->h->tables->queue();
+		$logs  = $this->h->tables->logs();
+		$conns = $this->h->tables->connections();
+		$conn  = $this->h->connection( array(), array( 'api_key' => 'sk-test-abcdefghijklmnop' ) );
+		$other = $this->h->connection();
+
+		// Put the three tables back in the shape of schema 1.0.0.
+		$this->h->sql( "ALTER TABLE `$queue` DROP INDEX `connection_key`, DROP INDEX `claim`" ); // phpcs:ignore
+		$this->h->sql( "ALTER TABLE `$queue` ADD KEY `claim` (state, next_attempt_at), ADD KEY `idempotency` (idempotency_key), DROP COLUMN priority, DROP COLUMN reaps, MODIFY error_message text NULL" ); // phpcs:ignore
+		$this->h->sql( "ALTER TABLE `$logs` MODIFY ts datetime NOT NULL, MODIFY message text NOT NULL" ); // phpcs:ignore
+		$this->h->sql( "ALTER TABLE `$conns` DROP COLUMN disconnected_at" ); // phpcs:ignore
+		$this->h->sql( "UPDATE `$conns` SET secret_hints_json = '{\"api_key\":\"mnop\",\"password\":\"\"}' WHERE id = $conn" ); // phpcs:ignore
+
+		$long = str_repeat( 'x', 900 );
+		$now  = '2026-11-02 12:00:00';
+		$rows = array(
+			array( $conn, '1', 'k1', $long ),
+			array( $conn, '1', 'k1', 'second row with the same key' ),
+			array( $conn, '1', 'k1', 'third row with the same key' ),
+			array( $conn, '2', 'k2', 'unique' ),
+			array( $other, '1', 'k1', 'same key, another connection' ),
+		);
+		foreach ( $rows as $row ) {
+			// Plain SQL: wpdb->insert() checks values against column lengths it cached from the other tests' schema.
+			$this->h->sql(
+				$this->h->wpdb->prepare(
+					"INSERT INTO `$queue` (connection_id, entity_type, entity_id, event, partition_key, idempotency_key, error_message, created_at, updated_at) VALUES (%d, 'order', %s, 'created', %s, %s, %s, %s, %s)", // phpcs:ignore
+					$row[0],
+					$row[1],
+					'order:' . $row[1],
+					str_pad( $row[2], 64, '0' ),
+					$row[3],
+					$now,
+					$now
+				)
+			);
+		}
+		$this->h->sql( $this->h->wpdb->prepare( "INSERT INTO `$logs` (ts, level, message) VALUES (%s, 'info', %s)", $now, $long ) ); // phpcs:ignore
+		update_option( Migrator::OPTION, '1.0.0' );
+
+		$this->assertTrue( $this->migrator->maybeMigrate(), 'the upgrade runs' );
+
+		$this->assertSame( array( 'state', 'next_attempt_at', 'priority' ), $this->indexColumns( $queue, 'claim' ) );
+		$this->assertSame( array( 'connection_id', 'idempotency_key' ), $this->indexColumns( $queue, 'connection_key' ) );
+		$this->assertSame( array(), $this->indexColumns( $queue, 'idempotency' ), 'the plain key index is gone' );
+		$this->assertSame( 'datetime(3)', $this->columns( $logs )['ts']['Type'] );
+		$this->assertSame( 'varchar(500)', $this->columns( $logs )['message']['Type'] );
+		$this->assertSame( 'varchar(500)', $this->columns( $queue )['error_message']['Type'] );
+		$this->assertArrayHasKey( 'disconnected_at', $this->columns( $conns ) );
+
+		// Repeated keys: the first row of each stays, the others are gone; other connections and other keys are untouched.
+		$left = $this->h->wpdb->get_results( "SELECT connection_id, entity_id, error_message FROM `$queue` ORDER BY id", ARRAY_A ); // phpcs:ignore
+		$this->assertCount( 3, $left );
+		$this->assertSame( 500, mb_strlen( (string) $left[0]['error_message'] ), 'the long message was cut to 500 characters, not lost' );
+		$this->assertSame( 'unique', $left[1]['error_message'] );
+		$this->assertSame( 'same key, another connection', $left[2]['error_message'] );
+		$this->assertSame( 500, mb_strlen( (string) $this->h->wpdb->get_var( "SELECT message FROM `$logs` WHERE level = 'info' ORDER BY id DESC LIMIT 1" ) ) ); // phpcs:ignore
+
+		// Secrets keep only a presence flag.
+		$this->assertSame( array( 'api_key' => true, 'password' => true ), json_decode( (string) $this->h->connectionRow( $conn )['secret_hints_json'], true ) );
+
+		// Running it all again changes nothing.
+		$before = array(
+			$this->h->wpdb->get_var( "SHOW CREATE TABLE `$queue`", 1 ), // phpcs:ignore
+			$this->h->wpdb->get_var( "SHOW CREATE TABLE `$logs`", 1 ), // phpcs:ignore
+			$this->h->wpdb->get_var( "SHOW CREATE TABLE `$conns`", 1 ), // phpcs:ignore
+			$this->h->count( $queue ),
+		);
+		update_option( Migrator::OPTION, '1.0.0' );
+		$this->assertTrue( $this->migrator->maybeMigrate() );
+		$this->assertTrue( $this->migrator->migrate() );
+		$this->assertSame(
+			$before,
+			array(
+				$this->h->wpdb->get_var( "SHOW CREATE TABLE `$queue`", 1 ), // phpcs:ignore
+				$this->h->wpdb->get_var( "SHOW CREATE TABLE `$logs`", 1 ), // phpcs:ignore
+				$this->h->wpdb->get_var( "SHOW CREATE TABLE `$conns`", 1 ), // phpcs:ignore
+				$this->h->count( $queue ),
+			)
+		);
+	}
+
+	public function test_a_fresh_install_has_nothing_to_upgrade_first(): void {
+		// The upgrade steps skip tables that do not exist yet.
+		$this->h->sql( "DROP TABLE `{$this->h->tables->reconDiffs()}`, `{$this->h->tables->reconRuns()}`, `{$this->h->tables->queue()}`, `{$this->h->tables->logs()}`, `{$this->h->tables->connections()}`" ); // phpcs:ignore
+		$this->assertFalse( $this->migrator->allTablesExist() );
+		( new Upgrades( $this->h->wpdb, $this->h->tables ) )->run();
+		$this->assertTrue( $this->migrator->migrate() );
+		$this->assertTrue( $this->migrator->allTablesExist() );
+	}
+
+	/**
+	 * Columns of a table by name.
+	 *
+	 * @param string $table Table name.
+	 * @return array<string,array<string,mixed>>
+	 */
+	private function columns( string $table ): array {
+		$out = array();
+		foreach ( (array) $this->h->wpdb->get_results( "SHOW COLUMNS FROM `{$table}`", ARRAY_A ) as $row ) { // phpcs:ignore
+			$out[ (string) $row['Field'] ] = $row;
+		}
+		return $out;
+	}
+
+	/**
+	 * Columns of an index, in order; empty when the index does not exist.
+	 *
+	 * @param string $table Table name.
+	 * @param string $index Index name.
+	 * @return array<int,string>
+	 */
+	private function indexColumns( string $table, string $index ): array {
+		$rows = (array) $this->h->wpdb->get_results( $this->h->wpdb->prepare( "SHOW INDEX FROM `{$table}` WHERE Key_name = %s", $index ), ARRAY_A ); // phpcs:ignore
+		usort( $rows, static fn( array $a, array $b ): int => (int) $a['Seq_in_index'] <=> (int) $b['Seq_in_index'] );
+		return array_map( static fn( array $row ): string => (string) $row['Column_name'], $rows );
 	}
 
 	public function test_running_the_migration_again_changes_nothing(): void {

@@ -12,9 +12,12 @@ namespace Estasoft\SyncEngine\Tests\Unit\Core\Queue;
 use Estasoft\SyncEngine\Contract\ConnectorError;
 use Estasoft\SyncEngine\Contract\HttpResponse;
 use Estasoft\SyncEngine\Core\Queue\ErrorClassifier;
+use Estasoft\SyncEngine\Core\Logging\Redactor;
 use Estasoft\SyncEngine\Core\Queue\FailureAction;
+use Estasoft\SyncEngine\Core\Settings;
 use Estasoft\SyncEngine\Domain\ErrorClass;
 use Estasoft\SyncEngine\Domain\ErrorCode;
+use Estasoft\SyncEngine\Tests\Support\CoreArrayOptionStore;
 use Estasoft\SyncEngine\Tests\Support\CoreFakeConnector;
 use PHPUnit\Framework\TestCase;
 
@@ -49,7 +52,10 @@ final class ErrorClassifierTest extends TestCase {
 		return array(
 			'ok'                    => array( 200, '', array(), null ),
 			'created'               => array( 201, '', array(), null ),
-			'redirect'              => array( 302, '', array(), null ),
+			'redirect'              => array( 302, '', array(), ErrorCode::Val002 ),
+			'moved permanently'     => array( 301, '', array(), ErrorCode::Val002 ),
+			'temporary redirect'    => array( 307, '', array(), ErrorCode::Val002 ),
+			'multiple choices'      => array( 399, '', array(), ErrorCode::Val002 ),
 			'sign-in refused'       => array( 401, '', array(), ErrorCode::Auth001 ),
 			'not allowed'           => array( 403, '', array(), ErrorCode::Auth004 ),
 			'slow down'             => array( 429, '', array( 'retry-after' => '30' ), ErrorCode::Rate001 ),
@@ -148,5 +154,73 @@ final class ErrorClassifierTest extends TestCase {
 		$this->assertSame( 'Product A was not found in Odoo.', $bare->message() );
 		$kept = $this->classifier->withSystem( new ConnectorError( ErrorCode::Map001, array( 'sku' => 'A', 'system' => 'Odoo 18' ) ), 'Other' );
 		$this->assertSame( 'Product A was not found in Odoo 18.', $kept->message() );
+	}
+
+	public function test_a_redirect_needs_a_person_and_says_which_address_to_use(): void {
+		foreach ( array( 301, 302, 307, 308 ) as $status ) {
+			$error = $this->classifier->fromResponse( new HttpResponse( $status, '', array( 'location' => 'https://elsewhere.example/api' ), '' ), 'Odoo' );
+			$this->assertNotNull( $error, (string) $status );
+			$this->assertSame( ErrorCode::Val002, $error->code );
+			$this->assertSame( $status, $error->httpStatus );
+			$this->assertStringContainsString( 'redirects', $error->message() );
+			$this->assertStringContainsString( 'final address', $error->message() );
+			$this->assertStringNotContainsString( 'elsewhere.example', $error->message(), 'the address it points to is not copied into a message' );
+
+			$decision = $this->classifier->classify( $error, null, 'Odoo' );
+			$this->assertSame( FailureAction::Fail, $decision->action, 'no automatic retry' );
+			$this->assertSame( ErrorClass::NeedsPerson, $decision->class );
+			$this->assertSame( 'Field address', $this->classifier->cause( $decision->error ) );
+		}
+	}
+
+	public function test_only_2xx_answers_are_successes(): void {
+		foreach ( array( 200, 201, 204, 299 ) as $status ) {
+			$this->assertNull( $this->classifier->fromResponse( new HttpResponse( $status, '', array(), '' ), 'Odoo' ), (string) $status );
+		}
+		foreach ( array( 300, 304, 399 ) as $status ) {
+			$this->assertNotNull( $this->classifier->fromResponse( new HttpResponse( $status, '', array(), '' ), 'Odoo' ), (string) $status );
+		}
+	}
+
+	public function test_text_from_the_other_system_is_redacted_before_it_fills_a_message(): void {
+		$error   = new ConnectorError(
+			ErrorCode::Val002,
+			array(
+				'field'  => 'partner.email',
+				'reason' => 'noor@example.com is not valid for phone 971501234567; Authorization: Bearer abcdef1234567890abcdef; api_key=sk_live_123456789abcdef',
+			),
+			422,
+			null,
+			null,
+			'detail with https://bob:hunter2@erp.example.com/x'
+		);
+		$decision = $this->classifier->classify( $error, null, 'Odoo' );
+		$text     = $decision->error->message() . ' | ' . $decision->error->detail;
+		foreach ( array( 'noor@example.com', '971501234567', 'abcdef1234567890abcdef', 'sk_live_123456789abcdef', 'hunter2' ) as $private ) {
+			$this->assertStringNotContainsString( $private, $text, $private );
+		}
+		$this->assertStringContainsString( 'partner.email', $decision->error->message(), 'field names stay readable' );
+		$this->assertSame( ErrorCode::Val002, $decision->error->code );
+		$this->assertSame( 422, $decision->error->httpStatus );
+	}
+
+	public function test_the_text_is_cut_to_a_sensible_length(): void {
+		$decision = $this->classifier->classify( new ConnectorError( ErrorCode::Val002, array( 'field' => 'x', 'reason' => str_repeat( 'word ', 400 ) ) ), null, 'Odoo' );
+		$this->assertLessThan( 450, mb_strlen( $decision->error->message() ) );
+	}
+
+	public function test_an_error_with_nothing_to_hide_is_not_copied(): void {
+		$error    = new ConnectorError( ErrorCode::Map001, array( 'sku' => 'CS-LAMP-07', 'system' => 'Odoo' ) );
+		$decision = $this->classifier->classify( $error, null, 'Odoo' );
+		$this->assertSame( $error, $decision->error );
+	}
+
+	public function test_personal_data_stays_when_the_setting_is_off_but_secrets_never_do(): void {
+		$settings = new Settings( new CoreArrayOptionStore(), 'owner@example.test' );
+		$settings->update( array( 'redaction' => false ) );
+		$classifier = new ErrorClassifier( new Redactor(), $settings );
+		$decision   = $classifier->classify( new ConnectorError( ErrorCode::Val002, array( 'field' => 'email', 'reason' => 'noor@example.com rejected, token=abcdef123456' ) ), null, 'Odoo' );
+		$this->assertStringContainsString( 'noor@example.com', $decision->error->message() );
+		$this->assertStringNotContainsString( 'abcdef123456', $decision->error->message() );
 	}
 }

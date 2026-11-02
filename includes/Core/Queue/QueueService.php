@@ -14,10 +14,15 @@ defined( 'ABSPATH' ) || exit;
 use Estasoft\SyncEngine\Core\Logging\Logger;
 use Estasoft\SyncEngine\Core\Repositories\LogRepository;
 use Estasoft\SyncEngine\Core\Repositories\QueueRepository;
+use Estasoft\SyncEngine\Domain\Item;
 
 /**
  * Retry one, many or a whole group of failed items; skip with a reason; restore; sync now; and the detail of one item. Every
  * action is written to the log with the id of the person. Capability and nonce checks are the controller's job.
+ *
+ * After an item is changed by retry, skip, restore (or the bulk forms of them) the action
+ * `estasoft_sync_item_state_changed( Item $item )` fires once for each changed item, with the item as it is after the change.
+ * Listeners (the order meta mirror, for one) use it to follow the queue without polling.
  */
 final class QueueService {
 
@@ -25,6 +30,11 @@ final class QueueService {
 	 * Most ids in one bulk action.
 	 */
 	public const BULK_LIMIT = 500;
+
+	/**
+	 * Most batches one group retry works through (a safety stop; 500 items each).
+	 */
+	private const GROUP_MAX_ROUNDS = 2000;
 
 	/**
 	 * @param QueueRepository $queue     Queue.
@@ -51,6 +61,7 @@ final class QueueService {
 			return null;
 		}
 		$this->audit( 'retry', $id );
+		$this->changed( $id );
 		$this->scheduler->runNow();
 		return $this->queue->findRow( $id );
 	}
@@ -58,15 +69,37 @@ final class QueueService {
 	/**
 	 * Retry several items.
 	 *
-	 * @param array<int,int> $ids Item ids.
+	 * @param array<int,int> $ids Item ids (at most BULK_LIMIT are used).
 	 * @return int How many were moved to the queue.
 	 */
 	public function retryMany( array $ids ): int {
-		$count = 0;
-		foreach ( $this->limit( $ids ) as $id ) {
-			if ( $this->queue->retry( $id ) ) {
-				$this->audit( 'retry', $id );
-				++$count;
+		$count = $this->retryBatch( $this->limit( $ids ) );
+		if ( $count > 0 ) {
+			$this->scheduler->runNow();
+		}
+		return $count;
+	}
+
+	/**
+	 * Retry a group on Needs attention: every failed item with an error code and, optionally, a cause. All of them, however
+	 * many there are: the group is read and retried in batches until none is left.
+	 *
+	 * @param string      $errorCode SYNC-... code.
+	 * @param string|null $cause     Cause text such as "SKU CS-LAMP-07"; null for every cause.
+	 * @return int How many were moved to the queue.
+	 */
+	public function retryGroup( string $errorCode, ?string $cause = null ): int {
+		$count   = 0;
+		$afterId = 0;
+		for ( $round = 0; $round < self::GROUP_MAX_ROUNDS; ++$round ) {
+			$ids = $this->queue->failedIdsByGroup( $errorCode, $cause, self::BULK_LIMIT, $afterId );
+			if ( array() === $ids ) {
+				break;
+			}
+			$count  += $this->retryBatch( $ids );
+			$afterId = max( $ids );
+			if ( count( $ids ) < self::BULK_LIMIT ) {
+				break;
 			}
 		}
 		if ( $count > 0 ) {
@@ -76,14 +109,21 @@ final class QueueService {
 	}
 
 	/**
-	 * Retry a group on Needs attention: every failed item with an error code and, optionally, a cause.
+	 * Retry a list of ids as they are, without a cap and without starting a run.
 	 *
-	 * @param string      $errorCode SYNC-... code.
-	 * @param string|null $cause     Cause text such as "SKU CS-LAMP-07"; null for every cause.
+	 * @param array<int,int> $ids Item ids.
 	 * @return int How many were moved to the queue.
 	 */
-	public function retryGroup( string $errorCode, ?string $cause = null ): int {
-		return $this->retryMany( $this->queue->failedIdsByGroup( $errorCode, $cause ) );
+	private function retryBatch( array $ids ): int {
+		$count = 0;
+		foreach ( $ids as $id ) {
+			if ( $this->queue->retry( $id ) ) {
+				$this->audit( 'retry', $id );
+				$this->changed( $id );
+				++$count;
+			}
+		}
+		return $count;
 	}
 
 	/**
@@ -99,6 +139,7 @@ final class QueueService {
 			return null;
 		}
 		$this->audit( 'skip', $id );
+		$this->changed( $id );
 		return $this->queue->findRow( $id );
 	}
 
@@ -130,6 +171,7 @@ final class QueueService {
 			return null;
 		}
 		$this->audit( 'restore', $id );
+		$this->changed( $id );
 		$this->scheduler->runNow();
 		return $this->queue->findRow( $id );
 	}
@@ -145,6 +187,7 @@ final class QueueService {
 		foreach ( $this->limit( $ids ) as $id ) {
 			if ( $this->queue->restore( $id ) ) {
 				$this->audit( 'restore', $id );
+				$this->changed( $id );
 				++$count;
 			}
 		}
@@ -207,6 +250,26 @@ final class QueueService {
 				'siblings'         => $this->queue->siblings( $id ),
 			)
 		);
+	}
+
+	/**
+	 * Tell listeners that an item was changed by a person.
+	 *
+	 * @param int $id Item id.
+	 */
+	private function changed( int $id ): void {
+		$item = $this->queue->find( $id );
+		if ( null === $item ) {
+			return;
+		}
+		/**
+		 * Fires after a person retried, skipped or restored an item (also in the bulk forms), once for each changed item.
+		 * The worker's own results fire `estasoft_sync_item_synced`, `estasoft_sync_item_failed` and
+		 * `estasoft_sync_shadow_processed` instead.
+		 *
+		 * @param Item $item The item as it is after the change.
+		 */
+		do_action( 'estasoft_sync_item_state_changed', $item );
 	}
 
 	/**

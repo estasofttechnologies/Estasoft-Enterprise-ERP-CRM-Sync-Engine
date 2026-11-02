@@ -40,6 +40,13 @@ final class CoreFakePayloadBuilder implements PayloadBuilderInterface {
 	public ?\Throwable $throw = null;
 
 	/**
+	 * Sensitive field paths the builder reports with every payload.
+	 *
+	 * @var array<int,string>
+	 */
+	public array $sensitivePaths = array();
+
+	/**
 	 * Mapping version reported.
 	 */
 	public int $mappingVersion = 3;
@@ -63,7 +70,7 @@ final class CoreFakePayloadBuilder implements PayloadBuilderInterface {
 			throw $this->throw;
 		}
 		if ( isset( $this->errors[ $item->entityId ] ) ) {
-			return new PayloadResult( array(), $this->errors[ $item->entityId ], $this->mappingVersion );
+			return new PayloadResult( array(), $this->errors[ $item->entityId ], $this->mappingVersion, array(), $this->sensitivePaths );
 		}
 		$payload = $this->payloads[ $item->entityId ] ?? array(
 			'client_order_ref' => $item->clientReference(),
@@ -71,6 +78,6 @@ final class CoreFakePayloadBuilder implements PayloadBuilderInterface {
 			'partner'          => array( 'email' => 'noor@example.com' ),
 			'lines'            => array( array( 'sku' => 'CS-BOWL-04', 'qty' => 2 ) ),
 		);
-		return new PayloadResult( $payload, null, $this->mappingVersion );
+		return new PayloadResult( $payload, null, $this->mappingVersion, array(), $this->sensitivePaths );
 	}
 }

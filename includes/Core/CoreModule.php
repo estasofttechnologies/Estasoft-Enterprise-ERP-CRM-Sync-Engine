@@ -178,7 +178,7 @@ final class CoreModule implements ModuleInterface {
 			$c,
 			Services::QUEUE_REPOSITORY,
 			QueueRepository::class,
-			static fn( Container $c ): QueueRepository => new QueueRepository( ...$base( $c ), ...array( wp_timezone() ) )
+			static fn( Container $c ): QueueRepository => new QueueRepository( ...$base( $c ), ...array( wp_timezone(), $c->get( Services::REDACTOR ), $c->get( Services::SETTINGS ) ) )
 		);
 		$this->add( $c, Services::LOG_REPOSITORY, LogRepository::class, static fn( Container $c ): LogRepository => new LogRepository( ...$base( $c ) ) );
 		$this->add( $c, Services::MAPPING_REPOSITORY, MappingRepository::class, static fn( Container $c ): MappingRepository => new MappingRepository( ...$base( $c ) ) );
@@ -230,7 +230,7 @@ final class CoreModule implements ModuleInterface {
 		$registry = static fn( Container $c ): \Closure => static fn(): ConnectorRegistry => $c->get( Services::CONNECTOR_REGISTRY );
 
 		$this->add( $c, Services::RETRY_POLICY, RetryPolicy::class, static fn( Container $c ): RetryPolicy => new RetryPolicy( $c->get( Services::CLOCK ) ) );
-		$this->add( $c, Services::ERROR_CLASSIFIER, ErrorClassifier::class, static fn(): ErrorClassifier => new ErrorClassifier() );
+		$this->add( $c, Services::ERROR_CLASSIFIER, ErrorClassifier::class, static fn( Container $c ): ErrorClassifier => new ErrorClassifier( $c->get( Services::REDACTOR ), $c->get( Services::SETTINGS ) ) );
 		$this->add(
 			$c,
 			Services::RATE_LIMITER,

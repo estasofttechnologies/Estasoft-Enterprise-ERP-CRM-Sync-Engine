@@ -30,6 +30,11 @@ final class LogRepository extends Repository {
 	private const PRUNE_BATCH = 2000;
 
 	/**
+	 * Longest stored message, in characters (LOG-1).
+	 */
+	public const MESSAGE_LIMIT = 500;
+
+	/**
 	 * Add an entry.
 	 *
 	 * @param array<string,mixed> $entry level, message (required); connection_id, queue_id, entity_ref, code, http_status,
@@ -41,13 +46,13 @@ final class LogRepository extends Repository {
 		return $this->insert(
 			$this->tables->logs(),
 			array(
-				'ts'               => $this->now(),
+				'ts'               => Time::sqlMs( $this->clock->now() ),
 				'level'            => $level,
 				'connection_id'    => isset( $entry['connection_id'] ) ? (int) $entry['connection_id'] : null,
 				'queue_id'         => isset( $entry['queue_id'] ) ? (int) $entry['queue_id'] : null,
 				'entity_ref'       => isset( $entry['entity_ref'] ) ? mb_substr( (string) $entry['entity_ref'], 0, 100 ) : null,
 				'code'             => isset( $entry['code'] ) ? mb_substr( (string) $entry['code'], 0, 20 ) : null,
-				'message'          => mb_substr( (string) ( $entry['message'] ?? '' ), 0, 4000 ),
+				'message'          => mb_substr( (string) ( $entry['message'] ?? '' ), 0, self::MESSAGE_LIMIT ),
 				'http_status'      => isset( $entry['http_status'] ) ? (int) $entry['http_status'] : null,
 				'duration_ms'      => isset( $entry['duration_ms'] ) ? (int) $entry['duration_ms'] : null,
 				'attempt'          => isset( $entry['attempt'] ) ? (int) $entry['attempt'] : null,
@@ -117,7 +122,7 @@ final class LogRepository extends Repository {
 		$rows = $this->results( "SELECT ts, level, code, message FROM {$this->tables->logs()} WHERE queue_id = %d ORDER BY id ASC LIMIT 200", array( $queueId ) );
 		return array_map(
 			static fn( array $row ): array => array(
-				'at'      => (string) Time::iso( (string) $row['ts'] ),
+				'at'      => (string) Time::isoMs( (string) $row['ts'] ),
 				'level'   => (string) $row['level'],
 				'code'    => self::stringOrNull( $row['code'] ),
 				'message' => (string) $row['message'],
@@ -170,7 +175,7 @@ final class LogRepository extends Repository {
 		foreach ( $rows as $row ) {
 			$lines[] = self::csvLine(
 				array(
-					(string) Time::iso( (string) $row['ts'] ),
+					(string) Time::isoMs( (string) $row['ts'] ),
 					(string) $row['level'],
 					(string) ( $row['code'] ?? '' ),
 					(string) $row['message'],
@@ -194,7 +199,7 @@ final class LogRepository extends Repository {
 	private function entry( array $row ): array {
 		return array(
 			'id'            => (int) $row['id'],
-			'ts'            => (string) Time::iso( (string) $row['ts'] ),
+			'ts'            => (string) Time::isoMs( (string) $row['ts'] ),
 			'level'         => (string) $row['level'],
 			'connection_id' => self::intOrNull( $row['connection_id'] ),
 			'queue_id'      => self::intOrNull( $row['queue_id'] ),
@@ -230,6 +235,11 @@ final class LogRepository extends Repository {
 		if ( null !== $query->code ) {
 			$parts[] = 'code = %s';
 			$args[]  = $query->code;
+		}
+		$seconds = $query->rangeSeconds();
+		if ( null !== $seconds ) {
+			$parts[] = 'ts >= %s';
+			$args[]  = Time::sqlMs( $this->clock->now()->modify( sprintf( '-%d seconds', $seconds ) ) );
 		}
 		if ( null !== $query->search ) {
 			$like    = $this->like( $query->search );

@@ -23,7 +23,10 @@ use Estasoft\SyncEngine\Domain\ErrorCode;
  * connection resumes by itself. The same class records the two automatic pauses that wait for a person: a refused
  * sign-in (SYNC-AUTH-001, paused) and an expired or unfinished one (needs reconnect).
  *
- * Hooks: `estasoft_sync_connection_paused( int $connectionId, string $reason )` with reason person or sign_in, and
+ * The reason is stored on the connection (`paused_reason`) and announced by the hook:
+ * `estasoft_sync_connection_paused( int $connectionId, string $reason )` with reason `person` (paused by hand), `circuit`
+ * (the breaker, announced by CircuitBreaker), `sign_in` (the sign-in was refused, expired or unfinished: AUTH-001, 002, 003,
+ * 005) or `key_missing` (no usable ESTASOFT_SYNC_KEY: CFG-002); and
  * `estasoft_sync_connection_resumed( int $connectionId, string $how )`.
  */
 final class PauseController {
@@ -65,7 +68,7 @@ final class PauseController {
 		 * Fires when a connection is paused.
 		 *
 		 * @param int    $connectionId Connection id.
-		 * @param string $reason       person, circuit or sign_in.
+		 * @param string $reason       person, circuit, sign_in or key_missing.
 		 */
 		do_action( 'estasoft_sync_connection_paused', $connectionId, 'person' );
 		return true;
@@ -169,14 +172,16 @@ final class PauseController {
 	 * @param ConnectionStatus $status       Paused or NeedsReconnect.
 	 * @param string           $system       Name of the system, for the message.
 	 * @param string|null      $message      A message to log instead of the catalog text.
+	 * @param string|null      $reason       `sign_in` or `key_missing`; by default `key_missing` for SYNC-CFG-002 and `sign_in` for the rest.
 	 * @return bool Whether this call changed the status (false when the connection was not active).
 	 */
-	public function holdForPerson( int $connectionId, ErrorCode $code, ConnectionStatus $status, string $system = '', ?string $message = null ): bool {
+	public function holdForPerson( int $connectionId, ErrorCode $code, ConnectionStatus $status, string $system = '', ?string $message = null, ?string $reason = null ): bool {
 		$connection = $this->connections->findWithoutSecrets( $connectionId );
 		if ( null === $connection || ConnectionStatus::Active !== $connection->status ) {
 			return false;
 		}
-		$this->connections->setStatus( $connectionId, $status, null, 'auth' );
+		$reason ??= ErrorCode::Cfg002 === $code ? 'key_missing' : 'sign_in';
+		$this->connections->setStatus( $connectionId, $status, null, $reason );
 		$this->logger->error(
 			$message ?? str_replace( '{system}', '' !== $system ? $system : $connection->label, $code->template() ),
 			array(
@@ -184,7 +189,7 @@ final class PauseController {
 				'code'          => $code,
 			)
 		);
-		do_action( 'estasoft_sync_connection_paused', $connectionId, 'sign_in' );
+		do_action( 'estasoft_sync_connection_paused', $connectionId, $reason );
 		return true;
 	}
 }

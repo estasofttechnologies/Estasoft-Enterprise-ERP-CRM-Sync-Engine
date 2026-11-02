@@ -101,7 +101,7 @@ final class CoreHarness {
 	 * @param string|null $key      Encryption key material; null for "no key defined".
 	 * @param string      $timezone Store time zone.
 	 */
-	public function __construct( string $now = '2026-11-02 12:00:00', ?string $key = 'unit-test-key-0123456789abcdef', string $timezone = 'Asia/Dubai' ) {
+	public function __construct( string $now = '2026-11-02 12:00:00', ?string $key = 'unit-test-key-0123456789abcdef-core', string $timezone = 'Asia/Dubai' ) {
 		global $wpdb;
 		$this->wpdb               = $wpdb;
 		$this->clock              = new CoreFakeClock( $now );
@@ -112,8 +112,10 @@ final class CoreHarness {
 		$this->connectionSettings = new ConnectionSettings();
 		$this->onboarding         = new OnboardingState( $this->options );
 
+		$this->redactor = new Redactor();
+
 		$this->connections = new ConnectionRepository( $wpdb, $this->tables, $this->clock, $this->box, $this->connectionSettings );
-		$this->queue       = new QueueRepository( $wpdb, $this->tables, $this->clock, new \DateTimeZone( $timezone ) );
+		$this->queue       = new QueueRepository( $wpdb, $this->tables, $this->clock, new \DateTimeZone( $timezone ), $this->redactor, $this->settings );
 		$this->logs        = new LogRepository( $wpdb, $this->tables, $this->clock );
 		$this->mappings    = new MappingRepository( $wpdb, $this->tables, $this->clock );
 		$this->idMap       = new IdMapRepository( $wpdb, $this->tables, $this->clock );
@@ -121,8 +123,7 @@ final class CoreHarness {
 		$this->idempotency = new IdempotencyRepository( $wpdb, $this->tables, $this->clock );
 		$this->recon       = new ReconRepository( $wpdb, $this->tables, $this->clock );
 
-		$this->redactor = new Redactor();
-		$this->logger   = new Logger( $this->logs, $this->settings, $this->redactor );
+		$this->logger = new Logger( $this->logs, $this->settings, $this->redactor );
 
 		$this->connector = new CoreFakeConnector( $this->clock );
 		$this->builder   = new CoreFakePayloadBuilder();
@@ -132,7 +133,7 @@ final class CoreHarness {
 		$builder  = fn(): ?PayloadBuilderInterface => $this->builder;
 
 		$this->retry      = new RetryPolicy( $this->clock, fn(): int => $this->jitter );
-		$this->classifier = new ErrorClassifier();
+		$this->classifier = new ErrorClassifier( $this->redactor, $this->settings );
 		$this->rateStore  = new CoreArrayRateStore();
 		$this->limiter    = new RateLimiter( $this->rateStore, $this->clock );
 		$this->pause      = new PauseController( $this->connections, $this->logger, $this->clock );
@@ -175,13 +176,28 @@ final class CoreHarness {
 	}
 
 	/**
-	 * Remove every row from the nine tables and the rate counters.
+	 * Remove every row from the nine tables, the rate counters and the plugin's transients.
+	 *
+	 * The Core tests (and the Rest, Admin and Woo tests built on them) do not run inside a transaction that is rolled back, so
+	 * what one test writes would still be there for the next. The transients matter most: a cached failed count left by one test
+	 * is read by the next test that opens the dashboard. They are deleted one by one through delete_option(), which also clears
+	 * their copy in the object cache.
 	 */
 	public function reset(): void {
 		foreach ( $this->tables->all() as $table ) {
 			$this->wpdb->query( "DELETE FROM `{$table}`" ); // phpcs:ignore
 		}
 		$this->wpdb->query( $this->wpdb->prepare( "DELETE FROM {$this->wpdb->options} WHERE option_name LIKE %s", $this->wpdb->esc_like( 'estasoft_sync_rl_' ) . '%' ) ); // phpcs:ignore
+		$names = $this->wpdb->get_col( // phpcs:ignore
+			$this->wpdb->prepare(
+				"SELECT option_name FROM {$this->wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s", // phpcs:ignore
+				$this->wpdb->esc_like( '_transient_estasoft_sync_' ) . '%',
+				$this->wpdb->esc_like( '_transient_timeout_estasoft_sync_' ) . '%'
+			)
+		);
+		foreach ( (array) $names as $name ) {
+			delete_option( (string) $name );
+		}
 	}
 
 	/**

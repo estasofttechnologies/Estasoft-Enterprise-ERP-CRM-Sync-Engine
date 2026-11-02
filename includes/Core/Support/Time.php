@@ -22,9 +22,19 @@ final class Time {
 	public const SQL = 'Y-m-d H:i:s';
 
 	/**
+	 * MySQL datetime(3) format (with milliseconds), used by the log table.
+	 */
+	public const SQL_MS = 'Y-m-d H:i:s.v';
+
+	/**
 	 * ISO 8601 UTC format used by the REST contract.
 	 */
 	public const ISO = 'Y-m-d\TH:i:s\Z';
+
+	/**
+	 * ISO 8601 UTC format with milliseconds, used for log entries.
+	 */
+	public const ISO_MS = 'Y-m-d\TH:i:s.v\Z';
 
 	/**
 	 * Format a moment as a MySQL datetime in UTC.
@@ -36,7 +46,16 @@ final class Time {
 	}
 
 	/**
-	 * Parse a MySQL datetime (UTC).
+	 * Format a moment as a MySQL datetime(3) in UTC, milliseconds included.
+	 *
+	 * @param \DateTimeInterface $moment Any moment.
+	 */
+	public static function sqlMs( \DateTimeInterface $moment ): string {
+		return \DateTimeImmutable::createFromInterface( $moment )->setTimezone( new \DateTimeZone( 'UTC' ) )->format( self::SQL_MS );
+	}
+
+	/**
+	 * Parse a MySQL datetime (UTC), with or without a fraction of a second.
 	 *
 	 * @param string $value Datetime string.
 	 * @return \DateTimeImmutable|null Null when the value is empty or invalid.
@@ -45,7 +64,11 @@ final class Time {
 		if ( null === $value || '' === $value || str_starts_with( $value, '0000-00-00' ) ) {
 			return null;
 		}
-		$parsed = \DateTimeImmutable::createFromFormat( self::SQL, $value, new \DateTimeZone( 'UTC' ) );
+		$utc    = new \DateTimeZone( 'UTC' );
+		$parsed = \DateTimeImmutable::createFromFormat( self::SQL, $value, $utc );
+		if ( false === $parsed ) {
+			$parsed = \DateTimeImmutable::createFromFormat( 'Y-m-d H:i:s.u', $value, $utc );
+		}
 		return false === $parsed ? null : $parsed;
 	}
 
@@ -58,6 +81,17 @@ final class Time {
 	public static function iso( ?string $value ): ?string {
 		$parsed = self::fromSql( $value );
 		return null === $parsed ? null : $parsed->format( self::ISO );
+	}
+
+	/**
+	 * Convert a MySQL datetime to the REST format with milliseconds.
+	 *
+	 * @param string|null $value MySQL datetime in UTC, with or without a fraction.
+	 * @return string|null ISO string, or null when empty.
+	 */
+	public static function isoMs( ?string $value ): ?string {
+		$parsed = self::fromSql( $value );
+		return null === $parsed ? null : $parsed->format( self::ISO_MS );
 	}
 
 	/**

@@ -111,4 +111,57 @@ final class PauseControllerTest extends CoreIntegrationTestCase {
 		$this->assertSame( 'SYNC-AUTH-005', $this->h->logs->latest( 1 )[0]['code'] );
 		$this->assertStringContainsString( 'Xero', $this->h->logs->latest( 1 )[0]['message'] );
 	}
+
+	public function test_each_pause_says_why_in_the_record_and_in_the_hook(): void {
+		$paused = $this->listen( 'estasoft_sync_connection_paused', 2 );
+
+		$by_hand = $this->h->connection();
+		$this->h->pause->pause( $by_hand );
+		$this->assertSame( 'person', $this->h->connections->findPublic( $by_hand )['paused_reason'] );
+
+		$refused = $this->h->connection();
+		$this->h->pause->pauseForRefusedSignIn( $refused, 'Odoo' );
+		$this->assertSame( 'sign_in', $this->h->connections->findPublic( $refused )['paused_reason'] );
+
+		$expired = $this->h->connection();
+		$this->h->pause->markNeedsReconnect( $expired, ErrorCode::Auth003, 'Xero' );
+		$this->assertSame( 'sign_in', $this->h->connections->findPublic( $expired )['paused_reason'] );
+
+		$nokey = $this->h->connection();
+		$this->h->pause->holdForPerson( $nokey, ErrorCode::Cfg002, \Estasoft\SyncEngine\Domain\ConnectionStatus::Paused );
+		$this->assertSame( 'key_missing', $this->h->connections->findPublic( $nokey )['paused_reason'] );
+
+		$custom = $this->h->connection();
+		$this->h->pause->holdForPerson( $custom, ErrorCode::Auth001, \Estasoft\SyncEngine\Domain\ConnectionStatus::Paused, '', null, 'person' );
+		$this->assertSame( 'person', $this->h->connections->findPublic( $custom )['paused_reason'], 'a caller can name the reason' );
+
+		$this->assertSame(
+			array(
+				array( $by_hand, 'person' ),
+				array( $refused, 'sign_in' ),
+				array( $expired, 'sign_in' ),
+				array( $nokey, 'key_missing' ),
+				array( $custom, 'person' ),
+			),
+			$paused->getArrayCopy(),
+			'the hook carries the same reason as the record'
+		);
+	}
+
+	public function test_the_circuit_breaker_records_and_announces_circuit(): void {
+		$paused = $this->listen( 'estasoft_sync_connection_paused', 2 );
+		$conn   = $this->h->connection();
+		for ( $i = 0; $i < 5; ++$i ) {
+			$this->h->breaker->recordRetryableFailure( $this->h->connections->findWithoutSecrets( $conn ) );
+		}
+		$this->assertSame( 'circuit', $this->h->connections->findPublic( $conn )['paused_reason'] );
+		$this->assertSame( array( array( $conn, 'circuit' ) ), $paused->getArrayCopy() );
+	}
+
+	public function test_resuming_clears_the_reason(): void {
+		$conn = $this->h->connection();
+		$this->h->pause->pauseForRefusedSignIn( $conn, 'Odoo' );
+		$this->h->pause->resume( $conn );
+		$this->assertNull( $this->h->connections->findPublic( $conn )['paused_reason'] );
+	}
 }

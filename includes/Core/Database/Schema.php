@@ -14,14 +14,18 @@ defined( 'ABSPATH' ) || exit;
 /**
  * CREATE TABLE statements in the exact layout dbDelta needs: one column per line, two spaces after
  * PRIMARY KEY, no backticks, no comments. Bump VERSION whenever a statement changes; the migrator
- * runs dbDelta again for every site whose stored version is older.
+ * runs dbDelta again for every site whose stored version is older. dbDelta cannot drop or change an
+ * index and cannot add a unique index over duplicate rows, so Upgrades runs first (see Upgrades).
+ *
+ * Version 1.1.0: queue `priority`, `reaps`, the claim index with priority, a unique (connection_id,
+ * idempotency_key); logs `ts` in milliseconds and `message` capped at 500; connections `disconnected_at`.
  */
 final class Schema {
 
 	/**
 	 * Schema version stored in the option estasoft_sync_db_version.
 	 */
-	public const VERSION = '1.0.0';
+	public const VERSION = '1.1.0';
 
 	/**
 	 * @param Tables $tables         Table names.
@@ -64,6 +68,7 @@ final class Schema {
   credential_expires_at datetime NULL DEFAULT NULL,
   credential_warn_days smallint(5) unsigned NOT NULL DEFAULT 14,
   inbound_enabled tinyint(1) NOT NULL DEFAULT 0,
+  disconnected_at datetime NULL DEFAULT NULL,
   created_at datetime NOT NULL,
   updated_at datetime NOT NULL,
   PRIMARY KEY  (id),
@@ -80,15 +85,17 @@ final class Schema {
   event varchar(32) NOT NULL,
   partition_key varchar(100) NOT NULL,
   idempotency_key char(64) NOT NULL,
+  priority tinyint(3) unsigned NOT NULL DEFAULT 5,
   state varchar(16) NOT NULL DEFAULT 'queued',
   mode varchar(8) NOT NULL DEFAULT 'live',
   attempt smallint(5) unsigned NOT NULL DEFAULT 0,
+  reaps tinyint(3) unsigned NOT NULL DEFAULT 0,
   max_attempts smallint(5) unsigned NOT NULL DEFAULT 5,
   next_attempt_at datetime NULL DEFAULT NULL,
   locked_until datetime NULL DEFAULT NULL,
   locked_by varchar(64) NULL DEFAULT NULL,
   error_code varchar(20) NULL DEFAULT NULL,
-  error_message text NULL,
+  error_message varchar(500) NULL DEFAULT NULL,
   error_cause varchar(191) NULL DEFAULT NULL,
   external_id varchar(191) NULL DEFAULT NULL,
   external_ref varchar(191) NULL DEFAULT NULL,
@@ -105,25 +112,25 @@ final class Schema {
   updated_at datetime NOT NULL,
   finished_at datetime NULL DEFAULT NULL,
   PRIMARY KEY  (id),
-  KEY claim (state, next_attempt_at),
+  KEY claim (state, next_attempt_at, priority),
   KEY locked (state, locked_until),
   KEY partition_order (connection_id, partition_key, id),
   KEY connection_state (connection_id, state),
   KEY entity (entity_type, entity_id),
-  KEY idempotency (idempotency_key),
+  UNIQUE KEY connection_key (connection_id, idempotency_key),
   KEY finished (finished_at),
   KEY created (created_at)
 ) $c;";
 
 		$statements['logs'] = "CREATE TABLE {$t->logs()} (
   id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-  ts datetime NOT NULL,
+  ts datetime(3) NOT NULL,
   level varchar(8) NOT NULL DEFAULT 'info',
   connection_id bigint(20) unsigned NULL DEFAULT NULL,
   queue_id bigint(20) unsigned NULL DEFAULT NULL,
   entity_ref varchar(100) NULL DEFAULT NULL,
   code varchar(20) NULL DEFAULT NULL,
-  message text NOT NULL,
+  message varchar(500) NOT NULL,
   http_status smallint(5) unsigned NULL DEFAULT NULL,
   duration_ms int(10) unsigned NULL DEFAULT NULL,
   attempt smallint(5) unsigned NULL DEFAULT NULL,

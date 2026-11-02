@@ -58,6 +58,9 @@ final class Redactor {
 		'bearer',
 		'signature',
 		'hmac',
+		'card_number',
+		'cvv',
+		'cvc',
 	);
 
 	/**
@@ -70,10 +73,44 @@ final class Redactor {
 		'e_mail',
 		'email_address',
 		'phone',
+		'phone_number',
 		'mobile',
+		'mobile_number',
+		'contact_number',
 		'telephone',
+		'telephone_number',
 		'tel',
+		'cell',
+		'whatsapp',
 		'fax',
+		'name',
+		'nickname',
+		'username',
+		'user_name',
+		'user_login',
+		'recipient',
+		'recipient_name',
+		'receiver',
+		'sender',
+		'ship_to',
+		'bill_to',
+		'attention',
+		'contact_person',
+		'cardholder',
+		'holder_name',
+		'date_of_birth',
+		'birth_date',
+		'birthday',
+		'dob',
+		'ip_address',
+		'customer_ip',
+		'iban',
+		'bank_account',
+		'account_number',
+		'national_id',
+		'passport',
+		'passport_number',
+		'ssn',
 		'first_name',
 		'last_name',
 		'firstname',
@@ -149,6 +186,8 @@ final class Redactor {
 		$text = (string) preg_replace( '/(authorization["\']?\s*[:=]\s*)(?!\[secret\])(?:"[^"]*"|\'[^\']*\'|(?:(?:bearer|basic|digest|token)\s+)?[^\s,;}"\']+)/i', '$1' . self::SECRET, $text );
 		// key=value and "key": "value" for secret names.
 		$text = (string) preg_replace( '/((?<![A-Za-z0-9])["\']?(?:' . $names . ')["\']?\s*[:=]\s*)(?!"?\[secret\])("(?:[^"\\\\]|\\\\.)*"|\'[^\']*\'|[^\s,;&}\]]+)/i', '$1"' . self::SECRET . '"', $text );
+		// Credentials inside an address: scheme://user:password@host. The whole user information part goes.
+		$text = (string) preg_replace( '/\b([a-z][a-z0-9+.\-]*:\/\/)[^\s\/@"\'<>]*:[^\s\/@"\'<>]*@/i', '$1' . self::SECRET . '@', $text );
 		// Bearer and Basic credentials anywhere.
 		$text = (string) preg_replace( '/\b(bearer|basic)\s+[A-Za-z0-9\-._~+\/]{6,}=*/i', '$1 ' . self::SECRET, $text );
 		// JSON web tokens.
@@ -167,22 +206,34 @@ final class Redactor {
 	/**
 	 * Remove personal data from free text: emails, tax numbers, phone numbers and address-like text.
 	 *
-	 * @param string $text Any text.
+	 * A bare run of 9 to 15 digits (separators allowed) is taken for a phone number such as `971501234567` or
+	 * `(212) 555-0199`, unless it looks like something else: money (a decimal tail or a currency next to it), a date, an
+	 * IP address, an id or total named by the words before it, or a JSON number. Short numbers (order ids, 6 digit tax
+	 * values) and codes with letters in them (`IT00123456`) are never taken for phones.
+	 *
+	 * @param string $text       Any text.
+	 * @param bool   $barePhones Whether the pattern for phone numbers without a plus or leading zero is applied.
 	 */
-	public function personal( string $text ): string {
+	public function personal( string $text, bool $barePhones = true ): string {
 		// Emails.
 		$text = (string) preg_replace( '/[A-Za-z0-9._%+\-]+@[A-Za-z0-9\-]+(?:\.[A-Za-z0-9\-]+)*\.[A-Za-z]{2,}/', '[email]', $text );
 
 		// Tax numbers: labelled values, 15 digit numbers (Saudi Arabia, UAE), and European VAT numbers.
-		$text = (string) preg_replace( '/\b((?i:vat|tax(?:[ _\-]?(?:number|id|no\.?))?|trn|tin|gst|abn|ein))\b([\s:#=\-"\']{0,6})([A-Z]{0,3} ?\d(?:[ \-.]?\d){5,17}[A-Z]?)(?![\w])/', '$1$2[tax number]', $text );
+		// A bare "tax" followed by a JSON number ("tax":123456) is an amount, not a tax number.
+		$text = (string) preg_replace( '/\b((?i:vat|tax(?:[ _\-]?(?:number|id|no\.?))?|trn|tin|gst|abn|ein))\b(?!(?<=[Tt][Aa][Xx])"\s*:\s*\d)([\s:#=\-"\']{0,6})([A-Z]{0,3} ?\d(?:[ \-.]?\d){5,17}[A-Z]?)(?![\w])/', '$1$2[tax number]', $text );
 		$text = (string) preg_replace( '/(?<![\d.])\d{15}(?![\d])/', '[tax number]', $text );
-		$text = (string) preg_replace( '/\b(?:AT|BE|BG|CY|CZ|DE|DK|EE|EL|ES|FI|FR|HR|HU|IE|IT|LT|LU|LV|MT|NL|PL|PT|RO|SE|SI|SK|GB|XI)(?=[A-Z0-9]*\d{6})[A-Z0-9]{8,12}\b/', '[tax number]', $text );
+		// The body after the country code is 8 characters only in a few countries; elsewhere it is 9 to 12, so a short code
+		// such as IT00123456 (not a valid Italian number, which has 11 digits) is left alone.
+		$text = (string) preg_replace( '/\b(?:(?:DK|FI|HU|LU|MT|SI|IE|CZ)(?=[A-Z0-9]*\d{6})[A-Z0-9]{8,12}|(?:AT|BE|BG|CY|DE|EE|EL|ES|FR|HR|IT|LT|LV|NL|PL|PT|RO|SE|SK|GB|XI)(?=[A-Z0-9]*\d{6})[A-Z0-9]{9,12})\b/', '[tax number]', $text );
 
 		// Phone numbers: international with a plus or 00, then local numbers with separators or a leading zero.
 		$text = (string) preg_replace( '/(?<![\w])\+\d[\d\s().\-]{7,17}\d/', '[phone]', $text );
 		$text = (string) preg_replace( '/(?<![\w])00\d{1,3}[\d\s().\-]{7,15}\d/', '[phone]', $text );
 		$text = (string) preg_replace( '/(?<![\w.\-:])\(?0\d{1,4}\)?[\s.\-]\d{3,4}[\s.\-]?\d{3,4}(?![\w])/', '[phone]', $text );
 		$text = (string) preg_replace( '/(?<![\w.\-:])0\d{8,10}(?![\w.])/', '[phone]', $text );
+		if ( $barePhones ) {
+			$text = $this->barePhones( $text );
+		}
 
 		// Address-like text: a house number and street, a named street, and PO boxes.
 		$suffix = 'street|st|road|rd|avenue|ave|boulevard|blvd|lane|ln|drive|dr|court|ct|way|place|pl|square|sq|highway|hwy|building|bldg|tower|floor|apt|apartment|suite|ste';
@@ -193,16 +244,70 @@ final class Redactor {
 	}
 
 	/**
+	 * Phone numbers with no plus, 00 or leading zero. See personal() for what is left alone.
+	 *
+	 * @param string $text Text.
+	 */
+	private function barePhones( string $text ): string {
+		$currency = '(?:AED|USD|EUR|GBP|SAR|EGP|JOD|KWD|QAR|BHD|OMR|INR|CHF|CAD|AUD|NGN|KES|ZAR|TRY)';
+		$label    = '(?:order|invoice|inv|ref|reference|sku|total|amount|price|qty|quantity|balance|ticket|transaction|txn|barcode|ean|gtin|upc|tracking|shipment|serial|ids?)';
+		return (string) preg_replace_callback(
+			'/(?<![\w#@$\x{20AC}\x{00A3}\x{00A5}\/:=.,\-+])\(?\d[\d\s().\-]{6,24}\d(?![\w:]|[.,]\d)/u',
+			static function ( array $match ) use ( $text, $currency, $label ): string {
+				$raw    = (string) $match[0][0];
+				$offset = (int) $match[0][1];
+				$digits = strlen( (string) preg_replace( '/\D/', '', $raw ) );
+				if ( $digits < 9 || $digits > 15 ) {
+					return $raw;
+				}
+				$before = substr( $text, max( 0, $offset - 40 ), min( 40, $offset ) );
+				$after  = substr( $text, $offset + strlen( $raw ), 12 );
+				if (
+					1 === preg_match( '/^\d{1,3}(?:\.\d{1,3}){3}$/', $raw )                                                      // IPv4 address.
+					|| 1 === preg_match( '/^\(?(?:\d{4}[\-.\/]\d{1,2}[\-.\/]\d{1,2}|\d{1,2}[\-.\/]\d{1,2}[\-.\/]\d{2,4})(?!\d)/', $raw ) // Date.
+					|| 1 === preg_match( '/^\d+\.\d+$|\.\d{1,2}$/', $raw )                                                    // Decimal amount.
+					|| 1 === preg_match( '/"\s*:\s*$/', $before )                                                              // JSON number.
+					|| 1 === preg_match( '/(?:' . $currency . '|[$\x{20AC}\x{00A3}\x{00A5}])\s*$/iu', $before )                  // Currency before.
+					|| 1 === preg_match( '/^\s*(?:' . $currency . '\b|%)/i', $after )                                            // Currency after.
+					|| 1 === preg_match( '/(?:^|[^A-Za-z])' . $label . '(?:[\s_\-]*(?:' . $label . '|no|nr|number|num))*[\s:#=.\-"\'_\[]*$/i', $before ) // Named as an id or total.
+				) {
+					return $raw;
+				}
+				return '[phone]';
+			},
+			$text,
+			-1,
+			$count,
+			PREG_OFFSET_CAPTURE
+		);
+	}
+
+	/**
+	 * Whether a field name stands for an identifier, a code, an amount or a time rather than for a person's phone.
+	 *
+	 * @param string $name Lower-case field name.
+	 */
+	private static function numericField( string $name ): bool {
+		return 1 === preg_match( '/(?:^|_)(?:id|ids|ref|reference|sku|number|no|nr|total|amount|price|qty|quantity|balance|barcode|ean|gtin|upc|tracking|code|ts|timestamp|time|date|created|updated)$/', $name );
+	}
+
+	/**
 	 * Redact a value of any shape: arrays are walked field by field; strings go through the text rules.
 	 *
 	 * @param mixed              $data            Array, string or scalar.
 	 * @param bool               $redactPersonal  Whether personal data is removed too.
-	 * @param array<int,string>  $sensitivePaths  Extra field paths whose value is personal (their last segment is used as a name).
+	 * @param array<int,string>  $sensitivePaths  Extra field paths whose value is personal, for example `partner.vat`. A path
+	 *                                            of one segment is a field name. A longer path matches a field whose names
+	 *                                            from the top, ending in the same segments, are those of the path (so
+	 *                                            `partner.ref` does not hide an unrelated `ref`).
 	 * @return mixed
 	 */
 	public function structure( mixed $data, bool $redactPersonal = true, array $sensitivePaths = array() ): mixed {
-		$personal_keys = $redactPersonal ? $this->personalKeys( $sensitivePaths ) : array();
-		return $this->walk( $data, $redactPersonal, $personal_keys );
+		if ( ! $redactPersonal ) {
+			return $this->walk( $data, false, array(), array(), array() );
+		}
+		list( $names, $paths ) = $this->personalKeys( $sensitivePaths );
+		return $this->walk( $data, true, $names, $paths, array() );
 	}
 
 	/**
@@ -268,44 +373,69 @@ final class Redactor {
 	}
 
 	/**
-	 * The set of personal field names for a call.
+	 * The personal field names and field paths for a call.
 	 *
 	 * @param array<int,string> $paths Extra paths.
-	 * @return array<string,bool> Name to true.
+	 * @return array{0:array<string,bool>,1:array<int,array<int,string>>} Names (name to true) and paths (lists of segments).
 	 */
 	private function personalKeys( array $paths ): array {
 		$names = self::PERSONAL_KEYS;
+		$deep  = array();
 		foreach ( $paths as $path ) {
-			$parts   = explode( '.', strtolower( str_replace( '[]', '', (string) $path ) ) );
-			$names[] = (string) end( $parts );
+			$parts = array_values( array_filter( explode( '.', strtolower( str_replace( '[]', '', trim( (string) $path ) ) ) ), static fn( string $part ): bool => '' !== $part ) );
+			if ( 1 === count( $parts ) ) {
+				$names[] = $parts[0];
+			} elseif ( count( $parts ) > 1 ) {
+				$deep[] = $parts;
+			}
 		}
-		return array_fill_keys( array_filter( $names ), true );
+		return array( array_fill_keys( array_filter( $names ), true ), $deep );
+	}
+
+	/**
+	 * Whether the names leading to a field end with the segments of one of the paths.
+	 *
+	 * @param array<int,array<int,string>> $paths Paths as lists of segments.
+	 * @param array<int,string>            $trail Names from the top to the field.
+	 */
+	private static function pathMatches( array $paths, array $trail ): bool {
+		foreach ( $paths as $segments ) {
+			$length = count( $segments );
+			if ( $length <= count( $trail ) && array_slice( $trail, -$length ) === $segments ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**
 	 * Walk a value and redact it.
 	 *
-	 * @param mixed              $data           Value.
-	 * @param bool               $personal       Whether personal data is removed.
-	 * @param array<string,bool> $personalKeys   Personal field names.
+	 * @param mixed                        $data         Value.
+	 * @param bool                         $personal     Whether personal data is removed.
+	 * @param array<string,bool>           $personalKeys Personal field names.
+	 * @param array<int,array<int,string>> $paths        Personal field paths.
+	 * @param array<int,string>            $trail        Names from the top down to this value.
+	 * @param bool                         $barePhones   Whether strings are checked for phone numbers with no plus or zero.
 	 * @return mixed
 	 */
-	private function walk( mixed $data, bool $personal, array $personalKeys ): mixed {
+	private function walk( mixed $data, bool $personal, array $personalKeys, array $paths, array $trail, bool $barePhones = true ): mixed {
 		if ( is_string( $data ) ) {
-			return $this->secrets( $personal ? $this->personal( $data ) : $data );
+			return $this->secrets( $personal ? $this->personal( $data, $barePhones ) : $data );
 		}
 		if ( ! is_array( $data ) ) {
 			return $data;
 		}
 		$out = array();
 		foreach ( $data as $key => $value ) {
-			$name = is_string( $key ) ? strtolower( $key ) : '';
+			$name  = is_string( $key ) ? strtolower( $key ) : '';
+			$where = '' === $name ? $trail : array_merge( $trail, array( $name ) );
 			if ( '' !== $name && in_array( $name, self::SECRET_KEYS, true ) ) {
 				$out[ $key ] = self::SECRET;
-			} elseif ( '' !== $name && isset( $personalKeys[ $name ] ) && ( is_array( $value ) || is_scalar( $value ) ) && '' !== $value && null !== $value ) {
+			} elseif ( '' !== $name && ( isset( $personalKeys[ $name ] ) || self::pathMatches( $paths, $where ) ) && ( is_array( $value ) || is_scalar( $value ) ) && '' !== $value && null !== $value ) {
 				$out[ $key ] = self::PERSONAL;
 			} else {
-				$out[ $key ] = $this->walk( $value, $personal, $personalKeys );
+				$out[ $key ] = $this->walk( $value, $personal, $personalKeys, $paths, $where, '' === $name ? $barePhones : ! self::numericField( $name ) );
 			}
 		}
 		return $out;

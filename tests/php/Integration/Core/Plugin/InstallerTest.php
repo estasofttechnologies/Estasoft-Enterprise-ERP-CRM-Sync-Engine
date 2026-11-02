@@ -12,6 +12,7 @@ namespace Estasoft\SyncEngine\Tests\Integration\Core\Plugin;
 require_once dirname( __DIR__, 3 ) . '/Support/CoreIntegrationTestCase.php';
 
 use Estasoft\SyncEngine\Core\Capabilities;
+use Estasoft\SyncEngine\Core\DataEraser;
 use Estasoft\SyncEngine\Core\Database\Migrator;
 use Estasoft\SyncEngine\Core\Database\Schema;
 use Estasoft\SyncEngine\Core\Installer;
@@ -24,6 +25,16 @@ final class InstallerTest extends CoreIntegrationTestCase {
 
 	protected function setUp(): void {
 		parent::setUp();
+		// Other tests of the suite may have deleted or changed the plugin's options and left them so (the options table is not
+		// rolled back). Start from what a fresh activation leaves, whatever ran before.
+		// A test that removed a row with plain SQL leaves its copy in the object cache, and delete_option() does not clear a
+		// copy whose row is gone, so each name is also dropped from the cache by hand.
+		foreach ( array( Settings::OPTION, OnboardingState::OPTION, 'estasoft_sync_installed_at' ) as $name ) {
+			delete_option( $name );
+			wp_cache_delete( $name, 'options' );
+		}
+		wp_cache_delete( 'alloptions', 'options' );
+		wp_cache_delete( 'notoptions', 'options' );
 		Installer::installSite();
 	}
 
@@ -151,6 +162,35 @@ final class InstallerTest extends CoreIntegrationTestCase {
 		$this->assertTrue( get_role( 'administrator' )->has_cap( Capabilities::MANAGE ), 'capabilities stay too' );
 	}
 
+	public function test_erasing_one_site_leaves_the_user_meta_that_belongs_to_the_whole_network(): void {
+		update_user_meta( 1, 'estasoft_sync_dismissed_notices', array( 'welcome' ) );
+		update_user_meta( 1, 'estasoft_sync_external_id', '77' );
+		try {
+			( new DataEraser( $this->h->wpdb, $this->h->tables ) )->erase( false, false );
+			$this->assertSame( array( 'welcome' ), get_user_meta( 1, 'estasoft_sync_dismissed_notices', true ), 'one site of a network was erased' );
+			$this->assertSame( '77', get_user_meta( 1, 'estasoft_sync_external_id', true ) );
+
+			( new DataEraser( $this->h->wpdb, $this->h->tables ) )->eraseUserMeta();
+			$this->assertSame( '', get_user_meta( 1, 'estasoft_sync_dismissed_notices', true ), 'the whole network was erased' );
+			$this->assertSame( '', get_user_meta( 1, 'estasoft_sync_external_id', true ) );
+		} finally {
+			delete_user_meta( 1, 'estasoft_sync_dismissed_notices' );
+			delete_user_meta( 1, 'estasoft_sync_external_id' );
+			Installer::installSite();
+		}
+	}
+
+	public function test_a_single_site_erase_removes_user_meta_by_default(): void {
+		update_user_meta( 1, 'estasoft_sync_per_page', 50 );
+		try {
+			( new DataEraser( $this->h->wpdb, $this->h->tables ) )->erase( false );
+			$this->assertSame( '', get_user_meta( 1, 'estasoft_sync_per_page', true ) );
+		} finally {
+			delete_user_meta( 1, 'estasoft_sync_per_page' );
+			Installer::installSite();
+		}
+	}
+
 	public function test_uninstall_with_the_setting_off_keeps_the_data_and_stops_the_tasks(): void {
 		$id = $this->h->connection();
 		Installer::uninstall();
@@ -166,8 +206,21 @@ final class InstallerTest extends CoreIntegrationTestCase {
 		$this->h->logger->info( 'hello' );
 		$this->enableDeletion();
 		set_transient( 'estasoft_sync_status_cache', 1, 600 );
+		set_transient( 'estasoft_sync_n_42', 1, 600 );
 		update_option( 'estasoft_sync_rl_abcdef', '1.0', false );
+		update_option( 'estasoft_sync_recon_progress', array( 'x' => 1 ), false );
+		update_option( 'estasoft_sync_capacity', array( 'x' => 1 ), false );
+		update_option( 'estasoft_sync_addon_cache_7', 'x', false );
+		update_option( 'estasoft_sync_addon_exact', 'x', false );
+		// Not in the plugin's list and not added through the filter: another plugin's option that only shares the prefix.
+		update_option( 'estasoft_sync_pro_license', 'keep', false );
 		update_option( 'other_plugin_option', 'keep', false );
+		add_filter(
+			'estasoft_sync_option_names',
+			static function ( array $names ): array {
+				return array_merge( $names, array( 'estasoft_sync_addon_exact', 'estasoft_sync_addon_cache_*', 'not_ours_at_all', 'estasoft_sync_*' ) );
+			}
+		);
 		set_transient( 'other_plugin_transient', 'keep', 600 );
 
 		$product = wp_insert_post( array( 'post_title' => 'Bowl', 'post_type' => 'post', 'post_status' => 'publish' ) );
@@ -194,7 +247,7 @@ final class InstallerTest extends CoreIntegrationTestCase {
 				$this->assertNull( $this->h->wpdb->get_var( $this->h->wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ), $table );
 			}
 			$leftover = $this->h->wpdb->get_col( "SELECT option_name FROM {$this->h->wpdb->options} WHERE option_name LIKE '%estasoft\\_sync\\_%'" ); // phpcs:ignore
-			$this->assertSame( array(), $leftover, 'every option and transient of the plugin is gone' );
+			$this->assertSame( array( 'estasoft_sync_pro_license' ), $leftover, 'the options in the list, the ones the filter added and every transient are gone; an option that only shares the prefix stays' );
 			$this->assertSame( 'keep', get_option( 'other_plugin_option' ) );
 			$this->assertSame( 'keep', get_transient( 'other_plugin_transient' ) );
 			$this->assertFalse( wp_next_scheduled( Scheduler::HOOK_RUN ) );
@@ -215,6 +268,7 @@ final class InstallerTest extends CoreIntegrationTestCase {
 			wp_delete_post( $product, true );
 			wp_delete_post( $order, true );
 			delete_option( 'other_plugin_option' );
+			delete_option( 'estasoft_sync_pro_license' );
 			delete_transient( 'other_plugin_transient' );
 			delete_user_meta( 1, 'some_other_user_meta' );
 			@unlink( $uploads['basedir'] . '/keep-me/file.txt' ); // phpcs:ignore

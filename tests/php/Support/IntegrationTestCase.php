@@ -32,6 +32,7 @@ abstract class IntegrationTestCase extends TestCase {
 	protected function tearDown(): void {
 		global $wpdb;
 		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		wp_cache_flush(); // The rollback restores rows, not the object cache.
 		parent::tearDown();
 	}
 }

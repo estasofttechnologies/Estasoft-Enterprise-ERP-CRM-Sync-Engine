@@ -12,6 +12,8 @@ namespace Estasoft\SyncEngine\Core\Repositories;
 defined( 'ABSPATH' ) || exit;
 
 use Estasoft\SyncEngine\Core\Database\Tables;
+use Estasoft\SyncEngine\Core\Logging\Redactor;
+use Estasoft\SyncEngine\Core\Settings;
 use Estasoft\SyncEngine\Core\Support\Clock;
 use Estasoft\SyncEngine\Core\Support\DayRange;
 use Estasoft\SyncEngine\Core\Support\Time;
@@ -46,25 +48,69 @@ final class QueueRepository extends Repository {
 	/**
 	 * How many times claim() looks again when another worker took every candidate first.
 	 */
-	private const CLAIM_ATTEMPTS = 3;
+	private const CLAIM_ATTEMPTS = 8;
+
+	/**
+	 * Longest stored error message, in characters (spec 5.3).
+	 */
+	public const MESSAGE_LIMIT = 500;
+
+	/**
+	 * Longest stored error cause, in characters.
+	 */
+	public const CAUSE_LIMIT = 191;
+
+	/**
+	 * Times the stale lock reaper may take back the same item before it is stopped and left to a person (poison item).
+	 */
+	public const MAX_REAPS = 3;
+
+	/**
+	 * Priority of an ordinary item. A lower number is claimed first.
+	 */
+	public const DEFAULT_PRIORITY = 5;
 
 	/**
 	 * @param \wpdb         $wpdb          Database.
 	 * @param Tables        $tables        Table names.
 	 * @param Clock         $clock         Time source.
 	 * @param \DateTimeZone $storeTimezone Store time zone, for the day filters.
+	 * @param Redactor|null $redactor      Cleans messages before they are stored; a default one is used when null.
+	 * @param Settings|null $settings      Tells whether personal data is removed too; it is removed when null.
 	 */
 	public function __construct(
 		\wpdb $wpdb,
 		Tables $tables,
 		Clock $clock,
-		private readonly \DateTimeZone $storeTimezone
+		private readonly \DateTimeZone $storeTimezone,
+		private readonly ?Redactor $redactor = null,
+		private readonly ?Settings $settings = null
 	) {
 		parent::__construct( $wpdb, $tables, $clock );
 	}
 
 	/**
+	 * Redact and cap a message that is about to be stored. Error messages can carry text the other system sent back, so
+	 * they are cleaned like log messages: secrets always, personal data while that setting is on.
+	 *
+	 * @param string|null $message Message.
+	 * @param int         $limit   Most characters kept.
+	 * @return string|null
+	 */
+	public function clean( ?string $message, int $limit = self::MESSAGE_LIMIT ): ?string {
+		if ( null === $message ) {
+			return null;
+		}
+		$personal = null === $this->settings || $this->settings->redactionEnabled();
+		return mb_substr( ( $this->redactor ?? new Redactor() )->message( $message, $personal ), 0, $limit );
+	}
+
+	/**
 	 * Add an item. Meant to run inside the order's own database transaction: it only inserts one row.
+	 *
+	 * The pair (connection, idempotency key) is unique. If a row with the same key already exists (two requests raced, or
+	 * the ledger was cleaned but the row stayed), no second row is added and the id of the existing one is returned.
+	 * enqueueOnce() says which of the two happened.
 	 *
 	 * @param int                 $connectionId   Connection.
 	 * @param EntityType          $type           Entity type.
@@ -75,7 +121,8 @@ final class QueueRepository extends Repository {
 	 * @param ItemMode            $mode           live or shadow.
 	 * @param int                 $maxAttempts    Tries allowed.
 	 * @param array<string,mixed> $display        Optional label, customer, total_minor, currency, search for the lists.
-	 * @return int The new id, or 0 when the row could not be written.
+	 * @param int                 $priority       0 to 9, claimed lowest first among items that are due; 5 is ordinary.
+	 * @return int The id (new, or the existing item with this key), or 0 when the row could not be written.
 	 */
 	public function enqueue(
 		int $connectionId,
@@ -86,30 +133,114 @@ final class QueueRepository extends Repository {
 		string $idempotencyKey,
 		ItemMode $mode = ItemMode::Live,
 		int $maxAttempts = 5,
-		array $display = array()
+		array $display = array(),
+		int $priority = self::DEFAULT_PRIORITY
 	): int {
-		$now = $this->now();
-		return $this->insert(
-			$this->tables->queue(),
-			array_merge(
-				array(
-					'connection_id'  => $connectionId,
-					'entity_type'    => $type->value,
-					'entity_id'      => mb_substr( $entityId, 0, 64 ),
-					'entity_label'   => mb_substr( (string) ( $display['label'] ?? $entityId ), 0, 191 ),
-					'event'          => mb_substr( $event, 0, 32 ),
-					'partition_key'  => mb_substr( $partitionKey, 0, 100 ),
-					'idempotency_key' => $idempotencyKey,
-					'state'          => ItemState::Queued->value,
-					'mode'           => $mode->value,
-					'attempt'        => 0,
-					'max_attempts'   => max( 1, $maxAttempts ),
-					'created_at'     => $now,
-					'updated_at'     => $now,
-				),
-				$this->displayColumns( $display )
-			)
+		return $this->enqueueOnce( $connectionId, $type, $entityId, $event, $partitionKey, $idempotencyKey, $mode, $maxAttempts, $display, $priority )['id'];
+	}
+
+	/**
+	 * Add an item, or find the one that already has this idempotency key. Same arguments as enqueue().
+	 *
+	 * @param int                 $connectionId   Connection.
+	 * @param EntityType          $type           Entity type.
+	 * @param string              $entityId       WooCommerce id.
+	 * @param string              $event          Event.
+	 * @param string              $partitionKey   Ordering key.
+	 * @param string              $idempotencyKey sha256 hex.
+	 * @param ItemMode            $mode           live or shadow.
+	 * @param int                 $maxAttempts    Tries allowed.
+	 * @param array<string,mixed> $display        Display values.
+	 * @param int                 $priority       0 to 9.
+	 * @return array{id:int,created:bool} `created` is false when the key was already in the queue; `id` is 0 when nothing could be written.
+	 */
+	public function enqueueOnce(
+		int $connectionId,
+		EntityType $type,
+		string $entityId,
+		string $event,
+		string $partitionKey,
+		string $idempotencyKey,
+		ItemMode $mode = ItemMode::Live,
+		int $maxAttempts = 5,
+		array $display = array(),
+		int $priority = self::DEFAULT_PRIORITY
+	): array {
+		$now  = $this->now();
+		$data = array_merge(
+			array(
+				'connection_id'   => $connectionId,
+				'entity_type'     => $type->value,
+				'entity_id'       => mb_substr( $entityId, 0, 64 ),
+				'entity_label'    => mb_substr( (string) ( $display['label'] ?? $entityId ), 0, 191 ),
+				'event'           => mb_substr( $event, 0, 32 ),
+				'partition_key'   => mb_substr( $partitionKey, 0, 100 ),
+				'idempotency_key' => $idempotencyKey,
+				'priority'        => max( 0, min( 9, $priority ) ),
+				'state'           => ItemState::Queued->value,
+				'mode'            => $mode->value,
+				'attempt'         => 0,
+				'max_attempts'    => max( 1, $maxAttempts ),
+				'created_at'      => $now,
+				'updated_at'      => $now,
+			),
+			$this->displayColumns( $display )
 		);
+
+		// A duplicate key is an expected answer here, not an error to print or to remember.
+		$failed    = $this->queryFailed;
+		$lastError = $this->lastError;
+		$previous  = $this->wpdb->suppress_errors( true );
+		$id        = $this->insert( $this->tables->queue(), $data );
+		$this->wpdb->suppress_errors( $previous );
+		if ( $id > 0 ) {
+			return array(
+				'id'      => $id,
+				'created' => true,
+			);
+		}
+		$existing = $this->idByKey( $connectionId, $idempotencyKey );
+		if ( null !== $existing ) {
+			$this->queryFailed = $failed;
+			$this->lastError   = $lastError;
+			return array(
+				'id'      => $existing,
+				'created' => false,
+			);
+		}
+		return array(
+			'id'      => 0,
+			'created' => false,
+		);
+	}
+
+	/**
+	 * Run work that writes the queue row and the rows that belong with it (the idempotency ledger) as one unit: all of it is
+	 * kept or none of it is. If the connection already has a transaction open (the order's own) the unit is a savepoint in
+	 * it and nothing is committed here; otherwise it is a transaction of its own. See Repository::unit().
+	 *
+	 * @param \Closure $work Work to do; return false to undo it.
+	 * @return mixed What the work returned, or false when it was undone.
+	 *
+	 * @throws \Throwable Whatever the work throws, after the rollback.
+	 */
+	public function atomically( \Closure $work ): mixed {
+		return $this->unit( $work );
+	}
+
+	/**
+	 * The item that has an idempotency key on a connection.
+	 *
+	 * @param int    $connectionId   Connection.
+	 * @param string $idempotencyKey sha256 hex.
+	 * @return int|null Item id.
+	 */
+	public function idByKey( int $connectionId, string $idempotencyKey ): ?int {
+		$id = $this->value(
+			"SELECT id FROM {$this->tables->queue()} WHERE connection_id = %d AND idempotency_key = %s LIMIT 1",
+			array( $connectionId, $idempotencyKey )
+		);
+		return null === $id ? null : (int) $id;
 	}
 
 	/**
@@ -168,9 +299,12 @@ final class QueueRepository extends Repository {
 	 * still queued or retrying and unlocked to syncing, stamped with this worker. The rows this worker really got
 	 * are read back by that stamp. Two workers can select the same candidate; only one UPDATE changes the row.
 	 *
+	 * Among the items that are due, a lower `priority` number goes first, then the older item. Ordering inside one
+	 * partition does not depend on priority: a later item of the same order still waits for the earlier one.
+	 *
 	 * @param int      $limit        Most items to claim.
 	 * @param int      $lockSeconds  How long the lock lasts before the reaper may take it back.
-	 * @param string   $workerId     Unique id of the caller (a UUID per run).
+	 * @param string   $workerId     Unique id of the caller (a UUID per run). It is the lock token: only the holder of it can write the result.
 	 * @param int|null $connectionId Claim for one connection only.
 	 * @return array<int,Item> The claimed items, in id order.
 	 */
@@ -192,21 +326,28 @@ final class QueueRepository extends Repository {
 			$sql   .= ' AND q.connection_id = %d';
 			$args[] = $connectionId;
 		}
-		$sql   .= " AND NOT EXISTS (
+		$sql .= " AND NOT EXISTS (
 				SELECT 1 FROM {$this->tables->queue()} e
 				WHERE e.connection_id = q.connection_id AND e.partition_key = q.partition_key AND e.id < q.id AND e.state IN ($block)
 			)
-			ORDER BY q.id ASC LIMIT %d";
-		$args[] = $limit;
+			ORDER BY q.priority ASC, q.id ASC LIMIT %d OFFSET %d";
 
-		// Another worker may take every candidate between our SELECT and our UPDATE. Look again a few times before giving up.
+		// Workers that look at the same moment all pick the same oldest items, and only one UPDATE can win them. A worker that
+		// lost every candidate looks again, a little later and a little further down the list, so that two workers stop
+		// fighting over the same rows. An empty answer therefore means that nothing is waiting, not that the race was lost.
 		$ids          = array();
 		$placeholders = '';
 		$updated      = 0;
+		$offset       = 0;
 		for ( $attempt = 0; $attempt < self::CLAIM_ATTEMPTS && 0 === $updated; ++$attempt ) {
-			$ids = array_map( static fn( array $row ): int => (int) $row['id'], $this->results( $sql, $args ) );
+			$ids = array_map( static fn( array $row ): int => (int) $row['id'], $this->results( $sql, array_merge( $args, array( $limit, $offset ) ) ) );
 			if ( array() === $ids ) {
-				return array();
+				if ( 0 === $offset ) {
+					return array();
+				}
+				// The offset skipped past the end of the list: look from the start again.
+				$offset = 0;
+				continue;
 			}
 			$placeholders = $this->placeholders( $ids );
 			$updated      = $this->run(
@@ -218,6 +359,10 @@ final class QueueRepository extends Repository {
 					array( ItemState::Queued->value, ItemState::Retrying->value, $now )
 				)
 			);
+			if ( 0 === $updated ) {
+				$offset = random_int( 0, $limit * ( $attempt + 1 ) );
+				usleep( random_int( 300, 2500 ) * ( $attempt + 1 ) );
+			}
 		}
 		if ( 0 === $updated ) {
 			return array();
@@ -231,7 +376,51 @@ final class QueueRepository extends Repository {
 	}
 
 	/**
+	 * Name of the MySQL named lock that makes "count what is running, then claim" one step for the whole site.
+	 *
+	 * Named locks belong to the whole database server, not to one database. Two sites with the same table prefix in two
+	 * databases on one server would share a lock named after the table alone and hold each other up, so the name is made from
+	 * the database name as well as the table name (at most 64 characters, the server's limit).
+	 */
+	public function claimLockName(): string {
+		return 'estasoft_sync_claim_' . substr( hash( 'sha256', (string) $this->wpdb->dbname . '|' . $this->tables->queue() ), 0, 16 );
+	}
+
+	/**
+	 * Run work while holding the claim lock, a MySQL named lock (`GET_LOCK` / `RELEASE_LOCK`).
+	 *
+	 * The global limit on items sent at once is checked by counting the items that are syncing and then claiming up to
+	 * the room that is left. Two workers doing that at the same moment would both see the same room and together go over
+	 * the limit. Holding this lock across the count and the claim makes the pair atomic. The wait is short; if the lock is
+	 * not free in time (another worker is claiming), the work is not run and `$fallback` is returned, so a worker never
+	 * waits long on another. The lock is always released, also when the work throws, and it is also released by MySQL if
+	 * the process dies.
+	 *
+	 * @param \Closure $work        Work to do while the lock is held.
+	 * @param int      $waitSeconds Seconds to wait for the lock.
+	 * @param mixed    $fallback    Returned when the lock could not be taken.
+	 * @return mixed What the work returned, or the fallback.
+	 */
+	public function withClaimLock( \Closure $work, int $waitSeconds = 2, mixed $fallback = null ): mixed {
+		$name = $this->claimLockName();
+		$got  = $this->value( 'SELECT GET_LOCK(%s, %d)', array( $name, max( 0, $waitSeconds ) ) );
+		if ( '1' !== $got ) {
+			return $fallback;
+		}
+		try {
+			return $work();
+		} finally {
+			$this->value( 'SELECT RELEASE_LOCK(%s)', array( $name ) );
+		}
+	}
+
+	/**
 	 * Record a successful send (or a link to a record that already existed).
+	 *
+	 * With `$lockToken` the write is guarded: it changes the row only while the row is still `syncing` and locked by that
+	 * token. If the lock was lost (it ran out, the reaper took the item back and another worker may now hold it), nothing is
+	 * written and false is returned, and the caller must discard the result. Without a token the row is updated as it is
+	 * (for code that did not claim the item).
 	 *
 	 * @param int         $id             Item id.
 	 * @param string      $externalId     The system's id.
@@ -241,11 +430,13 @@ final class QueueRepository extends Repository {
 	 * @param string|null $noteCode       A handled code to keep on the row, for example SYNC-DUP-001.
 	 * @param bool        $countTry       Whether this counts as a try.
 	 * @param string|null $noteMessage    The message for that code with its placeholders filled in; the catalog text when null.
+	 * @param string|null $lockToken      The `workerId` given to claim().
+	 * @return bool Whether the row was written.
 	 */
-	public function markSynced( int $id, string $externalId, string $externalRef, ?string $externalUrl = null, ?int $mappingVersion = null, ?string $noteCode = null, bool $countTry = true, ?string $noteMessage = null ): void {
+	public function markSynced( int $id, string $externalId, string $externalRef, ?string $externalUrl = null, ?int $mappingVersion = null, ?string $noteCode = null, bool $countTry = true, ?string $noteMessage = null, ?string $lockToken = null ): bool {
 		$now  = $this->now();
 		$note = null === $noteCode ? null : ErrorCode::tryFrom( $noteCode );
-		$this->updateRaw(
+		return $this->updateRaw(
 			$id,
 			array(
 				'state'           => ItemState::Synced->value,
@@ -255,82 +446,94 @@ final class QueueRepository extends Repository {
 				'external_url'    => $externalUrl,
 				'mapping_version' => $mappingVersion,
 				'error_code'      => $noteCode,
-				'error_message'   => $noteMessage ?? $note?->template(),
+				'error_message'   => $this->clean( $noteMessage ?? $note?->template() ),
 				'error_cause'     => null,
 				'next_attempt_at' => null,
 				'locked_by'       => null,
 				'locked_until'    => null,
 				'finished_at'     => $now,
 				'updated_at'      => $now,
-			)
+			),
+			$lockToken
 		);
 	}
 
 	/**
-	 * Record a retryable failure: the item waits for its next try.
+	 * Record a retryable failure: the item waits for its next try. See markSynced() for `$lockToken`.
 	 *
-	 * @param int    $id            Item id.
-	 * @param string $nextAttemptAt MySQL datetime (UTC).
-	 * @param string $errorCode     SYNC-... code.
-	 * @param string $message       Message with placeholders filled (no secrets, no personal data).
-	 * @param string $cause         Short cause such as "SKU CS-LAMP-07".
+	 * @param int         $id            Item id.
+	 * @param string      $nextAttemptAt MySQL datetime (UTC).
+	 * @param string      $errorCode     SYNC-... code.
+	 * @param string      $message       Message with placeholders filled (redacted and cut to 500 characters before it is stored).
+	 * @param string      $cause         Short cause such as "SKU CS-LAMP-07".
+	 * @param string|null $lockToken     The `workerId` given to claim().
+	 * @return bool Whether the row was written.
 	 */
-	public function markRetrying( int $id, string $nextAttemptAt, string $errorCode, string $message, string $cause = '' ): void {
-		$this->updateRaw(
+	public function markRetrying( int $id, string $nextAttemptAt, string $errorCode, string $message, string $cause = '', ?string $lockToken = null ): bool {
+		return $this->updateRaw(
 			$id,
 			array(
 				'state'           => ItemState::Retrying->value,
 				'attempt'         => $this->attemptPlusOne(),
+				'reaps'           => 0,
 				'next_attempt_at' => $nextAttemptAt,
 				'error_code'      => $errorCode,
-				'error_message'   => $message,
-				'error_cause'     => '' === $cause ? null : $cause,
+				'error_message'   => $this->clean( $message ),
+				'error_cause'     => '' === $cause ? null : $this->clean( $cause, self::CAUSE_LIMIT ),
 				'locked_by'       => null,
 				'locked_until'    => null,
 				'updated_at'      => $this->now(),
-			)
+			),
+			$lockToken
 		);
 	}
 
 	/**
-	 * Record a failure that retrying cannot fix: a person must act.
+	 * Record a failure that retrying cannot fix: a person must act. See markSynced() for `$lockToken`.
 	 *
-	 * @param int    $id        Item id.
-	 * @param string $errorCode SYNC-... code.
-	 * @param string $message   Message with placeholders filled.
-	 * @param string $cause     Short cause such as "SKU CS-LAMP-07".
-	 * @param bool   $countTry  Whether this counts as a try (errors found before sending do not).
+	 * @param int         $id        Item id.
+	 * @param string      $errorCode SYNC-... code.
+	 * @param string      $message   Message with placeholders filled (redacted and cut to 500 characters before it is stored).
+	 * @param string      $cause     Short cause such as "SKU CS-LAMP-07".
+	 * @param bool        $countTry  Whether this counts as a try (errors found before sending do not).
+	 * @param string|null $lockToken The `workerId` given to claim().
+	 * @return bool Whether the row was written.
 	 */
-	public function markFailed( int $id, string $errorCode, string $message, string $cause = '', bool $countTry = true ): void {
+	public function markFailed( int $id, string $errorCode, string $message, string $cause = '', bool $countTry = true, ?string $lockToken = null ): bool {
 		$now = $this->now();
-		$this->updateRaw(
+		return $this->updateRaw(
 			$id,
 			array(
 				'state'           => ItemState::Failed->value,
 				'attempt'         => $countTry ? $this->attemptPlusOne() : $this->attemptSame(),
+				'reaps'           => 0,
 				'next_attempt_at' => null,
 				'error_code'      => $errorCode,
-				'error_message'   => $message,
-				'error_cause'     => '' === $cause ? null : $cause,
+				'error_message'   => $this->clean( $message ),
+				'error_cause'     => '' === $cause ? null : $this->clean( $cause, self::CAUSE_LIMIT ),
 				'failed_before'   => 1,
 				'locked_by'       => null,
 				'locked_until'    => null,
 				'finished_at'     => $now,
 				'updated_at'      => $now,
-			)
+			),
+			$lockToken
 		);
 	}
 
 	/**
 	 * Give a claimed item back without counting a try (paused connection, missing connector, rate limit window).
+	 * See markSynced() for `$lockToken`.
 	 *
 	 * @param int         $id            Item id.
 	 * @param string|null $nextAttemptAt Earliest next claim, or null for now.
 	 * @param string|null $errorCode     Code to show, or null to clear.
 	 * @param string|null $message       Message to show.
 	 * @param bool        $keepError     Leave the error columns as they are.
+	 * @param string|null $lockToken     The `workerId` given to claim().
+	 * @return bool Whether the row was written.
 	 */
-	public function release( int $id, ?string $nextAttemptAt = null, ?string $errorCode = null, ?string $message = null, bool $keepError = false ): void {
+	public function release( int $id, ?string $nextAttemptAt = null, ?string $errorCode = null, ?string $message = null, bool $keepError = false, ?string $lockToken = null ): bool {
 		$data = array(
 			'state'           => ItemState::Queued->value,
 			'next_attempt_at' => $nextAttemptAt,
@@ -340,10 +543,10 @@ final class QueueRepository extends Repository {
 		);
 		if ( ! $keepError ) {
 			$data['error_code']    = $errorCode;
-			$data['error_message'] = $message;
+			$data['error_message'] = $this->clean( $message );
 			$data['error_cause']   = null;
 		}
-		$this->updateRaw( $id, $data );
+		return $this->updateRaw( $id, $data, $lockToken );
 	}
 
 	/**
@@ -370,43 +573,46 @@ final class QueueRepository extends Repository {
 	 */
 	public function restore( int $id ): bool {
 		return $this->run(
-			"UPDATE {$this->tables->queue()} SET state = %s, attempt = 0, skip_reason = NULL, next_attempt_at = NULL, error_code = NULL, error_message = NULL, error_cause = NULL, finished_at = NULL, updated_at = %s
+			"UPDATE {$this->tables->queue()} SET state = %s, attempt = 0, reaps = 0, skip_reason = NULL, next_attempt_at = NULL, error_code = NULL, error_message = NULL, error_cause = NULL, finished_at = NULL, updated_at = %s
 			WHERE id = %d AND state = %s",
 			array( ItemState::Queued->value, $this->now(), $id, ItemState::Skipped->value )
 		) > 0;
 	}
 
 	/**
-	 * Retry an item now. A failed item gets a fresh set of tries; a retrying item keeps its count.
+	 * Retry an item now: it returns to queued with a fresh set of tries (QUE-11), whether it was failed or retrying, and
+	 * with the count of times the stale lock reaper took it back reset.
 	 *
 	 * @param int $id Item id.
 	 * @return bool Whether the item was moved to queued.
 	 */
 	public function retry( int $id ): bool {
-		// The attempt assignment comes first: MySQL applies assignments left to right, so it still sees the old state.
 		return $this->run(
-			"UPDATE {$this->tables->queue()} SET attempt = CASE WHEN state = %s THEN 0 ELSE attempt END, state = %s, next_attempt_at = NULL, error_code = NULL, error_message = NULL, error_cause = NULL, finished_at = NULL, updated_at = %s
+			"UPDATE {$this->tables->queue()} SET attempt = 0, reaps = 0, state = %s, next_attempt_at = NULL, error_code = NULL, error_message = NULL, error_cause = NULL, finished_at = NULL, updated_at = %s
 			WHERE id = %d AND state IN (%s,%s)",
-			array( ItemState::Failed->value, ItemState::Queued->value, $this->now(), $id, ItemState::Failed->value, ItemState::Retrying->value )
+			array( ItemState::Queued->value, $this->now(), $id, ItemState::Failed->value, ItemState::Retrying->value )
 		) > 0;
 	}
 
 	/**
-	 * Ids of failed items with one error code and, optionally, one cause (a group on Needs attention).
+	 * Ids of failed items with one error code and, optionally, one cause (a group on Needs attention), oldest first.
 	 *
 	 * @param string      $errorCode SYNC-... code.
 	 * @param string|null $cause     Cause text, or null for every cause.
+	 * @param int         $limit     Most ids in one call.
+	 * @param int         $afterId   Only ids above this one, to read a large group in batches.
 	 * @return array<int,int>
 	 */
-	public function failedIdsByGroup( string $errorCode, ?string $cause = null ): array {
-		$sql  = "SELECT id FROM {$this->tables->queue()} WHERE state = %s AND error_code = %s";
-		$args = array( ItemState::Failed->value, $errorCode );
+	public function failedIdsByGroup( string $errorCode, ?string $cause = null, int $limit = 5000, int $afterId = 0 ): array {
+		$sql  = "SELECT id FROM {$this->tables->queue()} WHERE state = %s AND error_code = %s AND id > %d";
+		$args = array( ItemState::Failed->value, $errorCode, max( 0, $afterId ) );
 		if ( null !== $cause ) {
 			$sql   .= ' AND COALESCE(error_cause, %s) = %s';
 			$args[] = '';
 			$args[] = $cause;
 		}
-		$rows = $this->results( $sql . ' ORDER BY id ASC LIMIT 5000', $args );
+		$args[] = max( 1, $limit );
+		$rows   = $this->results( $sql . ' ORDER BY id ASC LIMIT %d', $args );
 		return array_map( static fn( array $row ): int => (int) $row['id'], $rows );
 	}
 
@@ -443,6 +649,37 @@ final class QueueRepository extends Repository {
 				'log_id'          => self::intOrNull( $row['last_log_id'] ),
 			)
 		);
+	}
+
+	/**
+	 * The newest item of one WooCommerce object, in the `QueueItem` shape (the rows of `query()`).
+	 *
+	 * Matches `entity_type` and `entity_id` exactly, so it uses the entity index and never misses an item the way a search
+	 * on text does. Items of every connection and every state are considered.
+	 *
+	 * @param EntityType $type     Entity type.
+	 * @param string     $entityId WooCommerce id (the SKU for stock).
+	 * @return array<string,mixed>|null
+	 */
+	public function latestForEntity( EntityType $type, string $entityId ): ?array {
+		$rows = $this->forEntity( $type, $entityId, 1 );
+		return array() === $rows ? null : $rows[0];
+	}
+
+	/**
+	 * The items of one WooCommerce object, newest id first, in the `QueueItem` shape (the rows of `query()`).
+	 *
+	 * @param EntityType $type     Entity type.
+	 * @param string     $entityId WooCommerce id (the SKU for stock).
+	 * @param int        $limit    Most rows, 1 to 200.
+	 * @return array<int,array<string,mixed>>
+	 */
+	public function forEntity( EntityType $type, string $entityId, int $limit = 20 ): array {
+		$rows = $this->results(
+			'SELECT q.*, ' . $this->waitingExpression() . " AS waiting_for_earlier FROM {$this->tables->queue()} q WHERE q.entity_type = %s AND q.entity_id = %s ORDER BY q.id DESC LIMIT %d",
+			array( $type->value, mb_substr( $entityId, 0, 64 ), max( 1, min( 200, $limit ) ) )
+		);
+		return array_map( array( $this, 'listShape' ), $rows );
 	}
 
 	/**
@@ -561,15 +798,28 @@ final class QueueRepository extends Repository {
 	/**
 	 * Push the lock of an item being sent further out, for work that takes longer than the first lock.
 	 *
-	 * @param int $id      Item id.
-	 * @param int $seconds New lock length from now.
+	 * With `$lockToken` the lock is only pushed while the item is still `syncing` and held by that token, so false means
+	 * the lock was lost and the caller must stop working on the item.
+	 *
+	 * @param int         $id        Item id.
+	 * @param int         $seconds   New lock length from now.
+	 * @param string|null $lockToken The `workerId` given to claim().
+	 * @return bool Whether the lock was extended.
 	 */
-	public function extendLock( int $id, int $seconds ): void {
+	public function extendLock( int $id, int $seconds, ?string $lockToken = null ): bool {
 		$until = Time::sql( $this->clock->now()->modify( sprintf( '+%d seconds', max( 1, $seconds ) ) ) );
-		$this->run(
-			"UPDATE {$this->tables->queue()} SET locked_until = %s WHERE id = %d AND state = %s",
-			array( $until, $id, ItemState::Syncing->value )
-		);
+		$sql   = "UPDATE {$this->tables->queue()} SET locked_until = %s WHERE id = %d AND state = %s";
+		$args  = array( $until, $id, ItemState::Syncing->value );
+		if ( null !== $lockToken ) {
+			$sql   .= ' AND locked_by = %s';
+			$args[] = $lockToken;
+		}
+		// An update that sets the value it already has reports 0 rows, so ask the row itself when nothing changed.
+		if ( $this->run( $sql, $args ) > 0 ) {
+			return true;
+		}
+		$held = $this->row( "SELECT state, locked_by FROM {$this->tables->queue()} WHERE id = %d", array( $id ) );
+		return null !== $held && ItemState::Syncing->value === $held['state'] && ( null === $lockToken || $lockToken === (string) $held['locked_by'] );
 	}
 
 	/**
@@ -659,41 +909,99 @@ final class QueueRepository extends Repository {
 	}
 
 	/**
-	 * Take back items whose lock ran out because the worker died. They return to queued without counting a try
-	 * and carry SYNC-LOCK-001.
+	 * Take back items whose lock ran out because the worker died. Each returns to queued without counting a try and
+	 * carries SYNC-LOCK-001. An item taken back MAX_REAPS times is a poison item (it keeps killing its worker): it is
+	 * stopped as Failed with SYNC-LOCK-001 so a person looks at it, and a person's retry starts the count again.
 	 *
-	 * @return array<int,int> Ids of the items taken back.
+	 * Every row is changed by its own guarded statement, and only rows that statement really changed are returned, so two
+	 * reapers running together never report (or act on) the same item twice.
+	 *
+	 * @return array<int,array{id:int,reaps:int,failed:bool}> The items taken back, in id order.
 	 */
-	public function reapStaleLockIds(): array {
+	public function reapStale(): array {
 		$now  = $this->now();
 		$rows = $this->results(
-			"SELECT id FROM {$this->tables->queue()} WHERE state = %s AND locked_until IS NOT NULL AND locked_until < %s ORDER BY id ASC LIMIT 500",
+			"SELECT id, reaps, locked_by FROM {$this->tables->queue()} WHERE state = %s AND locked_until IS NOT NULL AND locked_until < %s ORDER BY id ASC LIMIT 500",
 			array( ItemState::Syncing->value, $now )
 		);
-		$ids  = array_map( static fn( array $row ): int => (int) $row['id'], $rows );
-		if ( array() === $ids ) {
-			return array();
+		$taken = array();
+		foreach ( $rows as $row ) {
+			$id     = (int) $row['id'];
+			$reaps  = (int) $row['reaps'] + 1;
+			$failed = $reaps >= self::MAX_REAPS;
+			$guard  = 'WHERE id = %d AND state = %s AND locked_until < %s AND reaps = %d AND locked_by <=> %s';
+			$args   = array( $id, ItemState::Syncing->value, $now, (int) $row['reaps'], null === $row['locked_by'] ? null : (string) $row['locked_by'] );
+			if ( null === $args[4] ) {
+				$guard = 'WHERE id = %d AND state = %s AND locked_until < %s AND reaps = %d AND locked_by IS NULL';
+				array_pop( $args );
+			}
+			if ( $failed ) {
+				$changed = $this->run(
+					"UPDATE {$this->tables->queue()} SET state = %s, reaps = %d, locked_by = NULL, locked_until = NULL, next_attempt_at = NULL, error_code = %s, error_message = %s, error_cause = %s, failed_before = 1, finished_at = %s, updated_at = %s $guard",
+					array_merge(
+						array( ItemState::Failed->value, $reaps, ErrorCode::Lock001->value, $this->clean( self::poisonMessage( $reaps ) ), $this->clean( self::poisonCause( $reaps ), self::CAUSE_LIMIT ), $now, $now ),
+						$args
+					)
+				);
+			} else {
+				$changed = $this->run(
+					"UPDATE {$this->tables->queue()} SET state = %s, reaps = %d, locked_by = NULL, locked_until = NULL, next_attempt_at = NULL, error_code = %s, error_message = %s, updated_at = %s $guard",
+					array_merge(
+						array( ItemState::Queued->value, $reaps, ErrorCode::Lock001->value, $this->clean( ErrorCode::Lock001->template() ), $now ),
+						$args
+					)
+				);
+			}
+			if ( $changed > 0 ) {
+				$taken[] = array(
+					'id'     => $id,
+					'reaps'  => $reaps,
+					'failed' => $failed,
+				);
+			}
 		}
-		$placeholders = $this->placeholders( $ids );
-		$this->run(
-			"UPDATE {$this->tables->queue()} SET state = %s, locked_by = NULL, locked_until = NULL, next_attempt_at = NULL, error_code = %s, error_message = %s, updated_at = %s
-			WHERE id IN ($placeholders) AND state = %s AND locked_until < %s",
-			array_merge(
-				array( ItemState::Queued->value, ErrorCode::Lock001->value, ErrorCode::Lock001->template(), $now ),
-				$ids,
-				array( ItemState::Syncing->value, $now )
-			)
-		);
-		return $ids;
+		return $taken;
 	}
 
 	/**
-	 * Take back items whose lock ran out. See reapStaleLockIds().
+	 * Take back items whose lock ran out. See reapStale().
+	 *
+	 * @return array<int,int> Ids of the items this call took back.
+	 */
+	public function reapStaleLockIds(): array {
+		return array_map( static fn( array $taken ): int => $taken['id'], $this->reapStale() );
+	}
+
+	/**
+	 * Take back items whose lock ran out. See reapStale().
 	 *
 	 * @return int How many.
 	 */
 	public function reapStaleLocks(): int {
-		return count( $this->reapStaleLockIds() );
+		return count( $this->reapStale() );
+	}
+
+	/**
+	 * Message of an item stopped as a poison item.
+	 *
+	 * @param int $reaps How many times it was taken back.
+	 */
+	public static function poisonMessage( int $reaps ): string {
+		return sprintf(
+			/* translators: %d: how many times the worker stopped while sending this item. */
+			__( 'The sync worker stopped %d times while sending this item, so it was set aside. A person needs to look at it, then retry.', 'estasoft-erp-crm-sync-engine' ),
+			$reaps
+		);
+	}
+
+	/**
+	 * Cause text of an item stopped as a poison item (what Needs attention groups by).
+	 *
+	 * @param int $reaps How many times it was taken back.
+	 */
+	public static function poisonCause( int $reaps ): string {
+		/* translators: %d: how many times the worker stopped. */
+		return sprintf( __( 'Worker stopped %d times', 'estasoft-erp-crm-sync-engine' ), $reaps );
 	}
 
 	/**
@@ -719,6 +1027,39 @@ final class QueueRepository extends Repository {
 				if ( $deleted < self::PRUNE_BATCH ) {
 					break;
 				}
+			}
+		}
+		return $total;
+	}
+
+	/**
+	 * Delete the waiting items (queued and retrying) of connections that were disconnected more than `$days` ago (CON-9).
+	 * Mapping versions and the id map are not touched; the connection row stays too. Items that finished, failed or were
+	 * skipped follow their usual retention times.
+	 *
+	 * @param int $days Days after the disconnect.
+	 * @return int Rows deleted.
+	 */
+	public function pruneDisconnected( int $days = 30 ): int {
+		$cutoff = Time::sql( $this->clock->now()->modify( sprintf( '-%d days', max( 1, $days ) ) ) );
+		$total  = 0;
+		for ( $i = 0; $i < 200; ++$i ) {
+			$rows = $this->results(
+				"SELECT q.id FROM {$this->tables->queue()} q INNER JOIN {$this->tables->connections()} c ON c.id = q.connection_id
+				WHERE c.status = %s AND COALESCE(c.disconnected_at, c.updated_at) < %s AND q.state IN (%s,%s) ORDER BY q.id ASC LIMIT %d",
+				array( ConnectionStatus::Disconnected->value, $cutoff, ItemState::Queued->value, ItemState::Retrying->value, self::PRUNE_BATCH )
+			);
+			if ( array() === $rows ) {
+				break;
+			}
+			$ids      = array_map( static fn( array $row ): int => (int) $row['id'], $rows );
+			$deleted  = $this->run(
+				"DELETE FROM {$this->tables->queue()} WHERE id IN (" . $this->placeholders( $ids ) . ') AND state IN (%s,%s)',
+				array_merge( $ids, array( ItemState::Queued->value, ItemState::Retrying->value ) )
+			);
+			$total   += $deleted;
+			if ( count( $ids ) < self::PRUNE_BATCH || 0 === $deleted ) {
+				break;
 			}
 		}
 		return $total;
@@ -761,10 +1102,12 @@ final class QueueRepository extends Repository {
 	/**
 	 * Update one row where some values are raw SQL expressions (objects with a `raw` property).
 	 *
-	 * @param int                 $id   Item id.
-	 * @param array<string,mixed> $data Column to value; null becomes NULL.
+	 * @param int                 $id        Item id.
+	 * @param array<string,mixed> $data      Column to value; null becomes NULL.
+	 * @param string|null         $lockToken When given, the row is changed only while it is `syncing` and held by this token.
+	 * @return bool Whether a row was changed.
 	 */
-	private function updateRaw( int $id, array $data ): void {
+	private function updateRaw( int $id, array $data, ?string $lockToken = null ): bool {
 		$sets = array();
 		$args = array();
 		foreach ( $data as $column => $value ) {
@@ -777,8 +1120,13 @@ final class QueueRepository extends Repository {
 				$args[] = (string) $value;
 			}
 		}
+		$where  = 'WHERE id = %d';
 		$args[] = $id;
-		$this->run( "UPDATE {$this->tables->queue()} SET " . implode( ', ', $sets ) . ' WHERE id = %d', $args );
+		if ( null !== $lockToken ) {
+			$where .= ' AND state = %s AND locked_by = %s';
+			array_push( $args, ItemState::Syncing->value, $lockToken );
+		}
+		return $this->run( "UPDATE {$this->tables->queue()} SET " . implode( ', ', $sets ) . " $where", $args ) > 0;
 	}
 
 	/**

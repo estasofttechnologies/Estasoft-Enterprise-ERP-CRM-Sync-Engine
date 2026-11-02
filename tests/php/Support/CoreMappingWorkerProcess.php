@@ -2,7 +2,7 @@
 /**
  * A process that edits and publishes mappings, for the mapping concurrency test. Not a test.
  *
- * Usage: php CoreMappingWorkerProcess.php <worker name> <rounds> <start at (unix time with micro seconds)> <connection id>
+ * Usage: php CoreMappingWorkerProcess.php <worker name> <rounds> <start: unix time with micro seconds, or a barrier directory> <connection id>
  * Prints the number of publishes that worked.
  *
  * @package Estasoft\SyncEngine\Tests
@@ -12,7 +12,7 @@ declare(strict_types=1);
 
 $worker = (string) ( $argv[1] ?? 'worker' );
 $rounds = (int) ( $argv[2] ?? 10 );
-$start  = (float) ( $argv[3] ?? 0 );
+$start  = (string) ( $argv[3] ?? '0' );
 $conn   = (int) ( $argv[4] ?? 1 );
 
 require_once __DIR__ . '/CoreProcessBootstrap.php';
@@ -24,9 +24,7 @@ $repo = new Estasoft\SyncEngine\Core\Repositories\MappingRepository(
 	new Estasoft\SyncEngine\Core\Support\SystemClock()
 );
 
-while ( microtime( true ) < $start ) {
-	usleep( 200 );
-}
+core_wait_for_start( $start );
 
 $published = 0;
 $errors    = 0;

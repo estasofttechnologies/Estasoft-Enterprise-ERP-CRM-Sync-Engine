@@ -47,10 +47,12 @@ final class IdempotencyKeyTest extends TestCase {
 		$this->assertCount( 5, array_unique( $all ) );
 	}
 
-	public function test_only_updates_are_repeatable(): void {
-		$this->assertTrue( IdempotencyKey::isRepeatable( 'updated' ) );
-		foreach ( array( 'created', 'paid', 'refunded', 'cancelled', 'delivered' ) as $event ) {
-			$this->assertFalse( IdempotencyKey::isRepeatable( $event ), $event );
+	public function test_every_event_is_repeatable(): void {
+		foreach ( array( 'created', 'paid', 'updated', 'refunded', 'cancelled', 'delivered' ) as $event ) {
+			$this->assertTrue( IdempotencyKey::isRepeatable( $event ), $event );
+			$this->assertContains( $event, IdempotencyKey::REPEATABLE_EVENTS );
 		}
+		$this->assertTrue( IdempotencyKey::isRepeatable( 'made_up_by_a_module' ) );
+		$this->assertFalse( IdempotencyKey::isRepeatable( '' ) );
 	}
 }

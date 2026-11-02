@@ -100,7 +100,8 @@ A mapping is an ordered list of rules saved as `rules_json` in `estasoft_sync_ma
 order.id order.number order.status order.currency order.created_at order.paid_at order.note order.client_ref
 order.total order.subtotal order.discount_total order.shipping_total order.tax_total   (integer minor units)
 order.payment.method_id order.payment.method_title order.payment.transaction_id order.payment.last4 order.payment.is_cod
-order.buyer_tax_number
+order.buyer_tax_number   (digits only, ASCII, spaces and dashes removed)
+order.excluded_count order.excluded_total order.excluded_tax   (lines of products excluded from sync; order.total stays the WooCommerce figure)
 customer.id customer.email customer.first_name customer.last_name customer.company customer.phone customer.is_guest
 billing.first_name billing.last_name billing.company billing.address_1 billing.address_2 billing.city
 billing.state billing.postcode billing.country billing.phone billing.email          (same keys under shipping.*)
@@ -109,7 +110,8 @@ lines[].line_total lines[].line_tax lines[].tax_rate lines[].tax_class
 shipping_lines[].method_id shipping_lines[].method_title shipping_lines[].total shipping_lines[].tax shipping_lines[].tax_rate
 fees[].name fees[].total fees[].tax        taxes[].rate_id taxes[].label taxes[].rate_percent taxes[].amount
 coupons[].code coupons[].discount
-refund.id refund.order_id refund.amount refund.reason refund.created_at refund.lines[].sku refund.lines[].quantity refund.lines[].amount
+refund.id refund.order_id refund.amount refund.reason refund.created_at refund.lines[].sku refund.lines[].quantity refund.lines[].amount refund.lines[].tax
+refund.shipping_amount refund.excluded_amount refund.other_amount
 ```
 
 Card data never enters the canonical model: only `transaction_id` and `last4`.

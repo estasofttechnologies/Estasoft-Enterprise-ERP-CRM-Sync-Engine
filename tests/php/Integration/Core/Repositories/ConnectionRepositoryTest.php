@@ -46,8 +46,8 @@ final class ConnectionRepositoryTest extends CoreIntegrationTestCase {
 		$id  = $this->h->connection( array(), array( 'api_key' => self::SECRET ) );
 		$row = $this->h->connectionRow( $id );
 		$this->assertStringNotContainsString( self::SECRET, implode( '|', array_map( 'strval', $row ) ) );
-		$this->assertStringStartsWith( 'v1.', (string) $row['secrets_enc'] );
-		$this->assertSame( ( new SecretBox( 'unit-test-key-0123456789abcdef' ) )->fingerprint(), $row['key_fingerprint'] );
+		$this->assertStringStartsWith( 'v2.', (string) $row['secrets_enc'] );
+		$this->assertSame( ( new SecretBox( 'unit-test-key-0123456789abcdef-core' ) )->fingerprint(), $row['key_fingerprint'] );
 	}
 
 	public function test_screens_never_get_a_secret(): void {
@@ -56,15 +56,96 @@ final class ConnectionRepositoryTest extends CoreIntegrationTestCase {
 		$this->assertNotNull( $public );
 		$json = json_encode( $public );
 		$this->assertStringNotContainsString( self::SECRET, (string) $json );
-		$this->assertSame( array( 'api_key' => array( 'has_value' => true, 'last4' => 'mnop' ) ), $public['secret_hints'] );
+		$this->assertSame( array( 'api_key' => true ), $public['secret_hints'], 'only that the secret exists, not a character of it' );
+		$this->assertStringNotContainsString( 'mnop', (string) $json );
+		$this->assertStringNotContainsString( 'last4', (string) $json );
 		$this->assertTrue( $public['secrets_readable'] );
 		$this->assertStringNotContainsString( self::SECRET, (string) json_encode( $this->h->connections->all() ) );
 		$this->assertStringNotContainsString( self::SECRET, print_r( $this->h->connections->find( $id ), true ) ); // phpcs:ignore
 	}
 
-	public function test_short_secrets_show_no_last_four(): void {
-		$id = $this->h->connection( array(), array( 'api_key' => 'short' ) );
-		$this->assertSame( '', $this->h->connections->findPublic( $id )['secret_hints']['api_key']['last4'] );
+	public function test_no_character_of_a_secret_is_stored_beside_it_or_returned(): void {
+		foreach ( array( 'short', self::SECRET, str_repeat( 'Z', 80 ) ) as $secret ) {
+			$id  = $this->h->connection( array(), array( 'api_key' => $secret, 'password' => 'p@ss-' . $secret ) );
+			$row = $this->h->connectionRow( $id );
+			$this->assertSame( '{"api_key":true,"password":true}', $row['secret_hints_json'], 'presence flags only' );
+			$this->assertSame( array( 'api_key' => true, 'password' => true ), $this->h->connections->findPublic( $id )['secret_hints'] );
+			foreach ( array( $this->h->connections->all(), $this->h->connections->findPublic( $id ), $this->h->connections->findWithoutSecrets( $id ) ) as $shown ) {
+				$text = print_r( $shown, true ); // phpcs:ignore
+				$this->assertStringNotContainsString( substr( $secret, -4 ), $text );
+				$this->assertStringNotContainsString( 'last4', $text );
+			}
+		}
+	}
+
+	public function test_a_secret_that_is_removed_leaves_the_hints(): void {
+		$id = $this->h->connection( array(), array( 'api_key' => self::SECRET, 'password' => 'p@ss' ) );
+		$this->h->connections->update( $id, array( 'secrets' => array( 'password' => null ) ) );
+		$this->assertSame( array( 'api_key' => true ), $this->h->connections->findPublic( $id )['secret_hints'] );
+	}
+
+	public function test_a_partial_secret_save_is_refused_when_the_key_changed(): void {
+		$id = $this->h->connection( array(), array( 'api_key' => self::SECRET, 'password' => 'p@ss' ) );
+		$other = new ConnectionRepository( $this->h->wpdb, $this->h->tables, $this->h->clock, new SecretBox( 'a-completely-different-key-98765432' ), new ConnectionSettings() );
+		$before = $this->h->connectionRow( $id );
+
+		foreach ( array(
+			'one of two'                   => array( 'api_key' => 'sk-new-0123456789abcdef' ),
+			'one new, the other kept'      => array( 'api_key' => 'sk-new-0123456789abcdef', 'password' => '' ),
+			'nothing but keep'             => array( 'api_key' => '', 'password' => '' ),
+			'an unrelated secret only'     => array( 'token' => 'abc' ),
+		) as $label => $change ) {
+			try {
+				$other->update( $id, array( 'secrets' => $change ) );
+				$this->fail( "Expected the partial save to be refused: $label" );
+			} catch ( CryptoException $e ) {
+				$this->assertNull( $e->errorCode(), $label );
+				$this->assertStringContainsString( 'all the credentials', $e->getMessage(), $label );
+			}
+			$after = $this->h->connectionRow( $id );
+			$this->assertSame( $before['secrets_enc'], $after['secrets_enc'], "$label: nothing was written" );
+			$this->assertSame( $before['secret_hints_json'], $after['secret_hints_json'], $label );
+			$this->assertSame( $before['key_fingerprint'], $after['key_fingerprint'], $label );
+		}
+		$this->assertFalse( $other->findPublic( $id )['secrets_readable'], 'still unreadable, and still honest about it' );
+
+		// All of them given again: fine. A removal counts as an answer too.
+		$other->update( $id, array( 'secrets' => array( 'api_key' => 'sk-new-0123456789abcdef', 'password' => null ) ) );
+		$this->assertTrue( $other->findPublic( $id )['secrets_readable'] );
+		$this->assertSame( 'sk-new-0123456789abcdef', $other->find( $id )->secret( 'api_key' ) );
+		$this->assertSame( array( 'api_key' => true ), $other->findPublic( $id )['secret_hints'] );
+	}
+
+	public function test_other_changes_to_a_connection_with_unreadable_secrets_still_work(): void {
+		$id = $this->h->connection( array(), array( 'api_key' => self::SECRET ) );
+		$other = new ConnectionRepository( $this->h->wpdb, $this->h->tables, $this->h->clock, new SecretBox( 'a-completely-different-key-98765432' ), new ConnectionSettings() );
+		$other->update( $id, array( 'label' => 'Renamed', 'config' => array( 'address' => 'https://new.example.test' ) ) );
+		$this->assertSame( 'Renamed', $other->findPublic( $id )['label'] );
+		$this->assertFalse( $other->findPublic( $id )['secrets_readable'] );
+	}
+
+	public function test_a_short_key_is_refused_when_saving_secrets(): void {
+		$repo = new ConnectionRepository( $this->h->wpdb, $this->h->tables, $this->h->clock, new SecretBox( str_repeat( 'k', 31 ) ), new ConnectionSettings() );
+		try {
+			$repo->create( array( 'connector' => 'fake' ), array( 'api_key' => self::SECRET ) );
+			$this->fail( 'Expected an exception.' );
+		} catch ( CryptoException $e ) {
+			$this->assertSame( ErrorCode::Cfg002, $e->errorCode() );
+			$this->assertStringContainsString( 'too short', $e->getMessage() );
+		}
+		$this->assertSame( 0, $this->h->count( $this->h->tables->connections() ) );
+	}
+
+	public function test_disconnecting_stamps_the_time_and_coming_back_clears_it(): void {
+		$id = $this->h->connection();
+		$this->assertNull( $this->h->connectionRow( $id )['disconnected_at'] );
+		$this->h->connections->delete( $id );
+		$this->assertSame( '2026-11-02 12:00:00', $this->h->connectionRow( $id )['disconnected_at'] );
+		$this->h->clock->advance( 3600 );
+		$this->h->connections->setStatus( $id, ConnectionStatus::Active );
+		$this->assertNull( $this->h->connectionRow( $id )['disconnected_at'] );
+		$this->h->connections->setStatus( $id, ConnectionStatus::Disconnected );
+		$this->assertSame( '2026-11-02 13:00:00', $this->h->connectionRow( $id )['disconnected_at'] );
 	}
 
 	public function test_public_shape_matches_the_rest_contract(): void {
@@ -99,7 +180,7 @@ final class ConnectionRepositoryTest extends CoreIntegrationTestCase {
 
 	public function test_a_changed_key_makes_the_secrets_unreadable_but_not_the_screens(): void {
 		$id = $this->h->connection( array(), array( 'api_key' => self::SECRET ) );
-		$other = new ConnectionRepository( $this->h->wpdb, $this->h->tables, $this->h->clock, new SecretBox( 'a-completely-different-key-9876' ), new ConnectionSettings() );
+		$other = new ConnectionRepository( $this->h->wpdb, $this->h->tables, $this->h->clock, new SecretBox( 'a-completely-different-key-98765432' ), new ConnectionSettings() );
 		try {
 			$other->find( $id );
 			$this->fail( 'Expected an exception.' );
@@ -168,6 +249,16 @@ final class ConnectionRepositoryTest extends CoreIntegrationTestCase {
 		$this->h->connections->update( 999999, array( 'label' => 'x' ) );
 	}
 
+	public function test_the_reason_is_in_the_list_of_connections_too(): void {
+		$a = $this->h->connection();
+		$b = $this->h->connection();
+		$this->h->connections->setStatus( $a, ConnectionStatus::Paused, null, 'sign_in' );
+		$this->h->connections->tripCircuit( $b, '2026-11-02 12:02:00' );
+		$byId = array_column( $this->h->connections->all(), 'paused_reason', 'id' );
+		$this->assertSame( 'sign_in', $byId[ $a ] );
+		$this->assertSame( 'circuit', $byId[ $b ] );
+	}
+
 	public function test_status_changes_and_pause_reasons(): void {
 		$id = $this->h->connection();
 		$this->h->connections->setStatus( $id, ConnectionStatus::Paused, null, 'person' );
@@ -175,8 +266,17 @@ final class ConnectionRepositoryTest extends CoreIntegrationTestCase {
 		$this->assertSame( 'paused', $public['status'] );
 		$this->assertSame( 'person', $public['paused_reason'] );
 
+		$this->h->connections->setStatus( $id, ConnectionStatus::Paused, null, 'sign_in' );
+		$this->assertSame( 'sign_in', $this->h->connections->findPublic( $id )['paused_reason'], 'a refused sign-in is told apart from a pause by a person' );
+
+		$this->h->connections->setStatus( $id, ConnectionStatus::Paused, null, 'key_missing' );
+		$this->assertSame( 'key_missing', $this->h->connections->findPublic( $id )['paused_reason'] );
+
 		$this->h->connections->setStatus( $id, ConnectionStatus::Paused, null, 'auth' );
-		$this->assertSame( 'person', $this->h->connections->findPublic( $id )['paused_reason'], 'a refused sign-in shows as paused by a person' );
+		$this->assertSame( 'sign_in', $this->h->connections->findPublic( $id )['paused_reason'], 'the value the first development builds stored' );
+
+		$this->h->connections->setStatus( $id, ConnectionStatus::Paused, null, 'something-else' );
+		$this->assertSame( 'person', $this->h->connections->findPublic( $id )['paused_reason'], 'an unknown value is shown as a person\'s pause' );
 
 		$this->h->connections->setStatus( $id, ConnectionStatus::PausedCircuit, '2026-11-02 12:02:00', 'circuit' );
 		$public = $this->h->connections->findPublic( $id );

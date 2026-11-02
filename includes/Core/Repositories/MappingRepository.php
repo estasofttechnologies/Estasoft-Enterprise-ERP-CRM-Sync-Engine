@@ -147,13 +147,19 @@ final class MappingRepository extends Repository {
 	}
 
 	/**
-	 * Publish the draft: the live version becomes retired and the draft becomes live with the same version number.
+	 * Publish the draft: the live version becomes retired and the draft becomes live.
+	 *
+	 * The history stays strictly linear: version numbers only go up. Normally the draft already holds the highest number
+	 * and keeps it. If something was created after the draft was (a rollback makes a new live version with the next number),
+	 * the draft's number is lower than the highest one, so it is renumbered to the next free number inside the same
+	 * transaction. Without that, publishing would make an older number live above a newer one, and the version stored on queue
+	 * items could go backwards.
 	 *
 	 * @param int         $connectionId Connection.
 	 * @param string      $type         Mapping type.
 	 * @param string      $by           Who published.
 	 * @param string|null $note         Note for the history; keeps the draft's note when null.
-	 * @return array<string,mixed> The new live version.
+	 * @return array<string,mixed> The new live version (its number may differ from the draft's if it was renumbered).
 	 *
 	 * @throws \LogicException When there is no draft.
 	 */
@@ -167,11 +173,14 @@ final class MappingRepository extends Repository {
 					throw new \LogicException( 'There is no draft to publish.' );
 				}
 				$this->retireLive( $connectionId, $type );
+				$version = (int) $draft['version'];
+				$next    = $this->nextVersion( $connectionId, $type );
+				$number  = $version < $next - 1 ? $next : $version;
 				$this->run(
-					"UPDATE {$this->tables->mappings()} SET status = %s, published_at = %s, created_by = %s, note = %s WHERE connection_id = %d AND type = %s AND version = %d",
-					array( self::LIVE, $this->now(), mb_substr( $by, 0, 100 ), (string) ( $note ?? $draft['note'] ?? '' ), $connectionId, $type, (int) $draft['version'] )
+					"UPDATE {$this->tables->mappings()} SET version = %d, status = %s, published_at = %s, created_by = %s, note = %s WHERE connection_id = %d AND type = %s AND version = %d",
+					array( $number, self::LIVE, $this->now(), mb_substr( $by, 0, 100 ), (string) ( $note ?? $draft['note'] ?? '' ), $connectionId, $type, $version )
 				);
-				return (array) $this->find( $connectionId, $type, (int) $draft['version'] );
+				return (array) $this->find( $connectionId, $type, $number );
 			}
 		);
 	}
