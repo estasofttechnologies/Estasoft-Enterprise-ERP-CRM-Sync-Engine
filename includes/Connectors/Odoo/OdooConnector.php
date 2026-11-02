@@ -231,7 +231,10 @@ final class OdooConnector implements ConnectorInterface {
 
 	/**
 	 * Look for the record a retry would create again: the sale order whose customer reference is WC-{id}, or the credit note
-	 * whose reference starts with it.
+	 * whose reference starts with it. The engine links a record found here and does not call send() for it, so a record whose
+	 * steps are not all done (a quotation not confirmed, an invoice not posted or not yet sent to the tax authority service, an
+	 * unpaid invoice, a credit note still a draft) is reported as not found: send() then finds it and finishes the steps. The
+	 * steps wanted are the ones the connection's options ask for.
 	 *
 	 * @param Connection $connection Connection.
 	 * @param Item       $item       Item being sent.
@@ -240,15 +243,23 @@ final class OdooConnector implements ConnectorInterface {
 	public function findExisting( Connection $connection, Item $item ): ExternalRef|ConnectorError|null {
 		return $this->guard(
 			$connection,
-			function ( OdooClient $client ) use ( $item ): ?ExternalRef {
-				$finder = new OdooOrderFinder( $client, $this->amounts );
+			function ( OdooClient $client ) use ( $connection, $item ): ?ExternalRef {
+				$finder  = new OdooOrderFinder( $client, $this->amounts );
+				$flow    = new OdooDocumentFlow( $client );
+				$options = OdooOptions::fromConnection( $connection );
 				if ( EntityType::Order === $item->entityType ) {
 					$record = $finder->order( $item->clientReference() );
-					return null === $record ? null : $finder->orderRef( $record );
+					if ( null === $record || ! $flow->isComplete( OdooRecord::id( $record['id'] ?? 0 ), OdooOrderPayload::plan( $options, array() ) ) ) {
+						return null;
+					}
+					return $finder->orderRef( $record );
 				}
 				if ( EntityType::Refund === $item->entityType ) {
 					$record = $finder->creditNote( $item->clientReference() );
-					return null === $record ? null : $finder->creditNoteRef( $record );
+					if ( null === $record || ! $flow->isMoveComplete( OdooRecord::id( $record['id'] ?? 0 ), 'post' === $options->choice( 'refund_state', array( 'draft', 'post' ), 'draft' ) ) ) {
+						return null;
+					}
+					return $finder->creditNoteRef( $record );
 				}
 				return null;
 			}
@@ -326,7 +337,7 @@ final class OdooConnector implements ConnectorInterface {
 				}
 				$found = $client->searchRead(
 					'product.product',
-					array( array( 'default_code', '=', $sku ) ),
+					array_merge( array( array( 'default_code', '=', $sku ) ), $client->companyDomain() ),
 					array( 'default_code', 'name', 'barcode' ),
 					array(
 						'order' => 'id asc',
@@ -353,7 +364,7 @@ final class OdooConnector implements ConnectorInterface {
 				if ( '' === $query ) {
 					return array();
 				}
-				$domain  = array( '|', '|', array( 'default_code', 'ilike', $query ), array( 'name', 'ilike', $query ), array( 'barcode', 'ilike', $query ) );
+				$domain  = array_merge( array( '|', '|', array( 'default_code', 'ilike', $query ), array( 'name', 'ilike', $query ), array( 'barcode', 'ilike', $query ) ), $client->companyDomain() );
 				$records = $client->searchRead(
 					'product.product',
 					$domain,
@@ -543,7 +554,7 @@ final class OdooConnector implements ConnectorInterface {
 		}
 		$client  = $this->factory->forConnection( $connection );
 		$catalog = new OdooCatalog( $client, $options );
-		$sender  = new OdooOrderSender( $client, $catalog, new OdooPartners( $client, $catalog, $options ), new OdooOrderFinder( $client, $this->amounts ), new OdooDocumentFlow( $client ), $options, $this->amounts );
+		$sender  = new OdooOrderSender( $client, $catalog, new OdooPartners( $client, $catalog, $options ), new OdooOrderFinder( $client, $this->amounts ), new OdooDocumentFlow( $client ), $options, $this->amounts, new OdooTaxPricing( $catalog ), new OdooTotalCheck( $options, $this->amounts ) );
 		return $sender->send( $item, $parsed );
 	}
 
@@ -563,7 +574,8 @@ final class OdooConnector implements ConnectorInterface {
 		}
 		$options = OdooOptions::fromConnection( $connection );
 		$client  = $this->factory->forConnection( $connection );
-		$sender  = new OdooRefundSender( $client, new OdooCatalog( $client, $options ), new OdooOrderFinder( $client, $this->amounts ), new OdooDocumentFlow( $client ), $options, $this->amounts );
+		$catalog = new OdooCatalog( $client, $options );
+		$sender  = new OdooRefundSender( $client, $catalog, new OdooOrderFinder( $client, $this->amounts ), new OdooDocumentFlow( $client ), $options, $this->amounts, new OdooTaxPricing( $catalog ) );
 		return $sender->send( $item, $payload );
 	}
 

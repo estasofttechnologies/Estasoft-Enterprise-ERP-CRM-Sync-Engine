@@ -56,7 +56,7 @@ final class OdooStockReader {
 
 		$result = array();
 		foreach ( array_chunk( $skus, self::CHUNK ) as $chunk ) {
-			$records = $this->client->searchRead( 'product.product', array( array( 'default_code', 'in', $chunk ) ), $fields, array( 'order' => 'id asc' ), $context );
+			$records = $this->client->searchRead( 'product.product', array_merge( array( array( 'default_code', 'in', $chunk ) ), $this->client->companyDomain() ), $fields, array( 'order' => 'id asc' ), $context );
 			foreach ( $records as $record ) {
 				$sku = OdooRecord::text( $record['default_code'] ?? '' );
 				if ( '' === $sku || isset( $result[ $sku ] ) || ! $this->isStocked( $record, $storage ) ) {

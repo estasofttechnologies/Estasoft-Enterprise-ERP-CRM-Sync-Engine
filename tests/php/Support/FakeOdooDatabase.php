@@ -14,7 +14,11 @@ namespace Estasoft\SyncEngine\Tests\Support;
  * empty text as false, sale order totals computed from lines and taxes, the field names that changed between versions
  * (tax_id and product_uom before 19, tax_ids and product_uom_id from 19), the warehouse context key (warehouse before 18,
  * warehouse_id from 18), has_access from 18, the invoice and payment wizards, credit notes, and the Saudi e-invoicing fields.
- * It is not a model of Odoo; it is just enough Odoo for the connector's behaviour to be tested end to end.
+ * Behaviours that once hid bugs are modelled on purpose: an order takes its currency from its price list and, when none is given,
+ * from the customer's price list; taxes may be included in the price; confirming an order sets its date to now; a posted
+ * document waits in edi_state to_send until the e-invoicing action runs and an error blocks it; a user of several companies
+ * sees the records of all of them unless the context says allowed_company_ids; a delivery's sale order can be searched through
+ * sale_id.client_order_ref. It is not a model of Odoo; it is just enough Odoo for the connector's behaviour to be tested end to end.
  */
 final class FakeOdooDatabase {
 
@@ -52,6 +56,27 @@ final class FakeOdooDatabase {
 	 * @var string
 	 */
 	public string $zatcaOutcome = 'accept';
+
+	/**
+	 * The moment "now" is for the server: confirming an order sets its date to this, as Odoo sets it to the time of confirmation.
+	 *
+	 * @var string
+	 */
+	public string $now = '2026-11-02 08:00:00';
+
+	/**
+	 * A currency code Odoo uses for new orders whatever the price list says, to model a customisation that overrides it.
+	 *
+	 * @var string|null
+	 */
+	public ?string $currencyOverride = null;
+
+	/**
+	 * Ids of the documents the e-invoicing service really processed, one entry per run, for assertions.
+	 *
+	 * @var array<int,int>
+	 */
+	public array $ediRuns = array();
 
 	/**
 	 * Every call made, for assertions: model, method, ids, params, context.
@@ -103,6 +128,7 @@ final class FakeOdooDatabase {
 			'parent_id'  => 'res.partner',
 			'state_id'   => 'res.country.state',
 			'country_id' => 'res.country',
+			'company_id' => 'res.company',
 		),
 		'account.move'        => array(
 			'partner_id'        => 'res.partner',
@@ -117,13 +143,17 @@ final class FakeOdooDatabase {
 			'carrier_id' => 'delivery.carrier',
 			'sale_id'    => 'sale.order',
 		),
+		'product.product'     => array( 'company_id' => 'res.company' ),
 		'res.company'         => array(
 			'currency_id' => 'res.currency',
 			'country_id'  => 'res.country',
 		),
 		'res.users'           => array( 'company_id' => 'res.company' ),
 		'res.country.state'   => array( 'country_id' => 'res.country' ),
-		'product.pricelist'   => array( 'currency_id' => 'res.currency' ),
+		'product.pricelist'   => array(
+			'currency_id' => 'res.currency',
+			'company_id'  => 'res.company',
+		),
 		'stock.warehouse'     => array( 'company_id' => 'res.company' ),
 		'account.tax'         => array( 'company_id' => 'res.company' ),
 		'res.users.apikeys'   => array( 'user_id' => 'res.users' ),
@@ -159,9 +189,9 @@ final class FakeOdooDatabase {
 		'sale.order.line'        => array( 'id', 'name', 'product_uom_qty', 'price_unit', 'discount', 'sequence', 'display_type' ),
 		'res.partner'            => array( 'id', 'name', 'email', 'phone', 'street', 'street2', 'city', 'zip', 'vat', 'company_name', 'type', 'is_company', 'active', 'display_name' ),
 		'product.product'        => array( 'id', 'name', 'default_code', 'barcode', 'type', 'list_price', 'sale_ok', 'purchase_ok', 'active', 'qty_available', 'free_qty' ),
-		'account.tax'            => array( 'id', 'name', 'amount', 'amount_type', 'type_tax_use', 'active' ),
+		'account.tax'            => array( 'id', 'name', 'amount', 'amount_type', 'type_tax_use', 'active', 'price_include' ),
 		'account.payment.term'   => array( 'id', 'name', 'active' ),
-		'product.pricelist'      => array( 'id', 'name', 'active' ),
+		'product.pricelist'      => array( 'id', 'name', 'active', 'sequence' ),
 		'stock.warehouse'        => array( 'id', 'name', 'code', 'sequence', 'active' ),
 		'account.move'           => array( 'id', 'name', 'state', 'payment_state', 'move_type', 'ref', 'invoice_origin', 'invoice_date', 'amount_total', 'amount_residual' ),
 		'account.move.line'      => array( 'id', 'name', 'quantity', 'price_unit' ),
@@ -228,6 +258,9 @@ final class FakeOdooDatabase {
 		$id                           = ( $this->last[ $model ] ?? 0 ) + 1;
 		$this->last[ $model ]         = $id;
 		$values['id']                 = $id;
+		if ( 'product.pricelist' === $model ) {
+			$values += array( 'sequence' => 16, 'active' => true, 'company_id' => false );
+		}
 		$this->records[ $model ][ $id ] = $values;
 		return $id;
 	}
@@ -269,8 +302,38 @@ final class FakeOdooDatabase {
 	 * @param string $use     Use: sale, purchase or none.
 	 * @return int Tax id.
 	 */
-	public function addTax( string $name, float $percent, string $use = 'sale' ): int {
-		return $this->insert( 'account.tax', array( 'name' => $name, 'amount' => $percent, 'amount_type' => 'percent', 'type_tax_use' => $use, 'active' => true, 'company_id' => 1 ) );
+	public function addTax( string $name, float $percent, string $use = 'sale', bool $included = false, int $company = 1 ): int {
+		return $this->insert( 'account.tax', array( 'name' => $name, 'amount' => $percent, 'amount_type' => 'percent', 'type_tax_use' => $use, 'active' => true, 'company_id' => $company, 'price_include' => $included ) );
+	}
+
+	/**
+	 * Add a second company and make the sync user a member of both, as a user of a multi-company database is.
+	 *
+	 * @param string $name     Company name.
+	 * @param string $currency ISO code of its currency.
+	 * @return int Company id.
+	 */
+	public function addCompany( string $name, string $currency = 'AED' ): int {
+		$id = $this->insert( 'res.company', array( 'name' => $name, 'currency_id' => $this->idOf( 'res.currency', 'name', $currency ), 'country_id' => $this->idOf( 'res.country', 'code', 'AE' ) ) );
+		foreach ( $this->records['res.users'] as $userId => $user ) {
+			if ( 'sync@example.com' === $user['login'] ) {
+				$this->records['res.users'][ $userId ]['company_ids'][] = $id;
+			}
+		}
+		return $id;
+	}
+
+	/**
+	 * Add a price list.
+	 *
+	 * @param string   $name     Name.
+	 * @param string   $currency ISO code of its currency.
+	 * @param int|bool $company  Company id, or false for a list shared by all companies.
+	 * @param int      $sequence Position among the lists.
+	 * @return int Price list id.
+	 */
+	public function addPricelist( string $name, string $currency, int|bool $company = false, int $sequence = 16 ): int {
+		return $this->insert( 'product.pricelist', array( 'name' => $name, 'currency_id' => $this->idOf( 'res.currency', 'name', $currency ), 'active' => true, 'company_id' => $company, 'sequence' => $sequence ) );
 	}
 
 	/**
@@ -395,7 +458,7 @@ final class FakeOdooDatabase {
 				return $this->searchRead( $model, (array) ( $params['domain'] ?? array() ), (array) ( $params['fields'] ?? array() ), $params, $context );
 			case 'search_count':
 				$this->guard( $model, 'read' );
-				return count( $this->search( $model, (array) ( $params['domain'] ?? array() ) ) );
+				return count( $this->search( $model, (array) ( $params['domain'] ?? array() ), $context ) );
 			case 'read':
 				$this->guard( $model, 'read' );
 				return $this->read( $model, (array) $ids, (array) ( $params['fields'] ?? array() ), $context );
@@ -405,6 +468,9 @@ final class FakeOdooDatabase {
 			case 'write':
 				$this->guard( $model, 'write' );
 				return $this->write( $model, (array) $ids, (array) ( $params['vals'] ?? array() ) );
+			case 'unlink':
+				$this->guard( $model, 'unlink' );
+				return $this->unlink( $model, (array) $ids );
 			case 'fields_get':
 				return $this->fieldsGet( $model, (array) ( $params['allfields'] ?? array() ) );
 			case 'has_access':
@@ -463,24 +529,29 @@ final class FakeOdooDatabase {
 	 * @return array<int,array<string,mixed>>
 	 */
 	private function searchRead( string $model, array $domain, array $fields, array $params, array $context ): array {
-		$ids = $this->search( $model, $domain );
+		$ids = $this->search( $model, $domain, $context );
 		$ids = $this->order( $model, $ids, (string) ( $params['order'] ?? '' ) );
 		$ids = array_slice( $ids, (int) ( $params['offset'] ?? 0 ), isset( $params['limit'] ) ? (int) $params['limit'] : null );
 		return $this->read( $model, $ids, $fields, $context );
 	}
 
 	/**
-	 * Ids matching a domain (archived records are left out, as Odoo does).
+	 * Ids matching a domain (archived records and records of companies outside the context are left out, as Odoo does).
 	 *
-	 * @param string           $model  Model.
-	 * @param array<int,mixed> $domain Domain.
+	 * @param string              $model   Model.
+	 * @param array<int,mixed>    $domain  Domain.
+	 * @param array<string,mixed> $context Context; allowed_company_ids limits the companies whose records are seen.
 	 * @return array<int,int>
 	 */
-	private function search( string $model, array $domain ): array {
+	private function search( string $model, array $domain, array $context = array() ): array {
 		$matcher = new FakeOdooDomain( fn( array $record, string $path ): mixed => $this->resolve( $model, $record, $path ) );
 		$ids     = array();
+		$allowed = $this->visibleCompanies( $context );
 		foreach ( $this->records[ $model ] ?? array() as $id => $record ) {
 			if ( in_array( $model, self::ARCHIVABLE, true ) && false === ( $record['active'] ?? true ) ) {
+				continue;
+			}
+			if ( is_int( $record['company_id'] ?? null ) && ! in_array( $record['company_id'], $allowed, true ) ) {
 				continue;
 			}
 			if ( $matcher->matches( $record, $domain ) ) {
@@ -488,6 +559,26 @@ final class FakeOdooDatabase {
 			}
 		}
 		return $ids;
+	}
+
+	/**
+	 * The companies whose records a call can see: the ones named in the context, or, when it names none, every company the sync
+	 * user belongs to (Odoo's own rule, which is why a multi-company user sees another company's taxes and products by default).
+	 *
+	 * @param array<string,mixed> $context Context.
+	 * @return array<int,int>
+	 */
+	private function visibleCompanies( array $context ): array {
+		$named = array_map( 'intval', (array) ( $context['allowed_company_ids'] ?? array() ) );
+		if ( array() !== $named ) {
+			return $named;
+		}
+		foreach ( $this->records['res.users'] ?? array() as $user ) {
+			if ( 'sync@example.com' === $user['login'] ) {
+				return array_map( 'intval', (array) $user['company_ids'] );
+			}
+		}
+		return array( 1 );
 	}
 
 	/**
@@ -616,6 +707,9 @@ final class FakeOdooDatabase {
 		if ( 'account.move' === $model && 'edi_error_message' === $field ) {
 			return $record['_edi_error'] ?? false;
 		}
+		if ( 'account.move' === $model && 'edi_blocking_level' === $field ) {
+			return $record['_edi_blocking'] ?? false;
+		}
 		if ( 'account.move' === $model && 'l10n_sa_qr_code_str' === $field ) {
 			return 'posted' === ( $record['state'] ?? '' ) && isset( $record['_edi_state'] ) ? 'QR-' . $record['name'] : '';
 		}
@@ -688,7 +782,7 @@ final class FakeOdooDatabase {
 			$names[] = 'carrier_tracking_ref';
 		}
 		if ( 'account.move' === $model ) {
-			$names = array_merge( $names, array( 'edi_state', 'edi_error_message', 'edi_document_ids' ) );
+			$names = array_merge( $names, array( 'edi_state', 'edi_blocking_level', 'edi_error_message', 'edi_document_ids' ) );
 			if ( $this->zatca ) {
 				$names = array_merge( $names, array( 'l10n_sa_uuid', 'l10n_sa_qr_code_str', 'l10n_sa_confirmation_datetime' ) );
 				if ( $this->major >= 19 ) {
@@ -696,7 +790,7 @@ final class FakeOdooDatabase {
 					$names[] = 'l10n_sa_reason';
 				}
 			} else {
-				$names = array_diff( $names, array( 'edi_state', 'edi_error_message', 'edi_document_ids' ) );
+				$names = array_diff( $names, array( 'edi_state', 'edi_blocking_level', 'edi_error_message', 'edi_document_ids' ) );
 			}
 		}
 		if ( 'res.company' === $model && $this->zatca ) {
@@ -762,7 +856,7 @@ final class FakeOdooDatabase {
 			case 'res.partner':
 				return $this->createPartner( $values );
 			case 'sale.order':
-				return $this->createOrder( $values );
+				return $this->createOrder( $values, $context );
 			case 'sale.order.line':
 				return $this->createOrderLine( $values );
 			case 'account.move':
@@ -793,11 +887,13 @@ final class FakeOdooDatabase {
 	}
 
 	/**
-	 * Create a sale order with its lines.
+	 * Create a sale order with its lines. The price list is the one given, or else the customer's, or else the default one, and
+	 * the order's currency is the price list's; this is what Odoo does, and why the connector has to name the price list.
 	 *
-	 * @param array<string,mixed> $values Values.
+	 * @param array<string,mixed> $values  Values.
+	 * @param array<string,mixed> $context Context.
 	 */
-	private function createOrder( array $values ): int {
+	private function createOrder( array $values, array $context = array() ): int {
 		if ( empty( $values['partner_id'] ) ) {
 			throw FakeOdooFault::validation( "Missing required value for the field 'partner_id' (partner_id)." );
 		}
@@ -806,20 +902,33 @@ final class FakeOdooDatabase {
 		}
 		$lines = (array) ( $values['order_line'] ?? array() );
 		unset( $values['order_line'] );
-		$currency = isset( $values['pricelist_id'] )
-			? (int) $this->records['product.pricelist'][ (int) $values['pricelist_id'] ]['currency_id']
-			: (int) $this->records['res.company'][1]['currency_id'];
-		$id       = $this->insert(
+
+		$named   = array_map( 'intval', (array) ( $context['allowed_company_ids'] ?? array() ) );
+		$company = (int) ( $values['company_id'] ?? ( $named[0] ?? 1 ) );
+		$partner = $this->records['res.partner'][ (int) $values['partner_id'] ];
+
+		$pricelist = (int) ( $values['pricelist_id'] ?? $partner['_pricelist'] ?? $this->defaultPricelist() );
+		$list      = $this->records['product.pricelist'][ $pricelist ] ?? null;
+		if ( null === $list ) {
+			throw new FakeOdooFault( 'odoo.exceptions.MissingError', 'Record does not exist or has been deleted.', 404 );
+		}
+		if ( is_int( $list['company_id'] ?? null ) && $list['company_id'] !== $company ) {
+			throw FakeOdooFault::validation( 'Incompatible companies on records: the price list does not belong to the company of the order.' );
+		}
+
+		$id = $this->insert(
 			'sale.order',
-			$values + array(
+			array( 'pricelist_id' => $pricelist ) + $values + array(
 				'name'        => sprintf( 'S%05d', ++$this->counters['order'] ),
 				'state'       => 'draft',
-				'date_order'  => gmdate( 'Y-m-d H:i:s' ),
-				'currency_id' => $currency,
-				'company_id'  => 1,
+				'date_order'  => $this->now,
+				'currency_id' => (int) $list['currency_id'],
+				'company_id'  => $company,
 				'locked'      => false,
 			)
 		);
+		// The currency follows the price list, whatever else the values say (unless a customisation overrides it).
+		$this->records['sale.order'][ $id ]['currency_id'] = null !== $this->currencyOverride ? $this->idOf( 'res.currency', 'name', $this->currencyOverride ) : (int) $list['currency_id'];
 		foreach ( $lines as $command ) {
 			if ( is_array( $command ) && 0 === ( $command[0] ?? null ) ) {
 				$this->createOrderLine( (array) $command[2] + array( 'order_id' => $id ) );
@@ -827,6 +936,19 @@ final class FakeOdooDatabase {
 		}
 		$this->recomputeOrder( $id );
 		return $id;
+	}
+
+	/**
+	 * The price list a customer without one of their own gets: the first active one in the company currency.
+	 */
+	private function defaultPricelist(): int {
+		$currency = (int) $this->records['res.company'][1]['currency_id'];
+		foreach ( $this->records['product.pricelist'] ?? array() as $id => $list ) {
+			if ( (int) $list['currency_id'] === $currency && false !== ( $list['active'] ?? true ) ) {
+				return $id;
+			}
+		}
+		return (int) array_key_first( $this->records['product.pricelist'] ?? array( 1 => 1 ) );
 	}
 
 	/**
@@ -914,10 +1036,35 @@ final class FakeOdooDatabase {
 		return true;
 	}
 
+	/**
+	 * Delete records. Only quotations and cancelled orders can be deleted, as in Odoo.
+	 *
+	 * @param string         $model Model.
+	 * @param array<int,int> $ids   Ids.
+	 */
+	private function unlink( string $model, array $ids ): bool {
+		foreach ( $ids as $id ) {
+			if ( ! isset( $this->records[ $model ][ $id ] ) ) {
+				throw new FakeOdooFault( 'odoo.exceptions.MissingError', 'Record does not exist or has been deleted.', 404 );
+			}
+			if ( 'sale.order' !== $model || ! in_array( $this->records[ $model ][ $id ]['state'], array( 'draft', 'cancel' ), true ) ) {
+				throw FakeOdooFault::user( 'You can not delete a confirmed sale order. You must first cancel it.' );
+			}
+			foreach ( $this->records['sale.order.line'] ?? array() as $lineId => $line ) {
+				if ( (int) $line['order_id'] === $id ) {
+					unset( $this->records['sale.order.line'][ $lineId ] );
+				}
+			}
+			unset( $this->records[ $model ][ $id ] );
+		}
+		return true;
+	}
+
 	/* ------------------------------------------------------------ documents */
 
 	/**
-	 * Totals of a set of lines in a currency.
+	 * Totals of a set of lines in a currency. A tax included in the price takes its share out of the line amount (the line amount is
+	 * the amount with tax); a tax that is not included is added on top.
 	 *
 	 * @param array<int,array<string,mixed>> $lines  Lines with price, quantity, discount and tax ids.
 	 * @param int                            $places Decimal places.
@@ -926,12 +1073,20 @@ final class FakeOdooDatabase {
 		$total = 0.0;
 		foreach ( $lines as $line ) {
 			$quantity = (float) ( $line['product_uom_qty'] ?? $line['quantity'] ?? 0 );
-			$base     = (float) ( $line['price_unit'] ?? 0 ) * $quantity * ( 1 - (float) ( $line['discount'] ?? 0 ) / 100 );
-			$tax      = 0.0;
+			$amount   = (float) ( $line['price_unit'] ?? 0 ) * $quantity * ( 1 - (float) ( $line['discount'] ?? 0 ) / 100 );
+			$included = 0.0;
+			$excluded = 0.0;
 			foreach ( (array) ( $line['tax_ids'] ?? $line['tax_id'] ?? array() ) as $taxId ) {
-				$tax += $base * (float) ( $this->records['account.tax'][ (int) $taxId ]['amount'] ?? 0 ) / 100;
+				$tax  = $this->records['account.tax'][ (int) $taxId ] ?? array();
+				$rate = (float) ( $tax['amount'] ?? 0 );
+				if ( true === ( $tax['price_include'] ?? false ) ) {
+					$included += $rate;
+				} else {
+					$excluded += $rate;
+				}
 			}
-			$total += round( $base, $places ) + round( $tax, $places );
+			$net    = $amount / ( 1 + $included / 100 );
+			$total += round( $net, $places ) + round( $net * $included / 100, $places ) + round( $net * $excluded / 100, $places );
 		}
 		return round( $total, $places );
 	}
@@ -1000,7 +1155,8 @@ final class FakeOdooDatabase {
 			if ( ! in_array( $this->records['sale.order'][ $id ]['state'] ?? '', array( 'draft', 'sent' ), true ) ) {
 				throw FakeOdooFault::user( 'Only quotations can be confirmed.' );
 			}
-			$this->records['sale.order'][ $id ]['state'] = 'sale';
+			$this->records['sale.order'][ $id ]['state']      = 'sale';
+			$this->records['sale.order'][ $id ]['date_order'] = $this->now;
 		}
 		return true;
 	}
@@ -1091,14 +1247,17 @@ final class FakeOdooDatabase {
 	 */
 	private function processEdi( array $ids ): bool {
 		foreach ( $ids as $id ) {
-			if ( 'to_send' !== ( $this->records['account.move'][ $id ]['_edi_state'] ?? '' ) ) {
+			$move = $this->records['account.move'][ $id ] ?? array();
+			if ( 'to_send' !== ( $move['_edi_state'] ?? '' ) || 'error' === ( $move['_edi_blocking'] ?? '' ) ) {
 				continue;
 			}
+			$this->ediRuns[] = $id;
 			if ( 'reject' === $this->zatcaOutcome ) {
-				$this->records['account.move'][ $id ]['_edi_error'] = '<p>The buyer&#039;s address is missing.</p>';
+				$this->records['account.move'][ $id ]['_edi_error']    = '<p>The buyer&#039;s address is missing.</p>';
+				$this->records['account.move'][ $id ]['_edi_blocking'] = 'error';
 			} else {
 				$this->records['account.move'][ $id ]['_edi_state'] = 'sent';
-				unset( $this->records['account.move'][ $id ]['_edi_error'] );
+				unset( $this->records['account.move'][ $id ]['_edi_error'], $this->records['account.move'][ $id ]['_edi_blocking'] );
 			}
 		}
 		return true;

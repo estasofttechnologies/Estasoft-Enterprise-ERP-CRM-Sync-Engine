@@ -106,7 +106,7 @@ final class OdooConnectionTester {
 			'country'               => $country,
 			'modules'               => $modules,
 			'multi_company'         => $this->isMultiCompany( $client ),
-			'product_count'         => $modules['sale'] ? $client->searchCount( 'product.product', array( array( 'default_code', '!=', false ) ) ) : 0,
+			'product_count'         => $modules['sale'] ? $client->searchCount( 'product.product', array_merge( array( array( 'default_code', '!=', false ) ), $client->companyDomain() ) ) : 0,
 			'hints'                 => $this->hints( $client, $country, $modules ),
 			'credential_expires_at' => $this->keyExpiry( $client ),
 		);

@@ -40,6 +40,13 @@ final class OdooCatalog {
 	private array $memo = array();
 
 	/**
+	 * Tax details by tax id, remembered for the run.
+	 *
+	 * @var array<int,array{name:string,rate:int,percent:bool,included:bool}>
+	 */
+	private array $details = array();
+
+	/**
 	 * Set up with what it depends on.
 	 *
 	 * @param OdooClient  $client  Client.
@@ -60,7 +67,7 @@ final class OdooCatalog {
 		$codes   = array_values( array_unique( array_filter( array_map( 'trim', $codes ), static fn( string $code ): bool => '' !== $code ) ) );
 		$missing = array_values( array_filter( $codes, fn( string $code ): bool => ! isset( $this->memo['product'][ $code ] ) ) );
 		if ( array() !== $missing ) {
-			$records = $this->client->searchRead( 'product.product', array( array( 'default_code', 'in', $missing ) ), array( 'default_code' ), array( 'order' => 'id asc' ) );
+			$records = $this->client->searchRead( 'product.product', array_merge( array( array( 'default_code', 'in', $missing ) ), $this->client->companyDomain() ), array( 'default_code' ), array( 'order' => 'id asc' ) );
 			foreach ( $records as $record ) {
 				$code = OdooRecord::text( $record['default_code'] ?? '' );
 				$id   = OdooRecord::id( $record['id'] ?? 0 );
@@ -92,7 +99,7 @@ final class OdooCatalog {
 			return array();
 		}
 		$exists = array();
-		foreach ( $this->client->searchRead( 'product.product', array( array( 'id', 'in', $ids ) ), array( 'id' ) ) as $record ) {
+		foreach ( $this->client->searchRead( 'product.product', array_merge( array( array( 'id', 'in', $ids ) ), $this->client->companyDomain() ), array( 'id' ) ) as $record ) {
 			$exists[ OdooRecord::id( $record['id'] ?? 0 ) ] = true;
 		}
 		return $exists;
@@ -286,7 +293,7 @@ final class OdooCatalog {
 		if ( ! isset( $this->memo['term'][ $name ] ) ) {
 			$found                       = $this->client->searchRead(
 				'account.payment.term',
-				array( array( 'name', '=ilike', $name ) ),
+				array_merge( array( array( 'name', '=ilike', $name ) ), $this->client->companyDomain() ),
 				array( 'name' ),
 				array(
 					'limit' => 1,
@@ -299,7 +306,9 @@ final class OdooCatalog {
 	}
 
 	/**
-	 * Price list id for a currency; 0 when there is none.
+	 * The active price list to use for orders in a currency; 0 when there is none. Price lists shared by all companies
+	 * (no company) count, and so do those of the company the connector works in. With the option pricelist (a name or an
+	 * id) only that price list is considered, and only when it is in the currency. Otherwise the first one by sequence wins.
 	 *
 	 * @param string $currency ISO 4217 code.
 	 *
@@ -311,18 +320,85 @@ final class OdooCatalog {
 			return 0;
 		}
 		if ( ! isset( $this->memo['pricelist'][ $currency ] ) ) {
+			$domain = array( array( 'currency_id.name', '=', $currency ) );
+			$wanted = $this->options->text( 'pricelist' );
+			if ( '' !== $wanted ) {
+				$domain[] = ctype_digit( $wanted ) ? array( 'id', '=', (int) $wanted ) : array( 'name', '=ilike', $wanted );
+			}
 			$found                                = $this->client->searchRead(
 				'product.pricelist',
-				array_merge( array( array( 'currency_id.name', '=', $currency ) ), $this->client->companyDomain() ),
+				array_merge( $domain, $this->client->companyDomain() ),
 				array( 'name' ),
 				array(
 					'limit' => 1,
-					'order' => 'id asc',
+					'order' => 'sequence asc, id asc',
 				)
 			);
 			$this->memo['pricelist'][ $currency ] = isset( $found[0] ) ? OdooRecord::id( $found[0]['id'] ?? 0 ) : 0;
 		}
 		return (int) $this->memo['pricelist'][ $currency ];
+	}
+
+	/**
+	 * Make a price list for a currency (option create_pricelist). It belongs to the company the connector works in.
+	 *
+	 * @param string $currency ISO 4217 code.
+	 * @return int Price list id, or 0 when Odoo has no active currency with that code.
+	 *
+	 * @throws OdooException On failure.
+	 */
+	public function createPricelist( string $currency ): int {
+		$currency = strtoupper( trim( $currency ) );
+		$found    = $this->client->searchRead( 'res.currency', array( array( 'name', '=', $currency ) ), array( 'name' ), array( 'limit' => 1 ) );
+		if ( ! isset( $found[0] ) ) {
+			return 0;
+		}
+		$id                                   = $this->client->create(
+			'product.pricelist',
+			array(
+				'name'        => 'WooCommerce ' . $currency,
+				'currency_id' => OdooRecord::id( $found[0]['id'] ?? 0 ),
+				'company_id'  => $this->client->companyId(),
+			)
+		);
+		$this->memo['pricelist'][ $currency ] = $id;
+		return $id;
+	}
+
+	/**
+	 * What the pricing of a line needs to know about taxes: name, percentage (in ten-thousandths of a percent, so 5% is 50000),
+	 * whether the tax is a plain percentage, and whether Odoo counts it as included in the price. The flag is stored on the tax
+	 * in Odoo 17; from 18 it follows the tax's own setting or the company's default, and reads the same way.
+	 *
+	 * @param array<int,int> $ids Tax ids.
+	 * @return array<int,array{name:string,rate:int,percent:bool,included:bool}>
+	 *
+	 * @throws OdooException On failure.
+	 */
+	public function taxDetails( array $ids ): array {
+		$ids     = array_values( array_unique( array_filter( $ids, static fn( int $id ): bool => $id > 0 ) ) );
+		$missing = array_values( array_filter( $ids, fn( int $id ): bool => ! isset( $this->details[ $id ] ) ) );
+		if ( array() !== $missing ) {
+			$fields = array( 'name', 'amount', 'amount_type' );
+			if ( $this->client->hasField( 'account.tax', 'price_include' ) ) {
+				$fields[] = 'price_include';
+			}
+			foreach ( $this->client->searchRead( 'account.tax', array( array( 'id', 'in', $missing ) ), $fields ) as $record ) {
+				$this->details[ OdooRecord::id( $record['id'] ?? 0 ) ] = array(
+					'name'     => OdooRecord::text( $record['name'] ?? '' ),
+					'rate'     => (int) round( OdooRecord::number( $record['amount'] ?? 0 ) * 10000 ),
+					'percent'  => 'percent' === OdooRecord::text( $record['amount_type'] ?? 'percent' ),
+					'included' => true === ( $record['price_include'] ?? false ),
+				);
+			}
+		}
+		$result = array();
+		foreach ( $ids as $id ) {
+			if ( isset( $this->details[ $id ] ) ) {
+				$result[ $id ] = $this->details[ $id ];
+			}
+		}
+		return $result;
 	}
 
 	/**

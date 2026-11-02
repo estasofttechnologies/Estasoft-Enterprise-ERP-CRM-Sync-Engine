@@ -49,6 +49,8 @@ final class OdooDefaultMappings {
 				$this->rule( 'order-date', 'date_order', 'order.created_at', array( $this->transform( 'date_utc', array( 'format' => 'mysql' ) ) ) ),
 				$this->rule( 'order-currency', 'currency', 'order.currency' ),
 				$this->rule( 'order-note', 'note', 'order.note', array( $this->transform( 'trim' ) ) ),
+				$this->rule( 'order-total', 'total', 'order.total' ),
+				$this->rule( 'order-excluded-total', 'excluded_total', 'order.excluded_total' ),
 			),
 			$this->customerRules( 'partner.', 'billing', true ),
 			$this->deliveryRules(),

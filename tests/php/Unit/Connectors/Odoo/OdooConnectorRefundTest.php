@@ -242,6 +242,35 @@ final class OdooConnectorRefundTest extends OdooTestCase {
 		}
 	}
 
+	public function test_refund_lines_follow_a_tax_that_is_included_in_the_price(): void {
+		$server = $this->invoicedOrder();
+		$server->db->addTax( 'VAT 5% incl', 5.0, 'sale', true );
+		$payload                           = $this->refundPayload();
+		$payload['refund_line'][0]['tax'] = 'VAT 5% incl';
+		$payload['shipping']['tax']       = 'VAT 5% incl';
+
+		$result = $this->refund( $server, $payload );
+
+		$this->assertTrue( $result->isSuccess(), (string) $result->error?->message() );
+		$lines = array_values( array_filter( $server->db->all( 'account.move.line' ), static fn( array $line ): bool => 2 === (int) $line['move_id'] ) );
+		$this->assertSame( array( 229.95, 26.25 ), array_column( $lines, 'price_unit' ), '219.00 and 25.00 plus the 5% that Odoo counts inside the price.' );
+		$this->assertSame( 256.2, $server->db->all( 'account.move' )[1]['amount_total'] );
+	}
+
+	public function test_a_refund_whose_taxes_cannot_be_matched_to_the_shop_s_prices_is_refused_before_anything_is_made(): void {
+		$server = $this->invoicedOrder();
+		$server->db->addTax( 'VAT 5% incl', 5.0, 'sale', true );
+		$server->db->addTax( 'Tourism levy 2%', 2.0 );
+		$payload                           = $this->refundPayload();
+		$payload['refund_line'][0]['tax'] = array( 'VAT 5% incl', 'Tourism levy 2%' );
+
+		$result = $this->refund( $server, $payload );
+
+		$this->assertSame( ErrorCode::Val002, $result->error->code );
+		$this->assertStringContainsString( 'VAT 5% incl', $result->error->context['reason'] );
+		$this->assertCount( 1, $server->db->all( 'account.move' ), 'Only the invoice.' );
+	}
+
 	public function test_no_zatca_field_is_sent_to_a_server_without_the_saudi_module(): void {
 		$server = $this->invoicedOrder();
 		$this->refund( $server, $this->refundPayload() );

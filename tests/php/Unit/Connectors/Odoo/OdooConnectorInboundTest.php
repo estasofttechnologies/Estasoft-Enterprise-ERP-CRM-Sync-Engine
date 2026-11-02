@@ -209,6 +209,56 @@ final class OdooConnectorInboundTest extends OdooTestCase {
 		$this->assertSame( 'AX-9', $rows[0]['tracking'] );
 	}
 
+	/**
+	 * Deliveries of orders made in Odoo by hand, finished before the shop's, more than a page of them.
+	 */
+	private function crowd( \Estasoft\SyncEngine\Tests\Support\FakeOdooServer $server, int $count ): void {
+		$hand = $server->db->insert( 'sale.order', array( 'name' => 'S09999', 'client_order_ref' => 'PO-7788', 'state' => 'sale', 'partner_id' => 1, 'currency_id' => 1 ) );
+		$base = strtotime( '2026-11-02 01:00:00 UTC' );
+		for ( $i = 0; $i < $count; $i++ ) {
+			$server->db->addDelivery( $hand, 'Aramex', 'HAND-' . $i, gmdate( 'Y-m-d H:i:s', $base + $i ) );
+		}
+	}
+
+	public function test_a_crowd_of_other_deliveries_cannot_hide_the_shop_s_deliveries_when_they_carry_their_sale_order(): void {
+		$server = $this->server( 18 );
+		$refs   = $this->place( $server, array( '10490', '10491', '10492' ) );
+		$this->crowd( $server, 620 );
+		$server->db->addDelivery( (int) $refs['10490']->id, 'Aramex', 'AX-1', '2026-11-02 08:00:00' );
+		$server->db->addDelivery( (int) $refs['10491']->id, 'DHL Express', 'DH-2', '2026-11-02 08:05:00' );
+		$server->db->addDelivery( (int) $refs['10492']->id, 'Aramex', 'AX-3', '2026-11-02 08:10:00' );
+
+		$rows = $this->connector( $server )->fetchTracking( $this->connection( $server ), new \DateTimeImmutable( '2026-11-01T00:00:00Z' ) );
+
+		$this->assertSame( array( 'AX-1', 'DH-2', 'AX-3' ), array_column( $rows, 'tracking' ) );
+		$searches = $server->callsTo( 'stock.picking', 'search_read' );
+		$this->assertCount( 1, $searches, 'The search itself leaves the other deliveries out, so one page is enough.' );
+		$this->assertContains( array( 'sale_id.client_order_ref', '=like', 'WC-%' ), $searches[0]['params']['domain'] );
+	}
+
+	public function test_a_crowd_of_other_deliveries_cannot_hide_the_shop_s_deliveries_when_they_cannot_be_filtered(): void {
+		$server               = $this->server( 18 );
+		$server->db->saleLink = false;
+		$refs                 = $this->place( $server, array( '10490', '10491' ) );
+		$this->crowd( $server, 620 );
+		$server->db->addDelivery( (int) $refs['10490']->id, 'Aramex', 'AX-1', '2026-11-02 08:00:00' );
+		$server->db->addDelivery( (int) $refs['10491']->id, 'DHL Express', 'DH-2', '2026-11-02 08:05:00' );
+
+		$rows = $this->connector( $server )->fetchTracking( $this->connection( $server ), new \DateTimeImmutable( '2026-11-01T00:00:00Z' ) );
+
+		$this->assertSame( array( 'AX-1', 'DH-2' ), array_column( $rows, 'tracking' ), 'Found on the second page.' );
+		$this->assertCount( 2, $server->callsTo( 'stock.picking', 'search_read' ) );
+	}
+
+	public function test_paging_stops_when_a_page_comes_back_short(): void {
+		$server               = $this->server( 18 );
+		$server->db->saleLink = false;
+		$refs                 = $this->place( $server, array( '10490' ) );
+		$server->db->addDelivery( (int) $refs['10490']->id, 'Aramex', 'AX-1', '2026-11-02 08:00:00' );
+		$this->connector( $server )->fetchTracking( $this->connection( $server ), new \DateTimeImmutable( '2026-11-01T00:00:00Z' ) );
+		$this->assertCount( 1, $server->callsTo( 'stock.picking', 'search_read' ) );
+	}
+
 	public function test_nothing_finished_gives_an_empty_list_and_no_order_lookup(): void {
 		$server = $this->server( 18 );
 		$this->assertSame( array(), $this->connector( $server )->fetchTracking( $this->connection( $server ), new \DateTimeImmutable( '2026-11-01T00:00:00Z' ) ) );

@@ -97,23 +97,23 @@ final class OdooOrderFinder {
 	/**
 	 * A reference to a sale order record.
 	 *
-	 * @param array<string,mixed> $record Sale order record read with ORDER_FIELDS.
+	 * @param array<string,mixed>            $record   Sale order record read with ORDER_FIELDS.
+	 * @param array<int,array<string,mixed>> $warnings Differences that were accepted with a warning, put in extra["warnings"].
 	 */
-	public function orderRef( array $record ): ExternalRef {
+	public function orderRef( array $record, array $warnings = array() ): ExternalRef {
 		$id       = OdooRecord::id( $record['id'] ?? 0 );
 		$currency = strtoupper( OdooRecord::name( $record['currency_id'] ?? false ) );
-		return new ExternalRef(
-			(string) $id,
-			OdooRecord::text( $record['name'] ?? '' ),
-			$this->client->recordUrl( 'sale.order', $id ),
-			array(
-				'total_minor' => $this->amounts->toMinor( $record['amount_total'] ?? 0, $this->amounts->exponent( $currency ) ),
-				'currency'    => $currency,
-				'state'       => OdooRecord::text( $record['state'] ?? '' ),
-				'partner_id'  => OdooRecord::id( $record['partner_id'] ?? 0 ),
-				'invoice_ids' => OdooRecord::ids( $record['invoice_ids'] ?? array() ),
-			)
+		$extra    = array(
+			'total_minor' => $this->amounts->toMinor( $record['amount_total'] ?? 0, $this->amounts->exponent( $currency ) ),
+			'currency'    => $currency,
+			'state'       => OdooRecord::text( $record['state'] ?? '' ),
+			'partner_id'  => OdooRecord::id( $record['partner_id'] ?? 0 ),
+			'invoice_ids' => OdooRecord::ids( $record['invoice_ids'] ?? array() ),
 		);
+		if ( array() !== $warnings ) {
+			$extra['warnings'] = $warnings;
+		}
+		return new ExternalRef( (string) $id, OdooRecord::text( $record['name'] ?? '' ), $this->client->recordUrl( 'sale.order', $id ), $extra );
 	}
 
 	/**
