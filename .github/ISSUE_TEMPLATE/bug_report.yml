@@ -1,0 +1,83 @@
+name: Bug report
+description: Something does not work as the plugin or its documentation says it should.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time. Please read this before you post:
+
+        - **Never paste API keys, passwords, the contents of `wp-config.php` or customer data.** The plugin's **Support report** (Settings > Tools) leaves secrets out, but read it before you attach it.
+        - A security problem is not a bug report. Use [private vulnerability reporting](https://github.com/estasofttechnologies/estasoft-enterprise-erp-crm-sync-engine/security/advisories/new).
+  - type: input
+    id: plugin-version
+    attributes:
+      label: Plugin version
+      description: Plugins screen, or the footer of the ESTASOFT SYNC screen.
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: WordPress, WooCommerce and PHP versions
+      placeholder: "WordPress 7.1, WooCommerce 10.x, PHP 8.3"
+    validations:
+      required: true
+  - type: dropdown
+    id: hpos
+    attributes:
+      label: WooCommerce order storage
+      options:
+        - High-performance order storage (HPOS)
+        - Legacy posts storage
+        - Both (compatibility mode)
+        - I do not know
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Connected system and its version
+      description: For example Odoo 18 on Odoo.sh, or Odoo 19 self-hosted.
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: Include the error code if one is shown (for example SYNC-MAP-001).
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to ...
+        2. Click ...
+        3. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Support report or log excerpt
+      description: Paste the Support report, or the relevant log lines. Remove anything private first.
+      render: text
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Before you submit
+      options:
+        - label: I removed every secret and every customer's personal data from this report.
+          required: true
+        - label: I searched the existing issues and this one is not already reported.
+          required: true

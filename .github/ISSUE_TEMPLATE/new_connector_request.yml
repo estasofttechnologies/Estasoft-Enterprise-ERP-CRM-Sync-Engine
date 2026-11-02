@@ -1,0 +1,101 @@
+name: New connector request
+description: Ask for a system that the plugin cannot connect to yet, or offer to help build the connector.
+title: "[Connector]: "
+labels: [connector]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The setup screen lists 34 systems. Version 0.1.0 can connect to Odoo only; the others are planned. This form helps decide what to build first and what the connector needs.
+
+        To build a connector yourself, read the connector contract in `docs/ARCHITECTURE.md` and `CONTRIBUTING.md` first.
+        **Never post credentials.** A free trial or sandbox address is enough.
+  - type: input
+    id: system
+    attributes:
+      label: System name and edition
+      description: For example "Xero", or "Business Central online".
+    validations:
+      required: true
+  - type: dropdown
+    id: type
+    attributes:
+      label: Kind of system
+      options:
+        - ERP
+        - Accounting
+        - CRM
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: listed
+    attributes:
+      label: Is it one of the 34 systems on the setup screen?
+      options:
+        - "Yes"
+        - "No"
+        - I am not sure
+    validations:
+      required: true
+  - type: input
+    id: docs
+    attributes:
+      label: Link to the vendor's API documentation
+      placeholder: https://
+    validations:
+      required: true
+  - type: dropdown
+    id: auth
+    attributes:
+      label: How does a merchant give access?
+      options:
+        - They paste an API key
+        - They create their own app, then sign in
+        - An administrator registers a cloud app
+        - They give a server address, user and password
+        - They import a file (no web API)
+        - I do not know
+    validations:
+      required: true
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: What should sync?
+      options:
+        - label: Orders
+        - label: Customers
+        - label: Refunds or credit notes
+        - label: Stock levels back to WooCommerce
+        - label: Delivery tracking back to WooCommerce
+        - label: Invoice status back to WooCommerce
+  - type: textarea
+    id: details
+    attributes:
+      label: Plan or licence requirements, regions, limits, anything the connector must know
+      description: For example "API access needs the Pro plan" or "UAE and Saudi Arabia only".
+  - type: dropdown
+    id: sandbox
+    attributes:
+      label: Can you get a free sandbox or trial company for testing?
+      options:
+        - "Yes"
+        - "No"
+        - I do not know
+  - type: dropdown
+    id: help
+    attributes:
+      label: Would you like to help?
+      options:
+        - I can test a build against my own account
+        - I can build the connector
+        - I only want to ask for it
+    validations:
+      required: true
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Before you submit
+      options:
+        - label: I did not post any credentials, tokens or customer data.
+          required: true

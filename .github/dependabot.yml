@@ -1,0 +1,53 @@
+# Dependabot opens pull requests for Composer packages (dev tooling only: the plugin ships no Composer
+# dependencies), npm packages (the admin app and its tooling) and GitHub Actions (including the local
+# composite action). Updates arrive weekly, grouped so there is one pull request per area.
+version: 2
+
+updates:
+  - package-ecosystem: composer
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels: [dependencies]
+    groups:
+      php-tooling:
+        patterns: ["*"]
+        update-types: [minor, patch]
+    ignore:
+      # PHPUnit 9.6 is what the WordPress polyfills and the test bootstrap are written for; move on purpose.
+      - dependency-name: phpunit/phpunit
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels: [dependencies]
+    groups:
+      wordpress-packages:
+        patterns: ["@wordpress/*"]
+        update-types: [minor, patch]
+      testing:
+        patterns: ["@testing-library/*", "jest*", "@types/*"]
+        update-types: [minor, patch]
+      other-minor-and-patch:
+        patterns: ["*"]
+        exclude-patterns: ["@wordpress/*", "@testing-library/*", "jest*", "@types/*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directories:
+      - /
+      - /.github/actions/setup-php-composer
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    labels: [dependencies]
+    groups:
+      actions:
+        patterns: ["*"]

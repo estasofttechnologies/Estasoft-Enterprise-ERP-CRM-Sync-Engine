@@ -1,0 +1,275 @@
+name: CI
+
+# Runs on every push to main and on every pull request against it.
+#
+#   php-lint     syntax on PHP 8.1 to 8.4, plus the scan for code WordPress.org rejects
+#   phpcs        WordPress Coding Standards (phpcs.xml.dist)
+#   phpstan      static analysis (phpstan.neon.dist)
+#   unit         PHPUnit unit tests on PHP 8.1 to 8.4 (no WordPress, no database)
+#   integration  PHPUnit against a real WordPress and MySQL 8 (bin/install-wp-core.sh + bin/install-test-wp.php)
+#   javascript   the admin app: lint, stylelint, tsc, Jest, production build
+#   release-build  the same zip the release workflow publishes, built and verified
+#   ci-ok        one required check for branch protection
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  php-lint:
+    name: PHP syntax (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ["8.1", "8.2", "8.3", "8.4"]
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: ./.github/actions/setup-php-composer
+        with:
+          php-version: ${{ matrix.php }}
+          install: "false"
+
+      - name: Lint every PHP file and scan for red flags
+        run: bash bin/lint-php.sh
+
+  phpcs:
+    name: PHPCS (WordPress Coding Standards)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP and Composer
+        uses: ./.github/actions/setup-php-composer
+        with:
+          php-version: "8.3"
+
+      - name: Run PHPCS
+        run: vendor/bin/phpcs
+
+  phpstan:
+    name: PHPStan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP and Composer
+        uses: ./.github/actions/setup-php-composer
+        with:
+          php-version: "8.3"
+
+      - name: Run PHPStan
+        run: vendor/bin/phpstan analyse --memory-limit=1G --no-progress
+
+  unit:
+    name: Unit tests (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ["8.1", "8.2", "8.3", "8.4"]
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP and Composer
+        uses: ./.github/actions/setup-php-composer
+        with:
+          php-version: ${{ matrix.php }}
+
+      - name: Run the unit tests
+        run: vendor/bin/phpunit
+
+  integration:
+    name: Integration (WordPress ${{ matrix.wordpress }}, PHP ${{ matrix.php }}, MySQL ${{ matrix.mysql }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The minimum supported WordPress with the oldest supported PHP, and the current WordPress with a current PHP.
+          - wordpress: "6.4"
+            php: "8.1"
+            mysql: "8.0"
+          - wordpress: latest
+            php: "8.3"
+            mysql: "8.4"
+    services:
+      mysql:
+        image: mysql:${{ matrix.mysql }}
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      WP_CORE_DIR: /tmp/wordpress
+      WP_TEST_CONTENT: /tmp/wp-content
+      WP_DB_NAME: estasoft_ci
+      WP_DB_USER: root
+      WP_DB_PASSWORD: root
+      WP_DB_HOST: 127.0.0.1
+      WP_VERSION: ${{ matrix.wordpress }}
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP and Composer
+        uses: ./.github/actions/setup-php-composer
+        with:
+          php-version: ${{ matrix.php }}
+
+      - name: Download WordPress
+        run: bash bin/install-wp-core.sh "$WP_VERSION" "$WP_CORE_DIR"
+
+      # tests/php/stubs/woocommerce is a minimal stand-in; WooCommerce itself is not installed in this job.
+      - name: Install WordPress into the test database and activate the plugin
+        run: php bin/install-test-wp.php
+
+      - name: Run the integration tests
+        run: vendor/bin/phpunit -c phpunit-integration.xml.dist
+
+  javascript:
+    name: Admin app (Node 22)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Check that the expected npm scripts exist
+        run: |
+          missing=0
+          for script in lint:js lint:css typecheck test:js build; do
+            if ! node -e 'process.exit((require("./package.json").scripts || {})[process.argv[1]] ? 0 : 1)' "$script"; then
+              echo "::error::package.json has no '$script' script. Rename it back or update .github/workflows/ci.yml and bin/check-all.sh."
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: ESLint (wp-scripts lint-js)
+        run: npm run lint:js
+
+      - name: Stylelint (wp-scripts lint-style)
+        run: npm run lint:css
+
+      - name: TypeScript (tsc --noEmit)
+        run: npm run typecheck
+
+      - name: Jest
+        run: npm run test:js
+
+      - name: Production build
+        run: npm run build
+
+      - name: Check the build output
+        run: |
+          test -s build/index.js
+          test -s build/index.asset.php
+          if grep -rl "ESTASOFT_MOCK" build; then
+            echo "::error::The production bundle contains the mock layer."
+            exit 1
+          fi
+
+  release-build:
+    name: Release zip builds and verifies
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: ./.github/actions/setup-php-composer
+        with:
+          php-version: "8.3"
+          install: "false"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Check that .gitattributes and .distignore leave the same files in
+        run: bash bin/check-dist-parity.sh
+
+      - name: Check the documentation links and the document index
+        run: php bin/check-docs.php
+
+      - name: Build and verify the zip
+        run: bash bin/build-zip.sh --out "$RUNNER_TEMP/zip"
+
+      - name: Keep the zip for a week
+        uses: actions/upload-artifact@v4
+        with:
+          name: estasoft-erp-crm-sync-engine-zip
+          path: ${{ runner.temp }}/zip/*
+          if-no-files-found: error
+          retention-days: 7
+
+  ci-ok:
+    name: CI passed
+    if: ${{ always() }}
+    needs: [php-lint, phpcs, phpstan, unit, integration, javascript, release-build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail when any job failed or was cancelled
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Job results: $RESULTS"
+          for result in $RESULTS; do
+            if [ "$result" != "success" ]; then
+              exit 1
+            fi
+          done

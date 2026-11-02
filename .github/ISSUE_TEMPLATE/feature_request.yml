@@ -1,0 +1,49 @@
+name: Feature request
+description: Suggest an improvement to the engine, the admin screens or the documentation.
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For a new ERP, accounting or CRM system use the **New connector request** form instead.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of the plugin is this about?
+      options:
+        - Queue and retries
+        - Mapping and presets
+        - Stock and tracking
+        - Reconciliation
+        - Admin screens
+        - WooCommerce integration (orders list, order box, product box)
+        - Settings, access and notifications
+        - Documentation
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do, and what gets in the way?
+      description: Describe the situation in your business, not only the feature you have in mind.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like the plugin to do?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What do you do today instead?
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Before you submit
+      options:
+        - label: I searched the existing issues and this one is not already requested.
+          required: true

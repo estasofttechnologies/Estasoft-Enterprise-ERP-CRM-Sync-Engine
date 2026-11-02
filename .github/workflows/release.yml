@@ -1,0 +1,205 @@
+name: Release
+
+# Push a tag such as v0.1.0 (on a commit that is already on main) to:
+#   1. build the zip with bin/build-zip.sh, which refuses to continue unless the plugin header, the
+#      ESTASOFT_SYNC_VERSION constant, readme.txt "Stable tag" and package.json all equal the tag;
+#   2. attach the zip and its checksum to a GitHub release, with the notes from CHANGELOG.md;
+#   3. wait for a person to approve, then publish to WordPress.org.
+#
+# Step 3 uses the "wordpress-org" environment. Create it in Settings > Environments, add the owner as a
+# required reviewer (that is the manual approval), and store the secrets SVN_USERNAME and SVN_PASSWORD
+# in that environment (not as repository secrets). See docs/release/CHECKLIST.md. Tags with a hyphen
+# (v0.2.0-rc.1) make a GitHub pre-release and are never sent to WordPress.org.
+#
+# Running the workflow by hand (Actions > Release > Run workflow) only builds and uploads the zip as an
+# artifact; it creates no release and deploys nothing.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and verify the zip
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Work out the version from the tag
+        id: meta
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          version=""
+          prerelease=false
+          if [ "$REF_TYPE" = "tag" ]; then
+            version="${REF_NAME#v}"
+            case "$version" in
+              *-*) prerelease=true ;;
+            esac
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+          echo "Tag '$REF_NAME' -> version '$version', prerelease $prerelease"
+
+      - name: The tagged commit must be on main
+        if: ${{ github.ref_type == 'tag' }}
+        env:
+          TAGGED_SHA: ${{ github.sha }}
+        run: |
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$TAGGED_SHA" origin/main; then
+            echo "::error::Tag ${GITHUB_REF_NAME} is not on main. Merge first, then tag the merge commit."
+            exit 1
+          fi
+
+      - name: Set up PHP
+        uses: ./.github/actions/setup-php-composer
+        with:
+          php-version: "8.3"
+          install: "false"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Build and verify the zip (version must equal the tag)
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          if [ -n "$VERSION" ]; then
+            bash bin/build-zip.sh --out dist --expect-version "$VERSION"
+          else
+            bash bin/build-zip.sh --out dist
+          fi
+
+      - name: Write the release notes from CHANGELOG.md
+        if: ${{ github.ref_type == 'tag' }}
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: bash bin/release-notes.sh "$VERSION" > "$RUNNER_TEMP/release-notes.md"
+
+      - name: Keep the release files
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-package
+          path: |
+            dist/*.zip
+            dist/*.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Keep the release notes
+        if: ${{ github.ref_type == 'tag' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: ${{ runner.temp }}/release-notes.md
+          if-no-files-found: error
+          retention-days: 30
+
+  github-release:
+    name: GitHub release
+    needs: build
+    if: ${{ github.ref_type == 'tag' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download the release files
+        uses: actions/download-artifact@v4
+        with:
+          name: release-package
+          path: dist
+
+      - name: Download the release notes
+        uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+          path: notes
+
+      - name: Create the release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Version ${{ needs.build.outputs.version }}
+          body_path: notes/release-notes.md
+          prerelease: ${{ needs.build.outputs.prerelease == 'true' }}
+          files: |
+            dist/*.zip
+            dist/*.sha256
+          fail_on_unmatched_files: true
+
+  deploy-wordpress-org:
+    name: Publish to WordPress.org (needs approval)
+    needs: [build, github-release]
+    if: ${{ github.ref_type == 'tag' && needs.build.outputs.prerelease == 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Required reviewers on this environment are the manual approval. Nothing below runs until they approve.
+    environment:
+      name: wordpress-org
+      url: https://wordpress.org/plugins/estasoft-erp-crm-sync-engine/
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the code (for the .wordpress-org assets folder)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check that the WordPress.org secrets are set
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+        run: |
+          if [ -z "$SVN_USERNAME" ] || [ -z "$SVN_PASSWORD" ]; then
+            echo "::error::SVN_USERNAME and SVN_PASSWORD must be set as secrets of the 'wordpress-org' environment."
+            exit 1
+          fi
+
+      - name: Download the verified zip
+        uses: actions/download-artifact@v4
+        with:
+          name: release-package
+          path: dist
+
+      - name: Unpack the zip so the exact verified files are deployed
+        run: |
+          mkdir -p "$RUNNER_TEMP/release"
+          unzip -q dist/*.zip -d "$RUNNER_TEMP/release"
+          test -f "$RUNNER_TEMP/release/estasoft-erp-crm-sync-engine/estasoft-erp-crm-sync-engine.php"
+
+      # BUILD_DIR makes the action deploy the unpacked folder as it is and ignore .distignore.
+      # VERSION is set explicitly so the "v" in the tag name can never end up in the SVN tag folder.
+      # trunk gets the new files, tags/<version> is created, and .wordpress-org/* goes to the assets folder.
+      # 10up publishes no floating major tag; `stable` is the channel its documentation tells users to follow.
+      # Dependabot cannot bump it, so look at the action's releases before each release.
+      - name: Deploy to WordPress.org
+        uses: 10up/action-wordpress-plugin-deploy@stable
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+          SLUG: estasoft-erp-crm-sync-engine
+          VERSION: ${{ needs.build.outputs.version }}
+          BUILD_DIR: ${{ runner.temp }}/release/estasoft-erp-crm-sync-engine

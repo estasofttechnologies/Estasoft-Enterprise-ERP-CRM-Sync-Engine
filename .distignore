@@ -1,34 +1,68 @@
-# Files left out of the WordPress.org release zip.
+# Files and folders left out of the release zip (WordPress.org and GitHub release).
+#
+# Read by bin/build-zip.sh (rsync --exclude-from) and by the 10up/action-wordpress-plugin-deploy action
+# (when it is not given BUILD_DIR). rsync rules: a leading slash anchors the entry to the repository root;
+# an entry without one matches at any depth. There is no negation here.
+#
+# What is NOT listed is what ships: estasoft-erp-crm-sync-engine.php, uninstall.php, readme.txt, LICENSE,
+# includes/, build/ (compiled admin app, produced by npm run build), assets/, languages/.
+# bin/build-zip.sh refuses to build when any other top-level entry ends up in the zip, so a new developer
+# file cannot leak into a release unnoticed.
+
+# Version control, hosting and editor files
 .git
-.github
-.wordpress-org
-.editorconfig
 .gitattributes
 .gitignore
+.gitkeep
 .distignore
+.editorconfig
+.github
+.wordpress-org
+.idea
+.vscode
+.DS_Store
+Thumbs.db
+
+# Tooling configuration and caches (every hidden file in the root is dev-only, so a catch-all comes first)
+/.*
 .phpunit.result.cache
+.phpunit.cache
 .phpcs-cache
 .phpstan-cache
 .eslintcache
+/*.config.js
+/*.config.cjs
+/*.config.mjs
+/*.config.ts
+/tsconfig*.json
+/phpcs.xml.dist
+/phpstan.neon.dist
+/phpunit.xml.dist
+/phpunit-integration.xml.dist
+/composer.json
+/composer.lock
+/package.json
+/package-lock.json
+
+# Dependencies and generated output that must never be shipped
 node_modules
 vendor
-bin
-docs
-tests
-src
-composer.json
-composer.lock
-package.json
-package-lock.json
-tsconfig.json
-phpcs.xml.dist
-phpstan.neon.dist
-phpunit.xml.dist
-phpunit-integration.xml.dist
-webpack.config.js
-jest.config.js
-CONTRIBUTING.md
-CODE_OF_CONDUCT.md
-SECURITY.md
-CHANGELOG.md
-README.md
+/dist
+/build/mock
+/coverage
+/plugin-build
+*.map
+*.log
+*.zip
+*.sh
+
+# Source, tests, scripts and documentation (the source is public on GitHub; readme.txt links to it)
+/bin
+/docs
+/src
+/tests
+/CHANGELOG.md
+/CODE_OF_CONDUCT.md
+/CONTRIBUTING.md
+/README.md
+/SECURITY.md
