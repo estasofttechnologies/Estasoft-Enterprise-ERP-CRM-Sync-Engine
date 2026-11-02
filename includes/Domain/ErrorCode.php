@@ -47,6 +47,9 @@ enum ErrorCode: string {
 	case Auth007 = 'SYNC-AUTH-007';
 	case Exp001 = 'SYNC-EXP-001';
 	case Exp002 = 'SYNC-EXP-002';
+	case Cfg004 = 'SYNC-CFG-004';
+	case Rest001 = 'SYNC-REST-001';
+	case Rest002 = 'SYNC-REST-002';
 
 	/**
 	 * What the plugin does with this error.
@@ -54,9 +57,9 @@ enum ErrorCode: string {
 	public function errorClass(): ErrorClass {
 		return match ( $this ) {
 			self::Net001, self::Net002, self::Rate001 => ErrorClass::Retry,
-			self::Auth001, self::Auth002, self::Map001, self::Map002, self::Map003, self::Val001, self::Val002, self::Cfg001, self::Cfg002, self::Comp001, self::Auth003, self::Auth004, self::Cfg003, self::Net003, self::Auth005, self::Auth006, self::Auth007, self::Exp001, self::Exp002 => ErrorClass::NeedsPerson,
+			self::Auth001, self::Auth002, self::Map001, self::Map002, self::Map003, self::Val001, self::Val002, self::Cfg001, self::Cfg002, self::Comp001, self::Auth003, self::Auth004, self::Cfg003, self::Net003, self::Auth005, self::Auth006, self::Auth007, self::Exp001, self::Exp002, self::Cfg004, self::Rest002 => ErrorClass::NeedsPerson,
 			self::Dup001, self::State001, self::Lock001 => ErrorClass::Handled,
-			self::Pause001, self::Recon001, self::Stk001, self::Inb001, self::Prv001 => ErrorClass::Info,
+			self::Pause001, self::Recon001, self::Stk001, self::Inb001, self::Prv001, self::Rest001 => ErrorClass::Info,
 		};
 	}
 
@@ -97,6 +100,9 @@ enum ErrorCode: string {
 			self::Auth007 => '{system} does not know this app yet.',
 			self::Exp001 => 'The export file could not be written to the uploads folder.',
 			self::Exp002 => '{n} orders were left out of the export: {reason}.',
+			self::Cfg004 => '{system} connects with a key, not with a sign-in page.',
+			self::Rest001 => 'Something went wrong on the server. The details are in the log.',
+			self::Rest002 => 'The test email could not be sent. WordPress did not accept the message.',
 		};
 	}
 
@@ -135,6 +141,9 @@ enum ErrorCode: string {
 			self::Auth007 => 'Finish the app setup inside {system}, then test again',
 			self::Exp001 => 'Ask your host to make the uploads folder writable, then create the export again',
 			self::Exp002 => 'Map the missing ledger or code, then export again',
+			self::Cfg004 => 'Use the address and key form for this connection',
+			self::Rest001 => 'Try again in a moment. If it keeps happening, copy the support report and ask for help',
+			self::Rest002 => 'Check the email settings of this site, then send the test again',
 		};
 	}
 

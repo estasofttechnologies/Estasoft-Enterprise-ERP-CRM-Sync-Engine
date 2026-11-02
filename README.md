@@ -73,7 +73,7 @@ Setup, standards, the integration-test environment and the pull request checklis
 - **Connector contract:** `includes/Contract/ConnectorInterface.php` (contract version 1) and the
   `estasoft_sync_register_connectors` filter. "Build a connector" in [CONTRIBUTING.md](CONTRIBUTING.md) walks
   through it.
-- [docs/error-catalog.md](docs/error-catalog.md): the thirty `SYNC-...` error codes.
+- [docs/error-catalog.md](docs/error-catalog.md): the thirty-three `SYNC-...` error codes.
 - [docs/spec/README.md](docs/spec/README.md): the index of all documents and which one wins when they disagree.
 
 ## Roadmap

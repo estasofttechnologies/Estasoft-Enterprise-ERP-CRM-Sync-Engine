@@ -16,8 +16,8 @@ use PHPUnit\Framework\TestCase;
 
 final class ErrorCodeTest extends TestCase {
 
-	public function test_catalog_has_thirty_codes(): void {
-		$this->assertCount( 30, ErrorCode::cases() );
+	public function test_catalog_has_thirty_three_codes(): void {
+		$this->assertCount( 33, ErrorCode::cases() );
 	}
 
 	public function test_every_code_has_a_message_and_a_remedy(): void {
