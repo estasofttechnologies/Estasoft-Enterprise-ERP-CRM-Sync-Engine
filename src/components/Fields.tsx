@@ -102,7 +102,7 @@ export function TextField( {
 		<TextControl
 			__nextHasNoMarginBottom
 			__next40pxDefaultSize
-			className={ `estasoft-sync-field ${ className }`.trim() }
+			className={ `estasoft-sync-field estasoft-sync-field--line ${ className }`.trim() }
 			label={ label }
 			hideLabelFromVision={ hideLabel }
 			value={ value }
@@ -156,7 +156,7 @@ export function SelectField( {
 		<SelectControl
 			__nextHasNoMarginBottom
 			__next40pxDefaultSize
-			className={ `estasoft-sync-field ${ className }`.trim() }
+			className={ `estasoft-sync-field estasoft-sync-field--line ${ className }`.trim() }
 			label={ label }
 			hideLabelFromVision={ hideLabel }
 			value={ value }

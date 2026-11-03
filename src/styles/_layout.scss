@@ -1,3 +1,22 @@
+// The screen goes edge to edge: the app bar and the pages use the whole width of the WordPress content area. WordPress puts a
+// 20px gutter on its left (#wpcontent) and a margin round the `.wrap` that PHP prints around the app; neither is wanted here.
+// Notices of other plugins keep a gutter of their own, so they do not touch the admin menu.
+#wpcontent,
+.auto-fold #wpcontent {
+	padding-inline-start: 0;
+}
+
+#wpbody-content > .notice,
+#wpbody-content > .error,
+#wpbody-content > .update-nag {
+	margin-inline: 24px;
+}
+
+.wrap.estasoft-sync,
+.rtl .wrap.estasoft-sync {
+	margin: 0;
+}
+
 // App bar, tabs, page header, grids, cards.
 .estasoft-sync-appbar {
 	display: flex;
@@ -154,7 +173,6 @@
 	display: flex;
 	flex-direction: column;
 	gap: 16px;
-	max-inline-size: 1280px;
 	padding: 24px;
 }
 

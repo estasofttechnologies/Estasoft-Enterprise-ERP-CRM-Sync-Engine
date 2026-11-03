@@ -1,10 +1,8 @@
 .estasoft-sync {
 	box-sizing: border-box;
-	// WordPress floats Screen Options and Help to the top right of the page. A flex container (the app bar)
-	// would be squeezed to fit beside them, so the app starts below them.
 	clear: both;
 	min-block-size: 70vh;
-	margin-block-start: 12px;
+	margin: 0;
 	background: var(--estasoft-sync-canvas);
 	color: var(--estasoft-sync-text);
 	font-family: var(--estasoft-sync-font);

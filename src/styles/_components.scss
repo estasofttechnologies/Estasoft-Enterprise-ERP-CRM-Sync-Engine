@@ -325,6 +325,12 @@
 	font-family: inherit;
 }
 
+// A one-line field (text, number, choice list) is as wide as about 70 characters, not as wide as the screen. Text areas and tables
+// keep the full width.
+.estasoft-sync .estasoft-sync-field--line {
+	max-inline-size: 40rem;
+}
+
 .estasoft-sync .components-base-control__label,
 .estasoft-sync-overlay .components-base-control__label,
 .estasoft-sync-label {
@@ -1080,8 +1086,6 @@
 	flex-direction: column;
 	gap: 24px;
 	inline-size: 100%;
-	max-inline-size: 1180px;
-	margin-inline: auto;
 }
 
 .estasoft-sync-wizard__heading {
