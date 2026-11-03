@@ -491,6 +491,14 @@ final class ReadinessService {
 	 */
 	private function key(): array {
 		if ( $this->box->keyAvailable() ) {
+			if ( SecretBox::SOURCE_WORDPRESS === $this->box->keySource() ) {
+				return $this->check(
+					'key',
+					__( 'Credentials are encrypted with your WordPress security keys', 'estasoft-erp-crm-sync-engine' ),
+					'passed',
+					__( 'Saved credentials cannot be read from a copy of the database. If you ever change the WordPress security keys, the saved credentials must be entered again; a key of its own in wp-config.php (ESTASOFT_SYNC_KEY) avoids that.', 'estasoft-erp-crm-sync-engine' )
+				);
+			}
 			return $this->check(
 				'key',
 				__( 'The encryption key is in wp-config.php', 'estasoft-erp-crm-sync-engine' ),

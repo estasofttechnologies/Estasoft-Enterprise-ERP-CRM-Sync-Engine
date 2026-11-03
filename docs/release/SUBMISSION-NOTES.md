@@ -134,8 +134,9 @@ requests every route as a visitor and expects 401 or 403 (a 4xx for the webhook)
 ---
 
 - Credentials (API keys, passwords, client secrets, tokens, private keys) are encrypted with libsodium `secretbox`
-  before they are saved. The key comes from the constant `ESTASOFT_SYNC_KEY` in `wp-config.php`, which the merchant
-  adds; the plugin shows a ready-made line. The key is not stored in the database. Without it nothing is saved.
+  before they are saved. The key is the constant `ESTASOFT_SYNC_KEY` in `wp-config.php` when the merchant has added one
+  (the plugin shows a ready-made line when no key is available), otherwise it is derived from the WordPress security
+  keys and salts of the same file. The key is never stored in the database. Without any key nothing is saved.
 - They are saved in the plugin's own table (`{$wpdb->prefix}estasoft_sync_connections`), never in `wp_options`,
   never autoloaded, and are never returned by the REST API, written to a log, put in a support report or included
   in an exception message. The screens show only the last four characters.
@@ -171,8 +172,9 @@ There is no demo mode and no sample connector. A reviewer needs no paid ERP. Pic
 
 ---
 
-1. Use WordPress 6.4 or later, PHP 8.1 or later (sodium is part of PHP), and WooCommerce active. Add to
-   `wp-config.php`: `define( 'ESTASOFT_SYNC_KEY', 'any long random string of 32 or more characters' );`
+1. Use WordPress 6.4 or later, PHP 8.1 or later (sodium is part of PHP), and WooCommerce active. Nothing has to be added
+   to `wp-config.php`: the WordPress security keys encrypt the credentials. To try the dedicated key, add
+   `define( 'ESTASOFT_SYNC_KEY', 'any long random string of 32 or more characters' );`
 2. Activate the plugin. Open WooCommerce > ESTASOFT SYNC: the first-run dashboard, the readiness check
    (Settings > Readiness check), the Choose a system screen (34 entries; two say they cannot be selected yet) and
    the Settings, Mapping and Logs screens. Nothing is sent anywhere, and the plugin makes no request until a

@@ -7,7 +7,7 @@ Estasoft Enterprise ERP/CRM Sync Engine (ESTASOFT SYNC). WordPress plugin, PHP 8
 1. **Checkout never waits.** An order event writes one row to the queue table in the order's own database transaction. No network call in a customer request.
 2. **At least once, exactly once in effect.** Idempotency key per event, lookup by client reference `WC-{order id}` before any create, an id map, and a state table with data hashes.
 3. **WooCommerce through its CRUD layer only.** `wc_get_order`, `wc_get_orders`, `$order->update_meta_data()`. No SQL on `posts`, `postmeta` or HPOS tables.
-4. **Secrets are encrypted** with libsodium `secretbox`, key from the constant `ESTASOFT_SYNC_KEY` in `wp-config.php`. Never in options, logs, REST responses or exceptions.
+4. **Secrets are encrypted** with libsodium `secretbox`. The key is the constant `ESTASOFT_SYNC_KEY` in `wp-config.php` when the site defines one, otherwise it is derived from the WordPress security keys and salts in the same file. Never in options, logs, REST responses or exceptions.
 5. **Everything the person sees comes through the REST API** (`estasoft-sync/v1`) into a React app. PHP renders only the pieces WordPress requires it to render (order box, orders list column, product box, admin bar, dashboard widget, notices, emails).
 6. **No telemetry, no relay, no outside server.** The plugin contacts only the system the merchant connected.
 7. **All features free.** No licence, tier or upsell code anywhere.

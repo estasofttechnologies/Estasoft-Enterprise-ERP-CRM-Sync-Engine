@@ -46,8 +46,8 @@ has been tested. Please give us a reasonable time to fix a problem before you te
 
 ## For site owners
 
-- Keep the encryption key (`ESTASOFT_SYNC_KEY` in `wp-config.php`) out of backups that are shared and out of
-  version control.
+- Keep `wp-config.php` out of backups that are shared and out of version control. It holds the WordPress security
+  keys, which encrypt the saved credentials, and the optional `ESTASOFT_SYNC_KEY`.
 - Give each connection an API key with only the permissions the plugin needs, and replace keys before they
   expire.
 - The plugin sends no telemetry and contacts only the system you connect. See the *External services* section of

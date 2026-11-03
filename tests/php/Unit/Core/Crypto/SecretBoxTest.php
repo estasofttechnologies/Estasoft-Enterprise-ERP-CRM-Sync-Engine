@@ -167,4 +167,180 @@ final class SecretBoxTest extends TestCase {
 		$this->assertTrue( $generated->keyAvailable() );
 		$this->assertSame( array( 'a' => 'b' ), $generated->decrypt( $generated->encrypt( array( 'a' => 'b' ) ) ) );
 	}
+
+	/**
+	 * Four values of the shape WordPress generates.
+	 *
+	 * @return array<int,string>
+	 */
+	private static function wordpressKeys(): array {
+		return array(
+			str_repeat( 'a1', 32 ),
+			str_repeat( 'b2', 32 ),
+			str_repeat( 'c3', 32 ),
+			str_repeat( 'd4', 32 ),
+		);
+	}
+
+	public function test_the_wordpress_security_keys_give_a_key_when_there_is_no_constant(): void {
+		$material = SecretBox::materialFromWordPressKeys( self::wordpressKeys() );
+		$this->assertNotNull( $material );
+		$this->assertSame( 64, strlen( (string) $material ) );
+		$this->assertSame( $material, SecretBox::materialFromWordPressKeys( self::wordpressKeys() ), 'the same keys always give the same material' );
+		$box = new SecretBox( $material, SecretBox::SOURCE_WORDPRESS );
+		$this->assertTrue( $box->keyAvailable() );
+		$this->assertSame( 'wordpress', $box->keySource() );
+		$this->assertSame( array( 'api_key' => 'k' ), $box->decrypt( $box->encrypt( array( 'api_key' => 'k' ) ) ) );
+	}
+
+	public function test_changing_any_wordpress_security_key_changes_the_material(): void {
+		$keys    = self::wordpressKeys();
+		$changed = $keys;
+		$changed[2] = str_repeat( 'e5', 32 );
+		$this->assertNotSame( SecretBox::materialFromWordPressKeys( $keys ), SecretBox::materialFromWordPressKeys( $changed ) );
+	}
+
+	/**
+	 * @return array<string,array{0:array<int,mixed>}>
+	 */
+	public static function unusable_wordpress_keys(): array {
+		$good = self::wordpressKeys();
+		return array(
+			'none defined'            => array( array( null, null, null, null ) ),
+			'one missing'             => array( array( $good[0], $good[1], null, $good[3] ) ),
+			'too few values'          => array( array( $good[0], $good[1], $good[2] ) ),
+			'one too short'           => array( array( $good[0], 'short', $good[2], $good[3] ) ),
+			'one is not text'         => array( array( $good[0], 12345678901234567890123456789012, $good[2], $good[3] ) ),
+			'the sample text'         => array( array( $good[0], 'put your unique phrase here', $good[2], $good[3] ) ),
+			'the sample text, padded' => array( array( $good[0], 'put your unique phrase here, again and again', $good[2], $good[3] ) ),
+			'all four the same'       => array( array( $good[0], $good[0], $good[0], $good[0] ) ),
+		);
+	}
+
+	/**
+	 * @dataProvider unusable_wordpress_keys
+	 *
+	 * @param array<int,mixed> $values The four values.
+	 */
+	public function test_wordpress_security_keys_that_are_missing_short_or_the_sample_are_not_used( array $values ): void {
+		$this->assertNull( SecretBox::materialFromWordPressKeys( $values ) );
+	}
+
+	public function test_without_any_key_the_source_is_none(): void {
+		$this->assertSame( 'none', ( new SecretBox( null ) )->keySource() );
+		$this->assertSame( 'none', ( new SecretBox( 'too short' ) )->keySource() );
+		$this->assertSame( 'constant', ( new SecretBox( self::KEY ) )->keySource() );
+	}
+
+	public function test_credentials_saved_with_the_wordpress_keys_stay_readable_after_a_constant_is_added(): void {
+		$material = (string) SecretBox::materialFromWordPressKeys( self::wordpressKeys() );
+		$before   = new SecretBox( $material, SecretBox::SOURCE_WORDPRESS );
+		$stored   = $before->encrypt( array( 'api_key' => 'sk_live_1' ) );
+		$print    = $before->fingerprint();
+
+		$after = new SecretBox( self::KEY, SecretBox::SOURCE_CONSTANT, $material );
+		$this->assertSame( 'constant', $after->keySource() );
+		$this->assertSame( array( 'api_key' => 'sk_live_1' ), $after->decrypt( $stored ), 'read with the WordPress-derived key' );
+		$this->assertTrue( $after->reads( $print ), 'the saved fingerprint is still accepted' );
+		$this->assertTrue( $after->reads( $after->fingerprint() ) );
+
+		// What is saved from now on uses the constant, and the WordPress keys alone cannot read it.
+		$restored = $after->encrypt( array( 'api_key' => 'sk_live_2' ) );
+		$this->assertSame( array( 'api_key' => 'sk_live_2' ), $after->decrypt( $restored ) );
+		$this->expectException( CryptoException::class );
+		$before->decrypt( $restored );
+	}
+
+	public function test_a_key_that_is_neither_the_main_key_nor_the_alternate_is_refused(): void {
+		$material = (string) SecretBox::materialFromWordPressKeys( self::wordpressKeys() );
+		$stranger = new SecretBox( 'another-key-another-key-another-key-123' );
+		$stored   = $stranger->encrypt( array( 'a' => 'b' ) );
+		$box      = new SecretBox( self::KEY, SecretBox::SOURCE_CONSTANT, $material );
+		$this->assertFalse( $box->reads( $stranger->fingerprint() ) );
+		try {
+			$box->decrypt( $stored );
+			$this->fail( 'A third key must not open the text.' );
+		} catch ( CryptoException $e ) {
+			$this->assertNull( $e->errorCode(), 'a changed key has no catalog code' );
+		}
+	}
+
+	public function test_a_short_alternate_is_ignored(): void {
+		$box = new SecretBox( self::KEY, SecretBox::SOURCE_CONSTANT, 'short' );
+		$this->assertFalse( $box->reads( ( new SecretBox( 'short' ) )->fingerprint() ) );
+		$this->assertTrue( $box->reads( $box->fingerprint() ) );
+	}
+
+	/**
+	 * Define the four WordPress security constants in this process.
+	 */
+	private function defineWordPressKeys(): void {
+		foreach ( array( 'AUTH_KEY', 'SECURE_AUTH_KEY', 'AUTH_SALT', 'SECURE_AUTH_SALT' ) as $i => $name ) {
+			define( $name, str_repeat( dechex( 10 + $i ) . '7', 32 ) );
+		}
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_from_constant_uses_the_wordpress_keys_when_the_site_defines_no_key_of_its_own(): void {
+		$this->defineWordPressKeys();
+		$box = SecretBox::fromConstant();
+		$this->assertTrue( $box->keyAvailable() );
+		$this->assertSame( 'wordpress', $box->keySource() );
+		$this->assertSame( array( 'a' => 'b' ), $box->decrypt( $box->encrypt( array( 'a' => 'b' ) ) ) );
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_from_constant_has_no_key_when_there_is_no_constant_and_the_wordpress_keys_are_the_sample(): void {
+		foreach ( array( 'AUTH_KEY', 'SECURE_AUTH_KEY', 'AUTH_SALT', 'SECURE_AUTH_SALT' ) as $name ) {
+			define( $name, 'put your unique phrase here' );
+		}
+		$box = SecretBox::fromConstant();
+		$this->assertFalse( $box->keyAvailable() );
+		$this->assertSame( 'none', $box->keySource() );
+		$this->expectException( CryptoException::class );
+		$box->encrypt( array( 'a' => 'b' ) );
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_from_constant_has_no_key_when_nothing_is_defined(): void {
+		$box = SecretBox::fromConstant();
+		$this->assertFalse( $box->keyAvailable() );
+		$this->assertFalse( $box->keyTooShort() );
+		$this->assertSame( 'none', $box->keySource() );
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_from_constant_prefers_the_constant_and_does_not_hide_a_short_one_behind_the_wordpress_keys(): void {
+		$this->defineWordPressKeys();
+		define( 'ESTASOFT_SYNC_KEY', 'too-short' );
+		$box = SecretBox::fromConstant();
+		$this->assertFalse( $box->keyAvailable(), 'a short constant is refused, not replaced' );
+		$this->assertTrue( $box->keyTooShort() );
+		$this->assertSame( 'none', $box->keySource() );
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @preserveGlobalState disabled
+	 */
+	public function test_from_constant_uses_the_constant_when_it_is_long_enough_and_still_reads_what_the_wordpress_keys_saved(): void {
+		$this->defineWordPressKeys();
+		define( 'ESTASOFT_SYNC_KEY', self::KEY );
+		$box = SecretBox::fromConstant();
+		$this->assertSame( 'constant', $box->keySource() );
+		$wordpress = new SecretBox( (string) SecretBox::materialFromWordPressKeys( array( AUTH_KEY, SECURE_AUTH_KEY, AUTH_SALT, SECURE_AUTH_SALT ) ), SecretBox::SOURCE_WORDPRESS );
+		$this->assertSame( array( 'x' => 'y' ), $box->decrypt( $wordpress->encrypt( array( 'x' => 'y' ) ) ) );
+	}
 }

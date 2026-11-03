@@ -225,7 +225,7 @@ Pennylane (Pennylane requires OAuth for production integrations (its company tok
 
 1. Install and activate WooCommerce 8.2 or later.
 2. Install this plugin from the Plugins screen and activate it.
-3. Add an encryption key to wp-config.php, above the line "That's all, stop editing!": `define( 'ESTASOFT_SYNC_KEY', 'a long random value' );`. The setup screen shows a ready-made line to copy. Keep a copy of the key. Without it the saved credentials cannot be read and must be entered again.
+3. Nothing has to be added to wp-config.php: credentials are encrypted with your WordPress security keys. Optionally add a key of its own above "That's all, stop editing!": `define( 'ESTASOFT_SYNC_KEY', 'a long random value' );`. It keeps saved credentials readable if you change the WordPress keys.
 4. Open WooCommerce > ESTASOFT SYNC and follow the setup: check your store, choose a system, connect, choose what to sync, preview an order, run Shadow mode, go live.
 5. Each system's setup screen says what you need first (an API key, an app of your own, a server login). For Odoo, create an API key under your user's Account Security.
 
@@ -250,7 +250,7 @@ Yes. Both are declared compatible, and orders are read through WooCommerce's CRU
 PHP 8.1 or later with the sodium extension, WordPress 6.4 or later and WooCommerce 8.2 or later.
 
 = Where is the key stored, and what is encrypted? =
-API keys, passwords and client secrets are encrypted with libsodium before they are saved in the plugin's own table. The key is the constant ESTASOFT_SYNC_KEY in wp-config.php, not in the database. Order data in the queue and log is not encrypted; the log redacts emails, phone numbers and tokens by default.
+API keys, passwords and client secrets are encrypted with libsodium before they are saved in the plugin's own table. The key is the constant ESTASOFT_SYNC_KEY in wp-config.php if you added one, otherwise it comes from the WordPress security keys in the same file. It is never stored in the database. If you change those keys and have no key of your own, enter the credentials again. Order data in the queue and log is not encrypted; the log redacts emails, phone numbers and tokens by default.
 
 = What happens when my ERP is down? =
 Checkout is not affected. Deliveries retry with growing delays; after repeated failures the connection pauses and orders wait in the queue. Failed orders are listed under Needs attention.
@@ -287,4 +287,4 @@ In this plugin's support forum on WordPress.org. Bug reports and connector reque
 == Upgrade Notice ==
 
 = 0.1.0 =
-First release. Add the encryption key line to wp-config.php, then run Shadow mode before you go live.
+First release. Run Shadow mode before you go live.

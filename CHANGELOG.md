@@ -47,7 +47,8 @@ First release.
   invoices, connections, mapping, stock, reconciliation, logs and settings.
 - WooCommerce integration: declared compatible with high-performance order storage and the block checkout; order
   box, Sync column on the orders list, product box.
-- Credentials encrypted with libsodium using a key from `wp-config.php` (`ESTASOFT_SYNC_KEY`); secrets are never
+- Credentials encrypted with libsodium. The key is derived from the WordPress security keys in `wp-config.php`, or is
+  the constant `ESTASOFT_SYNC_KEY` when you add one (credentials saved before the constant was added stay readable); secrets are never
   returned by the REST API or written to logs.
 - Logs with redaction, a support report that leaves secrets out, readiness check, email alerts, settings export
   and import.

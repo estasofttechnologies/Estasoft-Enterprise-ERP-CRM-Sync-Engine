@@ -479,7 +479,7 @@ final class ConnectionRepository extends Repository {
 			'created_at'            => Time::iso( (string) $row['created_at'] ),
 			'config'                => $config,
 			'secret_hints'          => $secret,
-			'secrets_readable'      => '' === (string) $row['secrets_enc'] || ( $this->box->keyAvailable() && hash_equals( (string) $row['key_fingerprint'], $this->box->fingerprint() ) ),
+			'secrets_readable'      => '' === (string) $row['secrets_enc'] || $this->box->reads( (string) $row['key_fingerprint'] ),
 			'credential_warn_days'  => (int) $row['credential_warn_days'],
 		);
 	}

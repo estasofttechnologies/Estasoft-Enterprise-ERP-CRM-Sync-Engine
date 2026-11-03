@@ -17,7 +17,7 @@ Thirty-three codes. The same code shows on screen, in the log and in the support
 | `SYNC-DUP-001` | handled | {system} already has this order. Linked to {ref}. | Nothing | n/a |
 | `SYNC-STATE-001` | handled | The order changed while it waited. The latest version was sent. | Nothing | n/a |
 | `SYNC-CFG-001` | needs_person | There is no live mapping version for {type}. | Publish a mapping version | No |
-| `SYNC-CFG-002` | needs_person | The encryption key is missing from wp-config.php. | Add the line shown and reload | No |
+| `SYNC-CFG-002` | needs_person | The encryption key is missing from wp-config.php. | Only when the site has neither `ESTASOFT_SYNC_KEY` nor WordPress security keys: add the line shown and reload | No |
 | `SYNC-PAUSE-001` | info | Syncing is paused. Items wait in the queue. | Resume, or check the connection | n/a |
 | `SYNC-RECON-001` | info | The nightly check found {n} differences. | Open Reconciliation | n/a |
 | `SYNC-COMP-001` | needs_person | The tax authority rejected invoice {invoice}: {reason}. | Fix the cause in the system, report again | No |

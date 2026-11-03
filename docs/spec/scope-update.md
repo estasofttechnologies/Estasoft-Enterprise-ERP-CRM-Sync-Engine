@@ -66,6 +66,10 @@ Full detail, sources and confidence tags are in the research document. The point
 6. Whether to tell merchants about SMACC's own WooCommerce connection.
 7. Whether to keep the contract and test suite public for add-ons from other developers.
 
+## Update, 3 Nov 2026 (later): the encryption key no longer has to be added by hand
+
+Item CON-2 of the phase 1 spec said the key comes from the constant `ESTASOFT_SYNC_KEY`, and without it nothing is saved. A first install on a real site showed that this stops a merchant at the first screen. The plugin now derives the key from the WordPress security keys and salts (`AUTH_KEY`, `SECURE_AUTH_KEY`, `AUTH_SALT`, `SECURE_AUTH_SALT`) when the constant is not defined; they live in the same file as the constant, so a stolen database dump alone reveals nothing in either case. The constant stays the better choice because it survives a change of the WordPress keys, and it wins when both exist. Credentials saved under the WordPress-derived key stay readable after a constant is added. Only a site with neither (no constant, sample or missing security keys) still sees SYNC-CFG-002.
+
 ## Update, 3 Nov 2026: what the connector build found
 
 - **Every system now has a connector** (34 catalog rows, 36 connector ids because three rows hold several products), built from each vendor's public documentation and tested only against in-repository fakes of the vendors' wire behaviour. None has been run against a live account; the Choose a system screen says so ("Not yet tested with a live account") until a connector is verified with a vendor sandbox.

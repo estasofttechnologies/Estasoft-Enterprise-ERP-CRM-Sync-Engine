@@ -34,7 +34,8 @@ npm run build
 ```
 
 To try it in WordPress, link or copy the folder into `wp-content/plugins/`, activate WooCommerce 8.2 or later and
-then the plugin, and add the line the setup screen shows to `wp-config.php`:
+then the plugin. Credentials are encrypted with your WordPress security keys at once. To give the plugin a key of its
+own (so that changing the WordPress keys never makes saved credentials unreadable), add this to `wp-config.php`:
 `define( 'ESTASOFT_SYNC_KEY', '<a long random value>' );`
 
 `npm start` rebuilds the admin app when you change `src/`.
