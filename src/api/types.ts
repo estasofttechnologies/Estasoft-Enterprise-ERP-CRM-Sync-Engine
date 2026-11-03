@@ -737,8 +737,6 @@ export interface BootData {
 	routes: string[];
 	notices: Notice[];
 	encryptionKeyLine: string | null;
-	/** Rows per page of the person's Screen Options (25, 50 or 100). Additive: older boot data has none. */
-	perPage?: number;
 }
 
 /* ---------------------------------------------------------------- endpoint list */

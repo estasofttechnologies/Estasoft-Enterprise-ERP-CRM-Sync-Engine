@@ -7,7 +7,6 @@ import {
 	setBoot,
 	setTransport,
 } from '../../src/api/client';
-import { normaliseBootData } from '../../src/api/boot';
 import { mockBoot } from '../../src/api/mock/server';
 
 interface FakeResponse {
@@ -216,22 +215,5 @@ describe( 'REST client', () => {
 		expect( ( seen[ 0 ].headers as Record< string, string > ).Accept ).toBe(
 			'text/csv'
 		);
-	} );
-} );
-
-describe( 'Boot data', () => {
-	it( 'keeps the page size of Screen Options when it is one the queue offers, and drops anything else', () => {
-		expect( normaliseBootData( { perPage: 50 }, undefined ).perPage ).toBe(
-			50
-		);
-		expect( normaliseBootData( { perPage: 100 }, undefined ).perPage ).toBe(
-			100
-		);
-		expect(
-			normaliseBootData( { perPage: 40 }, undefined ).perPage
-		).toBeUndefined();
-		expect(
-			normaliseBootData( undefined, undefined ).perPage
-		).toBeUndefined();
 	} );
 } );

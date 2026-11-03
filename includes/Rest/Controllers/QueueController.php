@@ -11,7 +11,6 @@ namespace Estasoft\SyncEngine\Rest\Controllers;
 
 defined( 'ABSPATH' ) || exit;
 
-use Estasoft\SyncEngine\Admin\ScreenOptions;
 use Estasoft\SyncEngine\Core\Queue\QueueService;
 use Estasoft\SyncEngine\Core\Repositories\QueueQuery;
 use Estasoft\SyncEngine\Core\Repositories\QueueRepository;
@@ -104,10 +103,6 @@ final class QueueController extends BaseController {
 		$args  = $this->params( $request );
 		if ( ! isset( $args['mode'] ) ) {
 			$args['mode'] = 'live';
-		}
-		if ( ! isset( $args['per_page'] ) && $this->container->has( ScreenOptions::SERVICE ) ) {
-			$options          = $this->serviceAs( ScreenOptions::SERVICE, ScreenOptions::class );
-			$args['per_page'] = $options->perPage( $this->actorId() );
 		}
 		return $this->paged( $queue->query( QueueQuery::fromArray( $args ) ) );
 	}

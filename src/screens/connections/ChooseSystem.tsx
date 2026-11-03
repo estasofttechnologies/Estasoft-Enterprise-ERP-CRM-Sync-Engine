@@ -444,6 +444,7 @@ export function ChooseSystem( {
 								{ group.note }
 							</p>
 							<ResponsiveTable< SystemEntry, string >
+								className="estasoft-sync-table-wrap--systems"
 								caption={ sprintf(
 									/* translators: %s: group name */ __(
 										'%s systems',

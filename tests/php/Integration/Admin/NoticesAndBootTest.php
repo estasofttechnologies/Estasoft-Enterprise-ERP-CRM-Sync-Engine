@@ -1,6 +1,6 @@
 <?php
 /**
- * Notices, the welcome redirect, Help, Screen Options and the boot data.
+ * Notices, the welcome redirect and the boot data.
  *
  * @package Estasoft\SyncEngine
  */
@@ -13,11 +13,9 @@ require_once dirname( __DIR__, 2 ) . '/Support/RestIntegrationCase.php';
 
 use Estasoft\SyncEngine\Admin\AdminModule;
 use Estasoft\SyncEngine\Admin\BootData;
-use Estasoft\SyncEngine\Admin\Help;
 use Estasoft\SyncEngine\Admin\NoticeFacts;
 use Estasoft\SyncEngine\Admin\NoticeRules;
 use Estasoft\SyncEngine\Admin\Notices;
-use Estasoft\SyncEngine\Admin\ScreenOptions;
 use Estasoft\SyncEngine\Admin\Snapshot;
 use Estasoft\SyncEngine\Admin\Urls;
 use Estasoft\SyncEngine\Admin\Welcome;
@@ -325,45 +323,14 @@ final class NoticesAndBootTest extends RestIntegrationCase {
 		}
 	}
 
-	public function test_help_has_five_tabs_and_a_sidebar_with_the_four_links(): void {
+	public function test_the_screen_has_no_help_tabs_and_no_screen_options(): void {
+		do_action( 'admin_menu' );
 		set_current_screen( 'woocommerce_page_estasoft-sync' );
-		( new Help( $this->urls ) )->load();
+		do_action( 'load-woocommerce_page_estasoft-sync' );
 		$screen = get_current_screen();
-		$tabs   = $screen->get_help_tabs();
-		$this->assertSame( array( 'The queue', 'Sync states', 'Fix a failed order', 'Retries and pausing', 'Getting help' ), array_column( $tabs, 'title' ) );
-		$this->assertStringContainsString( 'checkout never waits', $tabs['estasoft-sync-queue']['content'] );
-		foreach ( array( 'Queued', 'Syncing', 'Synced', 'Retrying', 'Failed', 'Skipped' ) as $state ) {
-			$this->assertStringContainsString( "<strong>$state</strong>", $tabs['estasoft-sync-states']['content'] );
-		}
-		$sidebar = $screen->get_help_sidebar();
-		foreach ( array( 'Read the documentation', 'Ask in the support forum', 'Open an issue on GitHub', 'Copy a support report' ) as $link ) {
-			$this->assertStringContainsString( $link, $sidebar );
-		}
-		$this->assertStringContainsString( 'https://wordpress.org/support/plugin/estasoft-erp-crm-sync-engine/', $sidebar );
-		$this->assertStringContainsString( '#/logs', $sidebar );
-		$this->assertSame( 4, substr_count( $sidebar, 'href=' ) );
-		$this->assertSame( 3, substr_count( $sidebar, 'rel="noopener noreferrer"' ), 'outside links open safely' );
-	}
-
-	public function test_screen_options_save_the_nearest_allowed_page_size_per_person(): void {
-		$options = new ScreenOptions();
-		$options->register();
-		$this->assertSame( 25, apply_filters( 'set_screen_option_' . ScreenOptions::OPTION, false, ScreenOptions::OPTION, '30' ) );
-		$this->assertSame( 50, apply_filters( 'set_screen_option_' . ScreenOptions::OPTION, false, ScreenOptions::OPTION, '60' ) );
-		$this->assertSame( 100, apply_filters( 'set_screen_option_' . ScreenOptions::OPTION, false, ScreenOptions::OPTION, '999' ) );
-		$this->assertSame( 25, apply_filters( 'set_screen_option_' . ScreenOptions::OPTION, false, ScreenOptions::OPTION, 'abc' ) );
-		remove_all_filters( 'set_screen_option_' . ScreenOptions::OPTION );
-
-		$this->assertSame( 25, $options->perPage( $this->userId( 'shop_manager' ) ) );
-		update_user_meta( $this->userId( 'shop_manager' ), ScreenOptions::OPTION, 100 );
-		$this->assertSame( 100, $options->perPage( $this->userId( 'shop_manager' ) ) );
-		update_user_meta( $this->userId( 'shop_manager' ), ScreenOptions::OPTION, 7 );
-		$this->assertSame( 25, $options->perPage( $this->userId( 'shop_manager' ) ), 'a stored value that is not offered falls back' );
-		delete_user_meta( $this->userId( 'shop_manager' ), ScreenOptions::OPTION );
-
-		set_current_screen( 'woocommerce_page_estasoft-sync' );
-		$options->load();
-		$this->assertSame( ScreenOptions::OPTION, get_current_screen()->get_option( 'per_page', 'option' ) );
+		$this->assertSame( array(), $screen->get_help_tabs(), 'no Help button' );
+		$this->assertSame( '', $screen->get_help_sidebar() );
+		$this->assertSame( array(), $screen->get_options(), 'no Screen Options button' );
 	}
 
 	/**
@@ -393,7 +360,7 @@ final class NoticesAndBootTest extends RestIntegrationCase {
 		$scheme = (string) get_user_option( 'admin_color' );
 		$this->assertSame( '' === $scheme ? 'fresh' : $scheme, $boot['wpAdminColorScheme'] );
 		$this->assertNull( $boot['encryptionKeyLine'], 'the key constant is defined' );
-		$this->assertSame( 25, $boot['perPage'] );
+		$this->assertArrayNotHasKey( 'perPage', $boot );
 	}
 
 	public function test_the_boot_data_reports_what_this_person_may_do(): void {
@@ -429,9 +396,9 @@ final class NoticesAndBootTest extends RestIntegrationCase {
 		$this->assertStringContainsString( '</script><script>alert(1)</script>', $decoded['notices'][0]['text'], 'the text itself is unchanged after decoding' );
 	}
 
-	public function test_the_admin_module_adds_every_hook_and_the_menu_calls_back_for_help_and_screen_options(): void {
+	public function test_the_admin_module_adds_every_hook(): void {
 		global $wp_filter;
-		$names = array( 'admin_menu', 'admin_enqueue_scripts', 'admin_bar_menu', 'wp_dashboard_setup', 'admin_notices', 'admin_post_' . Notices::DISMISS_ACTION, 'plugin_action_links_' . plugin_basename( ESTASOFT_SYNC_FILE ), 'admin_init', 'set_screen_option_' . ScreenOptions::OPTION );
+		$names = array( 'admin_menu', 'admin_enqueue_scripts', 'admin_bar_menu', 'wp_dashboard_setup', 'admin_notices', 'admin_post_' . Notices::DISMISS_ACTION, 'plugin_action_links_' . plugin_basename( ESTASOFT_SYNC_FILE ), 'admin_init' );
 		$saved = array();
 		foreach ( $names as $name ) {
 			$saved[ $name ] = isset( $wp_filter[ $name ] ) ? clone $wp_filter[ $name ] : null;

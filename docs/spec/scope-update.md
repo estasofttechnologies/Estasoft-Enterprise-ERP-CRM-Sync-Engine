@@ -66,6 +66,10 @@ Full detail, sources and confidence tags are in the research document. The point
 6. Whether to tell merchants about SMACC's own WooCommerce connection.
 7. Whether to keep the contract and test suite public for add-ons from other developers.
 
+## Update, 3 Nov 2026 (later still): no Help tabs and no Screen Options on the plugin screen
+
+Item UI-8 of the phase 1 spec asked for WordPress's Screen Options and a Help tab on every list screen. On a real site they are two buttons above the plugin's own header, and the owner asked for them to be removed. The plugin screen now adds neither. The queue shows 25 rows a page (the route still accepts `per_page` 25, 50 or 100), the boot data no longer carries `perPage`, and what the Help tabs said is explained in place in the app and in the readme. The Screen Options of the WordPress dashboard, where the status box can be hidden, are WordPress's own and stay.
+
 ## Update, 3 Nov 2026 (later): the encryption key no longer has to be added by hand
 
 Item CON-2 of the phase 1 spec said the key comes from the constant `ESTASOFT_SYNC_KEY`, and without it nothing is saved. A first install on a real site showed that this stops a merchant at the first screen. The plugin now derives the key from the WordPress security keys and salts (`AUTH_KEY`, `SECURE_AUTH_KEY`, `AUTH_SALT`, `SECURE_AUTH_SALT`) when the constant is not defined; they live in the same file as the constant, so a stolen database dump alone reveals nothing in either case. The constant stays the better choice because it survives a change of the WordPress keys, and it wins when both exist. Credentials saved under the WordPress-derived key stay readable after a constant is added. Only a site with neither (no constant, sample or missing security keys) still sees SYNC-CFG-002.

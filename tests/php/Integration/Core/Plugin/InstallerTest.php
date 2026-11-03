@@ -181,12 +181,12 @@ final class InstallerTest extends CoreIntegrationTestCase {
 	}
 
 	public function test_a_single_site_erase_removes_user_meta_by_default(): void {
-		update_user_meta( 1, 'estasoft_sync_per_page', 50 );
+		update_user_meta( 1, 'estasoft_sync_dismissed_notices', 50 );
 		try {
 			( new DataEraser( $this->h->wpdb, $this->h->tables ) )->erase( false );
-			$this->assertSame( '', get_user_meta( 1, 'estasoft_sync_per_page', true ) );
+			$this->assertSame( '', get_user_meta( 1, 'estasoft_sync_dismissed_notices', true ) );
 		} finally {
-			delete_user_meta( 1, 'estasoft_sync_per_page' );
+			delete_user_meta( 1, 'estasoft_sync_dismissed_notices' );
 			Installer::installSite();
 		}
 	}

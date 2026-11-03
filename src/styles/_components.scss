@@ -620,6 +620,50 @@
 	}
 }
 
+// The Choose a system lists: the system column is wide enough for a name such as "Microsoft Dynamics 365 Business Central" and
+// its markets, the connection column takes the rest, and the button column is as wide as its widest button.
+@media (min-width: 783px) {
+
+	.estasoft-sync-table-wrap--systems {
+
+		.estasoft-sync-table {
+			table-layout: fixed;
+		}
+
+		th,
+		td {
+			padding-block: 14px;
+		}
+
+		th:nth-child(1),
+		td:nth-child(1) {
+			inline-size: 38%;
+			min-inline-size: 20rem;
+		}
+
+		// The connection column takes what the other two leave (the table-wide "wide" column asks for 100%, which a fixed layout
+		// would share with the system column).
+		th:nth-child(2),
+		td:nth-child(2) {
+			inline-size: auto;
+		}
+
+		th:nth-child(3),
+		td:nth-child(3) {
+			inline-size: 10.5rem;
+		}
+
+		td:nth-child(1) .estasoft-sync-strong {
+			font-size: 15px;
+			line-height: 1.35;
+		}
+
+		td:nth-child(2) {
+			line-height: 1.5;
+		}
+	}
+}
+
 .estasoft-sync-plain-table {
 	inline-size: 100%;
 	border-collapse: collapse;

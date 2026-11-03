@@ -78,15 +78,13 @@ final class QueueRoutesTest extends RestIntegrationCase {
 		$this->assertSame( 400, $this->call( 'GET', '/queue', array( 'error_code' => "SYNC-MAP-001'; DROP" ) )->get_status() );
 	}
 
-	public function test_the_screen_option_sets_the_page_size_when_the_request_names_none(): void {
+	public function test_the_page_size_is_25_unless_the_request_names_one(): void {
 		for ( $i = 1; $i <= 60; ++$i ) {
 			$this->h->item( $this->conn, (string) ( 30000 + $i ) );
 		}
-		update_user_meta( $this->userId( 'shop_manager' ), 'estasoft_sync_per_page', '50' );
-		$this->assertSame( 50, $this->call( 'GET', '/queue' )->get_data()['per_page'] );
-		$this->assertSame( 25, $this->call( 'GET', '/queue', array( 'per_page' => 25 ) )->get_data()['per_page'] );
-		delete_user_meta( $this->userId( 'shop_manager' ), 'estasoft_sync_per_page' );
 		$this->assertSame( 25, $this->call( 'GET', '/queue' )->get_data()['per_page'] );
+		$this->assertSame( 50, $this->call( 'GET', '/queue', array( 'per_page' => 50 ) )->get_data()['per_page'] );
+		$this->assertSame( 100, $this->call( 'GET', '/queue', array( 'per_page' => 100 ) )->get_data()['per_page'] );
 	}
 
 	public function test_attention_groups_and_item_detail(): void {

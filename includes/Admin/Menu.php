@@ -38,13 +38,6 @@ final class Menu {
 	private string $hook = '';
 
 	/**
-	 * Callbacks to run on `load-{page}`.
-	 *
-	 * @var array<int,callable>
-	 */
-	private array $onLoad = array();
-
-	/**
 	 * Create the menu.
 	 *
 	 * @param Assets   $assets      Knows whether the compiled app exists.
@@ -63,15 +56,6 @@ final class Menu {
 	 */
 	public function register(): void {
 		add_action( 'admin_menu', array( $this, 'addPage' ), 60 );
-	}
-
-	/**
-	 * Ask for a callback when the page is about to load (Help tabs, Screen Options). Call before `admin_menu` runs.
-	 *
-	 * @param callable $callback Called with no arguments.
-	 */
-	public function onLoad( callable $callback ): void {
-		$this->onLoad[] = $callback;
 	}
 
 	/**
@@ -98,9 +82,6 @@ final class Menu {
 			return;
 		}
 		$this->hook = $hook;
-		foreach ( $this->onLoad as $callback ) {
-			add_action( 'load-' . $hook, $callback );
-		}
 	}
 
 	/**

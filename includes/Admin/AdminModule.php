@@ -19,22 +19,21 @@ use Estasoft\SyncEngine\Rest\RestModule;
 
 /**
  * PHP renders only what WordPress requires: the menu entry and its mount point, the script and style loading, the admin bar item, the
- * dashboard box, notices on other screens, Help and Screen Options, the Plugins screen links and the one-time welcome redirect. The
- * React app does everything else.
+ * dashboard box, notices on other screens, the Plugins screen links and the one-time welcome redirect. The React app does everything
+ * else. The screen has no Help tabs and no Screen Options: they are WordPress's own buttons above the plugin's header, and the app
+ * explains itself in place.
  *
  * Container keys set by this module:
  *
  * - admin.urls            Urls
  * - admin.snapshot        Snapshot
  * - admin.notice_facts    NoticeFacts
- * - admin.screen_options  ScreenOptions (also the constant ScreenOptions::SERVICE)
  * - admin.boot_data       BootData
  * - admin.assets          Assets
  * - admin.menu            Menu
  * - admin.admin_bar       AdminBar
  * - admin.widget          DashboardWidget
  * - admin.notices         Notices
- * - admin.help            Help
  * - admin.plugin_links    PluginLinks
  * - admin.welcome         Welcome
  *
@@ -51,7 +50,6 @@ final class AdminModule implements ModuleInterface {
 	public const ADMIN_BAR    = 'admin.admin_bar';
 	public const WIDGET       = 'admin.widget';
 	public const NOTICES      = 'admin.notices';
-	public const HELP         = 'admin.help';
 	public const PLUGIN_LINKS = 'admin.plugin_links';
 	public const WELCOME      = 'admin.welcome';
 
@@ -62,7 +60,6 @@ final class AdminModule implements ModuleInterface {
 	 */
 	public function services( Container $container ): void {
 		$container->set( self::URLS, static fn(): Urls => new Urls( admin_url( 'admin.php?page=' . Urls::PAGE ) ) );
-		$container->set( ScreenOptions::SERVICE, static fn(): ScreenOptions => new ScreenOptions() );
 		$container->set(
 			self::SNAPSHOT,
 			static fn( Container $c ): Snapshot => new Snapshot(
@@ -87,7 +84,6 @@ final class AdminModule implements ModuleInterface {
 			self::BOOT_DATA,
 			static fn( Container $c ): BootData => new BootData(
 				$c->get( self::NOTICE_FACTS ),
-				$c->get( ScreenOptions::SERVICE ),
 				defined( 'ESTASOFT_SYNC_VERSION' ) ? ESTASOFT_SYNC_VERSION : '',
 				defined( 'ESTASOFT_SYNC_URL' ) ? ESTASOFT_SYNC_URL : ''
 			)
@@ -138,7 +134,6 @@ final class AdminModule implements ModuleInterface {
 				}
 			)
 		);
-		$container->set( self::HELP, static fn( Container $c ): Help => new Help( $c->get( self::URLS ) ) );
 		$container->set(
 			self::PLUGIN_LINKS,
 			static fn( Container $c ): PluginLinks => new PluginLinks( plugin_basename( defined( 'ESTASOFT_SYNC_FILE' ) ? ESTASOFT_SYNC_FILE : '' ), $c->get( self::URLS ) )
@@ -165,11 +160,8 @@ final class AdminModule implements ModuleInterface {
 	 */
 	public function addAdminHooks( Container $container ): void {
 		$menu = $container->get( self::MENU );
-		$menu->onLoad( array( $container->get( self::HELP ), 'load' ) );
-		$menu->onLoad( array( $container->get( ScreenOptions::SERVICE ), 'load' ) );
 		$menu->register();
 
-		$container->get( ScreenOptions::SERVICE )->register();
 		$container->get( self::ASSETS )->register();
 		$container->get( self::ADMIN_BAR )->register();
 		$container->get( self::WIDGET )->register();

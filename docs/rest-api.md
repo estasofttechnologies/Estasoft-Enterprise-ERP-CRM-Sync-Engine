@@ -37,7 +37,7 @@ The code is in `includes/Rest/`: `RestModule` registers the routes on `rest_api_
 | Method and route | Capability | Parameters | Answer |
 | --- | --- | --- | --- |
 | `GET /status` | manage | `connection_id?` | `Status` |
-| `GET /queue` | manage | `state?` (queued, syncing, synced, retrying, failed, skipped, waiting, all), `entity_type?`, `day?` (today, yesterday, 7d, 30d), `mode?` (live by default, shadow, all), `search?` (100 characters), `error_code?` (`SYNC-XXX-000`), `connection_id?`, `page?`, `per_page?` (25, 50 or 100; without it the person's Screen Options value) | `Paged<QueueItem>` |
+| `GET /queue` | manage | `state?` (queued, syncing, synced, retrying, failed, skipped, waiting, all), `entity_type?`, `day?` (today, yesterday, 7d, 30d), `mode?` (live by default, shadow, all), `search?` (100 characters), `error_code?` (`SYNC-XXX-000`), `connection_id?`, `page?`, `per_page?` (25, 50 or 100; 25 without it) | `Paged<QueueItem>` |
 | `GET /queue/attention` | manage | | `AttentionGroup[]` |
 | `GET /queue/{id}` | manage | | `QueueItemDetail`; 404 |
 | `POST /queue/{id}/retry` | manage | | `QueueItem`; 409 unless failed or retrying |
@@ -135,7 +135,7 @@ Everything else is decided inside the callback. It first uses the state up (the 
 
 ## Boot data
 
-`window.estasoftSync` (`BootData` of `types.ts`) is built by `Admin\BootData` and printed with `wp_add_inline_script( ..., 'before' )`, encoded so that no value can close the script element. Besides the fields of the contract it carries `perPage`, the person's Screen Options page size (25, 50 or 100) so that the queue opens with it. `notices` holds the notices that belong inside the app (failed orders, queue backlog, a connection that needs reconnecting, the missing encryption key, the end of shadow mode); the welcome notice is printed by PHP on other screens only.
+`window.estasoftSync` (`BootData` of `types.ts`) is built by `Admin\BootData` and printed with `wp_add_inline_script( ..., 'before' )`, encoded so that no value can close the script element. `notices` holds the notices that belong inside the app (failed orders, queue backlog, a connection that needs reconnecting, the missing encryption key, the end of shadow mode); the welcome notice is printed by PHP on other screens only.
 
 ## Admin redirects
 

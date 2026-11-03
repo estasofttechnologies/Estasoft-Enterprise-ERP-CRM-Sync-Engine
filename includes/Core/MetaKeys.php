@@ -67,7 +67,7 @@ final class MetaKeys {
 	}
 
 	/**
-	 * User meta (the contact id in the other system, dismissed notices, screen options).
+	 * User meta (the contact id in the other system, dismissed notices).
 	 *
 	 * @return array<int,string>
 	 */
@@ -77,8 +77,6 @@ final class MetaKeys {
 			array(
 				'estasoft_sync_external_id',
 				'estasoft_sync_dismissed_notices',
-				'estasoft_sync_screen_options',
-				'estasoft_sync_per_page',
 			)
 		);
 	}
