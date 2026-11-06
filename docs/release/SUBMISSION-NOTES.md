@@ -3,7 +3,7 @@
 Text the owner pastes into the WordPress.org submission and into replies to the Plugin Review team. Each block
 between the lines is ready to paste. Check every statement against the finished build first (see
 [CHECKLIST.md](CHECKLIST.md), step C4), and change this file when the plugin changes. Last checked against the tree
-on 2 Nov 2026 (version 0.1.0).
+on 6 Nov 2026 (version 0.1.0).
 
 ## 1. Summary
 
@@ -88,6 +88,10 @@ to use Shadow mode first.
   `Idempotency-Key` header.
 - **Shadow mode.** The same process runs without changing anything in either system, so a merchant can compare the
   result before going live.
+- **What leaves the shop is the merchant's choice.** In setup the merchant says whether orders are sent at all, when
+  (when placed, when paid or cash on delivery, or when completed) and whether refunds are sent; the order hooks
+  follow those answers. The same step can switch stock and tracking read-back on at go-live. The setup screen says
+  which other answers are only saved for now.
 - **No tax signing.** The plugin never signs, issues or certifies a tax invoice. The connected system does that.
 
 ---
@@ -172,7 +176,8 @@ There is no demo mode and no sample connector. A reviewer needs no paid ERP. Pic
 
 ---
 
-1. Use WordPress 6.4 or later, PHP 8.1 or later (sodium is part of PHP), and WooCommerce active. Nothing has to be added
+1. Use WordPress 6.4 or later (the current WooCommerce itself needs WordPress 7.0 or later, so use 7.x with the newest
+   WooCommerce), PHP 8.1 or later (sodium is part of PHP), and WooCommerce active. Nothing has to be added
    to `wp-config.php`: the WordPress security keys encrypt the credentials. To try the dedicated key, add
    `define( 'ESTASOFT_SYNC_KEY', 'any long random string of 32 or more characters' );`
 2. Activate the plugin. Open WooCommerce > ESTASOFT SYNC: the first-run dashboard, the readiness check
@@ -246,7 +251,9 @@ smoke test for its system. The plugin's own tests run each connector against a f
 - **The plugin is English only.** Strings use the text domain `estasoft-erp-crm-sync-engine`; a `.pot` file is
   generated with `bin/make-pot.sh`.
 - **Local checks.** The release zip is installed into a fresh WordPress with `bin/smoke-install.sh`
-  ([SMOKE-TEST.md](SMOKE-TEST.md)). Plugin Check itself ran only on GitHub; what was approximated is in
+  ([SMOKE-TEST.md](SMOKE-TEST.md)). The workflow `woocommerce-smoke.yml` installs the real WooCommerce (11.2.2 at the
+  last run) into WordPress 7.1.4 with PHP 8.2, places real orders and refunds, and checks the queue rows, with
+  posts storage and with HPOS. Plugin Check itself ran only on GitHub; what was approximated is in
   [PLUGIN-CHECK-NOTES.md](PLUGIN-CHECK-NOTES.md).
 
 ---

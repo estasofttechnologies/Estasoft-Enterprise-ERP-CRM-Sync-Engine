@@ -9,9 +9,7 @@ Releases are prepared with `bin/bump-version.sh`, which moves the notes under [U
 
 ## [Unreleased]
 
-## [0.1.0] - Unreleased
-
-<!-- Replace "Unreleased" in the heading above with the release date when the tag is created. -->
+## [0.1.0] - 2026-11-06
 
 First release.
 
@@ -47,6 +45,9 @@ First release.
   invoices, connections, mapping, stock, reconciliation, logs and settings.
 - WooCommerce integration: declared compatible with high-performance order storage and the block checkout; order
   box, Sync column on the orders list, product box.
+- The "what to sync" step of setup takes effect for three things: whether orders and refunds are sent, when an order is
+  first sent (paid or cash on delivery, placed, or completed), and whether stock and tracking are switched on at go-live.
+  The step says that its other choices are saved but do not change anything yet.
 - Credentials encrypted with libsodium. The key is derived from the WordPress security keys in `wp-config.php`, or is
   the constant `ESTASOFT_SYNC_KEY` when you add one (credentials saved before the constant was added stay readable); secrets are never
   returned by the REST API or written to logs.
@@ -59,7 +60,8 @@ First release.
 - WordPress.org submission material: an External services section in `readme.txt` for every service the plugin
   can contact, generated from the connector documents (`bin/generate-external-services.php`), the guideline audit,
   Plugin Check notes, and an install test of the release zip (`bin/smoke-install.sh`).
-- Repository tooling: CI on PHP 8.1 to 8.4 and two WordPress versions, Plugin Check, release workflow with a
+- Repository tooling: CI on PHP 8.1 to 8.4 and two WordPress versions, Plugin Check, a smoke test that makes real orders and
+  refunds in the current WooCommerce with both order storages, release workflow with a
   manual approval before WordPress.org, and scripts to build and verify the release zip.
 
 [Unreleased]: https://github.com/estasofttechnologies/estasoft-enterprise-erp-crm-sync-engine/compare/v0.1.0...HEAD

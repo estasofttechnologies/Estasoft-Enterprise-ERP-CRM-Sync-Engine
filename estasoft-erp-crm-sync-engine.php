@@ -14,7 +14,7 @@
  * Text Domain:       estasoft-erp-crm-sync-engine
  * Domain Path:       /languages
  * WC requires at least: 8.2
- * WC tested up to:   9.4
+ * WC tested up to:   11.2
  *
  * @package Estasoft\SyncEngine
  */

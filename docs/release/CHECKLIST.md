@@ -4,14 +4,14 @@ Steps in order. **Who** says whether tooling does it (and where) or the owner ha
 evidence named in it exists. The short list of what only the owner can do is [OWNER-ACTIONS.md](OWNER-ACTIONS.md).
 
 Legend: **Tooling** = a script or CI job in this repository does it. **Owner** = a person with the right account
-or authority has to do it. **Done** = already true on the day this file was last checked (2 Nov 2026).
+or authority has to do it. **Done** = already true on the day this file was last checked (6 Nov 2026).
 
 ## A. Repository set-up (once)
 
 | # | Step | Who | Status |
 | --- | --- | --- | --- |
 | A1 | The project documents are in the repository: `docs/spec/phase1-spec.md`, `docs/spec/review-2-changes.md`, `docs/DECISIONS.md`. `php bin/check-docs.php` checks the links and the index. | Owner / lead | **Done** |
-| A2 | Make the GitHub repository public (the readme's source-code link, guideline 4, needs it). | Owner | Open |
+| A2 | Make the GitHub repository public (the readme's source-code link, guideline 4, needs it). | Owner | **Done** |
 | A3 | Settings > Code security: turn on **private vulnerability reporting** (SECURITY.md and the issue-template links depend on it). | Owner | Open |
 | A4 | Settings > Environments: create **`wordpress-org`**, add the owner as **required reviewer** (this is the manual approval), and store **`SVN_USERNAME`** and **`SVN_PASSWORD`** as secrets of that environment. Use the WordPress.org account that is a committer of the plugin. | Owner | Open |
 | A5 | Settings > Branches: protect `main`, require the status check **CI passed** (the `ci-ok` job) and a pull request review. | Owner | Open |
@@ -40,7 +40,7 @@ or authority has to do it. **Done** = already true on the day this file was last
 | C2 | Try the built plugin on **WordPress 6.4** (the minimum) and the latest 7.x, PHP 8.1 and 8.4, with the real WooCommerce, HPOS on and off, with the classic and the block checkout. The smoke test proves the PHP side against a WooCommerce stand-in, and that the app's script handles exist on 6.4.3; the admin app runs at run time with the `@wordpress/*` packages WordPress ships, which on 6.4 are older than the ones it was compiled against, so open every admin screen on 6.4. | Owner / QA | Open |
 | C3 | Admin screens with a screen reader, at 200% zoom, on a phone and a tablet, in each admin colour scheme (the design status lists these as not checked). | Owner / QA | Open |
 | C4 | Re-read `readme.txt` (description, features, FAQ, External services) against the finished build: every sentence must be true. The External services entries are generated, so check the introduction and the links: open each address (the ones marked "not confirmed" at the end of [EXTERNAL-SERVICES.md](EXTERNAL-SERVICES.md) first). | Owner | Open |
-| C5 | Confirm **Tested up to** (now 7.1) is the current WordPress release the day you submit, and that the plugin header's `WC tested up to` is a current WooCommerce version. | Owner | Open |
+| C5 | Confirm **Tested up to** (now 7.1) is the current WordPress release the day you submit, and that the plugin header's `WC tested up to` (now 11.2) is a current WooCommerce version. | Owner | Checked 6 Nov 2026 (WordPress 7.1, WooCommerce 11.2) |
 | C6 | `php bin/check-readme.php` passes (checks the rules offline), then paste `readme.txt` into the **official validator**: <https://wordpress.org/plugins/developers/readme-validator/>. | Tooling, then Owner | Offline check **Done**; validator open |
 | C7 | **Licences.** The licences of the packages that are in the production dependency tree of `build/` are listed in [GUIDELINES-AUDIT.md](GUIDELINES-AUDIT.md) (guideline 1): all GPL-compatible, and none is inside the bundle. Confirm that Estasoft holds the rights to the icon and banner. | Owner | Licences **Done**; rights open |
 | C8 | **Source and bundle.** `build/index.asset.php` lists WordPress script handles for React and the `@wordpress` packages; the bundle contains no copy of React or jQuery and none of the mock layer (CI checks the mock, the smoke test checks the handles). | Tooling | **Done** |
@@ -54,7 +54,7 @@ or authority has to do it. **Done** = already true on the day this file was last
 | # | Step | Who | Status |
 | --- | --- | --- | --- |
 | D1 | Icon 128 and 256 px, banner 772 x 250 and 1544 x 500 px are in `.wordpress-org/`. | Tooling | **Done** |
-| D2 | Screenshots 1 to 6 are in `.wordpress-org/` (1280 wide PNG, sample shop; screenshot 3 retaken on 3 Nov 2026). Look at them once more against the final build ([ASSETS.md](ASSETS.md)). | Owner | Done |
+| D2 | Screenshots 1 to 6 are in `.wordpress-org/` (1280 wide PNG, sample shop, all retaken on 6 Nov 2026 from the final build). | Owner | **Done** ([ASSETS.md](ASSETS.md)) |
 | D3 | `php bin/check-readme.php --strict-assets` passes (it fails while any captioned screenshot is missing). | Tooling | **Done** |
 
 ## E. Version, tag and zip
@@ -62,7 +62,7 @@ or authority has to do it. **Done** = already true on the day this file was last
 | # | Step | Who | Status |
 | --- | --- | --- | --- |
 | E1 | For a version after 0.1.0: `bin/bump-version.sh <x.y.z>`, then write the real notes in `CHANGELOG.md` and `readme.txt` (changelog and upgrade notice). The placeholder text blocks the build on purpose. | Owner / lead | Per release |
-| E2 | For 0.1.0: replace `Unreleased` in the CHANGELOG heading with the release date. | Owner / lead | Open |
+| E2 | For 0.1.0: replace `Unreleased` in the CHANGELOG heading with the release date. | Owner / lead | **Done** (2026-11-06) |
 | E3 | `bin/build-zip.sh` passes locally: versions agree, readme valid, only runtime files in the zip, every PHP file guarded, header and text domain correct. Inspect the printed file list and size. | Tooling | **Done**: a full build ran as part of the smoke test ([SMOKE-TEST.md](SMOKE-TEST.md) gives the file count, size and SHA-256) |
 | E4 | Merge to `main`, wait for CI, then create the tag **`v<version>`** on that commit. The release workflow refuses a tag that is not on `main` or that differs from the plugin version. | Owner | Open |
 
@@ -77,7 +77,7 @@ or authority has to do it. **Done** = already true on the day this file was last
 | F5 | Check the plugin page: name, banner at both sizes, icon, screenshots and captions, tabs, changelog, upgrade notice, "Requires Plugins" box. Install it from the directory on a clean site with WooCommerce and run the setup. | Owner | After deploy |
 | F6 | Watch the support forum. Fix cycle: change, `bin/check-all.sh`, bump, tag, approve. Avoid frequent commits to SVN (guideline 14): one deploy per release. | Owner | Ongoing |
 
-## What was verified when this file was last checked (2 Nov 2026)
+## What was verified when this file was last checked (6 Nov 2026)
 
 - `php bin/red-flags.php`, `php bin/check-php-version.php`, `php bin/check-readme.php --strict-assets`,
   `php bin/check-docs.php`, `bash bin/check-dist-parity.sh`, the three `--check` generators, and `actionlint` on the
@@ -85,5 +85,7 @@ or authority has to do it. **Done** = already true on the day this file was last
   Composer and in CI; results in [PLUGIN-CHECK-NOTES.md](PLUGIN-CHECK-NOTES.md).
 - `bash bin/smoke-install.sh`: the release zip was built with `npm ci` and `npm run build`, unpacked into a fresh
   WordPress 6.4.3 and exercised ([SMOKE-TEST.md](SMOKE-TEST.md)).
-- **Not verified here (no network and no GitHub):** any GitHub Actions run, the real Plugin Check, the readme
-  validator, the deployment, `composer install`, the real WooCommerce, and any vendor account.
+- GitHub Actions on `main`: CI, Plugin Check and `woocommerce-smoke.yml` (the real WooCommerce 11.2.2 on WordPress
+  7.1.4, posts and HPOS storage).
+- **Not verified:** the readme validator on wordpress.org, the deployment, a real checkout in a browser, and any
+  vendor account.

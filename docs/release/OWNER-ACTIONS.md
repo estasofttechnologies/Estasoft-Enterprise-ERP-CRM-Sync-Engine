@@ -1,12 +1,12 @@
 # What only the owner can do
 
 Everything else is in the repository and checked by a script. The full ordered list is
-[CHECKLIST.md](CHECKLIST.md); this page is the short version. Written 2 Nov 2026.
+[CHECKLIST.md](CHECKLIST.md); this page is the short version. Updated 6 Nov 2026. For the evening of submission use [SUBMIT-TONIGHT.md](SUBMIT-TONIGHT.md).
 
 ## Before the first submission
 
-1. **Make the GitHub repository public.** The readme's source-code link (guideline 4) is dead until it is. Turn on
-   private vulnerability reporting (Settings > Code security) and protect `main` with the `CI passed` check.
+1. **GitHub.** The repository is public (done), so the readme's source-code link works. Still to do: turn on private
+   vulnerability reporting (Settings > Code security) and protect `main` with the `CI passed` check.
 2. **Check that the slug is free.** Open <https://wordpress.org/plugins/estasoft-erp-crm-sync-engine/>: "not found"
    means free. Search the directory for plugins with a similar name.
 3. **Run the gate once on GitHub and read it.** Push, wait for CI, then read the job summaries of **Plugin Check**
@@ -14,8 +14,8 @@ Everything else is in the repository and checked by a script. The full ordered l
    of the **smoke** job. Commit `composer.lock` and `package-lock.json` first. When the smoke job has passed once,
    add it to the `needs` of the `ci-ok` job.
 4. **Confirm the dates and versions on the day:** `Tested up to` in `readme.txt` is the current WordPress release,
-   `WC tested up to` in the plugin header is a current WooCommerce, and the heading `## [0.1.0] - Unreleased` in
-   `CHANGELOG.md` gets the release date.
+   `WC tested up to` in the plugin header (now 11.2) is a current WooCommerce. The `CHANGELOG.md` heading already
+   carries the date 2026-11-06; change it if you submit on another day.
 5. **Paste `readme.txt` into the official validator**
    (<https://wordpress.org/plugins/developers/readme-validator/>) and read the External services section as a
    reviewer would.
@@ -26,11 +26,12 @@ Everything else is in the repository and checked by a script. The full ordered l
 7. **Confirm the rights to the artwork:** Estasoft holds the rights to the icon and banner in `.wordpress-org/`
    (they are not in the zip). Real vendor logos are used **only with each vendor's written permission**; the plugin
    ships none.
-8. **Look at the screenshots again** against the final screens (screenshot 3, Choose a system, was retaken on
-   3 Nov 2026; [ASSETS.md](ASSETS.md)).
-9. **Test on a real shop**, because the install test used a WooCommerce stand-in: WordPress 6.4 and the latest 7.x,
-   PHP 8.1 and 8.4, HPOS on and off, classic and block checkout, every admin screen on 6.4 (older
-   `@wordpress/*` packages), a screen reader, 200% zoom and a phone.
+8. **Look at the screenshots again** against the final screens (all six were retaken on 6 Nov 2026 from the final
+   build, without vendor logos; [ASSETS.md](ASSETS.md)).
+9. **Test on a real shop.** Done in CI: the real WooCommerce 11.2.2 on WordPress 7.1.4 with programmatic orders and
+   refunds, posts storage and HPOS (`woocommerce-smoke.yml`). Not done: a real checkout in the browser (classic and
+   block), every admin screen on WordPress 6.4 (older `@wordpress/*` packages), PHP 8.1 and 8.4 on a real shop,
+   a screen reader, 200% zoom and a phone.
 10. **Create the translation template** once: `bin/make-pot.sh` needs WP-CLI; commit
     `languages/estasoft-erp-crm-sync-engine.pot`.
 

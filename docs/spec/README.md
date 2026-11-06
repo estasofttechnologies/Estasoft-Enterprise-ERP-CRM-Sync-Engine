@@ -60,6 +60,7 @@ Community and the "about 8 official connectors" cap (decisions), section 3 (phas
 | [../release/PLUGIN-CHECK-NOTES.md](../release/PLUGIN-CHECK-NOTES.md) | What the Plugin Check categories were approximated with, the result of each, and what only the real Plugin Check can verify. |
 | [../release/SMOKE-TEST.md](../release/SMOKE-TEST.md) | Result of installing the release zip into a fresh WordPress and exercising it (written by `bin/smoke-install.sh`). |
 | [../release/OWNER-ACTIONS.md](../release/OWNER-ACTIONS.md) | The short list of what only the owner can do before and after submission. |
+| [../release/SUBMIT-TONIGHT.md](../release/SUBMIT-TONIGHT.md) | The evening-of-submission page: state of the build, the owner's steps, and what to do after upload. |
 
 ## Keeping this folder honest
 
