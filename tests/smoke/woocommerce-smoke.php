@@ -135,7 +135,9 @@ $card = estasoft_smoke_order( estasoft_smoke_product( 'SMOKE-CARD' ), 'stripe' )
 do_action( 'woocommerce_checkout_order_processed', $card->get_id(), array(), $card );
 estasoft_smoke_check( array() === estasoft_smoke_rows( 'order', $card->get_id() ), 'An unpaid card order is not queued at checkout (send when: paid)' );
 $card->payment_complete( 'smoke-txn-1' );
-estasoft_smoke_check( array( 'created:queued' ) === estasoft_smoke_rows( 'order', $card->get_id() ), 'It is queued once when the payment completes' );
+$rows = estasoft_smoke_rows( 'order', $card->get_id() );
+// WooCommerce changes the status first (the order is queued as new) and then reports the payment (a paid item follows it).
+estasoft_smoke_check( array( 'created:queued' ) === array_values( array_filter( $rows, static fn( string $row ): bool => 0 === strpos( $row, 'created:' ) ) ), 'It is queued as new exactly once when the payment completes (' . implode( ', ', $rows ) . ')' );
 
 echo "Bank transfer order, put on hold then paid\n";
 $bank = estasoft_smoke_order( estasoft_smoke_product( 'SMOKE-BACS' ), 'bacs' );
