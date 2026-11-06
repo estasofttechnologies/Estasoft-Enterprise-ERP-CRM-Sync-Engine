@@ -1,0 +1,86 @@
+name: WooCommerce smoke test
+
+# The unit and integration tests use a small stand-in for WooCommerce. This job installs the real, current WooCommerce in a real
+# WordPress, activates the plugin, makes real orders and refunds and checks what the plugin queued (tests/smoke/woocommerce-smoke.php).
+# It runs once with the older posts order storage and once with high-performance order storage. Nothing is sent anywhere.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: woocommerce-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Real WooCommerce (${{ matrix.storage }} order storage)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        storage: [posts, hpos]
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: smoke
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: mysqli, mbstring, sodium, intl, zip, gd
+          tools: none
+          coverage: none
+
+      - name: Install WP-CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -o /tmp/wp
+          chmod +x /tmp/wp
+          sudo mv /tmp/wp /usr/local/bin/wp
+          wp --info
+
+      - name: Install WordPress and WooCommerce
+        run: |
+          mkdir /tmp/site && cd /tmp/site
+          wp core download --quiet
+          wp config create --dbname=smoke --dbuser=root --dbpass=root --dbhost=127.0.0.1 --skip-check
+          wp core install --url=http://localhost --title=Smoke --admin_user=admin --admin_password=admin --admin_email=admin@example.com --skip-email
+          wp plugin install woocommerce --activate
+          ln -s "$GITHUB_WORKSPACE" wp-content/plugins/estasoft-erp-crm-sync-engine
+          wp plugin activate estasoft-erp-crm-sync-engine
+          wp plugin list
+
+      - name: Choose the order storage
+        working-directory: /tmp/site
+        run: |
+          if [ "${{ matrix.storage }}" = "hpos" ]; then
+            wp wc hpos enable || wp option update woocommerce_custom_orders_table_enabled yes
+          else
+            wp option update woocommerce_custom_orders_table_data_sync_enabled no
+            wp option update woocommerce_custom_orders_table_enabled no
+          fi
+
+      - name: Run the checks
+        working-directory: /tmp/site
+        run: wp eval-file "$GITHUB_WORKSPACE/tests/smoke/woocommerce-smoke.php"
