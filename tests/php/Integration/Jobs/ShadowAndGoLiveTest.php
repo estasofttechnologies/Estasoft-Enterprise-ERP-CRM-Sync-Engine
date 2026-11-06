@@ -131,6 +131,71 @@ final class ShadowAndGoLiveTest extends JobsTestCase {
 		$this->assertCount( 1, $this->h->queue->query( new QueueQuery( 'skipped' ) )->items );
 	}
 
+	/**
+	 * A go-live service that records the inbound switches it is asked to turn on.
+	 *
+	 * @param array<int,array<int,mixed>> $calls Receives one entry per call.
+	 * @param bool                        $fails Whether the switch throws.
+	 */
+	private function recordingGoLive( array &$calls, bool $fails = false ): GoLiveService {
+		return new GoLiveService(
+			$this->h->onboarding,
+			$this->h->queue,
+			$this->h->connections,
+			$this->j->shadowService,
+			$this->h->logger,
+			$this->h->clock,
+			static function ( int $connectionId, bool $stock, bool $tracking ) use ( &$calls, $fails ): void {
+				$calls[] = array( $connectionId, $stock, $tracking );
+				if ( $fails ) {
+					throw new \RuntimeException( 'no' );
+				}
+			}
+		);
+	}
+
+	public function test_go_live_switches_on_stock_and_tracking_when_setup_left_them_on(): void {
+		$calls = array();
+		$this->h->onboarding->save( array( 'answers' => array( 'what' => array( 'stock_in' => true, 'tracking_in' => false ) ) ) );
+
+		$this->recordingGoLive( $calls )->goLive( 'shadow', 1 );
+
+		$this->assertSame( array( array( $this->connection, true, false ) ), $calls );
+		$this->assertTrue( $this->h->onboarding->get()['completed'] );
+	}
+
+	public function test_go_live_leaves_stock_and_tracking_alone_when_they_were_turned_off_or_never_answered(): void {
+		$calls = array();
+		$this->h->onboarding->save( array( 'answers' => array( 'what' => array( 'stock_in' => false, 'tracking_in' => false ) ) ) );
+		$this->recordingGoLive( $calls )->goLive( 'live', 1 );
+		$this->assertSame( array(), $calls, 'both off: nothing to switch on' );
+	}
+
+	public function test_go_live_without_step_three_answers_changes_no_stock_or_tracking_setting(): void {
+		$calls = array();
+		$this->recordingGoLive( $calls )->goLive( 'live', 1 );
+		$this->assertSame( array(), $calls );
+	}
+
+	public function test_a_failure_switching_on_stock_never_stops_go_live(): void {
+		$calls = array();
+		$this->h->onboarding->save( array( 'answers' => array( 'what' => array( 'stock_in' => true, 'tracking_in' => true ) ) ) );
+
+		$state = $this->recordingGoLive( $calls, true )->goLive( 'live', 1 );
+
+		$this->assertTrue( $state['completed'] );
+		$this->assertCount( 1, $calls );
+	}
+
+	public function test_going_live_a_second_time_does_not_switch_anything_on_again(): void {
+		$calls = array();
+		$this->h->onboarding->save( array( 'answers' => array( 'what' => array( 'stock_in' => true, 'tracking_in' => true ) ) ) );
+		$service = $this->recordingGoLive( $calls );
+		$service->goLive( 'live', 1 );
+		$service->goLive( 'live', 1 );
+		$this->assertCount( 1, $calls );
+	}
+
 	public function test_go_live_skips_only_items_created_before_it_began(): void {
 		$this->placeOrder( 801 );
 		$this->h->clock->advance( 60 );

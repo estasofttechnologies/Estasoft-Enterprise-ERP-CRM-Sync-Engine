@@ -18,6 +18,7 @@ use Estasoft\SyncEngine\ModuleInterface;
 use Estasoft\SyncEngine\Woo\Adapters\CoreConnectionInfo;
 use Estasoft\SyncEngine\Woo\Adapters\CoreGoLiveInfo;
 use Estasoft\SyncEngine\Woo\Adapters\CoreQueueGateway;
+use Estasoft\SyncEngine\Woo\Adapters\CoreSendChoices;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -29,6 +30,7 @@ defined( 'ABSPATH' ) || exit;
  * - woo.product_meta      ProductMeta
  * - woo.eligibility       OrderEligibility (drafts and excluded products)
  * - woo.go_live           GoLive (was an order placed after go-live?), over Ports\GoLiveInfo and the core onboarding state
+ * - woo.send_choices      Ports\SendChoices (what was chosen in setup: send orders, send when, send refunds), over the core onboarding state
  * - woo.queue_gateway     Ports\QueueGateway over the core queue
  * - woo.state_mirror      StateMirror (copies queue state onto orders)
  * - woo.order_hooks       OrderHooks
@@ -51,6 +53,7 @@ final class WooModule implements ModuleInterface {
 		$container->set( 'woo.times', static fn ( Container $c ): TimeLabel => new TimeLabel( $c->get( Services::CLOCK ) ) );
 		$container->set( 'woo.eligibility', static fn ( Container $c ): OrderEligibility => new OrderEligibility( $c->get( 'woo.product_meta' ) ) );
 		$container->set( 'woo.go_live', static fn ( Container $c ): GoLive => new GoLive( new CoreGoLiveInfo( $c->get( Services::ONBOARDING ) ) ) );
+		$container->set( 'woo.send_choices', static fn ( Container $c ): CoreSendChoices => new CoreSendChoices( $c->get( Services::ONBOARDING ) ) );
 		$container->set( 'woo.order_reader', static fn ( Container $c ): WooOrderReader => new WooOrderReader( $c->get( 'woo.product_meta' ) ) );
 
 		$container->set(
@@ -84,7 +87,8 @@ final class WooModule implements ModuleInterface {
 				$c->get( 'woo.eligibility' ),
 				$c->get( 'woo.state_mirror' ),
 				$c->get( 'woo.log' ),
-				$c->get( 'woo.go_live' )
+				$c->get( 'woo.go_live' ),
+				$c->get( 'woo.send_choices' )
 			)
 		);
 	}

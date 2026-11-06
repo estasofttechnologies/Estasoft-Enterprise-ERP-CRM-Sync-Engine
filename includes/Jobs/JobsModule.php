@@ -412,7 +412,22 @@ final class JobsModule implements ModuleInterface {
 				$c->get( Services::CONNECTION_REPOSITORY ),
 				$c->get( JobServices::SHADOW ),
 				$c->get( Services::LOGGER ),
-				$c->get( Services::CLOCK )
+				$c->get( Services::CLOCK ),
+				static function ( int $connectionId, bool $stock, bool $tracking ) use ( $c ): void {
+					$capabilities = array();
+					foreach ( $c->get( Services::CONNECTION_REPOSITORY )->allWithoutSecrets() as $connection ) {
+						if ( $connection->id === $connectionId ) {
+							$connector    = $c->get( Services::CONNECTOR_REGISTRY )->get( $connection->connector );
+							$capabilities = null === $connector ? array() : $connector->capabilities();
+						}
+					}
+					if ( $stock && true === ( $capabilities['stock_in'] ?? false ) ) {
+						$c->get( JobServices::STOCK )->saveRules( $connectionId, array( 'enabled' => true ) );
+					}
+					if ( $tracking && true === ( $capabilities['tracking_in'] ?? false ) ) {
+						$c->get( JobServices::TRACKING )->saveSettings( $connectionId, array( 'tracking_enabled' => true ) );
+					}
+				}
 			)
 		);
 	}

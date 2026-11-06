@@ -9,6 +9,7 @@ import { ResponsiveTable } from '../../components/ResponsiveTable';
 import { useAsyncAction } from '../../hooks/useAsyncAction';
 import { errorText, systemName } from '../../lib/text';
 import { savedFields } from '../connections/ConnectionDialogs';
+import { AppliedNote } from './AppliedNote';
 import type { WhatAnswers } from './what';
 
 interface KindProps {
@@ -129,6 +130,7 @@ export function AccountingWhat( { connection, value, onChange }: KindProps ) {
 	}
 	return (
 		<div className="estasoft-sync-stack">
+			<AppliedNote />
 			<Card
 				title={ sprintf(
 					/* translators: %s: system name */ __(
@@ -537,6 +539,7 @@ export function CrmWhat( { connection, value, onChange }: KindProps ) {
 	const setPipeline = ( next: string ) => set( 'crm_pipeline', next );
 	return (
 		<div className="estasoft-sync-stack">
+			<AppliedNote />
 			<Card
 				title={ sprintf(
 					/* translators: %s: system name */ __(

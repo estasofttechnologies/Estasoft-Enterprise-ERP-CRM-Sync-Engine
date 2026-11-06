@@ -265,6 +265,25 @@ describe( 'What should sync to a CRM', () => {
 	} );
 } );
 
+describe( 'what the choices change today', () => {
+	it.each( [
+		[ 'an accounting system', accounting() ],
+		[ 'a CRM', crm() ],
+		[ 'an ERP', { ...makeConnection(), type: 'erp' as const } ],
+	] )(
+		'says plainly which choices are applied for %s',
+		( _name, connection ) => {
+			render( <Host connection={ connection } /> );
+			expect(
+				screen.getByText( /What these choices do today/ )
+			).toBeInTheDocument();
+			expect(
+				screen.getByText( /do not change anything yet/ )
+			).toBeInTheDocument();
+		}
+	);
+} );
+
 describe( 'stored answers', () => {
 	it( 'keeps old answers working and ignores a table that holds something else than text', () => {
 		const read = readWhat( {

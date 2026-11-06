@@ -12,6 +12,7 @@ namespace Estasoft\SyncEngine\Woo;
 use Estasoft\SyncEngine\Domain\EntityType;
 use Estasoft\SyncEngine\Mapping\Ports\EventLog;
 use Estasoft\SyncEngine\Woo\Ports\QueueGateway;
+use Estasoft\SyncEngine\Woo\Ports\SendChoices;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -31,6 +32,11 @@ defined( 'ABSPATH' ) || exit;
  * - woocommerce_refund_created: event "refunded" for the refund, when the parent order is in the queue's history. This hook fires once
  *   per refund and after it is saved; woocommerce_order_refunded is not used because it would fire a second time for the same refund.
  * - woocommerce_created_customer: event "created" for the customer.
+ *
+ * What the person chose in setup is applied here: with "Send orders" off nothing is queued by these hooks; "Send when" decides which
+ * of the paths above may start an order (placed: any of them; paid or cash on delivery: checkout only when the order is already paid
+ * or is cash on delivery, then payment and a paid status; completed: only the status "completed"); with "Send refunds" off a refund
+ * is not queued. An order a person sends by hand from the order screen does not pass through here.
  *
  * Every callback catches everything it can throw and logs it: a sync problem must never stop a customer from checking out. A callback
  * does one insert through the queue and one small meta write; it makes no network call. About transactions: this class does not open one.
@@ -78,6 +84,7 @@ final class OrderHooks {
 	 * @param StateMirror      $mirror      Copies queue state to the order.
 	 * @param EventLog         $log         Event log.
 	 * @param GoLive           $goLive      Whether an order was placed after go-live.
+	 * @param SendChoices|null $choices     What was chosen in setup; null sends everything as soon as it is placed.
 	 */
 	public function __construct(
 		private readonly QueueGateway $queue,
@@ -85,7 +92,8 @@ final class OrderHooks {
 		private readonly OrderEligibility $eligibility,
 		private readonly StateMirror $mirror,
 		private readonly EventLog $log,
-		private readonly GoLive $goLive
+		private readonly GoLive $goLive,
+		private readonly ?SendChoices $choices = null
 	) {
 	}
 
@@ -113,7 +121,10 @@ final class OrderHooks {
 	public function onClassicCheckout( mixed $orderId = 0, mixed $postedData = null, mixed $order = null ): void {
 		$this->guard(
 			function () use ( $orderId, $order ): void {
-				$this->queueOrder( (int) $orderId, self::CREATED, $order instanceof \WC_Order ? $order : null );
+				$order = $order instanceof \WC_Order ? $order : $this->load( (int) $orderId );
+				if ( null !== $order && $this->mayStartAtCheckout( $order ) ) {
+					$this->queueOrder( (int) $orderId, self::CREATED, $order );
+				}
 			}
 		);
 	}
@@ -126,7 +137,7 @@ final class OrderHooks {
 	public function onBlocksCheckout( mixed $order = null ): void {
 		$this->guard(
 			function () use ( $order ): void {
-				if ( $order instanceof \WC_Order ) {
+				if ( $order instanceof \WC_Order && $this->mayStartAtCheckout( $order ) ) {
 					$this->queueOrder( (int) $order->get_id(), self::CREATED, $order );
 				}
 			}
@@ -147,7 +158,7 @@ final class OrderHooks {
 				}
 				if ( '' !== $this->orders->state( $order ) ) {
 					$this->queueOrder( (int) $orderId, self::PAID, $order );
-				} elseif ( $this->goLive->placedAfter( $order ) ) {
+				} elseif ( $this->mayStartAtPayment() && $this->goLive->placedAfter( $order ) ) {
 					// Paid, never seen, placed after go-live: this is the order's first event, so it is sent as a new order.
 					$this->queueOrder( (int) $orderId, self::CREATED, $order );
 				}
@@ -173,7 +184,7 @@ final class OrderHooks {
 				$status = (string) $to;
 				$state  = $this->orders->state( $order );
 				$known  = '' !== $state;
-				if ( ! $known && in_array( $status, self::FIRST_EVENT_STATUSES, true ) && $this->goLive->placedAfter( $order ) ) {
+				if ( ! $known && $this->mayStartAtStatus( $status, $order ) && $this->goLive->placedAfter( $order ) ) {
 					$this->queueOrder( (int) $orderId, self::CREATED, $order );
 					return;
 				}
@@ -237,6 +248,10 @@ final class OrderHooks {
 				if ( ! function_exists( 'wc_get_order' ) || $this->seenBefore( 'refund:' . (int) $refundId . ':' . self::REFUNDED ) ) {
 					return;
 				}
+				if ( null !== $this->choices && ( ! $this->choices->sendOrders() || ! $this->choices->sendRefunds() ) ) {
+					$this->log->info( __( 'A refund was not queued because refunds are turned off in your setup.', 'estasoft-erp-crm-sync-engine' ), array( 'refund_id' => (int) $refundId ) );
+					return;
+				}
 				$refund = wc_get_order( (int) $refundId );
 				if ( ! $refund instanceof \WC_Order_Refund ) {
 					return;
@@ -269,6 +284,9 @@ final class OrderHooks {
 		$this->guard(
 			function () use ( $customerId ): void {
 				$id = (int) $customerId;
+				if ( null !== $this->choices && ! $this->choices->sendOrders() ) {
+					return;
+				}
 				if ( $id > 0 && ! $this->seenBefore( 'customer:' . $id . ':' . self::CREATED ) ) {
 					$this->queue->enqueue( EntityType::Customer, (string) $id, self::CREATED );
 				}
@@ -284,7 +302,7 @@ final class OrderHooks {
 	 * @param \WC_Order|null $order   The order, if already loaded.
 	 */
 	private function queueOrder( int $orderId, string $event, ?\WC_Order $order ): void {
-		if ( $orderId <= 0 || $this->seenBefore( 'order:' . $orderId . ':' . $event ) ) {
+		if ( $orderId <= 0 || ( null !== $this->choices && ! $this->choices->sendOrders() ) || $this->seenBefore( 'order:' . $orderId . ':' . $event ) ) {
 			return;
 		}
 		$order = $order ?? $this->load( $orderId );
@@ -299,6 +317,67 @@ final class OrderHooks {
 		if ( null !== $queueId ) {
 			$this->mirror->mirrorById( $queueId );
 		}
+	}
+
+	/**
+	 * Whether an order seen for the first time at checkout may be queued now.
+	 *
+	 * @param \WC_Order $order Order.
+	 */
+	private function mayStartAtCheckout( \WC_Order $order ): bool {
+		$when = $this->when();
+		if ( null === $when || 'placed' === $when ) {
+			return true;
+		}
+		if ( 'completed' === $when ) {
+			return false;
+		}
+		return 'cod' === (string) $order->get_payment_method() || in_array( (string) $order->get_status(), $this->paidStatuses(), true );
+	}
+
+	/**
+	 * Whether an order seen for the first time when a payment is completed may be queued now.
+	 */
+	private function mayStartAtPayment(): bool {
+		$when = $this->when();
+		return null === $when || 'completed' !== $when;
+	}
+
+	/**
+	 * Whether an order seen for the first time when it reaches a status may be queued now.
+	 *
+	 * @param string    $status New status without the wc- prefix.
+	 * @param \WC_Order $order  Order.
+	 */
+	private function mayStartAtStatus( string $status, \WC_Order $order ): bool {
+		$when = $this->when();
+		if ( null === $when || 'placed' === $when ) {
+			return in_array( $status, self::FIRST_EVENT_STATUSES, true );
+		}
+		if ( 'completed' === $when ) {
+			return 'completed' === $status;
+		}
+		return in_array( $status, $this->paidStatuses(), true )
+			|| ( 'cod' === (string) $order->get_payment_method() && in_array( $status, self::FIRST_EVENT_STATUSES, true ) );
+	}
+
+	/**
+	 * The "send when" choice, or null when orders are sent the way they always were (nothing was chosen).
+	 *
+	 * @return string|null `placed`, `paid_or_cod` or `completed`.
+	 */
+	private function when(): ?string {
+		return null === $this->choices ? null : $this->choices->sendWhen();
+	}
+
+	/**
+	 * Statuses that count as paid.
+	 *
+	 * @return array<int,string>
+	 */
+	private function paidStatuses(): array {
+		$statuses = function_exists( 'wc_get_is_paid_statuses' ) ? wc_get_is_paid_statuses() : array( 'processing', 'completed' );
+		return is_array( $statuses ) ? array_map( 'strval', $statuses ) : array( 'processing', 'completed' );
 	}
 
 	/**

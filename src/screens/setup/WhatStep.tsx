@@ -5,6 +5,7 @@ import { Card } from '../../components/Card';
 import { CheckField, SelectField } from '../../components/Fields';
 import { systemName } from '../../lib/text';
 import type { WhatAnswers } from './what';
+import { AppliedNote } from './AppliedNote';
 import { AccountingWhat, CrmWhat } from './WhatStepKinds';
 
 export type { WhatAnswers } from './what';
@@ -110,6 +111,7 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 
 	return (
 		<div className="estasoft-sync-stack">
+			<AppliedNote />
 			<Card
 				title={ sprintf(
 					/* translators: %s: system name */ __(

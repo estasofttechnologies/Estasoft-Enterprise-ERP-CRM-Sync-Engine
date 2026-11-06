@@ -31,6 +31,11 @@ use Estasoft\SyncEngine\Jobs\Onboarding\OnboardingView;
  * sent, and nothing is back-filled. Mode `shadow` then opens a shadow window (7 days, owner decides at the end); mode `live` closes
  * any open window (`OnboardingState::endShadow()`, reason `go_live`). Only orders placed after this moment are sent. A second call
  * changes nothing.
+ *
+ * The two inbound choices of the "what to sync" step are applied here too: when the person left "Update WooCommerce stock" or "Update
+ * order status and tracking numbers" on, the stock rules or the tracking setting of the connection are switched on (they are off
+ * until then). Nothing is written to the shop during a shadow run, so this is safe in either mode. Choosing "off" changes nothing: the
+ * Stock and Tracking screens stay the place to switch them on later.
  */
 final class GoLiveService {
 
@@ -53,6 +58,7 @@ final class GoLiveService {
 	 * @param ShadowService        $shadow      Shadow window.
 	 * @param Logger               $logger      Log.
 	 * @param Clock                $clock       Time source.
+	 * @param \Closure|null        $inbound     Switches on stock and tracking for a connection: `fn( int $connectionId, bool $stock, bool $tracking ): void`.
 	 */
 	public function __construct(
 		private readonly OnboardingState $onboarding,
@@ -60,7 +66,8 @@ final class GoLiveService {
 		private readonly ConnectionRepository $connections,
 		private readonly ShadowService $shadow,
 		private readonly Logger $logger,
-		private readonly Clock $clock
+		private readonly Clock $clock,
+		private readonly ?\Closure $inbound = null
 	) {
 	}
 
@@ -105,6 +112,7 @@ final class GoLiveService {
 		} else {
 			$this->shadow->end( $userId, 'go_live' );
 		}
+		$this->applyInbound( $connectionId );
 		$this->logger->info(
 			sprintf(
 				/* translators: 1: number of waiting items skipped, 2: user id. */
@@ -115,6 +123,32 @@ final class GoLiveService {
 			array( 'connection_id' => $connectionId )
 		);
 		return OnboardingView::present( $this->onboarding->get() );
+	}
+
+	/**
+	 * Switch on stock and tracking when the person left them on in setup. A failure here never stops going live.
+	 *
+	 * @param int $connectionId Connection.
+	 */
+	private function applyInbound( int $connectionId ): void {
+		$answers = $this->onboarding->get()['answers'];
+		$what    = is_array( $answers ) && is_array( $answers['what'] ?? null ) ? $answers['what'] : array();
+		$stock   = true === ( $what['stock_in'] ?? null );
+		$track   = true === ( $what['tracking_in'] ?? null );
+		if ( null === $this->inbound || ( ! $stock && ! $track ) ) {
+			return;
+		}
+		try {
+			( $this->inbound )( $connectionId, $stock, $track );
+		} catch ( \Throwable $e ) {
+			$this->logger->warning(
+				__( 'Stock or tracking could not be switched on. Switch them on from the Stock and Tracking screens.', 'estasoft-erp-crm-sync-engine' ),
+				array(
+					'connection_id' => $connectionId,
+					'error'         => get_class( $e ),
+				)
+			);
+		}
 	}
 
 	/**
