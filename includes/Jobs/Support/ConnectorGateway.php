@@ -104,7 +104,7 @@ final class ConnectorGateway {
 				$connection = $this->connections->find( $candidate->id );
 			} catch ( CryptoException $e ) {
 				$this->logger->warning(
-					null === $e->errorCode() ? __( 'Saved credentials could not be read because the encryption key changed.', 'estasoft-erp-crm-sync-engine' ) : ErrorCode::Cfg002->template(),
+					null === $e->errorCode() ? __( 'Saved credentials could not be read because the encryption key changed.', 'estasoft-enterprise-erpcrm-sync-engine' ) : ErrorCode::Cfg002->template(),
 					array(
 						'connection_id' => $candidate->id,
 						'code'          => $e->errorCode() ?? ErrorCode::Cfg002,
@@ -147,7 +147,7 @@ final class ConnectorGateway {
 					'field'  => 'connector',
 					'reason' => sprintf(
 						/* translators: %s: PHP error class name. */
-						__( 'The connector stopped unexpectedly (%s).', 'estasoft-erp-crm-sync-engine' ),
+						__( 'The connector stopped unexpectedly (%s).', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						( new \ReflectionClass( $e ) )->getShortName()
 					),
 				),

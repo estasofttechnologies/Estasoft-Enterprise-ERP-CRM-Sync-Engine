@@ -49,7 +49,7 @@ export function ReadinessPage() {
 			<Card
 				title={ __(
 					'Readiness check',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				description={
 					data ? (
@@ -58,7 +58,7 @@ export function ReadinessPage() {
 								<>
 									{ __(
 										'Last run',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									) }{ ' ' }
 									<DateTime
 										value={ data.ran_at }
@@ -69,7 +69,7 @@ export function ReadinessPage() {
 							) : null }
 							{ __(
 								'These checks find the things that most often break syncing.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</>
 					) : undefined
@@ -85,13 +85,13 @@ export function ReadinessPage() {
 							>
 								{ __(
 									'Run the checks again',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</Btn>
 							<Btn small onClick={ () => setReport( true ) }>
 								{ __(
 									'Copy a support report',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</Btn>
 						</>
@@ -104,7 +104,7 @@ export function ReadinessPage() {
 						rows={ 5 }
 						label={ __(
 							'Running the checks',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					/>
 				) : null }
@@ -127,7 +127,7 @@ export function ReadinessPage() {
 								{ sprintf(
 									/* translators: %s: summary such as "7 passed, 3 worth fixing" */ __(
 										'Checks: %s',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									checkSummary( data )
 								) }

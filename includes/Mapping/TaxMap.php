@@ -238,7 +238,7 @@ final class TaxMap implements TaxResolver {
 		$rate    = $row['rate_percent'] ?? null;
 		$key     = MinorUnits::rateKey( $rate );
 		if ( 1 !== preg_match( '/^[A-Z]{2}$/', $country ) || null === $key || (float) $key < 0 || (float) $key > 100 ) {
-			throw new \InvalidArgumentException( esc_html__( 'Each tax row needs a country code and a rate from 0 to 100.', 'estasoft-erp-crm-sync-engine' ) );
+			throw new \InvalidArgumentException( esc_html__( 'Each tax row needs a country code and a rate from 0 to 100.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return array(
 			'kind'         => 'tax',
@@ -272,7 +272,7 @@ final class TaxMap implements TaxResolver {
 	private function cleanBuyerRule( array $rule ): array {
 		$country = strtoupper( Text::trim( Text::toString( $rule['country'] ?? '' ) ) );
 		if ( 1 !== preg_match( '/^[A-Z]{2}$/', $country ) ) {
-			throw new \InvalidArgumentException( esc_html__( 'Each buyer tax rule needs a country code.', 'estasoft-erp-crm-sync-engine' ) );
+			throw new \InvalidArgumentException( esc_html__( 'Each buyer tax rule needs a country code.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$digits = $rule['digits'] ?? null;
 		return array(
@@ -318,7 +318,7 @@ final class TaxMap implements TaxResolver {
 				continue;
 			}
 			$this->log->info(
-				__( 'Tax mapping changed.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Tax mapping changed.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				array(
 					'connection_id' => $connectionId,
 					'by'            => $by,

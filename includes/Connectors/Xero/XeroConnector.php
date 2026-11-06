@@ -221,7 +221,7 @@ final class XeroConnector extends AbstractApiConnector implements OAuthConnector
 	 */
 	protected function identify( Connection $connection ): TestResult {
 		if ( '' === XeroPayloadReader::text( $connection->config( 'tenant_id' ) ) ) {
-			return new TestResult( false, '', '', array(), array(), XeroErrors::refused( 'tenant_id', __( 'No organisation is chosen yet. Sign in with Xero and choose one.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return new TestResult( false, '', '', array(), array(), XeroErrors::refused( 'tenant_id', __( 'No organisation is chosen yet. Sign in with Xero and choose one.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$services    = $this->servicesFor( $connection );
 		$facts       = $services->organisation->facts();
@@ -317,7 +317,7 @@ final class XeroConnector extends AbstractApiConnector implements OAuthConnector
 			EntityType::Order    => $services->orders->send( $item, $payload ),
 			EntityType::Refund   => $services->refunds->send( $item, $payload ),
 			EntityType::Customer => $services->customers->send( $item, $payload ),
-			default              => SendResult::failure( XeroErrors::refused( 'entity', __( 'Xero takes orders, refunds and customers only.', 'estasoft-erp-crm-sync-engine' ) ) ),
+			default              => SendResult::failure( XeroErrors::refused( 'entity', __( 'Xero takes orders, refunds and customers only.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) ),
 		};
 		$this->logWarnings( $result, $item );
 		return $result;

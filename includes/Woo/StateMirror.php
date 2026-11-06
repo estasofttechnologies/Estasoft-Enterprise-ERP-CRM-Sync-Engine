@@ -81,7 +81,7 @@ final class StateMirror {
 				$this->mirror( $row );
 			}
 		} catch ( \Throwable $e ) {
-			$this->log->warning( __( 'The order screen could not be updated with the sync state.', 'estasoft-erp-crm-sync-engine' ), array( 'queue_id' => $itemId ) );
+			$this->log->warning( __( 'The order screen could not be updated with the sync state.', 'estasoft-enterprise-erpcrm-sync-engine' ), array( 'queue_id' => $itemId ) );
 		}
 	}
 

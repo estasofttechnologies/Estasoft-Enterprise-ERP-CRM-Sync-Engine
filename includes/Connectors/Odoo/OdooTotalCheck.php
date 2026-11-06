@@ -69,7 +69,7 @@ final class OdooTotalCheck {
 			'document'       => $document,
 			'message'        => sprintf(
 				/* translators: 1: Odoo document number, 2: Odoo total with currency, 3: shop total with currency. */
-				__( 'Odoo calculates %2$s for %1$s but the shop total is %3$s. Check that the taxes in Odoo have the same rates as the shop and that "Included in Price" is set the same way on both sides.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Odoo calculates %2$s for %1$s but the shop total is %3$s. Check that the taxes in Odoo have the same rates as the shop and that "Included in Price" is set the same way on both sides.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$document,
 				$this->amounts->toDecimalString( $actual, $exponent ) . ' ' . $currency,
 				$this->amounts->toDecimalString( $expectedMinor, $exponent ) . ' ' . $currency

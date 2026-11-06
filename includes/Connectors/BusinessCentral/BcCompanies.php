@@ -71,7 +71,7 @@ final class BcCompanies {
 			return $found[0];
 		}
 		if ( array() === $found ) {
-			throw new ApiException( Failures::invalid( $this->system, 'company', __( 'There is no company with this name or ID in the environment.', 'estasoft-erp-crm-sync-engine' ), 'company not found' ) );
+			throw new ApiException( Failures::invalid( $this->system, 'company', __( 'There is no company with this name or ID in the environment.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'company not found' ) );
 		}
 		$names = array_map( static fn( array $company ): string => $company['name'], array_slice( $found, 0, self::LISTED ) );
 		throw new ApiException(
@@ -80,7 +80,7 @@ final class BcCompanies {
 				'company',
 				sprintf(
 					/* translators: %s: company names separated by commas. */
-					__( 'The environment has several companies. Type the name or ID of one of: %s.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The environment has several companies. Type the name or ID of one of: %s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					implode( ', ', $names )
 				),
 				'company ambiguous'

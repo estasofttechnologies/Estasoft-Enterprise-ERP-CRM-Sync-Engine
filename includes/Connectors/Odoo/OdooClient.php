@@ -349,12 +349,12 @@ final class OdooClient {
 				ErrorCode::Val002,
 				array(
 					'system' => OdooErrorMapper::SYSTEM,
-					'field'  => __( 'Company', 'estasoft-erp-crm-sync-engine' ),
+					'field'  => __( 'Company', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					'reason' => '' === $name
-						? __( 'The sync user has no company.', 'estasoft-erp-crm-sync-engine' )
+						? __( 'The sync user has no company.', 'estasoft-enterprise-erpcrm-sync-engine' )
 						: sprintf(
 							/* translators: %s: company name typed on the connection. */
-							__( 'Odoo has no company called %s, or the sync user cannot see it.', 'estasoft-erp-crm-sync-engine' ),
+							__( 'Odoo has no company called %s, or the sync user cannot see it.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 							$this->errors->scrub( $name )
 						),
 				),

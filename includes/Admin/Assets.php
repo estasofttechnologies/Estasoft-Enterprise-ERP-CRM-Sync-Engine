@@ -86,7 +86,7 @@ final class Assets {
 		$ver   = isset( $asset['version'] ) ? (string) $asset['version'] : $this->version;
 
 		wp_register_script( self::HANDLE, $this->url . 'build/index.js', $deps, $ver, true );
-		wp_set_script_translations( self::HANDLE, 'estasoft-erp-crm-sync-engine', $this->dir . 'languages' );
+		wp_set_script_translations( self::HANDLE, 'estasoft-enterprise-erpcrm-sync-engine', $this->dir . 'languages' );
 		wp_add_inline_script( self::HANDLE, 'window.estasoftSync = ' . self::encode( ( $this->boot )() ) . ';', 'before' );
 		wp_enqueue_script( self::HANDLE );
 

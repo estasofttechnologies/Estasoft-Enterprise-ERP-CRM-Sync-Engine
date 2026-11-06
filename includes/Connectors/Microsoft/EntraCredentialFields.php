@@ -25,10 +25,10 @@ final class EntraCredentialFields {
 	public static function tenant(): CredentialField {
 		return new CredentialField(
 			'tenant_id',
-			__( 'Directory (tenant) ID', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Directory (tenant) ID', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			false,
 			true,
-			__( 'On the Overview page of your app in the Microsoft Entra admin center. A GUID, or your domain name.', 'estasoft-erp-crm-sync-engine' ),
+			__( 'On the Overview page of your app in the Microsoft Entra admin center. A GUID, or your domain name.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			'',
 			'text',
 			array(),
@@ -44,8 +44,8 @@ final class EntraCredentialFields {
 	public static function app(): array {
 		return array(
 			self::tenant(),
-			CredentialFields::clientId( 'client_id', __( 'Application (client) ID from the Overview page of your app.', 'estasoft-erp-crm-sync-engine' ) ),
-			CredentialFields::clientSecret( 'client_secret', __( 'The secret value, not its ID. Saved encrypted and never shown again. It ends on the date you chose in Microsoft Entra.', 'estasoft-erp-crm-sync-engine' ) ),
+			CredentialFields::clientId( 'client_id', __( 'Application (client) ID from the Overview page of your app.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			CredentialFields::clientSecret( 'client_secret', __( 'The secret value, not its ID. Saved encrypted and never shown again. It ends on the date you chose in Microsoft Entra.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 		);
 	}
 

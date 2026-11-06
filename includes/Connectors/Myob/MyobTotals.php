@@ -43,9 +43,9 @@ final class MyobTotals {
 				'ForeignCurrency',
 				sprintf(
 					/* translators: 1: currency the file works in, 2: currency MYOB made the document in. */
-					__( 'The company file works in %1$s but MYOB made the document in %2$s.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The company file works in %1$s but MYOB made the document in %2$s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$currency,
-					'' !== $foreign ? $foreign : __( 'a foreign currency', 'estasoft-erp-crm-sync-engine' )
+					'' !== $foreign ? $foreign : __( 'a foreign currency', 'estasoft-enterprise-erpcrm-sync-engine' )
 				)
 			);
 		}
@@ -54,7 +54,7 @@ final class MyobTotals {
 		}
 		$actual = $this->amounts->fromNumber( $document['TotalAmount'] ?? null, $currency );
 		if ( null === $actual ) {
-			return MyobErrors::refused( 'TotalAmount', __( 'MYOB did not report a total to compare.', 'estasoft-erp-crm-sync-engine' ) );
+			return MyobErrors::refused( 'TotalAmount', __( 'MYOB did not report a total to compare.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$actual = abs( $actual );
 		if ( $this->amounts->agree( abs( $expected ), $actual ) ) {
@@ -64,7 +64,7 @@ final class MyobTotals {
 			'TotalAmount',
 			sprintf(
 				/* translators: 1: total of the shop, 2: total MYOB worked out. */
-				__( 'The shop total is %1$s but MYOB worked out %2$s. Check the tax mapping and whether prices include tax.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'The shop total is %1$s but MYOB worked out %2$s. Check the tax mapping and whether prices include tax.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$this->amounts->show( abs( $expected ), $currency ),
 				$this->amounts->show( $actual, $currency )
 			)

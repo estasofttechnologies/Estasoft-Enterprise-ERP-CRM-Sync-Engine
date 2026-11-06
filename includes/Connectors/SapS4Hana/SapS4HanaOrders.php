@@ -93,18 +93,18 @@ final class SapS4HanaOrders {
 	 */
 	public function create( OrderData $data, Warnings $warnings ): array {
 		$soldTo = '' !== $data->rawText( 'sold_to_party' ) ? $data->rawText( 'sold_to_party' ) : $this->options->soldToParty();
-		$this->mustHave( 'sold_to_party', $soldTo, __( 'Enter the customer number all web orders are sold to in the connection settings.', 'estasoft-erp-crm-sync-engine' ) );
-		$this->mustHave( 'sales_organization', $this->options->salesOrganization(), __( 'Enter the sales organization in the connection settings.', 'estasoft-erp-crm-sync-engine' ) );
-		$this->mustHave( 'distribution_channel', $this->options->distributionChannel(), __( 'Enter the distribution channel in the connection settings.', 'estasoft-erp-crm-sync-engine' ) );
-		$this->mustHave( 'division', $this->options->division(), __( 'Enter the division in the connection settings.', 'estasoft-erp-crm-sync-engine' ) );
+		$this->mustHave( 'sold_to_party', $soldTo, __( 'Enter the customer number all web orders are sold to in the connection settings.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
+		$this->mustHave( 'sales_organization', $this->options->salesOrganization(), __( 'Enter the sales organization in the connection settings.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
+		$this->mustHave( 'distribution_channel', $this->options->distributionChannel(), __( 'Enter the distribution channel in the connection settings.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
+		$this->mustHave( 'division', $this->options->division(), __( 'Enter the division in the connection settings.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		if ( strlen( $data->reference ) > self::REFERENCE_LENGTH ) {
-			$this->refuse( 'PurchaseOrderByCustomer', __( 'The order reference is longer than 35 characters, which S/4HANA does not take.', 'estasoft-erp-crm-sync-engine' ) );
+			$this->refuse( 'PurchaseOrderByCustomer', __( 'The order reference is longer than 35 characters, which S/4HANA does not take.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( array() !== $data->charges ) {
 			if ( 'fail' === $this->options->extraCharges() ) {
-				$this->refuse( 'extra_charges', __( 'The order has shipping, fees or a discount. S/4HANA prices those with condition types of your pricing procedure, which this connection cannot know. Set extra_charges to ignore to leave them out.', 'estasoft-erp-crm-sync-engine' ) );
+				$this->refuse( 'extra_charges', __( 'The order has shipping, fees or a discount. S/4HANA prices those with condition types of your pricing procedure, which this connection cannot know. Set extra_charges to ignore to leave them out.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
-			$warnings->add( __( 'Shipping, fees and discounts were left out of the sales order.', 'estasoft-erp-crm-sync-engine' ) );
+			$warnings->add( __( 'Shipping, fees and discounts were left out of the sales order.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$this->assertProductsExist( $data );
 		$items = array();
@@ -146,7 +146,7 @@ final class SapS4HanaOrders {
 			$created = $this->find( $data->reference );
 		}
 		if ( null === $created ) {
-			$this->refuse( 'SalesOrder', __( 'S/4HANA accepted the order but it cannot be read back.', 'estasoft-erp-crm-sync-engine' ) );
+			$this->refuse( 'SalesOrder', __( 'S/4HANA accepted the order but it cannot be read back.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return $created;
 	}
@@ -168,18 +168,18 @@ final class SapS4HanaOrders {
 				'TransactionCurrency',
 				sprintf(
 					/* translators: 1: currency in S/4HANA, 2: currency of the shop. */
-					__( 'S/4HANA holds the order in %1$s but the shop charged in %2$s.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'S/4HANA holds the order in %1$s but the shop charged in %2$s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$actual,
 					$data->currency
 				)
 			);
 		}
 		if ( 'shop' !== $this->options->priceSource() ) {
-			$warnings->add( __( 'S/4HANA priced the order itself, so its amount was not compared with the shop.', 'estasoft-erp-crm-sync-engine' ) );
+			$warnings->add( __( 'S/4HANA priced the order itself, so its amount was not compared with the shop.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			return null;
 		}
 		$expected = $this->expectedNet( $data );
-		return $total->run( $expected, $this->amounts->fromWire( $order['TotalNetAmount'] ?? null, $data->currency ), $data->currency, $warnings, __( 'net amount', 'estasoft-erp-crm-sync-engine' ) );
+		return $total->run( $expected, $this->amounts->fromWire( $order['TotalNetAmount'] ?? null, $data->currency ), $data->currency, $warnings, __( 'net amount', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**
@@ -213,10 +213,10 @@ final class SapS4HanaOrders {
 		}
 		$actual = strtoupper( (string) ( $order['TransactionCurrency'] ?? '' ) );
 		if ( '' !== $actual && $actual !== $marked['currency'] ) {
-			return Problem::validation( $this->system, 'TransactionCurrency', __( 'The order exists in S/4HANA but in another currency than the shop charged. Correct or delete it in S/4HANA.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problem::validation( $this->system, 'TransactionCurrency', __( 'The order exists in S/4HANA but in another currency than the shop charged. Correct or delete it in S/4HANA.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
-		$error = $total->run( $marked['minor'], $this->amounts->fromWire( $order['TotalNetAmount'] ?? null, $marked['currency'] ), $marked['currency'], new Warnings(), __( 'net amount', 'estasoft-erp-crm-sync-engine' ) );
-		return null === $error ? null : Problem::validation( $this->system, 'net amount', (string) $error->context['reason'] . ' ' . __( 'Correct or delete the order in S/4HANA.', 'estasoft-erp-crm-sync-engine' ) );
+		$error = $total->run( $marked['minor'], $this->amounts->fromWire( $order['TotalNetAmount'] ?? null, $marked['currency'] ), $marked['currency'], new Warnings(), __( 'net amount', 'estasoft-enterprise-erpcrm-sync-engine' ) );
+		return null === $error ? null : Problem::validation( $this->system, 'net amount', (string) $error->context['reason'] . ' ' . __( 'Correct or delete the order in S/4HANA.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**

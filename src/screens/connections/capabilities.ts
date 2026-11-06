@@ -10,15 +10,27 @@ export type Capability = string;
  */
 export function usedFor( capabilities: Record< string, boolean > ): string {
 	const words: [ string, string ][] = [
-		[ 'orders', __( 'Orders', 'estasoft-erp-crm-sync-engine' ) ],
-		[ 'customers', __( 'customers', 'estasoft-erp-crm-sync-engine' ) ],
-		[ 'refunds', __( 'refunds', 'estasoft-erp-crm-sync-engine' ) ],
-		[ 'stock_in', __( 'stock', 'estasoft-erp-crm-sync-engine' ) ],
-		[ 'tracking_in', __( 'tracking', 'estasoft-erp-crm-sync-engine' ) ],
-		[ 'prices_in', __( 'prices', 'estasoft-erp-crm-sync-engine' ) ],
+		[ 'orders', __( 'Orders', 'estasoft-enterprise-erpcrm-sync-engine' ) ],
+		[
+			'customers',
+			__( 'customers', 'estasoft-enterprise-erpcrm-sync-engine' ),
+		],
+		[
+			'refunds',
+			__( 'refunds', 'estasoft-enterprise-erpcrm-sync-engine' ),
+		],
+		[ 'stock_in', __( 'stock', 'estasoft-enterprise-erpcrm-sync-engine' ) ],
+		[
+			'tracking_in',
+			__( 'tracking', 'estasoft-enterprise-erpcrm-sync-engine' ),
+		],
+		[
+			'prices_in',
+			__( 'prices', 'estasoft-enterprise-erpcrm-sync-engine' ),
+		],
 		[
 			'invoice_readback',
-			__( 'invoices', 'estasoft-erp-crm-sync-engine' ),
+			__( 'invoices', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		],
 	];
 	const on = words

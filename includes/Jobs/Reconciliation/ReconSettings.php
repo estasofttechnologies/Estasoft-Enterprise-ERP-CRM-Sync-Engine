@@ -132,7 +132,7 @@ final class ReconSettings {
 						)
 						: array(
 							'value' => null,
-							'error' => __( 'Enter a time from 00:00 to 23:59.', 'estasoft-erp-crm-sync-engine' ),
+							'error' => __( 'Enter a time from 00:00 to 23:59.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						);
 					break;
 				case 'window_days':
@@ -164,7 +164,7 @@ final class ReconSettings {
 					$results[ $key ] = null === $bool
 						? array(
 							'value' => null,
-							'error' => __( 'Choose on or off.', 'estasoft-erp-crm-sync-engine' ),
+							'error' => __( 'Choose on or off.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						)
 						: array(
 							'value' => $bool,

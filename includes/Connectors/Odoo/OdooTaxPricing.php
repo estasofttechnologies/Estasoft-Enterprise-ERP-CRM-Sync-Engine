@@ -116,9 +116,9 @@ final class OdooTaxPricing {
 					'field'  => 'tax',
 					'reason' => sprintf(
 						/* translators: 1: tax name in Odoo, 2: how the shop's prices are described. */
-						__( 'The tax "%1$s" in Odoo does not treat prices the way the shop does (the shop\'s prices %2$s). Change "Included in Price" on that tax in Odoo, or use a single plain percentage tax for the line.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'The tax "%1$s" in Odoo does not treat prices the way the shop does (the shop\'s prices %2$s). Change "Included in Price" on that tax in Odoo, or use a single plain percentage tax for the line.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$tax,
-						$payloadIncludesTax ? __( 'include tax', 'estasoft-erp-crm-sync-engine' ) : __( 'do not include tax', 'estasoft-erp-crm-sync-engine' )
+						$payloadIncludesTax ? __( 'include tax', 'estasoft-enterprise-erpcrm-sync-engine' ) : __( 'do not include tax', 'estasoft-enterprise-erpcrm-sync-engine' )
 					),
 				),
 				null,

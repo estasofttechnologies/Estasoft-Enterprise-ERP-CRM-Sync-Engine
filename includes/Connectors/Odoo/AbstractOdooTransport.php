@@ -171,7 +171,7 @@ abstract class AbstractOdooTransport implements OdooTransport {
 					array(
 						'system' => OdooErrorMapper::SYSTEM,
 						'field'  => $model,
-						'reason' => __( 'A value could not be written as text. Check for characters that are not valid.', 'estasoft-erp-crm-sync-engine' ),
+						'reason' => __( 'A value could not be written as text. Check for characters that are not valid.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					),
 					null,
 					null,

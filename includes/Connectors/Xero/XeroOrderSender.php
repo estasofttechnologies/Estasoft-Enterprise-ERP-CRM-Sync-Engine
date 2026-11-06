@@ -120,7 +120,7 @@ final class XeroOrderSender {
 				'CurrencyCode',
 				sprintf(
 					/* translators: %s: currency code. */
-					__( 'The currency %s is not enabled in Xero. Add it under Settings, Currencies.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The currency %s is not enabled in Xero. Add it under Settings, Currencies.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$currency
 				)
 			);
@@ -170,7 +170,7 @@ final class XeroOrderSender {
 				$expected = $parsed->date;
 				$actual   = substr( XeroPayloadReader::text( $invoice['DateString'] ?? '' ), 0, 10 );
 				if ( '' !== $expected && '' !== $actual && $actual !== $expected ) {
-					$warnings[] = __( 'Xero changed the invoice date when it approved the invoice.', 'estasoft-erp-crm-sync-engine' );
+					$warnings[] = __( 'Xero changed the invoice date when it approved the invoice.', 'estasoft-enterprise-erpcrm-sync-engine' );
 				}
 			}
 		}
@@ -196,7 +196,7 @@ final class XeroOrderSender {
 	private function pay( array $invoice, XeroOrderPayload $parsed ): array|ConnectorError {
 		$account = $this->options->text( 'payment_account' );
 		if ( '' === $account ) {
-			return XeroErrors::refused( 'payment_account', __( 'Set the Xero account code that receives payments in the connection option "payment_account".', 'estasoft-erp-crm-sync-engine' ) );
+			return XeroErrors::refused( 'payment_account', __( 'Set the Xero account code that receives payments in the connection option "payment_account".', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$id        = XeroPayloadReader::text( $invoice['InvoiceID'] ?? '' );
 		$currency  = strtoupper( XeroPayloadReader::text( $invoice['CurrencyCode'] ?? '' ) );
@@ -289,7 +289,7 @@ final class XeroOrderSender {
 			'Invoice',
 			sprintf(
 				/* translators: %s: the shop's reference of the order, such as WC-1042. */
-				__( 'The invoice for %s was voided in Xero. Restore it there, or delete the voided invoice, then retry.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'The invoice for %s was voided in Xero. Restore it there, or delete the voided invoice, then retry.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$reference
 			)
 		);

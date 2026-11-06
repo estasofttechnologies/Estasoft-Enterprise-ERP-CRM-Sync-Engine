@@ -30,8 +30,8 @@ final class DvFieldCatalog {
 	public function fields( string $mappingType ): array {
 		return match ( $mappingType ) {
 			'orders'    => $this->orders(),
-			'customers' => FieldGroups::customer( FieldCatalogBuilder::make(), __( 'Contact', 'estasoft-erp-crm-sync-engine' ), 'partner.', true )->build(),
-			'products'  => FieldGroups::products( FieldCatalogBuilder::make(), __( 'Product ID (productnumber)', 'estasoft-erp-crm-sync-engine' ) )->build(),
+			'customers' => FieldGroups::customer( FieldCatalogBuilder::make(), __( 'Contact', 'estasoft-enterprise-erpcrm-sync-engine' ), 'partner.', true )->build(),
+			'products'  => FieldGroups::products( FieldCatalogBuilder::make(), __( 'Product ID (productnumber)', 'estasoft-enterprise-erpcrm-sync-engine' ) )->build(),
 			'refunds'   => $this->refunds(),
 			default     => array(),
 		};
@@ -43,10 +43,10 @@ final class DvFieldCatalog {
 	 * @return array<int,FieldDef>
 	 */
 	private function orders(): array {
-		$b = FieldGroups::orderHeader( FieldCatalogBuilder::make(), __( 'Deal (opportunity)', 'estasoft-erp-crm-sync-engine' ) );
-		FieldGroups::customer( $b, __( 'Contact and account', 'estasoft-erp-crm-sync-engine' ), 'partner.', true );
-		FieldGroups::lines( $b, __( 'Deal products', 'estasoft-erp-crm-sync-engine' ), false );
-		FieldGroups::extras( $b, __( 'Shipping, fees and discount', 'estasoft-erp-crm-sync-engine' ), false );
+		$b = FieldGroups::orderHeader( FieldCatalogBuilder::make(), __( 'Deal (opportunity)', 'estasoft-enterprise-erpcrm-sync-engine' ) );
+		FieldGroups::customer( $b, __( 'Contact and account', 'estasoft-enterprise-erpcrm-sync-engine' ), 'partner.', true );
+		FieldGroups::lines( $b, __( 'Deal products', 'estasoft-enterprise-erpcrm-sync-engine' ), false );
+		FieldGroups::extras( $b, __( 'Shipping, fees and discount', 'estasoft-enterprise-erpcrm-sync-engine' ), false );
 		return $b->build();
 	}
 
@@ -57,10 +57,10 @@ final class DvFieldCatalog {
 	 */
 	private function refunds(): array {
 		return FieldCatalogBuilder::make()
-			->group( __( 'Note on the deal', 'estasoft-erp-crm-sync-engine' ) )
-			->text( 'order_ref', __( 'Original order reference (WC-…)', 'estasoft-erp-crm-sync-engine' ), true )
-			->money( 'amount', __( 'Refund total (minor units)', 'estasoft-erp-crm-sync-engine' ), true )
-			->text( 'reason', __( 'Reason', 'estasoft-erp-crm-sync-engine' ) )
+			->group( __( 'Note on the deal', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->text( 'order_ref', __( 'Original order reference (WC-…)', 'estasoft-enterprise-erpcrm-sync-engine' ), true )
+			->money( 'amount', __( 'Refund total (minor units)', 'estasoft-enterprise-erpcrm-sync-engine' ), true )
+			->text( 'reason', __( 'Reason', 'estasoft-enterprise-erpcrm-sync-engine' ) )
 			->build();
 	}
 }

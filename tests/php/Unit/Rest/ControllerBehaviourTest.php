@@ -157,7 +157,7 @@ final class ControllerBehaviourTest extends RestStubCase {
 		$controller = $this->controller( static fn(): array => array() );
 		$error      = $controller->handle(
 			static function (): never {
-				throw ApiException::notFound( esc_html__( "That item doesn't exist & can't be shown.", 'estasoft-erp-crm-sync-engine' ) );
+				throw ApiException::notFound( esc_html__( "That item doesn't exist & can't be shown.", 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			},
 			$this->request(),
 			false

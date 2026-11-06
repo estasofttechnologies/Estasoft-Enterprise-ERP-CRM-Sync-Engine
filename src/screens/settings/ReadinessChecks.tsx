@@ -41,11 +41,17 @@ const TONE: Record< ReadinessCheck[ 'status' ], Tone > = {
 export function checkWord( status: ReadinessCheck[ 'status' ] ): string {
 	switch ( status ) {
 		case 'passed':
-			return __( 'Passed', 'estasoft-erp-crm-sync-engine' );
+			return __( 'Passed', 'estasoft-enterprise-erpcrm-sync-engine' );
 		case 'worth_fixing':
-			return __( 'Worth fixing', 'estasoft-erp-crm-sync-engine' );
+			return __(
+				'Worth fixing',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			);
 		case 'needs_fixing':
-			return __( 'Needs fixing', 'estasoft-erp-crm-sync-engine' );
+			return __(
+				'Needs fixing',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			);
 	}
 }
 
@@ -63,7 +69,7 @@ export function checkSummary( readiness: Readiness ): string {
 		/* translators: 1: number passed, 2: number worth fixing, 3: sentence about those that need fixing */
 		__(
 			'%1$d passed, %2$d worth fixing, %3$s',
-			'estasoft-erp-crm-sync-engine'
+			'estasoft-enterprise-erpcrm-sync-engine'
 		),
 		count( 'passed' ),
 		count( 'worth_fixing' ),
@@ -72,7 +78,7 @@ export function checkSummary( readiness: Readiness ): string {
 				'%d needs fixing',
 				'%d need fixing',
 				needs,
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			needs
 		)
@@ -148,7 +154,7 @@ export function ReadinessVerdict( { readiness }: { readiness: Readiness } ) {
 			<Callout tone="info" role="status">
 				{ __(
 					'The checks have not run yet. A check that did not run is not a pass.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			</Callout>
 		);
@@ -167,7 +173,7 @@ export function ReadinessVerdict( { readiness }: { readiness: Readiness } ) {
 						'%d thing needs fixing. Continue stays off until it is fixed.',
 						'%d things need fixing. Continue stays off until they are fixed.',
 						needs,
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					needs
 				) }
@@ -182,7 +188,7 @@ export function ReadinessVerdict( { readiness }: { readiness: Readiness } ) {
 						'%d thing is worth fixing. None of them stops you from continuing, but each can cause failed orders later.',
 						'%d things are worth fixing. None of them stops you from continuing, but each can cause failed orders later.',
 						worth,
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					worth
 				) }
@@ -191,7 +197,10 @@ export function ReadinessVerdict( { readiness }: { readiness: Readiness } ) {
 	}
 	return (
 		<Callout tone="success" role="status">
-			{ __( 'Everything passed.', 'estasoft-erp-crm-sync-engine' ) }
+			{ __(
+				'Everything passed.',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			) }
 		</Callout>
 	);
 }

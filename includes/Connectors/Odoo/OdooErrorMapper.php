@@ -139,8 +139,8 @@ final class OdooErrorMapper {
 			return $this->exception(
 				ErrorCode::Val002,
 				array(
-					'field'  => __( 'Odoo address', 'estasoft-erp-crm-sync-engine' ),
-					'reason' => __( 'The address points to a private network or to this computer, which is not allowed.', 'estasoft-erp-crm-sync-engine' ),
+					'field'  => __( 'Odoo address', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'reason' => __( 'The address points to a private network or to this computer, which is not allowed.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				null,
 				null,
@@ -192,7 +192,7 @@ final class OdooErrorMapper {
 			if ( $this->odooOnline ) {
 				return $this->exception( ErrorCode::Auth006, array(), 403, null, 'outside access refused', '', $model, $method );
 			}
-			return $this->exception( ErrorCode::Auth004, array( 'action' => __( 'use the external API', 'estasoft-erp-crm-sync-engine' ) ), 403, null, 'forbidden', '', $model, $method );
+			return $this->exception( ErrorCode::Auth004, array( 'action' => __( 'use the external API', 'estasoft-enterprise-erpcrm-sync-engine' ) ), 403, null, 'forbidden', '', $model, $method );
 		}
 		if ( in_array( $status, array( 408, 504, 524 ), true ) ) {
 			return $this->exception( ErrorCode::Net001, array(), $status, null, 'gateway timeout', '', $model, $method );
@@ -204,8 +204,8 @@ final class OdooErrorMapper {
 			return $this->exception(
 				ErrorCode::Val002,
 				array(
-					'field'  => __( 'Odoo address', 'estasoft-erp-crm-sync-engine' ),
-					'reason' => __( 'The address sends visitors on to another address. Enter the address you end up on when you open Odoo.', 'estasoft-erp-crm-sync-engine' ),
+					'field'  => __( 'Odoo address', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'reason' => __( 'The address sends visitors on to another address. Enter the address you end up on when you open Odoo.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				$status,
 				null,
@@ -224,7 +224,7 @@ final class OdooErrorMapper {
 				'field'  => $model,
 				'reason' => sprintf(
 					/* translators: %d: HTTP status code. */
-					__( 'Odoo answered with status %d.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Odoo answered with status %d.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$status
 				),
 			),
@@ -301,10 +301,10 @@ final class OdooErrorMapper {
 		return $this->exception(
 			ErrorCode::Val002,
 			array(
-				'field'  => __( 'Odoo version', 'estasoft-erp-crm-sync-engine' ),
+				'field'  => __( 'Odoo version', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'reason' => sprintf(
 					/* translators: %s: Odoo version label such as "Odoo 16 Community". */
-					__( '%s is older than the versions this plugin supports. Use Odoo 17 or later.', 'estasoft-erp-crm-sync-engine' ),
+					__( '%s is older than the versions this plugin supports. Use Odoo 17 or later.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$version->label()
 				),
 			),
@@ -440,7 +440,7 @@ final class OdooErrorMapper {
 			ErrorCode::Val002,
 			array(
 				'field'  => $model,
-				'reason' => __( 'This Odoo app is not installed or this version does not have it.', 'estasoft-erp-crm-sync-engine' ),
+				'reason' => __( 'This Odoo app is not installed or this version does not have it.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			),
 			$status > 0 ? $status : null,
 			null,
@@ -492,7 +492,7 @@ final class OdooErrorMapper {
 	 */
 	public function action( string $model, string $method ): string {
 		$verb  = self::METHOD_VERBS[ $method ] ?? 'use';
-		$thing = self::MODEL_WORDS[ $model ] ?? ( '' !== $model ? $model : __( 'this data', 'estasoft-erp-crm-sync-engine' ) );
+		$thing = self::MODEL_WORDS[ $model ] ?? ( '' !== $model ? $model : __( 'this data', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		return $verb . ' ' . $thing;
 	}
 

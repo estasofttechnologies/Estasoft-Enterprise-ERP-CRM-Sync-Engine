@@ -87,7 +87,7 @@ export function MethodExplainer( { entry }: { entry: SystemEntry } ) {
 					? sprintf(
 							/* translators: %s: system name */ __(
 								'%s cannot be connected yet.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							entry.name
 						)
@@ -95,14 +95,14 @@ export function MethodExplainer( { entry }: { entry: SystemEntry } ) {
 						? sprintf(
 								/* translators: %s: system name */ __(
 									'The connector for %s is installed, but this screen has no form for it yet. Open Connections to continue.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								entry.name
 							)
 						: sprintf(
 								/* translators: %s: system name */ __(
 									'The %s connector is not part of this release yet, so it cannot be connected today. This page shows what connecting will involve.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								entry.name
 							) }
@@ -111,7 +111,7 @@ export function MethodExplainer( { entry }: { entry: SystemEntry } ) {
 				title={ sprintf(
 					/* translators: %s: system name */ __(
 						'How you connect to %s',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					entry.name
 				) }

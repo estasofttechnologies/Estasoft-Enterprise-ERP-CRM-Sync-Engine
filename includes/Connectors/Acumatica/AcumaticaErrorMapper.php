@@ -51,13 +51,13 @@ final class AcumaticaErrorMapper {
 			);
 		}
 		if ( 404 === $status && $this->isHtml( $response->body() ) ) {
-			return $this->refused( $system, 'address', __( 'This address did not answer like an Acumatica site, or the endpoint version is not offered. Check the address and the endpoint version.', 'estasoft-erp-crm-sync-engine' ), $status );
+			return $this->refused( $system, 'address', __( 'This address did not answer like an Acumatica site, or the endpoint version is not offered. Check the address and the endpoint version.', 'estasoft-enterprise-erpcrm-sync-engine' ), $status );
 		}
 		if ( 404 === $status ) {
-			return $this->refused( $system, 'endpoint_version', '' !== $text ? $text : __( 'Acumatica does not offer this entity or endpoint version.', 'estasoft-erp-crm-sync-engine' ), $status );
+			return $this->refused( $system, 'endpoint_version', '' !== $text ? $text : __( 'Acumatica does not offer this entity or endpoint version.', 'estasoft-enterprise-erpcrm-sync-engine' ), $status );
 		}
 		if ( 422 === $status || 400 === $status ) {
-			return $this->refused( $system, 'request', '' !== $text ? $text : __( 'Acumatica refused the data.', 'estasoft-erp-crm-sync-engine' ), $status );
+			return $this->refused( $system, 'request', '' !== $text ? $text : __( 'Acumatica refused the data.', 'estasoft-enterprise-erpcrm-sync-engine' ), $status );
 		}
 		if ( 500 === $status && $this->isBusinessError( $json, $text ) ) {
 			return $this->refused( $system, 'request', $text, $status );

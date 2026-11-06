@@ -21,7 +21,7 @@ final class PluginLinks {
 	/**
 	 * Create the plugin row links.
 	 *
-	 * @param string $basename Plugin basename, for example estasoft-erp-crm-sync-engine/estasoft-erp-crm-sync-engine.php.
+	 * @param string $basename Plugin basename, for example estasoft-enterprise-erpcrm-sync-engine/estasoft-enterprise-erpcrm-sync-engine.php.
 	 * @param Urls   $urls     Addresses of the app.
 	 */
 	public function __construct(
@@ -47,10 +47,10 @@ final class PluginLinks {
 		$links = is_array( $links ) ? $links : array();
 		$mine  = array();
 		if ( Capabilities::userCanManage() ) {
-			$mine['estasoft-sync-settings'] = '<a href="' . esc_url( $this->urls->settings() ) . '">' . esc_html__( 'Settings', 'estasoft-erp-crm-sync-engine' ) . '</a>';
+			$mine['estasoft-sync-settings'] = '<a href="' . esc_url( $this->urls->settings() ) . '">' . esc_html__( 'Settings', 'estasoft-enterprise-erpcrm-sync-engine' ) . '</a>';
 		}
 		if ( Capabilities::userCanConfigure() ) {
-			$mine['estasoft-sync-setup'] = '<a href="' . esc_url( $this->urls->setup() ) . '">' . esc_html__( 'Setup guide', 'estasoft-erp-crm-sync-engine' ) . '</a>';
+			$mine['estasoft-sync-setup'] = '<a href="' . esc_url( $this->urls->setup() ) . '">' . esc_html__( 'Setup guide', 'estasoft-enterprise-erpcrm-sync-engine' ) . '</a>';
 		}
 		return array_merge( $mine, $links );
 	}

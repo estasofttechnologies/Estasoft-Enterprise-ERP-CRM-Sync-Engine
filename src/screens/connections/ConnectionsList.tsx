@@ -59,7 +59,7 @@ export function ConnectionsList() {
 		? connections.length === 0
 			? __(
 					'No system is connected yet.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				)
 			: sprintf(
 					/* translators: 1: number of active connections, 2: sentence about keys */
@@ -67,7 +67,7 @@ export function ConnectionsList() {
 						'%1$d connection is active%2$s',
 						'%1$d connections are active%2$s',
 						active,
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					active,
 					expiring.length > 0
@@ -76,7 +76,7 @@ export function ConnectionsList() {
 									', and %d key needs renewing soon.',
 									', and %d keys need renewing soon.',
 									expiring.length,
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								expiring.length
 							)
@@ -87,7 +87,10 @@ export function ConnectionsList() {
 	return (
 		<>
 			<PageHeader
-				title={ __( 'Connections', 'estasoft-erp-crm-sync-engine' ) }
+				title={ __(
+					'Connections',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 				description={ description }
 				actions={
 					<>
@@ -98,13 +101,13 @@ export function ConnectionsList() {
 						>
 							{ __(
 								'Connection problems',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Btn>
 						<Btn onClick={ () => navigate( '/connections/other' ) }>
 							{ __(
 								'Other systems',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Btn>
 					</>
@@ -121,7 +124,10 @@ export function ConnectionsList() {
 							small
 							onClick={ () => navigate( '/connections', true ) }
 						>
-							{ __( 'Close', 'estasoft-erp-crm-sync-engine' ) }
+							{ __(
+								'Close',
+								'estasoft-enterprise-erpcrm-sync-engine'
+							) }
 						</Btn>
 					}
 				>
@@ -129,11 +135,11 @@ export function ConnectionsList() {
 						{ lostSignIn.result === 'cancelled'
 							? __(
 									'Sign-in was cancelled. Nothing was connected.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								)
 							: __(
 									'The sign-in could not be finished. Nothing was connected. The link may have expired or been used already.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }{ ' ' }
 						{ lostSignIn.result === 'cancelled' ? (
 							<span className="estasoft-sync-mono">
@@ -144,7 +150,7 @@ export function ConnectionsList() {
 					<p className="estasoft-sync-muted">
 						{ __(
 							'Open the connection and press Sign in again, or add the system again. The log has the details.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</p>
 				</Callout>
@@ -159,7 +165,7 @@ export function ConnectionsList() {
 								text={ boot.encryptionKeyLine }
 								label={ __(
 									'Copy the line',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							/>
 						) : undefined
@@ -168,7 +174,7 @@ export function ConnectionsList() {
 					<p>
 						{ __(
 							'The encryption key is missing from wp-config.php. Saved credentials cannot be stored safely until you add it.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }{ ' ' }
 						<span className="estasoft-sync-mono">SYNC-CFG-002</span>
 					</p>
@@ -180,7 +186,7 @@ export function ConnectionsList() {
 					<p className="estasoft-sync-muted">
 						{ __(
 							'Add the line to wp-config.php above the line that says “That’s all, stop editing”, then reload this page. Existing connections keep working; new secrets are refused until then.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</p>
 				</Callout>
@@ -202,7 +208,7 @@ export function ConnectionsList() {
 					rows={ 3 }
 					label={ __(
 						'Loading connections',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			) : null }
@@ -217,7 +223,7 @@ export function ConnectionsList() {
 					as="h2"
 					title={ __(
 						'No connections yet',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					action={
 						canConfigure ? (
@@ -227,7 +233,7 @@ export function ConnectionsList() {
 							>
 								{ __(
 									'Start setup',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</Btn>
 						) : undefined
@@ -235,7 +241,7 @@ export function ConnectionsList() {
 				>
 					{ __(
 						'Connect your accounting, ERP or CRM system to start syncing.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</EmptyState>
 			) : null }
@@ -243,14 +249,14 @@ export function ConnectionsList() {
 				<Card
 					title={ __(
 						'Your connections',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					flush
 				>
 					<ResponsiveTable< ConnectionSummary, number >
 						caption={ __(
 							'Your connections',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						rows={ connections }
 						rowKey={ ( connection ) => connection.id }
@@ -259,7 +265,7 @@ export function ConnectionsList() {
 								id: 'connection',
 								header: __(
 									'Connection',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								primary: true,
 								cell: ( connection ) => (
@@ -289,7 +295,7 @@ export function ConnectionsList() {
 								id: 'type',
 								header: __(
 									'Type',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								cell: ( connection ) => (
 									<StatusBadge tone="neutral" icon="box">
@@ -301,7 +307,7 @@ export function ConnectionsList() {
 								id: 'state',
 								header: __(
 									'State',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								cell: ( connection ) => (
 									<ConnectionStateChip
@@ -313,7 +319,7 @@ export function ConnectionsList() {
 								id: 'last',
 								header: __(
 									'Last success',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								cell: ( connection ) => (
 									<DateTime
@@ -326,7 +332,7 @@ export function ConnectionsList() {
 								id: 'used',
 								header: __(
 									'Used for',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								wide: true,
 								cell: ( connection ) =>
@@ -336,7 +342,7 @@ export function ConnectionsList() {
 								id: 'open',
 								header: __(
 									'Open',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								hideHeader: true,
 								align: 'end',
@@ -351,7 +357,7 @@ export function ConnectionsList() {
 												aria-label={ sprintf(
 													/* translators: %s: connection name */ __(
 														'Reconnect %s',
-														'estasoft-erp-crm-sync-engine'
+														'estasoft-enterprise-erpcrm-sync-engine'
 													),
 													connection.label
 												) }
@@ -363,7 +369,7 @@ export function ConnectionsList() {
 											>
 												{ __(
 													'Reconnect',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												) }
 											</Btn>
 										) : null }
@@ -372,7 +378,7 @@ export function ConnectionsList() {
 											aria-label={ sprintf(
 												/* translators: %s: connection name */ __(
 													'Open %s',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												),
 												connection.label
 											) }
@@ -384,7 +390,7 @@ export function ConnectionsList() {
 										>
 											{ __(
 												'Open',
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											) }
 										</Btn>
 									</span>
@@ -398,19 +404,19 @@ export function ConnectionsList() {
 				<Card
 					title={ __(
 						'Add another connection',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				>
 					<p className="estasoft-sync-strong">
 						{ __(
 							'One store, more than one system',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</p>
 					<p className="estasoft-sync-muted">
 						{ __(
 							'For example Odoo for orders and stock, and HubSpot for contacts. Each connection has its own mapping, limits and pause switch.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</p>
 					<div className="estasoft-sync-actions">
@@ -429,7 +435,7 @@ export function ConnectionsList() {
 						>
 							{ __(
 								'Add a connection',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Btn>
 					</div>
@@ -456,7 +462,10 @@ export function ConnectionStateChip( {
 			return (
 				<StateChip
 					state="synced"
-					label={ __( 'Connected', 'estasoft-erp-crm-sync-engine' ) }
+					label={ __(
+						'Connected',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 				/>
 			);
 		case 'paused':
@@ -469,9 +478,12 @@ export function ConnectionStateChip( {
 						connection.status === 'paused_circuit'
 							? __(
 									'Paused: not answering',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								)
-							: __( 'Paused', 'estasoft-erp-crm-sync-engine' )
+							: __(
+									'Paused',
+									'estasoft-enterprise-erpcrm-sync-engine'
+								)
 					}
 				/>
 			);
@@ -481,7 +493,7 @@ export function ConnectionStateChip( {
 					state="retrying"
 					label={ __(
 						'Needs reconnect',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			);
@@ -491,7 +503,7 @@ export function ConnectionStateChip( {
 					state="queued"
 					label={ __(
 						'Disconnected',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			);
@@ -517,12 +529,12 @@ function ExpiryNotice( {
 	const shape = shapeOfEntry( entry );
 	const word =
 		shape === 'own_app'
-			? __( 'sign-in', 'estasoft-erp-crm-sync-engine' )
+			? __( 'sign-in', 'estasoft-enterprise-erpcrm-sync-engine' )
 			: shape === 'cloud_app'
-				? __( 'secret', 'estasoft-erp-crm-sync-engine' )
+				? __( 'secret', 'estasoft-enterprise-erpcrm-sync-engine' )
 				: shape === 'server_login'
-					? __( 'password', 'estasoft-erp-crm-sync-engine' )
-					: __( 'key', 'estasoft-erp-crm-sync-engine' );
+					? __( 'password', 'estasoft-enterprise-erpcrm-sync-engine' )
+					: __( 'key', 'estasoft-enterprise-erpcrm-sync-engine' );
 	return (
 		<Callout
 			tone={ expired || days <= 7 ? 'danger' : 'warning' }
@@ -539,12 +551,12 @@ function ExpiryNotice( {
 						{ shape === 'own_app'
 							? __(
 									'Sign in again',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								)
 							: sprintf(
 									/* translators: %s: "key", "secret" or "password" */ __(
 										'Replace the %s',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									word
 								) }
@@ -557,7 +569,7 @@ function ExpiryNotice( {
 					? sprintf(
 							/* translators: 1: system name, 2: "key", "secret", "password" or "sign-in", 3: date */ __(
 								'The %1$s %2$s ran out on %3$s. Syncing has stopped and orders wait in the queue.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							name,
 							word,
@@ -568,7 +580,7 @@ function ExpiryNotice( {
 								'The %1$s %2$s runs out on %3$s, in %4$d day.',
 								'The %1$s %2$s runs out on %3$s, in %4$d days.',
 								days,
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							name,
 							word,
@@ -581,12 +593,12 @@ function ExpiryNotice( {
 				{ shape === 'own_app'
 					? __(
 							'When it runs out, syncing stops and orders wait in the queue. Sign in again before then; your mappings stay.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						)
 					: sprintf(
 							/* translators: 1: system name, 2: "key", "secret" or "password" */ __(
 								'When it runs out, syncing stops and orders wait in the queue. Make a new %2$s in %1$s and paste it here; your mappings stay.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							name,
 							word

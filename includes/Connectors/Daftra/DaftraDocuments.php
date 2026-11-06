@@ -245,7 +245,7 @@ final class DaftraDocuments {
 			array(
 				'system' => DaftraConnector::LABEL,
 				'field'  => $what,
-				'reason' => '' !== $message ? $message : __( 'Daftra did not return the id of the new record.', 'estasoft-erp-crm-sync-engine' ),
+				'reason' => '' !== $message ? $message : __( 'Daftra did not return the id of the new record.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			),
 			null,
 			null,

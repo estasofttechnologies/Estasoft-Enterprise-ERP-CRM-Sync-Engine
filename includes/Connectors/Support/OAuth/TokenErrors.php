@@ -85,7 +85,7 @@ final class TokenErrors {
 			$context['date'] = $today;
 		}
 		if ( ErrorCode::Auth004 === $code ) {
-			$context['action'] = __( 'use the access this connection asks for', 'estasoft-erp-crm-sync-engine' );
+			$context['action'] = __( 'use the access this connection asks for', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		return new ConnectorError( $code, $context, $response->status, null, null, $detail );
 	}

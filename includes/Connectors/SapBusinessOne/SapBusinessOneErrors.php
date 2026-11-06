@@ -44,7 +44,7 @@ final class SapBusinessOneErrors {
 		$text = $this->message( $response );
 		$low  = strtolower( $text );
 		if ( 403 === $status || str_contains( $low, 'not authorized' ) || str_contains( $low, 'no permission' ) || str_contains( $low, 'authorization' ) ) {
-			return new ConnectorError( ErrorCode::Auth004, $base + array( 'action' => __( 'do this', 'estasoft-erp-crm-sync-engine' ) ), $status, null, null, 'authorisation' );
+			return new ConnectorError( ErrorCode::Auth004, $base + array( 'action' => __( 'do this', 'estasoft-enterprise-erpcrm-sync-engine' ) ), $status, null, null, 'authorisation' );
 		}
 		if ( str_contains( $low, 'locked' ) ) {
 			return new ConnectorError( ErrorCode::Net002, $base + array( 'status' => 409 ), 409, null, null, 'object locked' );
@@ -55,7 +55,7 @@ final class SapBusinessOneErrors {
 		return new ConnectorError(
 			ErrorCode::Val002,
 			$base + array(
-				'field'  => __( 'the request', 'estasoft-erp-crm-sync-engine' ),
+				'field'  => __( 'the request', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'reason' => $text,
 			),
 			$status,

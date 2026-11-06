@@ -152,7 +152,7 @@ final class DaftraConnector extends AbstractApiConnector {
 				array(
 					'system' => self::LABEL,
 					'field'  => 'subdomain',
-					'reason' => __( 'Enter only the name before .daftara.com, with letters, digits and hyphens.', 'estasoft-erp-crm-sync-engine' ),
+					'reason' => __( 'Enter only the name before .daftara.com, with letters, digits and hyphens.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				null,
 				null,
@@ -201,73 +201,73 @@ final class DaftraConnector extends AbstractApiConnector {
 	protected function credentialDefinition(): array {
 		$advanced = static fn( string $name, string $label, string $hint, string $preset = '', string $type = 'text', array $options = array() ): CredentialField => new CredentialField( $name, $label, false, false, $hint, $preset, $type, $options, 'advanced' );
 		return array(
-			new CredentialField( 'subdomain', __( 'Account name', 'estasoft-erp-crm-sync-engine' ), false, true, __( 'The part of your Daftra address before .daftara.com or .daftra.com.', 'estasoft-erp-crm-sync-engine' ) ),
+			new CredentialField( 'subdomain', __( 'Account name', 'estasoft-enterprise-erpcrm-sync-engine' ), false, true, __( 'The part of your Daftra address before .daftara.com or .daftra.com.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			CredentialFields::choice(
 				'domain',
-				__( 'Address ends with', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Address ends with', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				array(
 					'daftara.com' => 'daftara.com',
 					'daftra.com'  => 'daftra.com',
 				),
 				'daftara.com',
-				__( 'Daftra writes both. Use the one your account address ends with.', 'estasoft-erp-crm-sync-engine' )
+				__( 'Daftra writes both. Use the one your account address ends with.', 'estasoft-enterprise-erpcrm-sync-engine' )
 			),
-			CredentialFields::apiKey( 'api_key', __( 'API key', 'estasoft-erp-crm-sync-engine' ), __( 'Copy it from Settings, API in Daftra. Saved encrypted. It is never shown again.', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'store_id', __( 'Warehouse number', 'estasoft-erp-crm-sync-engine' ), __( 'The warehouse that documents are booked to. Empty: the account default.', 'estasoft-erp-crm-sync-engine' ) ),
+			CredentialFields::apiKey( 'api_key', __( 'API key', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Copy it from Settings, API in Daftra. Saved encrypted. It is never shown again.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'store_id', __( 'Warehouse number', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'The warehouse that documents are booked to. Empty: the account default.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			$advanced(
 				'invoice_state',
-				__( 'Invoices', 'estasoft-erp-crm-sync-engine' ),
-				__( 'Issued invoices get their official number. Drafts wait for a person to issue them in Daftra.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Invoices', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				__( 'Issued invoices get their official number. Drafts wait for a person to issue them in Daftra.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'issued',
 				'select',
 				array(
-					'issued' => __( 'Issue after the total is checked', 'estasoft-erp-crm-sync-engine' ),
-					'draft'  => __( 'Leave as draft', 'estasoft-erp-crm-sync-engine' ),
+					'issued' => __( 'Issue after the total is checked', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'draft'  => __( 'Leave as draft', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				)
 			),
 			$advanced(
 				'record_payment',
-				__( 'Record payments', 'estasoft-erp-crm-sync-engine' ),
-				__( 'Paid orders also create a payment in Daftra. Needs the payment method below.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Record payments', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				__( 'Paid orders also create a payment in Daftra. Needs the payment method below.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'no',
 				'select',
 				array(
-					'no'  => __( 'No', 'estasoft-erp-crm-sync-engine' ),
-					'yes' => __( 'Yes', 'estasoft-erp-crm-sync-engine' ),
+					'no'  => __( 'No', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'yes' => __( 'Yes', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				)
 			),
-			$advanced( 'payment_method', __( 'Payment method', 'estasoft-erp-crm-sync-engine' ), __( 'The key of an active payment method in Daftra, for example bank or cash.', 'estasoft-erp-crm-sync-engine' ) ),
+			$advanced( 'payment_method', __( 'Payment method', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'The key of an active payment method in Daftra, for example bank or cash.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			$advanced(
 				'unknown_sku',
-				__( 'A product Daftra does not know', 'estasoft-erp-crm-sync-engine' ),
-				__( 'Stop the order, or send the line as text without a product.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'A product Daftra does not know', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				__( 'Stop the order, or send the line as text without a product.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'refuse',
 				'select',
 				array(
-					'refuse'    => __( 'Stop the order', 'estasoft-erp-crm-sync-engine' ),
-					'free_text' => __( 'Send a text line', 'estasoft-erp-crm-sync-engine' ),
+					'refuse'    => __( 'Stop the order', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'free_text' => __( 'Send a text line', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				)
 			),
 			$advanced(
 				'link_credit_notes',
-				__( 'Link credit notes to the invoice', 'estasoft-erp-crm-sync-engine' ),
-				__( 'Daftra says the link may need checking on your account. The credit note always names the order.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Link credit notes to the invoice', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				__( 'Daftra says the link may need checking on your account. The credit note always names the order.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'no',
 				'select',
 				array(
-					'no'  => __( 'No', 'estasoft-erp-crm-sync-engine' ),
-					'yes' => __( 'Yes', 'estasoft-erp-crm-sync-engine' ),
+					'no'  => __( 'No', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'yes' => __( 'Yes', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				)
 			),
 			$advanced(
 				'total_mismatch',
-				__( 'A total that differs from the shop', 'estasoft-erp-crm-sync-engine' ),
-				__( 'Stop before issuing, or issue and warn.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'A total that differs from the shop', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				__( 'Stop before issuing, or issue and warn.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'fail',
 				'select',
 				array(
-					'fail' => __( 'Stop the invoice', 'estasoft-erp-crm-sync-engine' ),
-					'warn' => __( 'Warn and go on', 'estasoft-erp-crm-sync-engine' ),
+					'fail' => __( 'Stop the invoice', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'warn' => __( 'Warn and go on', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				)
 			),
 		);
@@ -306,7 +306,7 @@ final class DaftraConnector extends AbstractApiConnector {
 				array(
 					'system' => self::LABEL,
 					'field'  => 'subscription',
-					'reason' => __( 'The Daftra subscription has expired.', 'estasoft-erp-crm-sync-engine' ),
+					'reason' => __( 'The Daftra subscription has expired.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				null,
 				null,
@@ -398,7 +398,7 @@ final class DaftraConnector extends AbstractApiConnector {
 					array(
 						'system' => self::LABEL,
 						'field'  => $item->entityType->value,
-						'reason' => __( 'This connector does not send this kind of item.', 'estasoft-erp-crm-sync-engine' ),
+						'reason' => __( 'This connector does not send this kind of item.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					),
 					null,
 					null,
@@ -508,7 +508,7 @@ final class DaftraConnector extends AbstractApiConnector {
 			}
 			$codes[] = array(
 				'code'         => $tax['id'],
-				'name'         => $tax['name'] . ( $tax['included'] ? ' (' . __( 'included in prices', 'estasoft-erp-crm-sync-engine' ) . ')' : '' ),
+				'name'         => $tax['name'] . ( $tax['included'] ? ' (' . __( 'included in prices', 'estasoft-enterprise-erpcrm-sync-engine' ) . ')' : '' ),
 				'rate_percent' => null === $tax['rate_bp'] ? '0' : $this->amounts->decimalString( $tax['rate_bp'], 2 ),
 			);
 		}

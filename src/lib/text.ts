@@ -23,17 +23,17 @@ import { formatNumber, formatTime } from './format';
 export function stateLabel( state: ItemState ): string {
 	switch ( state ) {
 		case 'queued':
-			return __( 'Queued', 'estasoft-erp-crm-sync-engine' );
+			return __( 'Queued', 'estasoft-enterprise-erpcrm-sync-engine' );
 		case 'syncing':
-			return __( 'Syncing', 'estasoft-erp-crm-sync-engine' );
+			return __( 'Syncing', 'estasoft-enterprise-erpcrm-sync-engine' );
 		case 'synced':
-			return __( 'Synced', 'estasoft-erp-crm-sync-engine' );
+			return __( 'Synced', 'estasoft-enterprise-erpcrm-sync-engine' );
 		case 'retrying':
-			return __( 'Retrying', 'estasoft-erp-crm-sync-engine' );
+			return __( 'Retrying', 'estasoft-enterprise-erpcrm-sync-engine' );
 		case 'failed':
-			return __( 'Failed', 'estasoft-erp-crm-sync-engine' );
+			return __( 'Failed', 'estasoft-enterprise-erpcrm-sync-engine' );
 		case 'skipped':
-			return __( 'Skipped', 'estasoft-erp-crm-sync-engine' );
+			return __( 'Skipped', 'estasoft-enterprise-erpcrm-sync-engine' );
 	}
 }
 
@@ -48,32 +48,32 @@ export function stateMeaning( state: ItemState ): string {
 		case 'queued':
 			return __(
 				'Waiting its turn. Nothing has been sent yet.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 		case 'syncing':
 			return __(
 				'Being sent to the system right now.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 		case 'synced':
 			return __(
 				'The system accepted it. Its number is saved on the order.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 		case 'retrying':
 			return __(
 				'The system did not answer well. The plugin will try again on its own.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 		case 'failed':
 			return __(
 				'Retrying cannot fix it. A person has to change something.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 		case 'skipped':
 			return __(
 				'A person chose not to send it. It can be restored.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 	}
 }
@@ -87,14 +87,20 @@ export function stateMeaning( state: ItemState ): string {
 export function connectionStatusLabel( status: ConnectionStatus ): string {
 	switch ( status ) {
 		case 'active':
-			return __( 'Connected', 'estasoft-erp-crm-sync-engine' );
+			return __( 'Connected', 'estasoft-enterprise-erpcrm-sync-engine' );
 		case 'paused':
 		case 'paused_circuit':
-			return __( 'Paused', 'estasoft-erp-crm-sync-engine' );
+			return __( 'Paused', 'estasoft-enterprise-erpcrm-sync-engine' );
 		case 'needs_reconnect':
-			return __( 'Needs reconnect', 'estasoft-erp-crm-sync-engine' );
+			return __(
+				'Needs reconnect',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			);
 		case 'disconnected':
-			return __( 'Disconnected', 'estasoft-erp-crm-sync-engine' );
+			return __(
+				'Disconnected',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			);
 	}
 }
 
@@ -109,7 +115,7 @@ export function systemName(
 		Pick< ConnectionSummary, 'connector' | 'label' > | null | undefined
 ): string {
 	if ( ! connection ) {
-		return __( 'your system', 'estasoft-erp-crm-sync-engine' );
+		return __( 'your system', 'estasoft-enterprise-erpcrm-sync-engine' );
 	}
 	const known: Record< string, string > = { odoo: 'Odoo' };
 	if ( known[ connection.connector ] ) {
@@ -132,17 +138,17 @@ export function systemName(
 export function eventLabel( event: string, entityType: EntityType ): string {
 	const key = event.replace( /^[a-z]+\./, '' ).toLowerCase();
 	if ( entityType === 'refund' || key === 'refund' || key === 'refunded' ) {
-		return __( 'Refund', 'estasoft-erp-crm-sync-engine' );
+		return __( 'Refund', 'estasoft-enterprise-erpcrm-sync-engine' );
 	}
 	switch ( entityType ) {
 		case 'customer':
-			return __( 'Customer', 'estasoft-erp-crm-sync-engine' );
+			return __( 'Customer', 'estasoft-enterprise-erpcrm-sync-engine' );
 		case 'stock':
-			return __( 'Stock', 'estasoft-erp-crm-sync-engine' );
+			return __( 'Stock', 'estasoft-enterprise-erpcrm-sync-engine' );
 		case 'tracking':
-			return __( 'Tracking', 'estasoft-erp-crm-sync-engine' );
+			return __( 'Tracking', 'estasoft-enterprise-erpcrm-sync-engine' );
 		case 'invoice':
-			return __( 'Invoice', 'estasoft-erp-crm-sync-engine' );
+			return __( 'Invoice', 'estasoft-enterprise-erpcrm-sync-engine' );
 		default:
 			break;
 	}
@@ -150,22 +156,34 @@ export function eventLabel( event: string, entityType: EntityType ): string {
 		case 'created':
 		case 'create':
 		case 'placed':
-			return __( 'Order created', 'estasoft-erp-crm-sync-engine' );
+			return __(
+				'Order created',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			);
 		case 'paid':
 		case 'payment':
 		case 'payment_complete':
-			return __( 'Order paid', 'estasoft-erp-crm-sync-engine' );
+			return __( 'Order paid', 'estasoft-enterprise-erpcrm-sync-engine' );
 		case 'completed':
 		case 'complete':
-			return __( 'Order completed', 'estasoft-erp-crm-sync-engine' );
+			return __(
+				'Order completed',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			);
 		case 'cancelled':
 		case 'canceled':
-			return __( 'Order cancelled', 'estasoft-erp-crm-sync-engine' );
+			return __(
+				'Order cancelled',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			);
 		case 'updated':
 		case 'update':
-			return __( 'Order updated', 'estasoft-erp-crm-sync-engine' );
+			return __(
+				'Order updated',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			);
 		default:
-			return __( 'Order', 'estasoft-erp-crm-sync-engine' );
+			return __( 'Order', 'estasoft-enterprise-erpcrm-sync-engine' );
 	}
 }
 
@@ -204,7 +222,9 @@ export function catalogMessage(
 		return '';
 	}
 	return fillPlaceholders( info.message, {
-		system: system || __( 'your system', 'estasoft-erp-crm-sync-engine' ),
+		system:
+			system ||
+			__( 'your system', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		...context,
 	} );
 }
@@ -224,7 +244,7 @@ export function errorText( error: unknown ): string {
 	}
 	return __(
 		'Something went wrong. Try again.',
-		'estasoft-erp-crm-sync-engine'
+		'estasoft-enterprise-erpcrm-sync-engine'
 	);
 }
 
@@ -251,7 +271,7 @@ export function whatHappened(
 	if ( item.mode === 'shadow' && item.state === 'synced' ) {
 		return __(
 			'Compared with the system. Nothing was sent.',
-			'estasoft-erp-crm-sync-engine'
+			'estasoft-enterprise-erpcrm-sync-engine'
 		);
 	}
 	switch ( item.state ) {
@@ -259,32 +279,38 @@ export function whatHappened(
 			return item.waiting_for_earlier
 				? __(
 						'Waiting for an earlier step of this order',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					)
-				: __( 'Waiting to be sent', 'estasoft-erp-crm-sync-engine' );
+				: __(
+						'Waiting to be sent',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					);
 		case 'syncing':
 			return sprintf(
 				/* translators: %s: system name such as Odoo */
-				__( 'Sending to %s', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Sending to %s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				system
 			);
 		case 'synced':
 			if ( item.entity_type === 'refund' && item.external_ref ) {
 				return sprintf(
 					/* translators: %s: credit note number */
-					__( 'Credit note %s', 'estasoft-erp-crm-sync-engine' ),
+					__(
+						'Credit note %s',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					),
 					item.external_ref
 				);
 			}
 			if ( item.external_ref ) {
 				return sprintf(
 					/* translators: 1: system name, 2: number in that system such as S00490 */
-					__( '%1$s %2$s', 'estasoft-erp-crm-sync-engine' ),
+					__( '%1$s %2$s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					system,
 					item.external_ref
 				);
 			}
-			return __( 'Synced', 'estasoft-erp-crm-sync-engine' );
+			return __( 'Synced', 'estasoft-enterprise-erpcrm-sync-engine' );
 		case 'retrying': {
 			const problem = problemOf( item, system );
 			const retriesAllowed = Math.max( 1, item.max_attempts - 1 );
@@ -295,7 +321,7 @@ export function whatHappened(
 				problem ||
 				__(
 					'The system did not answer well',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				);
 			const retry = Math.max( 1, item.attempt );
 			if ( ! next ) {
@@ -303,7 +329,7 @@ export function whatHappened(
 					/* translators: 1: problem such as "Odoo answered 503", 2: retry number, 3: number of retries allowed */
 					__(
 						'%1$s. Retry %2$d of %3$d',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					reason,
 					retry,
@@ -314,7 +340,7 @@ export function whatHappened(
 				/* translators: 1: problem such as "Odoo answered 503", 2: retry number, 3: number of retries allowed, 4: clock time of the next try */
 				__(
 					'%1$s. Retry %2$d of %3$d, next try %4$s',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				reason,
 				retry,
@@ -325,7 +351,7 @@ export function whatHappened(
 		case 'failed':
 			return (
 				problemOf( item, system ) ||
-				__( 'Failed', 'estasoft-erp-crm-sync-engine' )
+				__( 'Failed', 'estasoft-enterprise-erpcrm-sync-engine' )
 			);
 		case 'skipped':
 			if ( item.skip_reason ) {
@@ -333,7 +359,7 @@ export function whatHappened(
 					/* translators: 1: reason the person gave, 2: clock time */
 					__(
 						'%1$s. Skipped at %2$s',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					item.skip_reason,
 					formatTime( item.updated_at, cfg )
@@ -341,7 +367,7 @@ export function whatHappened(
 			}
 			return sprintf(
 				/* translators: %s: clock time */
-				__( 'Skipped at %s', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Skipped at %s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				formatTime( item.updated_at, cfg )
 			);
 	}
@@ -356,7 +382,12 @@ export function whatHappened(
 export function daysPhrase( count: number ): string {
 	return sprintf(
 		/* translators: %d: number of days */
-		_n( '%d day', '%d days', count, 'estasoft-erp-crm-sync-engine' ),
+		_n(
+			'%d day',
+			'%d days',
+			count,
+			'estasoft-enterprise-erpcrm-sync-engine'
+		),
 		count
 	);
 }
@@ -370,7 +401,12 @@ export function daysPhrase( count: number ): string {
 export function groupsPhrase( count: number ): string {
 	return sprintf(
 		/* translators: %d: number of groups of failed orders */
-		_n( '%d group', '%d groups', count, 'estasoft-erp-crm-sync-engine' ),
+		_n(
+			'%d group',
+			'%d groups',
+			count,
+			'estasoft-enterprise-erpcrm-sync-engine'
+		),
 		count
 	);
 }
@@ -384,7 +420,12 @@ export function groupsPhrase( count: number ): string {
 export function notesPhrase( count: number ): string {
 	return sprintf(
 		/* translators: %d: number of notes */
-		_n( '%d note', '%d notes', count, 'estasoft-erp-crm-sync-engine' ),
+		_n(
+			'%d note',
+			'%d notes',
+			count,
+			'estasoft-enterprise-erpcrm-sync-engine'
+		),
 		count
 	);
 }
@@ -399,7 +440,12 @@ export function notesPhrase( count: number ): string {
 export function ordersPhrase( count: number, locale?: string ): string {
 	return sprintf(
 		/* translators: %s: number of orders */
-		_n( '%s order', '%s orders', count, 'estasoft-erp-crm-sync-engine' ),
+		_n(
+			'%s order',
+			'%s orders',
+			count,
+			'estasoft-enterprise-erpcrm-sync-engine'
+		),
 		locale ? formatNumber( count, locale ) : String( count )
 	);
 }

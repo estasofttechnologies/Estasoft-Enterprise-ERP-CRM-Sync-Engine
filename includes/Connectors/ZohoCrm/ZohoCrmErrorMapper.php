@@ -40,13 +40,13 @@ final class ZohoCrmErrorMapper {
 			return new ConnectorError( ErrorCode::Rate001, array( 'n' => $wait ), 429, $wait, null, 'rate limited' );
 		}
 		if ( 401 === $status && 'OAUTH_SCOPE_MISMATCH' === $code ) {
-			return new ConnectorError( ErrorCode::Auth004, array( 'action' => __( 'use the access this connection asks for', 'estasoft-erp-crm-sync-engine' ) ), 401, null, null, 'scope mismatch' );
+			return new ConnectorError( ErrorCode::Auth004, array( 'action' => __( 'use the access this connection asks for', 'estasoft-enterprise-erpcrm-sync-engine' ) ), 401, null, null, 'scope mismatch' );
 		}
 		if ( 401 === $status ) {
 			return new ConnectorError( ErrorCode::Auth002, array(), 401, null, null, 'unauthorized' );
 		}
 		if ( 403 === $status || 'NO_PERMISSION' === $code ) {
-			return new ConnectorError( ErrorCode::Auth004, array( 'action' => __( 'do this', 'estasoft-erp-crm-sync-engine' ) ), 403, null, null, 'forbidden' );
+			return new ConnectorError( ErrorCode::Auth004, array( 'action' => __( 'do this', 'estasoft-enterprise-erpcrm-sync-engine' ) ), 403, null, null, 'forbidden' );
 		}
 		if ( $status >= 400 && $status < 500 && 408 !== $status ) {
 			return self::record( $row, $status );
@@ -66,11 +66,11 @@ final class ZohoCrmErrorMapper {
 		$text    = trim( (string) ( $row['code'] ?? '' ) . ' ' . (string) ( $row['message'] ?? '' ) );
 		if ( 'Pipeline' === $field && 'MANDATORY_NOT_FOUND' === strtoupper( (string) ( $row['code'] ?? '' ) ) ) {
 			// The Deals module has pipelines on, which makes the Pipeline field mandatory (insert records page).
-			$text = __( 'Zoho CRM needs a pipeline on every deal. Enter the pipeline name in the connection settings and test the connection.', 'estasoft-erp-crm-sync-engine' );
+			$text = __( 'Zoho CRM needs a pipeline on every deal. Enter the pipeline name in the connection settings and test the connection.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		if ( '' === $text ) {
 			/* translators: 1: HTTP status */
-			$text = sprintf( __( 'The system answered with status %d.', 'estasoft-erp-crm-sync-engine' ), $status );
+			$text = sprintf( __( 'The system answered with status %d.', 'estasoft-enterprise-erpcrm-sync-engine' ), $status );
 		}
 		return new ConnectorError(
 			ErrorCode::Val002,

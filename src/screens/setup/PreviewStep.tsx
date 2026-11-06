@@ -30,7 +30,7 @@ export function PreviewStep( {
 				rows={ 4 }
 				label={ __(
 					'Loading your latest orders',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			/>
 		);
@@ -48,7 +48,7 @@ export function PreviewStep( {
 			<Callout tone="info">
 				{ __(
 					'No orders yet? A new store has nothing to preview. Place a test order in WooCommerce, or continue without a preview.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			</Callout>
 		);

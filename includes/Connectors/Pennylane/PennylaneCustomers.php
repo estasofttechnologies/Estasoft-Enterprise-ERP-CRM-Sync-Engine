@@ -99,7 +99,7 @@ final class PennylaneCustomers {
 		if ( 'collective' === $policy ) {
 			$id = $options->text( 'collective_customer_id' );
 			if ( '' === $id || ! $api->get( 'customers/' . rawurlencode( $id ), array(), null, array( 'allow' => array( 404 ) ) )->isSuccess() ) {
-				return Refusal::value( PennylaneConnector::LABEL, 'collective_customer_id', __( 'The collective customer is not set, or Pennylane has no customer with that id.', 'estasoft-erp-crm-sync-engine' ), 'collective customer missing' );
+				return Refusal::value( PennylaneConnector::LABEL, 'collective_customer_id', __( 'The collective customer is not set, or Pennylane has no customer with that id.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'collective customer missing' );
 			}
 			return array(
 				'id'      => $id,
@@ -116,12 +116,12 @@ final class PennylaneCustomers {
 			);
 		}
 		if ( 'match_only' === $policy ) {
-			return Refusal::value( PennylaneConnector::LABEL, 'customer.email', __( 'Pennylane has no customer for this buyer and the customer setting is match only.', 'estasoft-erp-crm-sync-engine' ), 'no matching customer' );
+			return Refusal::value( PennylaneConnector::LABEL, 'customer.email', __( 'Pennylane has no customer for this buyer and the customer setting is match only.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'no matching customer' );
 		}
 		$created = $api->post( $company ? 'company_customers' : 'individual_customers', array(), $this->body( $customer, $reference, $company ) )->json();
 		$id      = PayloadReader::text( $created['id'] ?? '' );
 		if ( '' === $id ) {
-			return Refusal::value( PennylaneConnector::LABEL, 'customer', __( 'Pennylane did not return the new customer.', 'estasoft-erp-crm-sync-engine' ), 'no customer id' );
+			return Refusal::value( PennylaneConnector::LABEL, 'customer', __( 'Pennylane did not return the new customer.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'no customer id' );
 		}
 		return array(
 			'id'      => $id,

@@ -36,7 +36,7 @@ function causesOf( report: ShadowReport ): Cause[] {
 		}
 		for ( const field of row.fields.length > 0
 			? row.fields
-			: [ __( 'Other', 'estasoft-erp-crm-sync-engine' ) ] ) {
+			: [ __( 'Other', 'estasoft-enterprise-erpcrm-sync-engine' ) ] ) {
 			map.set( field, [ ...( map.get( field ) ?? [] ), row ] );
 		}
 	}
@@ -61,8 +61,16 @@ export function ShadowResults() {
 	);
 	const [ dialog, setDialog ] = useState( false );
 	const crumbs = [
-		{ label: __( 'Dashboard', 'estasoft-erp-crm-sync-engine' ), to: '/' },
-		{ label: __( 'Shadow mode', 'estasoft-erp-crm-sync-engine' ) },
+		{
+			label: __( 'Dashboard', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			to: '/',
+		},
+		{
+			label: __(
+				'Shadow mode',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
+		},
 	];
 	if ( report.loading ) {
 		return (
@@ -70,7 +78,7 @@ export function ShadowResults() {
 				<PageHeader
 					title={ __(
 						'Shadow mode results',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					breadcrumb={ crumbs }
 				/>
@@ -78,7 +86,7 @@ export function ShadowResults() {
 					rows={ 4 }
 					label={ __(
 						'Loading the comparison',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			</>
@@ -91,7 +99,7 @@ export function ShadowResults() {
 				<PageHeader
 					title={ __(
 						'Shadow mode results',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					breadcrumb={ crumbs }
 				/>
@@ -122,13 +130,13 @@ export function ShadowResults() {
 			<PageHeader
 				title={ __(
 					'Shadow mode results',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				breadcrumb={ crumbs }
 				description={ sprintf(
 					/* translators: 1: day, 2: total days, 3: system name */ __(
 						'Day %1$d of %2$d. Nothing has been sent to %3$s.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					data.info.day,
 					data.info.of_days,
@@ -138,7 +146,7 @@ export function ShadowResults() {
 					<Btn icon="download" onClick={ csv }>
 						{ __(
 							'Download as CSV',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</Btn>
 				}
@@ -146,31 +154,43 @@ export function ShadowResults() {
 			<KpiGrid
 				items={ [
 					{
-						label: __( 'Compared', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'Compared',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						value: data.info.items,
 						hint: sprintf(
 							/* translators: %s: number of days such as "3 days" */
 							__(
 								'orders in %s',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							daysPhrase( data.info.day )
 						),
 					},
 					{
-						label: __( 'Match', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'Match',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						value: data.info.matches,
-						hint: __( 'identical', 'estasoft-erp-crm-sync-engine' ),
+						hint: __(
+							'identical',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 					},
 					{
-						label: __( 'Differ', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'Differ',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						value: data.info.differs,
 						hint: sprintf(
 							/* translators: %d: number of causes */ _n(
 								'in %d cause',
 								'in %d causes',
 								causes.length,
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							causes.length
 						),
@@ -179,14 +199,14 @@ export function ShadowResults() {
 						label: sprintf(
 							/* translators: %s: system name */ __(
 								'Not in %s yet',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							system
 						),
 						value: data.info.not_found,
 						hint: __(
 							'expected in shadow mode',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 					},
 				] }
@@ -194,11 +214,11 @@ export function ShadowResults() {
 			<Card
 				title={ __(
 					'Differences by cause',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				description={ __(
 					'Matched by the reference WC- plus the order number, which your team copies into the system.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				flush
 			>
@@ -206,19 +226,19 @@ export function ShadowResults() {
 					<EmptyState
 						title={ __(
 							'No differences',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					>
 						{ __(
 							'Every order that your team entered matches what the plugin would have sent.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</EmptyState>
 				) : (
 					<ResponsiveTable< Cause, string >
 						caption={ __(
 							'Differences by cause',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						rows={ causes }
 						rowKey={ ( cause ) => cause.field }
@@ -227,7 +247,7 @@ export function ShadowResults() {
 								id: 'cause',
 								header: __(
 									'Cause',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								primary: true,
 								cell: ( cause ) => (
@@ -240,7 +260,7 @@ export function ShadowResults() {
 								id: 'orders',
 								header: __(
 									'Orders',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								cell: ( cause ) => cause.orders.length,
 							},
@@ -248,7 +268,7 @@ export function ShadowResults() {
 								id: 'example',
 								header: __(
 									'Examples',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								wide: true,
 								cell: ( cause ) =>
@@ -261,7 +281,7 @@ export function ShadowResults() {
 								id: 'open',
 								header: __(
 									'Open',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								hideHeader: true,
 								align: 'end',
@@ -278,7 +298,7 @@ export function ShadowResults() {
 										aria-label={ sprintf(
 											/* translators: 1: number of orders, 2: cause */ __(
 												'Open the first of %1$d orders: %2$s',
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											),
 											cause.orders.length,
 											cause.field
@@ -289,7 +309,7 @@ export function ShadowResults() {
 												'Open %d order',
 												'Open %d orders',
 												cause.orders.length,
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											),
 											cause.orders.length
 										) }
@@ -303,7 +323,7 @@ export function ShadowResults() {
 			<Card
 				title={ __(
 					'Ready to go live?',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			>
 				<p>
@@ -313,7 +333,7 @@ export function ShadowResults() {
 							'Shadow mode has run for %1$d of %2$d days. You can go live now. Only new orders are sent; the %3$d compared order is not sent again.',
 							'Shadow mode has run for %1$d of %2$d days. You can go live now. Only new orders are sent; the %3$d compared orders are not sent again.',
 							data.info.items,
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						data.info.day,
 						data.info.of_days,
@@ -326,12 +346,15 @@ export function ShadowResults() {
 							variant="primary"
 							onClick={ () => setDialog( true ) }
 						>
-							{ __( 'Go live', 'estasoft-erp-crm-sync-engine' ) }
+							{ __(
+								'Go live',
+								'estasoft-enterprise-erpcrm-sync-engine'
+							) }
 						</Btn>
 						<Btn onClick={ () => navigate( '/' ) }>
 							{ __(
 								'Keep comparing',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Btn>
 					</div>
@@ -339,7 +362,7 @@ export function ShadowResults() {
 					<Callout tone="info">
 						{ __(
 							'Only an administrator can go live.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</Callout>
 				) }
@@ -348,11 +371,11 @@ export function ShadowResults() {
 				<ConfirmDialog
 					title={ __(
 						'Go live now?',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					confirmLabel={ __(
 						'Go live',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					onClose={ () => setDialog( false ) }
 					onConfirm={ async () => {
@@ -362,7 +385,7 @@ export function ShadowResults() {
 							kind: 'success',
 							text: __(
 								'You are live. New orders are sent as they arrive.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 						} );
 						navigate( '/' );
@@ -372,7 +395,7 @@ export function ShadowResults() {
 						{ sprintf(
 							/* translators: %s: system name */ __(
 								'New orders will be sent to %s as they arrive. Orders compared in shadow mode are not sent again.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							system
 						) }

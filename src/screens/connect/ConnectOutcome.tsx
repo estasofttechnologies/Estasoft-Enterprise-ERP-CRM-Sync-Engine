@@ -24,7 +24,7 @@ export function TestChecks( { checks }: { checks: TestCheck[] } ) {
 			className="estasoft-sync-checks"
 			aria-label={ __(
 				'The steps of the test',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			) }
 		>
 			{ checks.map( ( check ) => (
@@ -121,7 +121,7 @@ export function ConnectOutcome( {
 					<p className="estasoft-sync-strong">
 						{ __(
 							'Connected, but one thing is missing.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</p>
 					<p>
@@ -129,7 +129,7 @@ export function ConnectOutcome( {
 							? sprintf(
 									/* translators: 1: system name, 2: list of missing permissions */ __(
 										'%1$s did not give access to everything we need. We could not: %2$s. Sign in again and approve all the items listed above.',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									system,
 									shown.missing_permissions.join( ', ' )
@@ -137,7 +137,7 @@ export function ConnectOutcome( {
 							: sprintf(
 									/* translators: 1: system and version, 2: list of missing permissions, 3: system name */ __(
 										'%1$s answered, but this user cannot do the following: %2$s. In %3$s, give the user the access right it needs, then test again.',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									shown.version || system,
 									shown.missing_permissions.join( ', ' ),
@@ -151,7 +151,7 @@ export function ConnectOutcome( {
 								{ ' ' }
 								{ __(
 									'Nothing was saved yet.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</>
 						) : null }
@@ -172,7 +172,7 @@ export function ConnectOutcome( {
 								/* translators: %s: system name */
 								__(
 									'%s could not be reached or refused the test.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								system
 							) }{ ' ' }
@@ -184,7 +184,7 @@ export function ConnectOutcome( {
 								{ ' ' }
 								{ __(
 									'Nothing was saved.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</>
 						) : null }

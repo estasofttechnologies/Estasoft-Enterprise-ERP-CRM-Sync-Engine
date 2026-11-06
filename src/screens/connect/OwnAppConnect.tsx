@@ -47,15 +47,15 @@ function asks( type: SystemEntry[ 'type' ] ): string[] {
 		return [
 			__(
 				'Read and create contacts and companies, so each customer matches one contact.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			__(
 				'Create deals, or notes, for your orders.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			__(
 				'Read your pipelines and stages, so you can map them.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 		];
 	}
@@ -63,34 +63,34 @@ function asks( type: SystemEntry[ 'type' ] ): string[] {
 		return [
 			__(
 				'Read and create customers, and read your products.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			__(
 				'Create sales orders, invoices and credit notes for your orders and refunds.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			__(
 				'Read stock levels and tax codes, where the system offers them.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 		];
 	}
 	return [
 		__(
 			'Read and create contacts, so each customer matches one contact.',
-			'estasoft-erp-crm-sync-engine'
+			'estasoft-enterprise-erpcrm-sync-engine'
 		),
 		__(
 			'Create invoices, and payments if you choose that, for your orders.',
-			'estasoft-erp-crm-sync-engine'
+			'estasoft-enterprise-erpcrm-sync-engine'
 		),
 		__(
 			'Create credit notes for refunds.',
-			'estasoft-erp-crm-sync-engine'
+			'estasoft-enterprise-erpcrm-sync-engine'
 		),
 		__(
 			'Read your chart of accounts and tax rates, so you can map them.',
-			'estasoft-erp-crm-sync-engine'
+			'estasoft-enterprise-erpcrm-sync-engine'
 		),
 	];
 }
@@ -121,12 +121,15 @@ export function OwnAppConnect( {
 		allFields.find( ( field ) => isDisplayField( field ) ) ??
 		( {
 			name: 'redirect_uri',
-			label: __( 'Redirect address', 'estasoft-erp-crm-sync-engine' ),
+			label: __(
+				'Redirect address',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			secret: false,
 			required: false,
 			hint: __(
 				'Add this address to the redirect addresses of your app. It must match exactly.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			default: redirectAddress( boot ),
 			type: 'display',
@@ -166,7 +169,10 @@ export function OwnAppConnect( {
 		signIn.busy ? 'leaving' : 'form',
 		sprintf(
 			/* translators: %s: system name */
-			__( 'Opening the %s sign-in page', 'estasoft-erp-crm-sync-engine' ),
+			__(
+				'Opening the %s sign-in page',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			system
 		)
 	);
@@ -262,7 +268,7 @@ export function OwnAppConnect( {
 					<p className="estasoft-sync-muted">
 						{ __(
 							'Saved credentials cannot be stored until you add the key line to wp-config.php. The Connections screen shows it.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</p>
 				</Callout>
@@ -273,7 +279,7 @@ export function OwnAppConnect( {
 						/* translators: %s: system name */
 						__(
 							'Your app details are saved, but you have not signed in at %s yet. Press the sign-in button below.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						system
 					) }
@@ -290,7 +296,7 @@ export function OwnAppConnect( {
 							/* translators: 1: system name, 2: system name again */
 							__(
 								'%1$s does not let one plugin sign in for every store. You create a small app in your own %2$s account, once. It usually takes a few minutes.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							system,
 							system
@@ -340,7 +346,7 @@ export function OwnAppConnect( {
 							/* translators: %s: system name */
 							__(
 								'Step 2: sign in at %s',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							system
 						) }
@@ -350,7 +356,7 @@ export function OwnAppConnect( {
 							/* translators: %s: system name */
 							__(
 								'%s opens its own sign-in page. After you approve, you come back here.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							system
 						) }
@@ -358,7 +364,7 @@ export function OwnAppConnect( {
 					<p>
 						{ __(
 							'The plugin asks for access to what syncing needs:',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</p>
 					<ul className="estasoft-sync-list">
@@ -369,7 +375,7 @@ export function OwnAppConnect( {
 					<p className="estasoft-sync-muted">
 						{ __(
 							'The plugin never sees your password. The vendor’s page lists exactly what you approve.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</p>
 					<div className="estasoft-sync-actions">
@@ -385,7 +391,7 @@ export function OwnAppConnect( {
 								/* translators: %s: system name */
 								__(
 									'Save and sign in at %s',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								system
 							) }
@@ -402,7 +408,7 @@ export function OwnAppConnect( {
 								/* translators: %s: system name */
 								__(
 									'Saving, then opening the %s sign-in page…',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								system
 							) }
@@ -418,7 +424,7 @@ export function OwnAppConnect( {
 				<p className="estasoft-sync-muted">
 					{ __(
 						'Continue stays off until you have signed in and the test passes.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</p>
 			</Card>
@@ -427,7 +433,7 @@ export function OwnAppConnect( {
 					/* translators: %s: system name */
 					__(
 						'What to expect from %s',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					system
 				) }
@@ -445,14 +451,14 @@ export function OwnAppConnect( {
 			<Card
 				title={ __(
 					'If the sign-in does not finish',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			>
 				<ul className="estasoft-sync-list">
 					<li>
 						{ __(
 							'Cancelled: nothing is connected. Press the sign-in button to try again. If the sign-in page did not open, check that your browser is not blocking it. (SYNC-AUTH-003)',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</li>
 					<li>
@@ -460,7 +466,7 @@ export function OwnAppConnect( {
 							/* translators: %s: system name */
 							__(
 								'Only partly approved: %s did not give access to everything we need. Sign in again and approve all the items. (SYNC-AUTH-004)',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							system
 						) }

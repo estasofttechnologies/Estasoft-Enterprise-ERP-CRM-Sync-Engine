@@ -91,12 +91,12 @@ final class HubSpotConnector extends AbstractSalesConnector {
 	 */
 	protected function credentialDefinition(): array {
 		return array(
-			new CredentialField( 'access_token', __( 'Service key', 'estasoft-erp-crm-sync-engine' ), true, true, __( 'Saved encrypted. It is never shown again.', 'estasoft-erp-crm-sync-engine' ), '', 'password' ),
-			new CredentialField( 'pipeline', __( 'Deal pipeline id', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Leave empty to use the first pipeline.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
-			new CredentialField( 'deal_stage', __( 'Stage id for unpaid orders', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Leave empty to use the first stage of the pipeline.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
-			new CredentialField( 'deal_stage_paid', __( 'Stage id for paid orders', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Leave empty to use the pipeline\'s closed-won stage.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
-			new CredentialField( 'portal_id', __( 'Hub ID', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Optional. Only used to build links to deals.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
-			new CredentialField( 'api_version', __( 'API version', 'estasoft-erp-crm-sync-engine' ), false, false, '', '2026-03', 'select', array_combine( self::VERSIONS, self::VERSIONS ), 'advanced' ),
+			new CredentialField( 'access_token', __( 'Service key', 'estasoft-enterprise-erpcrm-sync-engine' ), true, true, __( 'Saved encrypted. It is never shown again.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'password' ),
+			new CredentialField( 'pipeline', __( 'Deal pipeline id', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Leave empty to use the first pipeline.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'advanced' ),
+			new CredentialField( 'deal_stage', __( 'Stage id for unpaid orders', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Leave empty to use the first stage of the pipeline.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'advanced' ),
+			new CredentialField( 'deal_stage_paid', __( 'Stage id for paid orders', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Leave empty to use the pipeline\'s closed-won stage.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'advanced' ),
+			new CredentialField( 'portal_id', __( 'Hub ID', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Optional. Only used to build links to deals.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'advanced' ),
+			new CredentialField( 'api_version', __( 'API version', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, '', '2026-03', 'select', array_combine( self::VERSIONS, self::VERSIONS ), 'advanced' ),
 		);
 	}
 
@@ -190,10 +190,10 @@ final class HubSpotConnector extends AbstractSalesConnector {
 		$detected['pipelines'] = null === $pipelines ? null : count( $pipelines );
 		$wanted                = $options->text( 'pipeline' );
 		if ( null !== $pipelines && '' !== $wanted && ! in_array( $wanted, array_map( static fn( array $row ): string => (string) ( $row['id'] ?? '' ), $pipelines ), true ) ) {
-			return new TestResult( false, $version, $label, array(), $permissions, $this->invalid( 'pipeline', __( 'HubSpot has no deal pipeline with this id.', 'estasoft-erp-crm-sync-engine' ) ), $detected );
+			return new TestResult( false, $version, $label, array(), $permissions, $this->invalid( 'pipeline', __( 'HubSpot has no deal pipeline with this id.', 'estasoft-enterprise-erpcrm-sync-engine' ) ), $detected );
 		}
 		$missing = array_keys( array_filter( $permissions, static fn( bool $allowed ): bool => ! $allowed ) );
-		$error   = array() === $missing ? null : $this->noPermission( sprintf( /* translators: 1: object name */ __( 'read %s', 'estasoft-erp-crm-sync-engine' ), str_replace( 'read_', '', (string) $missing[0] ) ) );
+		$error   = array() === $missing ? null : $this->noPermission( sprintf( /* translators: 1: object name */ __( 'read %s', 'estasoft-enterprise-erpcrm-sync-engine' ), str_replace( 'read_', '', (string) $missing[0] ) ) );
 		if ( null === $error ) {
 			$detected += $this->referenceSetup( $records, $options, $permissions );
 		}
@@ -434,14 +434,14 @@ final class HubSpotConnector extends AbstractSalesConnector {
 			$this->discardLineItems( $records, $lineIds );
 			$winner = $this->findDeal( $records, $ref, $order->reference );
 			return null === $winner
-				? SendResult::failure( $this->invalid( 'deal', __( 'HubSpot says a deal with this order number exists but did not return it. It is retried.', 'estasoft-erp-crm-sync-engine' ) ) )
+				? SendResult::failure( $this->invalid( 'deal', __( 'HubSpot says a deal with this order number exists but did not return it. It is retried.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) )
 				: SendResult::existing( $this->dealRef( $winner, $order->reference, $connection, false ) );
 		}
 		$deal = $created->json();
 		$id   = (string) ( $deal['id'] ?? '' );
 		if ( '' === $id ) {
 			$this->discardLineItems( $records, $lineIds );
-			return SendResult::failure( $this->invalid( 'deal', __( 'HubSpot did not return the new deal.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( $this->invalid( 'deal', __( 'HubSpot did not return the new deal.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 
 		$read = (array) ( $deal['properties'] ?? array() );
@@ -459,7 +459,7 @@ final class HubSpotConnector extends AbstractSalesConnector {
 			$warnings[] = $problem;
 		}
 		if ( $cut ) {
-			$warnings[] = __( 'The order summary was longer than HubSpot allows and was cut.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'The order summary was longer than HubSpot allows and was cut.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		return SendResult::created(
 			new ExternalRef(
@@ -491,7 +491,7 @@ final class HubSpotConnector extends AbstractSalesConnector {
 		$deal    = $this->findDeal( $records, $this->reference( $connection ), $refund->orderRef );
 		if ( null === $deal ) {
 			/* translators: 1: order reference */
-			return SendResult::failure( $this->invalid( 'order', sprintf( __( 'The order %s is not in HubSpot yet.', 'estasoft-erp-crm-sync-engine' ), $refund->orderRef ) ) );
+			return SendResult::failure( $this->invalid( 'order', sprintf( __( 'The order %s is not in HubSpot yet.', 'estasoft-enterprise-erpcrm-sync-engine' ), $refund->orderRef ) ) );
 		}
 		$dealId = (string) $deal['id'];
 		$note   = $this->findNote( $records, $dealId, $refund->reference );
@@ -759,7 +759,7 @@ final class HubSpotConnector extends AbstractSalesConnector {
 			if ( null !== $again ) {
 				return (string) $again['id'];
 			}
-			throw new ApiException( $this->invalid( 'email', __( 'HubSpot says the contact exists but did not say which one.', 'estasoft-erp-crm-sync-engine' ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
+			throw new ApiException( $this->invalid( 'email', __( 'HubSpot says the contact exists but did not say which one.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 		}
 		return (string) ( $response->json()['id'] ?? '' );
 	}
@@ -860,7 +860,7 @@ final class HubSpotConnector extends AbstractSalesConnector {
 		}
 		$pipelines = $records->pipelines();
 		if ( null === $pipelines || array() === $pipelines ) {
-			return $this->invalid( 'pipeline', __( 'Enter the pipeline and stage ids in the connection settings: HubSpot did not let the key read the pipelines.', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->invalid( 'pipeline', __( 'Enter the pipeline and stage ids in the connection settings: HubSpot did not let the key read the pipelines.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		usort( $pipelines, static fn( array $a, array $b ): int => (int) ( $a['displayOrder'] ?? 0 ) <=> (int) ( $b['displayOrder'] ?? 0 ) );
 		$chosen = $pipelines[0];
@@ -872,7 +872,7 @@ final class HubSpotConnector extends AbstractSalesConnector {
 		$stages = array_values( array_filter( (array) ( $chosen['stages'] ?? array() ), 'is_array' ) );
 		usort( $stages, static fn( array $a, array $b ): int => (int) ( $a['displayOrder'] ?? 0 ) <=> (int) ( $b['displayOrder'] ?? 0 ) );
 		if ( array() === $stages ) {
-			return $this->invalid( 'dealstage', __( 'The HubSpot pipeline has no stages.', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->invalid( 'dealstage', __( 'The HubSpot pipeline has no stages.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$first = '' !== $unpaid ? $unpaid : (string) $stages[0]['id'];
 		$won   = $first;
@@ -903,14 +903,14 @@ final class HubSpotConnector extends AbstractSalesConnector {
 		}
 		if ( $order->shippingMinor > 0 ) {
 			$rows[] = array(
-				'name'     => __( 'Shipping', 'estasoft-erp-crm-sync-engine' ),
+				'name'     => __( 'Shipping', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'price'    => Amounts::decimal( $order->shippingMinor, $order->currency ),
 				'quantity' => '1',
 			);
 		}
 		foreach ( $order->fees as $fee ) {
 			$rows[] = array(
-				'name'     => '' !== $fee['name'] ? $fee['name'] : __( 'Fee', 'estasoft-erp-crm-sync-engine' ),
+				'name'     => '' !== $fee['name'] ? $fee['name'] : __( 'Fee', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'price'    => Amounts::decimal( max( 0, $fee['total'] ), $order->currency ),
 				'quantity' => '1',
 			);

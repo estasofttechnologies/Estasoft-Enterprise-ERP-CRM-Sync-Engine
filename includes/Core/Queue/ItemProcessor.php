@@ -141,7 +141,7 @@ final class ItemProcessor {
 			$this->logger->error(
 				sprintf(
 					/* translators: %s: PHP error class name. */
-					__( 'The queue hit an unexpected error and will try this item again later (%s).', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The queue hit an unexpected error and will try this item again later (%s).', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					get_class( $e )
 				),
 				array(
@@ -163,7 +163,7 @@ final class ItemProcessor {
 	 */
 	private function lost( Item $item ): Outcome {
 		$this->logger->warning(
-			__( 'The result of this item was thrown away because its lock ran out and another worker may have taken it over. The item was left as it is.', 'estasoft-erp-crm-sync-engine' ),
+			__( 'The result of this item was thrown away because its lock ran out and another worker may have taken it over. The item was left as it is.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			array(
 				'connection_id' => $item->connectionId,
 				'queue_id'      => $item->id,
@@ -212,7 +212,7 @@ final class ItemProcessor {
 			if ( ! $this->queue->release( $item->id, null, null, null, true, $this->token ) ) {
 				return $this->lost( $item );
 			}
-			$this->queue->skip( $item->id, __( 'The connection was removed.', 'estasoft-erp-crm-sync-engine' ) );
+			$this->queue->skip( $item->id, __( 'The connection was removed.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			return Outcome::Skipped;
 		}
 		if ( ! $connection->status->allowsClaiming() ) {
@@ -237,7 +237,7 @@ final class ItemProcessor {
 					ErrorCode::Val002,
 					array(
 						'field'  => 'payload',
-						'reason' => __( 'The payload could not be built.', 'estasoft-erp-crm-sync-engine' ),
+						'reason' => __( 'The payload could not be built.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					),
 					null,
 					null,
@@ -264,7 +264,7 @@ final class ItemProcessor {
 				return $this->lost( $item );
 			}
 			$this->idempotency->markDone( $item->idempotencyKey, $mapped['external_id'] );
-			$this->note( $item, __( 'Nothing changed since the last sync, so nothing was sent.', 'estasoft-erp-crm-sync-engine' ), $built->mappingVersion );
+			$this->note( $item, __( 'Nothing changed since the last sync, so nothing was sent.', 'estasoft-enterprise-erpcrm-sync-engine' ), $built->mappingVersion );
 			return Outcome::NoChange;
 		}
 
@@ -316,7 +316,7 @@ final class ItemProcessor {
 			ErrorCode::Val002,
 			array(
 				'field'  => 'response',
-				'reason' => __( 'The connector returned nothing.', 'estasoft-erp-crm-sync-engine' ),
+				'reason' => __( 'The connector returned nothing.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			)
 		);
 		return $this->handleFailure( $item, $connection, $connector, $error, $ms, $payload, $built->mappingVersion, true, $built->sensitivePaths );
@@ -340,7 +340,7 @@ final class ItemProcessor {
 					'field'  => 'connector',
 					'reason' => sprintf(
 						/* translators: %s: PHP error class name. */
-						__( 'The connector stopped unexpectedly (%s).', 'estasoft-erp-crm-sync-engine' ),
+						__( 'The connector stopped unexpectedly (%s).', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						( new \ReflectionClass( $e ) )->getShortName()
 					),
 				),
@@ -413,7 +413,7 @@ final class ItemProcessor {
 			$code    = ErrorCode::Dup001;
 		} else {
 			/* translators: %s: name of the external system, for example Odoo. */
-			$message = sprintf( __( 'Sent to %s.', 'estasoft-erp-crm-sync-engine' ), $connector->label() );
+			$message = sprintf( __( 'Sent to %s.', 'estasoft-enterprise-erpcrm-sync-engine' ), $connector->label() );
 			$code    = null;
 		}
 		$log_id = $this->logger->info(
@@ -546,7 +546,7 @@ final class ItemProcessor {
 			return $this->lost( $item );
 		}
 		$log_id = $this->logger->info(
-			__( 'Shadow check: the payload was built and nothing was sent.', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Shadow check: the payload was built and nothing was sent.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			array(
 				'connection_id'   => $item->connectionId,
 				'queue_id'        => $item->id,
@@ -592,7 +592,7 @@ final class ItemProcessor {
 			if ( '' === $text ) {
 				$text = sprintf(
 					/* translators: %s: name of the external system, for example Odoo. */
-					__( '%s accepted the order and added a warning.', 'estasoft-erp-crm-sync-engine' ),
+					__( '%s accepted the order and added a warning.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$connector->label()
 				);
 			}
@@ -647,7 +647,7 @@ final class ItemProcessor {
 			$this->logger->warning(
 				sprintf(
 					/* translators: %s: connector id, for example odoo. */
-					__( 'The connector "%s" is not installed or not active, so its items wait in the queue.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The connector "%s" is not installed or not active, so its items wait in the queue.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$connection->connector
 				),
 				array(

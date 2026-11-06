@@ -41,19 +41,19 @@ final class DocumentReader {
 
 		$number = Utf8::line( $this->text( $document, 'number' ) );
 		if ( '' === $number ) {
-			throw Refusal::because( __( 'the order number is missing', 'estasoft-erp-crm-sync-engine' ) );
+			throw Refusal::because( __( 'the order number is missing', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
-		$date = $this->date( $this->text( $document, 'date' ), __( 'the order date is missing', 'estasoft-erp-crm-sync-engine' ) );
+		$date = $this->date( $this->text( $document, 'date' ), __( 'the order date is missing', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		$name = Utf8::line( $this->text( $customer, 'name' ) );
 		if ( '' === $name ) {
-			throw Refusal::because( __( 'the customer name is empty', 'estasoft-erp-crm-sync-engine' ) );
+			throw Refusal::because( __( 'the customer name is empty', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$currency = strtoupper( trim( $this->text( $document, 'currency' ) ) );
 		if ( '' !== $currency && $currency !== $this->currency ) {
 			throw Refusal::because(
 				sprintf(
 					/* translators: 1: currency of the order, 2: currency of the books. */
-					__( 'its currency (%1$s) is not the currency of the books (%2$s)', 'estasoft-erp-crm-sync-engine' ),
+					__( 'its currency (%1$s) is not the currency of the books (%2$s)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$currency,
 					$this->currency
 				)
@@ -92,11 +92,11 @@ final class DocumentReader {
 		foreach ( $this->rows( $payload, 'line' ) as $index => $row ) {
 			$quantity = Amount::quantity( $row['quantity'] ?? null );
 			if ( null === $quantity ) {
-				throw Refusal::because( sprintf( /* translators: %d: line number */ __( 'line %d has no valid quantity', 'estasoft-erp-crm-sync-engine' ), $index + 1 ) );
+				throw Refusal::because( sprintf( /* translators: %d: line number */ __( 'line %d has no valid quantity', 'estasoft-enterprise-erpcrm-sync-engine' ), $index + 1 ) );
 			}
 			$net = Amount::minor( $row['net'] ?? null );
 			if ( null === $net ) {
-				throw Refusal::because( sprintf( /* translators: %d: line number */ __( 'line %d has no amount', 'estasoft-erp-crm-sync-engine' ), $index + 1 ) );
+				throw Refusal::because( sprintf( /* translators: %d: line number */ __( 'line %d has no amount', 'estasoft-enterprise-erpcrm-sync-engine' ), $index + 1 ) );
 			}
 			$lines[] = new ExportLine(
 				Utf8::line( $this->text( $row, 'sku' ) ),
@@ -123,8 +123,8 @@ final class DocumentReader {
 			$common['note'],
 			$common['expected'],
 			$lines,
-			$this->charges( $payload, 'shipping', __( 'Shipping', 'estasoft-erp-crm-sync-engine' ) ),
-			$this->charges( $payload, 'fee', __( 'Fee', 'estasoft-erp-crm-sync-engine' ) ),
+			$this->charges( $payload, 'shipping', __( 'Shipping', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$this->charges( $payload, 'fee', __( 'Fee', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			0,
 			$payment
 		);
@@ -142,7 +142,7 @@ final class DocumentReader {
 	private function refund( array $payload, array $document, array $common ): ExportDocument {
 		$refundId = Amount::minor( $document['refund_id'] ?? null ) ?? 0;
 		if ( $refundId <= 0 ) {
-			throw Refusal::because( __( 'the refund number is missing', 'estasoft-erp-crm-sync-engine' ) );
+			throw Refusal::because( __( 'the refund number is missing', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$original = $this->rows( $payload, 'original_line' );
 		$lines    = array();
@@ -150,18 +150,18 @@ final class DocumentReader {
 			$quantity = Amount::quantity( $row['quantity'] ?? null ) ?? '1';
 			$net      = Amount::minor( $row['net'] ?? null );
 			if ( null === $net ) {
-				throw Refusal::because( sprintf( /* translators: %d: line number */ __( 'refund line %d has no amount', 'estasoft-erp-crm-sync-engine' ), $index + 1 ) );
+				throw Refusal::because( sprintf( /* translators: %d: line number */ __( 'refund line %d has no amount', 'estasoft-enterprise-erpcrm-sync-engine' ), $index + 1 ) );
 			}
 			$tax   = Amount::minor( $row['tax'] ?? null ) ?? 0;
 			$sku   = Utf8::line( $this->text( $row, 'sku' ) );
 			$found = $this->originalTax( $original, $sku );
 			if ( '' === $found['code'] && $tax > 0 ) {
-				throw Refusal::because( sprintf( /* translators: %d: line number */ __( 'refund line %d has tax but its tax code cannot be told from the original order', 'estasoft-erp-crm-sync-engine' ), $index + 1 ) );
+				throw Refusal::because( sprintf( /* translators: %d: line number */ __( 'refund line %d has tax but its tax code cannot be told from the original order', 'estasoft-enterprise-erpcrm-sync-engine' ), $index + 1 ) );
 			}
 			$rate    = '' !== $found['rate'] ? $found['rate'] : Amount::observedRate( $net, $tax );
 			$lines[] = new ExportLine(
 				$sku,
-				'' === $sku ? sprintf( /* translators: %d: line number */ __( 'Refund line %d', 'estasoft-erp-crm-sync-engine' ), $index + 1 ) : $sku,
+				'' === $sku ? sprintf( /* translators: %d: line number */ __( 'Refund line %d', 'estasoft-enterprise-erpcrm-sync-engine' ), $index + 1 ) : $sku,
 				$quantity,
 				0,
 				$net,
@@ -180,7 +180,7 @@ final class DocumentReader {
 				'net' => $gross,
 				'tax' => 0,
 			);
-			$shipping[] = new ExportCharge( __( 'Shipping', 'estasoft-erp-crm-sync-engine' ), $part['net'], $part['tax'], $code, null === $rate ? '' : Amount::rateText( $rate ) );
+			$shipping[] = new ExportCharge( __( 'Shipping', 'estasoft-enterprise-erpcrm-sync-engine' ), $part['net'], $part['tax'], $code, null === $rate ? '' : Amount::rateText( $rate ) );
 		}
 		return new ExportDocument(
 			ExportDocument::CREDIT_NOTE,

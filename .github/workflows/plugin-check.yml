@@ -61,7 +61,7 @@ jobs:
       - name: Run Plugin Check
         uses: WordPress/plugin-check-action@v1
         with:
-          build-dir: ./plugin-build/estasoft-erp-crm-sync-engine
-          slug: estasoft-erp-crm-sync-engine
+          build-dir: ./plugin-build/estasoft-enterprise-erpcrm-sync-engine
+          slug: estasoft-enterprise-erpcrm-sync-engine
           wp-version: latest
           include-experimental: false

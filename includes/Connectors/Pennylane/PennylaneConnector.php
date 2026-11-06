@@ -140,26 +140,26 @@ final class PennylaneConnector extends AbstractApiConnector {
 		return array(
 			new CredentialField(
 				'api_token',
-				__( 'API token', 'estasoft-erp-crm-sync-engine' ),
+				__( 'API token', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				true,
 				true,
-				__( 'In Pennylane: Settings, Connectivity, Developers. Pennylane shows it once.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'In Pennylane: Settings, Connectivity, Developers. Pennylane shows it once.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'',
 				'password'
 			),
 			new CredentialField(
 				'token_lifetime',
-				__( 'Token lasts', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Token lasts', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				false,
 				true,
-				__( 'The same choice you made when you created the token. You get a warning before it ends.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'The same choice you made when you created the token. You get a warning before it ends.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'12',
 				'select',
 				array(
-					'1'         => __( '1 month', 'estasoft-erp-crm-sync-engine' ),
-					'6'         => __( '6 months', 'estasoft-erp-crm-sync-engine' ),
-					'12'        => __( '12 months', 'estasoft-erp-crm-sync-engine' ),
-					'unlimited' => __( 'Unlimited', 'estasoft-erp-crm-sync-engine' ),
+					'1'         => __( '1 month', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'6'         => __( '6 months', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'12'        => __( '12 months', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'unlimited' => __( 'Unlimited', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				)
 			),
 		);
@@ -289,7 +289,7 @@ final class PennylaneConnector extends AbstractApiConnector {
 				$ref = new ExternalRef( $resolved['id'], $customer['name'], null, array( 'name' => $customer['name'] ) );
 				return $resolved['created'] ? SendResult::created( $ref ) : SendResult::existing( $ref );
 			default:
-				return SendResult::failure( Refusal::value( self::LABEL, 'entity', __( 'This connector does not send this kind of item.', 'estasoft-erp-crm-sync-engine' ), 'unsupported entity' ) );
+				return SendResult::failure( Refusal::value( self::LABEL, 'entity', __( 'This connector does not send this kind of item.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'unsupported entity' ) );
 		}
 	}
 
@@ -410,31 +410,31 @@ final class PennylaneConnector extends AbstractApiConnector {
 	 */
 	public function listTaxCodes( Connection $connection ): array {
 		unset( $connection );
-		$unconfirmed = ' (' . __( 'to be confirmed', 'estasoft-erp-crm-sync-engine' ) . ')';
+		$unconfirmed = ' (' . __( 'to be confirmed', 'estasoft-enterprise-erpcrm-sync-engine' ) . ')';
 		return array(
 			array(
 				'code'         => 'FR_200',
-				'name'         => __( 'France 20 %', 'estasoft-erp-crm-sync-engine' ),
+				'name'         => __( 'France 20 %', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'rate_percent' => '20',
 			),
 			array(
 				'code'         => 'FR_100',
-				'name'         => __( 'France 10 %', 'estasoft-erp-crm-sync-engine' ) . $unconfirmed,
+				'name'         => __( 'France 10 %', 'estasoft-enterprise-erpcrm-sync-engine' ) . $unconfirmed,
 				'rate_percent' => '10',
 			),
 			array(
 				'code'         => 'FR_55',
-				'name'         => __( 'France 5.5 %', 'estasoft-erp-crm-sync-engine' ) . $unconfirmed,
+				'name'         => __( 'France 5.5 %', 'estasoft-enterprise-erpcrm-sync-engine' ) . $unconfirmed,
 				'rate_percent' => '5.5',
 			),
 			array(
 				'code'         => 'FR_21',
-				'name'         => __( 'France 2.1 %', 'estasoft-erp-crm-sync-engine' ) . $unconfirmed,
+				'name'         => __( 'France 2.1 %', 'estasoft-enterprise-erpcrm-sync-engine' ) . $unconfirmed,
 				'rate_percent' => '2.1',
 			),
 			array(
 				'code'         => 'exempt',
-				'name'         => __( 'Exempt from VAT', 'estasoft-erp-crm-sync-engine' ),
+				'name'         => __( 'Exempt from VAT', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'rate_percent' => '0',
 			),
 		);

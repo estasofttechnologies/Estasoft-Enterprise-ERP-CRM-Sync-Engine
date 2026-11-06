@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Creates languages/estasoft-erp-crm-sync-engine.pot with WP-CLI.
+# Creates languages/estasoft-enterprise-erpcrm-sync-engine.pot with WP-CLI.
 #
 #   bin/make-pot.sh
 #

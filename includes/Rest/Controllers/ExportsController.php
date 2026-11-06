@@ -108,7 +108,7 @@ final class ExportsController extends BaseController {
 	public function download( \WP_REST_Request $request ): \WP_REST_Response {
 		$found = $this->exports()->download( (string) $request['file'], (int) $request->get_param( 'part' ) );
 		if ( null === $found ) {
-			throw ApiException::notFound( esc_html__( 'That export file does not exist any more. Files are kept for 30 days.', 'estasoft-erp-crm-sync-engine' ) );
+			throw ApiException::notFound( esc_html__( 'That export file does not exist any more. Files are kept for 30 days.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$response = new \WP_REST_Response( null, 200 );
 		$response->header( 'Content-Type', $found['mime'] );
@@ -146,7 +146,7 @@ final class ExportsController extends BaseController {
 	 */
 	public function delete( \WP_REST_Request $request ): array {
 		if ( ! $this->exports()->delete( (string) $request['file'] ) ) {
-			throw ApiException::notFound( esc_html__( 'That export file does not exist any more.', 'estasoft-erp-crm-sync-engine' ) );
+			throw ApiException::notFound( esc_html__( 'That export file does not exist any more.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return array( 'deleted' => true );
 	}

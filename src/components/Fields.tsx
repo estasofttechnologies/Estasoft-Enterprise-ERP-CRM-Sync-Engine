@@ -394,7 +394,7 @@ export function validateWholeNumber(
 			/* translators: 1: lowest value, 2: highest value */
 			__(
 				'Enter a number from %1$d to %2$d.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			min,
 			max

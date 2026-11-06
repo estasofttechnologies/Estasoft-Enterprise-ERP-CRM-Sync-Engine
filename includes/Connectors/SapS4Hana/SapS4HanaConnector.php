@@ -77,7 +77,7 @@ final class SapS4HanaConnector extends AbstractApiConnector {
 		$parts = wp_parse_url( trim( (string) $connection->config( 'address', '' ) ) );
 		$host  = is_array( $parts ) ? strtolower( (string) ( $parts['host'] ?? '' ) ) : '';
 		if ( ! is_array( $parts ) || '' === $host || 1 !== preg_match( '/^[a-z0-9.\-\[\]:]+$/', $host ) || ! in_array( strtolower( (string) ( $parts['scheme'] ?? '' ) ), array( 'https', 'http' ), true ) || isset( $parts['user'] ) || isset( $parts['pass'] ) ) {
-			$problem = Problem::validation( self::SYSTEM, 'address', __( 'Enter the API address of the tenant, for example https://my300000-api.s4hana.cloud.sap.', 'estasoft-erp-crm-sync-engine' ) );
+			$problem = Problem::validation( self::SYSTEM, 'address', __( 'Enter the API address of the tenant, for example https://my300000-api.s4hana.cloud.sap.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			throw new ApiException( $problem ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 		}
 		$port = isset( $parts['port'] ) && (int) $parts['port'] > 0 && (int) $parts['port'] < 65536 ? ':' . (int) $parts['port'] : '';
@@ -100,26 +100,26 @@ final class SapS4HanaConnector extends AbstractApiConnector {
 	 */
 	protected function credentialDefinition(): array {
 		return array(
-			CredentialFields::address( 'address', __( 'API address of the tenant', 'estasoft-erp-crm-sync-engine' ), __( 'The host with -api, for example https://my300000-api.s4hana.cloud.sap. Copy it from the communication arrangement.', 'estasoft-erp-crm-sync-engine' ) ),
+			CredentialFields::address( 'address', __( 'API address of the tenant', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'The host with -api, for example https://my300000-api.s4hana.cloud.sap. Copy it from the communication arrangement.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			CredentialFields::choice(
 				'auth_method',
-				__( 'Sign-in', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Sign-in', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				array(
-					'oauth' => __( 'OAuth 2.0 (client ID and secret)', 'estasoft-erp-crm-sync-engine' ),
-					'basic' => __( 'Communication user and password', 'estasoft-erp-crm-sync-engine' ),
+					'oauth' => __( 'OAuth 2.0 (client ID and secret)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'basic' => __( 'Communication user and password', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				'oauth'
 			),
-			CredentialFields::clientId( 'client_id', __( 'OAuth: the client ID on the communication arrangement.', 'estasoft-erp-crm-sync-engine' ) ),
+			CredentialFields::clientId( 'client_id', __( 'OAuth: the client ID on the communication arrangement.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			CredentialFields::clientSecret( 'client_secret' ),
-			new CredentialField( 'token_url', __( 'Token service URL', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'OAuth: shown on the communication arrangement.', 'estasoft-erp-crm-sync-engine' ), '', 'url', array(), 'app' ),
-			new CredentialField( 'scope', __( 'Scope', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'OAuth: the scope of the communication arrangement, for example API_SALES_ORDER_SRV_0001.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'app' ),
-			CredentialFields::username( 'user', __( 'Communication user', 'estasoft-erp-crm-sync-engine' ), __( 'Basic sign-in only.', 'estasoft-erp-crm-sync-engine' ) ),
-			CredentialFields::password( 'password', __( 'Password', 'estasoft-erp-crm-sync-engine' ), __( 'Basic sign-in only. Saved encrypted. It is never shown again.', 'estasoft-erp-crm-sync-engine' ) ),
-			new CredentialField( 'sales_organization', __( 'Sales organization', 'estasoft-erp-crm-sync-engine' ), false, true, '' ),
-			new CredentialField( 'distribution_channel', __( 'Distribution channel', 'estasoft-erp-crm-sync-engine' ), false, true, '' ),
-			new CredentialField( 'division', __( 'Division', 'estasoft-erp-crm-sync-engine' ), false, true, '' ),
-			new CredentialField( 'sold_to_party', __( 'Sold-to customer number', 'estasoft-erp-crm-sync-engine' ), false, true, __( 'The customer all web orders are sold to.', 'estasoft-erp-crm-sync-engine' ) ),
+			new CredentialField( 'token_url', __( 'Token service URL', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'OAuth: shown on the communication arrangement.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'url', array(), 'app' ),
+			new CredentialField( 'scope', __( 'Scope', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'OAuth: the scope of the communication arrangement, for example API_SALES_ORDER_SRV_0001.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'app' ),
+			CredentialFields::username( 'user', __( 'Communication user', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Basic sign-in only.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			CredentialFields::password( 'password', __( 'Password', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Basic sign-in only. Saved encrypted. It is never shown again.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			new CredentialField( 'sales_organization', __( 'Sales organization', 'estasoft-enterprise-erpcrm-sync-engine' ), false, true, '' ),
+			new CredentialField( 'distribution_channel', __( 'Distribution channel', 'estasoft-enterprise-erpcrm-sync-engine' ), false, true, '' ),
+			new CredentialField( 'division', __( 'Division', 'estasoft-enterprise-erpcrm-sync-engine' ), false, true, '' ),
+			new CredentialField( 'sold_to_party', __( 'Sold-to customer number', 'estasoft-enterprise-erpcrm-sync-engine' ), false, true, __( 'The customer all web orders are sold to.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 		);
 	}
 
@@ -152,7 +152,7 @@ final class SapS4HanaConnector extends AbstractApiConnector {
 			ErrorCode::Auth004,
 			array(
 				'system' => self::SYSTEM,
-				'action' => __( 'read sales orders and products', 'estasoft-erp-crm-sync-engine' ),
+				'action' => __( 'read sales orders and products', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			),
 			403,
 			null,
@@ -161,10 +161,10 @@ final class SapS4HanaConnector extends AbstractApiConnector {
 		);
 		return new TestResult(
 			null === $error,
-			__( 'OData V2 APIs', 'estasoft-erp-crm-sync-engine' ),
+			__( 'OData V2 APIs', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			sprintf(
 				/* translators: %s: sales organization. */
-				__( 'Sales organization %s', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Sales organization %s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$kit->options->salesOrganization()
 			),
 			array(),
@@ -247,7 +247,7 @@ final class SapS4HanaConnector extends AbstractApiConnector {
 		return match ( $item->entityType ) {
 			EntityType::Order  => $this->sendOrder( $connection, $item, $payload ),
 			EntityType::Refund => $this->sendRefund( $connection, $item, $payload ),
-			default            => SendResult::failure( Problem::validation( self::SYSTEM, 'entity', __( 'This connector does not send this kind of record.', 'estasoft-erp-crm-sync-engine' ) ) ),
+			default            => SendResult::failure( Problem::validation( self::SYSTEM, 'entity', __( 'This connector does not send this kind of record.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) ),
 		};
 	}
 
@@ -337,12 +337,12 @@ final class SapS4HanaConnector extends AbstractApiConnector {
 		$error    = $kit->orders->check( $order, $parsed, $kit->total, $warnings );
 		if ( null !== $error ) {
 			if ( $existed ) {
-				$error = Problem::validation( self::SYSTEM, 'net amount', $error->context['reason'] . ' ' . __( 'The sales order was found, not made by this pass, so it is not deleted. Correct or delete it in S/4HANA.', 'estasoft-erp-crm-sync-engine' ) );
+				$error = Problem::validation( self::SYSTEM, 'net amount', $error->context['reason'] . ' ' . __( 'The sales order was found, not made by this pass, so it is not deleted. Correct or delete it in S/4HANA.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			} elseif ( 'fail' === $kit->options->totalMismatch() ) {
 				$error = Problem::validation(
 					self::SYSTEM,
 					'net amount',
-					$error->context['reason'] . ' ' . ( $kit->orders->remove( $order ) ? __( 'The sales order was deleted.', 'estasoft-erp-crm-sync-engine' ) : __( 'The sales order could not be deleted and stays in S/4HANA.', 'estasoft-erp-crm-sync-engine' ) )
+					$error->context['reason'] . ' ' . ( $kit->orders->remove( $order ) ? __( 'The sales order was deleted.', 'estasoft-enterprise-erpcrm-sync-engine' ) : __( 'The sales order could not be deleted and stays in S/4HANA.', 'estasoft-enterprise-erpcrm-sync-engine' ) )
 				);
 			}
 			return SendResult::failure( $error );
@@ -375,12 +375,12 @@ final class SapS4HanaConnector extends AbstractApiConnector {
 		$error    = $kit->refunds->check( $request, $refund, $currency, $kit->total, $warnings );
 		if ( null !== $error ) {
 			if ( $existed ) {
-				$error = Problem::validation( self::SYSTEM, 'net amount', $error->context['reason'] . ' ' . __( 'The credit memo request was found, not made by this pass, so it is not deleted. Correct or delete it in S/4HANA.', 'estasoft-erp-crm-sync-engine' ) );
+				$error = Problem::validation( self::SYSTEM, 'net amount', $error->context['reason'] . ' ' . __( 'The credit memo request was found, not made by this pass, so it is not deleted. Correct or delete it in S/4HANA.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			} elseif ( 'fail' === $kit->options->totalMismatch() ) {
 				$error = Problem::validation(
 					self::SYSTEM,
 					'net amount',
-					$error->context['reason'] . ' ' . ( $kit->refunds->remove( $request ) ? __( 'The credit memo request was deleted.', 'estasoft-erp-crm-sync-engine' ) : __( 'The credit memo request could not be deleted and stays in S/4HANA.', 'estasoft-erp-crm-sync-engine' ) )
+					$error->context['reason'] . ' ' . ( $kit->refunds->remove( $request ) ? __( 'The credit memo request was deleted.', 'estasoft-enterprise-erpcrm-sync-engine' ) : __( 'The credit memo request could not be deleted and stays in S/4HANA.', 'estasoft-enterprise-erpcrm-sync-engine' ) )
 				);
 			}
 			return SendResult::failure( $error );

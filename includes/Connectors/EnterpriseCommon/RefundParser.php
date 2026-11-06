@@ -38,7 +38,7 @@ final class RefundParser {
 	public function parse( array $payload, Item $item ): RefundData|ConnectorError {
 		$orderRef = PayloadReader::text( $payload['order_ref'] ?? '' );
 		if ( 1 !== preg_match( '/^WC-[A-Za-z0-9_-]{1,40}$/', $orderRef ) ) {
-			return Problem::validation( $this->system, 'order_ref', __( 'The refund does not name its order (WC- and the order number).', 'estasoft-erp-crm-sync-engine' ) );
+			return Problem::validation( $this->system, 'order_ref', __( 'The refund does not name its order (WC- and the order number).', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$lines = array();
 		foreach ( PayloadReader::rows( $payload['refund_line'] ?? null ) as $index => $raw ) {
@@ -50,7 +50,7 @@ final class RefundParser {
 					'refund_line[]',
 					sprintf(
 						/* translators: %d: line number. */
-						__( 'Refund line %d needs a quantity and an amount in minor units.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'Refund line %d needs a quantity and an amount in minor units.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$index + 1
 					)
 				);
@@ -64,7 +64,7 @@ final class RefundParser {
 		}
 		$amount = PayloadReader::minor( $payload['amount'] ?? null );
 		if ( array() === $lines && ( null === $amount || 0 === $amount ) ) {
-			return Problem::validation( $this->system, 'amount', __( 'The refund has no lines and no amount.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problem::validation( $this->system, 'amount', __( 'The refund has no lines and no amount.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return new RefundData(
 			$item->clientReference(),

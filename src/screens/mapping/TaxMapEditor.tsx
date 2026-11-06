@@ -61,7 +61,7 @@ export function TaxMapEditor() {
 			kind: 'success',
 			text: __(
 				'Tax mapping saved. It applies to items sent from now on, and the change is written to the log.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 		} );
 	} );
@@ -72,7 +72,7 @@ export function TaxMapEditor() {
 				rows={ 4 }
 				label={ __(
 					'Loading the tax mapping',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			/>
 		);
@@ -92,23 +92,23 @@ export function TaxMapEditor() {
 			( entry ) => entry.country === row.country
 		);
 		if ( ! rule ) {
-			return __( 'Optional', 'estasoft-erp-crm-sync-engine' );
+			return __( 'Optional', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		if ( rule.required_for_business ) {
 			return rule.digits
 				? sprintf(
 						/* translators: %d: number of digits */ __(
 							'Required for business buyers, %d digits',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						rule.digits
 					)
 				: __(
 						'Required for business buyers',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					);
 		}
-		return __( 'Optional', 'estasoft-erp-crm-sync-engine' );
+		return __( 'Optional', 'estasoft-enterprise-erpcrm-sync-engine' );
 	};
 
 	return (
@@ -116,14 +116,14 @@ export function TaxMapEditor() {
 			<Callout tone="info">
 				{ __(
 					'Changes on this tab apply as soon as you save, and are written to the log. Unlike order and customer rules, tax codes have no drafts or versions.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			</Callout>
 			<p className="estasoft-sync-muted">
 				{ sprintf(
 					/* translators: %s: system name */ __(
 						'Your %s or an accredited provider signs and sends tax invoices. This screen only makes sure each order carries the right tax code and the buyer’s tax number.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					system
 				) }
@@ -136,7 +136,7 @@ export function TaxMapEditor() {
 							'%1$d WooCommerce tax rate has no code. Orders that use %2$s will fail with “Tax code not mapped” until you choose one.',
 							'%1$d WooCommerce tax rates have no code. Orders that use %2$s will fail with “Tax code not mapped” until you choose one.',
 							unmapped.length,
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						unmapped.length,
 						`${ unmapped[ 0 ].country } ${ unmapped[ 0 ].tax_name } ${ unmapped[ 0 ].rate_percent }%`
@@ -150,12 +150,15 @@ export function TaxMapEditor() {
 					disabled={ ! canConfigure }
 				>
 					<legend className="estasoft-sync-sr-only">
-						{ __( 'Tax codes', 'estasoft-erp-crm-sync-engine' ) }
+						{ __(
+							'Tax codes',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						) }
 					</legend>
 					<ResponsiveTable< TaxMapRow, string >
 						caption={ __(
 							'Tax codes by country and rate',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						rows={ rows }
 						rowKey={ rowKey }
@@ -164,7 +167,7 @@ export function TaxMapEditor() {
 								id: 'country',
 								header: __(
 									'Country',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								primary: true,
 								cell: ( row ) => (
@@ -177,7 +180,7 @@ export function TaxMapEditor() {
 								id: 'tax',
 								header: __(
 									'WooCommerce tax',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								cell: ( row ) => row.tax_name,
 							},
@@ -185,7 +188,7 @@ export function TaxMapEditor() {
 								id: 'rate',
 								header: __(
 									'Rate',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								cell: ( row ) => `${ row.rate_percent }%`,
 							},
@@ -194,7 +197,7 @@ export function TaxMapEditor() {
 								header: sprintf(
 									/* translators: %s: system name */ __(
 										'Tax code in %s',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									system
 								),
@@ -205,7 +208,7 @@ export function TaxMapEditor() {
 											<StatusBadge tone="warning">
 												{ __(
 													'No code yet',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												) }
 											</StatusBadge>
 										) : null }
@@ -214,7 +217,7 @@ export function TaxMapEditor() {
 											label={ sprintf(
 												/* translators: %s: country, tax name and rate */ __(
 													'Tax code for %s',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												),
 												`${ row.country } ${ row.tax_name } ${ row.rate_percent }%`
 											) }
@@ -239,7 +242,7 @@ export function TaxMapEditor() {
 													value: '',
 													label: __(
 														'Choose a code',
-														'estasoft-erp-crm-sync-engine'
+														'estasoft-enterprise-erpcrm-sync-engine'
 													),
 												},
 												...data.system_codes.map(
@@ -257,7 +260,7 @@ export function TaxMapEditor() {
 								id: 'buyer',
 								header: __(
 									'Buyer tax number',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								cell: ( row ) => buyerText( row ),
 							},
@@ -265,7 +268,7 @@ export function TaxMapEditor() {
 								id: 'orders',
 								header: __(
 									'Orders, 30 days',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								align: 'end',
 								cell: ( row ) => row.orders_30d,

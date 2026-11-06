@@ -34,10 +34,10 @@ final class NoticeRules {
 		$dismissed = is_array( $facts['dismissed'] ?? null ) ? $facts['dismissed'] : array();
 
 		if ( $configure && empty( $facts['connected'] ) && empty( $facts['setup_done'] ) && ! in_array( 'welcome', $dismissed, true ) ) {
-			$notices[] = $this->notice( 'welcome', 'info', __( 'ESTASOFT SYNC is active. Set it up in about ten minutes. Nothing is sent to your system until you say so.', 'estasoft-erp-crm-sync-engine' ), __( 'Start setup', 'estasoft-erp-crm-sync-engine' ), '/setup', 'everywhere', true );
+			$notices[] = $this->notice( 'welcome', 'info', __( 'ESTASOFT SYNC is active. Set it up in about ten minutes. Nothing is sent to your system until you say so.', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Start setup', 'estasoft-enterprise-erpcrm-sync-engine' ), '/setup', 'everywhere', true );
 		}
 		if ( $configure && ! empty( $facts['key_missing'] ) ) {
-			$notice = $this->notice( 'encryption_key', 'error', __( 'The encryption key is missing from wp-config.php. Saved credentials cannot be stored safely until you add it.', 'estasoft-erp-crm-sync-engine' ), __( 'Show me how', 'estasoft-erp-crm-sync-engine' ), '/connections', 'everywhere', false );
+			$notice = $this->notice( 'encryption_key', 'error', __( 'The encryption key is missing from wp-config.php. Saved credentials cannot be stored safely until you add it.', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Show me how', 'estasoft-enterprise-erpcrm-sync-engine' ), '/connections', 'everywhere', false );
 			if ( is_string( $facts['key_line'] ?? null ) && '' !== $facts['key_line'] ) {
 				$notice['key_line'] = $facts['key_line'];
 			}
@@ -49,9 +49,9 @@ final class NoticeRules {
 					'reconnect_' . (int) $connection['id'],
 					'error',
 					/* translators: %s: name of the connection, for example Odoo. */
-					sprintf( __( 'Syncing to %s is paused because its sign-in no longer works. Orders are waiting safely.', 'estasoft-erp-crm-sync-engine' ), (string) $connection['label'] ),
+					sprintf( __( 'Syncing to %s is paused because its sign-in no longer works. Orders are waiting safely.', 'estasoft-enterprise-erpcrm-sync-engine' ), (string) $connection['label'] ),
 					/* translators: %s: name of the connection, for example Odoo. */
-					sprintf( __( 'Reconnect %s', 'estasoft-erp-crm-sync-engine' ), (string) $connection['label'] ),
+					sprintf( __( 'Reconnect %s', 'estasoft-enterprise-erpcrm-sync-engine' ), (string) $connection['label'] ),
 					'/connections/' . (int) $connection['id'],
 					'everywhere',
 					false
@@ -63,8 +63,8 @@ final class NoticeRules {
 					'failed_orders',
 					'warning',
 					/* translators: %s: number of failed orders. */
-					sprintf( _n( '%s order failed to sync. It needs a person.', '%s orders failed to sync. They need a person.', $failed, 'estasoft-erp-crm-sync-engine' ), number_format_i18n( $failed ) ),
-					__( 'Review failed orders', 'estasoft-erp-crm-sync-engine' ),
+					sprintf( _n( '%s order failed to sync. It needs a person.', '%s orders failed to sync. They need a person.', $failed, 'estasoft-enterprise-erpcrm-sync-engine' ), number_format_i18n( $failed ) ),
+					__( 'Review failed orders', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					'/queue?state=failed',
 					'plugin',
 					false
@@ -77,8 +77,8 @@ final class NoticeRules {
 					'backlog',
 					'warning',
 					/* translators: 1: number of waiting items, 2: the queue warning limit. */
-					sprintf( __( '%1$s items are waiting. That is more than the limit of %2$s. The queue is moving, but slower than orders arrive.', 'estasoft-erp-crm-sync-engine' ), number_format_i18n( $waiting ), number_format_i18n( $threshold ) ),
-					__( 'Open the queue', 'estasoft-erp-crm-sync-engine' ),
+					sprintf( __( '%1$s items are waiting. That is more than the limit of %2$s. The queue is moving, but slower than orders arrive.', 'estasoft-enterprise-erpcrm-sync-engine' ), number_format_i18n( $waiting ), number_format_i18n( $threshold ) ),
+					__( 'Open the queue', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					'/queue?state=waiting',
 					'plugin',
 					false
@@ -86,7 +86,7 @@ final class NoticeRules {
 			}
 		}
 		if ( $configure && ! empty( $facts['shadow_ends_soon'] ) ) {
-			$notices[] = $this->notice( 'shadow_ends', 'info', __( 'Shadow mode ends tomorrow. Review the results, then go live.', 'estasoft-erp-crm-sync-engine' ), __( 'See the results', 'estasoft-erp-crm-sync-engine' ), '/shadow', 'plugin', false );
+			$notices[] = $this->notice( 'shadow_ends', 'info', __( 'Shadow mode ends tomorrow. Review the results, then go live.', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'See the results', 'estasoft-enterprise-erpcrm-sync-engine' ), '/shadow', 'plugin', false );
 		}
 		return $notices;
 	}

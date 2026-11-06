@@ -91,7 +91,7 @@ final class SageRefundSender {
 			return SendResult::failure( $parsed );
 		}
 		if ( '' === $this->options->text( 'sales_ledger_account' ) ) {
-			return SendResult::failure( SageErrors::refused( 'sales_ledger_account', __( 'Set the nominal code of an income account in the connection option "sales_ledger_account": Sage needs a ledger account on every line.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( SageErrors::refused( 'sales_ledger_account', __( 'Set the nominal code of an income account in the connection option "sales_ledger_account": Sage needs a ledger account on every line.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$warnings = array();
 		$note     = $this->invoices->findCreditNote( $parsed->clientRef );
@@ -105,7 +105,7 @@ final class SageRefundSender {
 					'sales_invoice',
 					sprintf(
 						/* translators: %s: the shop's reference of the order, such as WC-1042. */
-						__( 'The invoice %s was not found in Sage, so the refund cannot be linked to it.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'The invoice %s was not found in Sage, so the refund cannot be linked to it.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$parsed->orderRef
 					)
 				)
@@ -132,7 +132,7 @@ final class SageRefundSender {
 			$done = $this->checked( $note, $parsed, false, $warnings );
 		}
 		if ( null === $done ) {
-			return SendResult::failure( SageErrors::refused( 'sales_credit_note', __( 'Sage keeps answering with a credit note that no longer exists. Try again later.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( SageErrors::refused( 'sales_credit_note', __( 'Sage keeps answering with a credit note that no longer exists. Try again later.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		if ( $done instanceof ConnectorError ) {
 			return SendResult::failure( $done );
@@ -189,7 +189,7 @@ final class SageRefundSender {
 				'sales_ledger_account',
 				sprintf(
 					/* translators: %s: a nominal code. */
-					__( 'Sage has no ledger account "%s". Check the connection option "sales_ledger_account".', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Sage has no ledger account "%s". Check the connection option "sales_ledger_account".', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$this->options->ledgerFor( 'sales' )
 				)
 			);
@@ -230,7 +230,7 @@ final class SageRefundSender {
 			$problem,
 			sprintf(
 				/* translators: %s: the shop's reference of the refund, such as WC-77. */
-				__( 'The credit note %s is still in Sage and could not be removed by the connector. Void it in Sage, then retry.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'The credit note %s is still in Sage and could not be removed by the connector. Void it in Sage, then retry.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				SagePayloadReader::text( $note['reference'] ?? '' )
 			)
 		);
@@ -337,7 +337,7 @@ final class SageRefundSender {
 			'sales_credit_note',
 			sprintf(
 				/* translators: %s: the shop's reference of the refund, such as WC-77. */
-				__( 'The credit note %s was voided in Sage. Delete the voided credit note there, or change its reference, then retry.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'The credit note %s was voided in Sage. Delete the voided credit note there, or change its reference, then retry.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$reference
 			)
 		);

@@ -30,7 +30,7 @@ export function HourlyChart( { points }: { points: HourlyPoint[] } ) {
 				/* translators: 1: orders synced today, 2: orders failed today, 3: busiest hour such as 10:00, 4: orders synced in that hour */
 				__(
 					'Today: %1$s orders synced and %2$s failed. The busiest hour was %3$s with %4$s synced.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				formatNumber( total, cfg.locale ),
 				formatNumber( failed, cfg.locale ),
@@ -39,17 +39,17 @@ export function HourlyChart( { points }: { points: HourlyPoint[] } ) {
 			)
 		: __(
 				'Nothing has been synced yet today.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 	return (
 		<Card
 			title={ __(
 				'Orders synced per hour',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			) }
 			description={ __(
 				'Today, store time. The last bar is the hour in progress.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			) }
 			flush
 		>
@@ -96,31 +96,34 @@ export function HourlyChart( { points }: { points: HourlyPoint[] } ) {
 				<summary>
 					{ __(
 						'Show the numbers as a table',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</summary>
 				<table className="estasoft-sync-plain-table">
 					<caption className="estasoft-sync-sr-only">
 						{ __(
 							'Orders synced and failed in each hour today',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</caption>
 					<thead>
 						<tr>
 							<th scope="col">
-								{ __( 'Hour', 'estasoft-erp-crm-sync-engine' ) }
+								{ __(
+									'Hour',
+									'estasoft-enterprise-erpcrm-sync-engine'
+								) }
 							</th>
 							<th scope="col">
 								{ __(
 									'Synced',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</th>
 							<th scope="col">
 								{ __(
 									'Failed',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</th>
 						</tr>

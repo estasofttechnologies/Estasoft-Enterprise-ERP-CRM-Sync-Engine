@@ -40,7 +40,7 @@ final class TotalCheck {
 	 * @return ConnectorError|null The failure, or null when the total is accepted.
 	 */
 	public function run( ?int $expected, ?int $actual, string $currency, Warnings $warnings, string $what = '' ): ?ConnectorError {
-		$what = '' === $what ? __( 'total', 'estasoft-erp-crm-sync-engine' ) : $what;
+		$what = '' === $what ? __( 'total', 'estasoft-enterprise-erpcrm-sync-engine' ) : $what;
 		if ( null === $expected ) {
 			return null;
 		}
@@ -48,7 +48,7 @@ final class TotalCheck {
 			$warnings->add(
 				sprintf(
 					/* translators: 1: system name, 2: the word total. */
-					__( '%1$s did not return a %2$s, so it could not be compared with the shop.', 'estasoft-erp-crm-sync-engine' ),
+					__( '%1$s did not return a %2$s, so it could not be compared with the shop.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$this->system,
 					$what
 				)
@@ -60,7 +60,7 @@ final class TotalCheck {
 		}
 		$reason = sprintf(
 			/* translators: 1: system name, 2: figure name, 3: amount in the system, 4: amount in the shop, 5: currency. */
-			__( '%1$s shows a %2$s of %3$s %5$s but the shop charged %4$s %5$s.', 'estasoft-erp-crm-sync-engine' ),
+			__( '%1$s shows a %2$s of %3$s %5$s but the shop charged %4$s %5$s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			$this->system,
 			$what,
 			$this->amounts->toDecimal( $actual, $currency ),

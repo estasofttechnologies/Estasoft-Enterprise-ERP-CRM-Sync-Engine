@@ -106,59 +106,71 @@ export function summariseWhat(
 	const when: Record< WhatAnswers[ 'send_when' ], string > = {
 		paid_or_cod: __(
 			'Sent when paid, or when placed with cash on delivery.',
-			'estasoft-erp-crm-sync-engine'
+			'estasoft-enterprise-erpcrm-sync-engine'
 		),
-		placed: __( 'Sent when placed.', 'estasoft-erp-crm-sync-engine' ),
-		completed: __( 'Sent when completed.', 'estasoft-erp-crm-sync-engine' ),
+		placed: __(
+			'Sent when placed.',
+			'estasoft-enterprise-erpcrm-sync-engine'
+		),
+		completed: __(
+			'Sent when completed.',
+			'estasoft-enterprise-erpcrm-sync-engine'
+		),
 	};
 	const docs: Record< WhatAnswers[ 'documents' ], string > = {
-		order: __( 'Sale order only.', 'estasoft-erp-crm-sync-engine' ),
+		order: __(
+			'Sale order only.',
+			'estasoft-enterprise-erpcrm-sync-engine'
+		),
 		order_invoice: __(
 			'Sale order and invoice.',
-			'estasoft-erp-crm-sync-engine'
+			'estasoft-enterprise-erpcrm-sync-engine'
 		),
 		order_invoice_payment: __(
 			'Sale order, invoice and payment.',
-			'estasoft-erp-crm-sync-engine'
+			'estasoft-enterprise-erpcrm-sync-engine'
 		),
 	};
 	const customers: Record< WhatAnswers[ 'customer_match' ], string > = {
 		match_create: __(
 			'Matched by email, created if missing',
-			'estasoft-erp-crm-sync-engine'
+			'estasoft-enterprise-erpcrm-sync-engine'
 		),
 		match_only: __(
 			'Matched by email, never created',
-			'estasoft-erp-crm-sync-engine'
+			'estasoft-enterprise-erpcrm-sync-engine'
 		),
 		always_create: __(
 			'A new contact for every order',
-			'estasoft-erp-crm-sync-engine'
+			'estasoft-enterprise-erpcrm-sync-engine'
 		),
 	};
 	const accounting: Record< WhatAnswers[ 'accounting_create' ], string > = {
 		invoice_payment: __(
 			'Invoice and payment.',
-			'estasoft-erp-crm-sync-engine'
+			'estasoft-enterprise-erpcrm-sync-engine'
 		),
-		invoice: __( 'Invoice only.', 'estasoft-erp-crm-sync-engine' ),
+		invoice: __(
+			'Invoice only.',
+			'estasoft-enterprise-erpcrm-sync-engine'
+		),
 		draft_invoice: __(
 			'Draft invoice, for you to check.',
-			'estasoft-erp-crm-sync-engine'
+			'estasoft-enterprise-erpcrm-sync-engine'
 		),
 	};
 	const deals: Record< WhatAnswers[ 'crm_order_as' ], string > = {
 		deal_per_order: __(
 			'One deal for each order.',
-			'estasoft-erp-crm-sync-engine'
+			'estasoft-enterprise-erpcrm-sync-engine'
 		),
 		deal_per_customer: __(
 			'One deal for each customer, updated each time.',
-			'estasoft-erp-crm-sync-engine'
+			'estasoft-enterprise-erpcrm-sync-engine'
 		),
 		note_only: __(
 			'A note on the contact only.',
-			'estasoft-erp-crm-sync-engine'
+			'estasoft-enterprise-erpcrm-sync-engine'
 		),
 	};
 	if ( type === 'accounting' ) {
@@ -172,12 +184,15 @@ export function summariseWhat(
 				? sprintf(
 						/* translators: %s: system name */ __(
 							'From %s',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						system
 					)
-				: __( 'Not synced', 'estasoft-erp-crm-sync-engine' ),
-			tracking: __( 'Not synced', 'estasoft-erp-crm-sync-engine' ),
+				: __( 'Not synced', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			tracking: __(
+				'Not synced',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 		};
 	}
 	if ( type === 'crm' ) {
@@ -185,37 +200,43 @@ export function summariseWhat(
 			orders: deals[ what.crm_order_as ],
 			customers:
 				what.crm_contacts === 'contacts_only'
-					? __( 'Contacts only', 'estasoft-erp-crm-sync-engine' )
+					? __(
+							'Contacts only',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						)
 					: __(
 							'A contact for every customer, plus a company when filled',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
-			stock: __( 'Not synced', 'estasoft-erp-crm-sync-engine' ),
-			tracking: __( 'Not synced', 'estasoft-erp-crm-sync-engine' ),
+			stock: __( 'Not synced', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			tracking: __(
+				'Not synced',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 		};
 	}
 	return {
 		orders: what.send_orders
 			? `${ when[ what.send_when ] } ${ docs[ what.documents ] }`
-			: __( 'Not sent', 'estasoft-erp-crm-sync-engine' ),
+			: __( 'Not sent', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		customers: customers[ what.customer_match ],
 		stock: what.stock_in
 			? sprintf(
 					/* translators: %s: system name */ __(
 						'From %s',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					system
 				)
-			: __( 'Not synced', 'estasoft-erp-crm-sync-engine' ),
+			: __( 'Not synced', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		tracking: what.tracking_in
 			? sprintf(
 					/* translators: %s: system name */ __(
 						'From %s',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					system
 				)
-			: __( 'Not synced', 'estasoft-erp-crm-sync-engine' ),
+			: __( 'Not synced', 'estasoft-enterprise-erpcrm-sync-engine' ),
 	};
 }

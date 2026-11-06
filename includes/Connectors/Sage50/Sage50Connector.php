@@ -52,7 +52,7 @@ final class Sage50Connector extends LedgerExportConnector {
 	 * The default format; the content type of a real file follows the chosen character set.
 	 */
 	public function exportFormat(): ExportFormat {
-		return new ExportFormat( 'csv', 'text/csv; charset=windows-1252', __( 'Sage 50 CSV import', 'estasoft-erp-crm-sync-engine' ), false, 'windows-1252', true );
+		return new ExportFormat( 'csv', 'text/csv; charset=windows-1252', __( 'Sage 50 CSV import', 'estasoft-enterprise-erpcrm-sync-engine' ), false, 'windows-1252', true );
 	}
 
 	/**
@@ -75,7 +75,7 @@ final class Sage50Connector extends LedgerExportConnector {
 	 */
 	protected function buildRow( ExportDocument $document, ExportSettings $settings ): array {
 		if ( ! $settings instanceof Sage50Settings ) {
-			throw new \LogicException( esc_html__( 'These are not Sage 50 settings.', 'estasoft-erp-crm-sync-engine' ) );
+			throw new \LogicException( esc_html__( 'These are not Sage 50 settings.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$part = $settings->isUk() ? ( new Sage50UkWriter() )->render( $document, $settings ) : ( new Sage50UsWriter() )->render( $document, $settings );
 		return $part + array( 'extra' => array() );
@@ -107,7 +107,7 @@ final class Sage50Connector extends LedgerExportConnector {
 	 */
 	protected function fileFormat( array $settings ): ExportFormat {
 		$charset = $this->charsetFor( $settings );
-		return new ExportFormat( 'csv', 'text/csv; charset=' . strtolower( $charset->label() ), __( 'Sage 50 CSV import', 'estasoft-erp-crm-sync-engine' ), false, strtolower( $charset->label() ), true );
+		return new ExportFormat( 'csv', 'text/csv; charset=' . strtolower( $charset->label() ), __( 'Sage 50 CSV import', 'estasoft-enterprise-erpcrm-sync-engine' ), false, strtolower( $charset->label() ), true );
 	}
 
 	/**
@@ -141,20 +141,20 @@ final class Sage50Connector extends LedgerExportConnector {
 		$lines   = array(
 			sprintf(
 				/* translators: 1: Sage 50 edition, 2: number of orders, 3: number of rows, 4: character set */
-				_n( 'Sage 50 %1$s CSV: %2$d order, %3$d rows, written in %4$s.', 'Sage 50 %1$s CSV: %2$d orders, %3$d rows, written in %4$s.', $stats['orders'], 'estasoft-erp-crm-sync-engine' ),
-				$uk ? __( 'Accounts (UK and Ireland)', 'estasoft-erp-crm-sync-engine' ) : __( 'U.S. edition', 'estasoft-erp-crm-sync-engine' ),
+				_n( 'Sage 50 %1$s CSV: %2$d order, %3$d rows, written in %4$s.', 'Sage 50 %1$s CSV: %2$d orders, %3$d rows, written in %4$s.', $stats['orders'], 'estasoft-enterprise-erpcrm-sync-engine' ),
+				$uk ? __( 'Accounts (UK and Ireland)', 'estasoft-enterprise-erpcrm-sync-engine' ) : __( 'U.S. edition', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$stats['orders'],
 				$stats['lines'],
 				$charset->label()
 			),
 		);
 		if ( ! $uk ) {
-			$lines[] = __( 'Import template fields, in this order:', 'estasoft-erp-crm-sync-engine' ) . ' ' . implode( ', ', Sage50UsWriter::HEADINGS );
+			$lines[] = __( 'Import template fields, in this order:', 'estasoft-enterprise-erpcrm-sync-engine' ) . ' ' . implode( ', ', Sage50UsWriter::HEADINGS );
 		}
 		if ( $stats['lost'] > 0 ) {
 			$lines[] = sprintf(
 				/* translators: 1: number of characters, 2: number of orders */
-				_n( '%1$d character cannot be written in Windows-1252 and becomes a question mark (%2$d orders).', '%1$d characters cannot be written in Windows-1252 and become question marks (%2$d orders).', $stats['lost'], 'estasoft-erp-crm-sync-engine' ),
+				_n( '%1$d character cannot be written in Windows-1252 and becomes a question mark (%2$d orders).', '%1$d characters cannot be written in Windows-1252 and become question marks (%2$d orders).', $stats['lost'], 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$stats['lost'],
 				$stats['lost_orders']
 			);
@@ -188,12 +188,12 @@ final class Sage50Connector extends LedgerExportConnector {
 	 */
 	protected function masterHeadings(): array {
 		return array(
-			'accounts'  => __( 'Accounts and nominal or G/L codes', 'estasoft-erp-crm-sync-engine' ),
-			'customers' => __( 'Customer IDs', 'estasoft-erp-crm-sync-engine' ),
-			'nominals'  => __( 'Nominal codes', 'estasoft-erp-crm-sync-engine' ),
-			'tax_codes' => __( 'Tax codes', 'estasoft-erp-crm-sync-engine' ),
-			'agencies'  => __( 'Sales tax agencies', 'estasoft-erp-crm-sync-engine' ),
-			'items'     => __( 'Item IDs', 'estasoft-erp-crm-sync-engine' ),
+			'accounts'  => __( 'Accounts and nominal or G/L codes', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'customers' => __( 'Customer IDs', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'nominals'  => __( 'Nominal codes', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'tax_codes' => __( 'Tax codes', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'agencies'  => __( 'Sales tax agencies', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'items'     => __( 'Item IDs', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		);
 	}
 
@@ -214,59 +214,59 @@ final class Sage50Connector extends LedgerExportConnector {
 	 */
 	protected function settingFields(): array {
 		$yesno = array(
-			'yes' => __( 'Yes', 'estasoft-erp-crm-sync-engine' ),
-			'no'  => __( 'No', 'estasoft-erp-crm-sync-engine' ),
+			'yes' => __( 'Yes', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'no'  => __( 'No', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		);
 		return array(
 			new CredentialField(
 				'edition',
-				__( 'Sage 50 edition', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Sage 50 edition', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				false,
 				true,
-				__( 'Sage 50 Canada is not covered.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Sage 50 Canada is not covered.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'uk',
 				'select',
 				array(
-					'uk' => __( 'Sage 50 Accounts (UK and Ireland)', 'estasoft-erp-crm-sync-engine' ),
-					'us' => __( 'Sage 50 (U.S. edition)', 'estasoft-erp-crm-sync-engine' ),
+					'uk' => __( 'Sage 50 Accounts (UK and Ireland)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'us' => __( 'Sage 50 (U.S. edition)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				'connection'
 			),
-			new CredentialField( 'currency', __( 'Currency of your books', 'estasoft-erp-crm-sync-engine' ), false, true, __( 'Three letters, for example GBP or USD. Orders in another currency are left out.', 'estasoft-erp-crm-sync-engine' ), 'GBP', 'text', array(), 'connection' ),
-			new CredentialField( 'customer_account', __( 'UK: customer account reference', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'The one account that web orders post to, for example WEB. It must exist in Sage 50.', 'estasoft-erp-crm-sync-engine' ), 'WEB', 'text', array(), 'connection' ),
-			new CredentialField( 'sales_nominal', __( 'UK: sales nominal code', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'A tax code in the tax mapping can name another nominal for its rate, written like T1:4001.', 'estasoft-erp-crm-sync-engine' ), '4000', 'text', array(), 'connection' ),
-			new CredentialField( 'shipping_nominal', __( 'UK: shipping nominal code', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Empty uses the sales nominal.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
-			new CredentialField( 'department', __( 'UK: department code', 'estasoft-erp-crm-sync-engine' ), false, false, '', '', 'text', array(), 'advanced' ),
-			new CredentialField( 'user_name', __( 'UK: user name column', 'estasoft-erp-crm-sync-engine' ), false, false, '', '', 'text', array(), 'advanced' ),
-			new CredentialField( 'date_format', __( 'UK: date format', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'It must match the date format of the computer that imports the file.', 'estasoft-erp-crm-sync-engine' ), 'dd/mm/yyyy', 'select', array_combine( Sage50Settings::DATE_FORMATS, Sage50Settings::DATE_FORMATS ), 'advanced' ),
-			new CredentialField( 'customer_id', __( 'US: customer ID', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'The one customer that web orders use. It must exist in Sage 50.', 'estasoft-erp-crm-sync-engine' ), 'WEB', 'text', array(), 'connection' ),
-			new CredentialField( 'ar_account', __( 'US: Accounts Receivable account', 'estasoft-erp-crm-sync-engine' ), false, false, '', '', 'text', array(), 'connection' ),
-			new CredentialField( 'sales_account', __( 'US: sales G/L account', 'estasoft-erp-crm-sync-engine' ), false, false, '', '', 'text', array(), 'connection' ),
-			new CredentialField( 'freight_account', __( 'US: freight G/L account', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Empty uses the sales account.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
-			new CredentialField( 'tax_gl_account', __( 'US: sales tax G/L account', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'A tax code in the tax mapping can name another account for its agency, written like STATE:2300.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
-			new CredentialField( 'item_tax_type', __( 'US: tax type of product lines', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'A number from 0 to 26.', 'estasoft-erp-crm-sync-engine' ), '1', 'number', array(), 'advanced' ),
-			new CredentialField( 'due_days', __( 'US: days until due', 'estasoft-erp-crm-sync-engine' ), false, false, '', '0', 'number', array(), 'advanced' ),
-			new CredentialField( 'use_items', __( 'US: write the SKU as Item ID', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Yes needs an inventory item with that ID in Sage 50.', 'estasoft-erp-crm-sync-engine' ), 'no', 'select', $yesno, 'advanced' ),
-			new CredentialField( 'untaxed_code', __( 'Tax code for lines without tax', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'UK default T0.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
-			new CredentialField( 'fee_tax_code', __( 'Tax code for fees', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Fees carry no rate. Name the tax code for fees that have tax.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
-			new CredentialField( 'adjustment_account', __( 'Account for other refund amounts', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Nominal code (UK) or G/L account (US) for refund amounts that belong to no product.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
-			new CredentialField( 'header_row', __( 'Heading row', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Leave it on No unless you have confirmed that your Sage 50 import skips the first row: no source says the UK import does, and a heading row it does not skip is read as an order.', 'estasoft-erp-crm-sync-engine' ), 'no', 'select', $yesno, 'advanced' ),
+			new CredentialField( 'currency', __( 'Currency of your books', 'estasoft-enterprise-erpcrm-sync-engine' ), false, true, __( 'Three letters, for example GBP or USD. Orders in another currency are left out.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'GBP', 'text', array(), 'connection' ),
+			new CredentialField( 'customer_account', __( 'UK: customer account reference', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'The one account that web orders post to, for example WEB. It must exist in Sage 50.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'WEB', 'text', array(), 'connection' ),
+			new CredentialField( 'sales_nominal', __( 'UK: sales nominal code', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'A tax code in the tax mapping can name another nominal for its rate, written like T1:4001.', 'estasoft-enterprise-erpcrm-sync-engine' ), '4000', 'text', array(), 'connection' ),
+			new CredentialField( 'shipping_nominal', __( 'UK: shipping nominal code', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Empty uses the sales nominal.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'advanced' ),
+			new CredentialField( 'department', __( 'UK: department code', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, '', '', 'text', array(), 'advanced' ),
+			new CredentialField( 'user_name', __( 'UK: user name column', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, '', '', 'text', array(), 'advanced' ),
+			new CredentialField( 'date_format', __( 'UK: date format', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'It must match the date format of the computer that imports the file.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'dd/mm/yyyy', 'select', array_combine( Sage50Settings::DATE_FORMATS, Sage50Settings::DATE_FORMATS ), 'advanced' ),
+			new CredentialField( 'customer_id', __( 'US: customer ID', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'The one customer that web orders use. It must exist in Sage 50.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'WEB', 'text', array(), 'connection' ),
+			new CredentialField( 'ar_account', __( 'US: Accounts Receivable account', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, '', '', 'text', array(), 'connection' ),
+			new CredentialField( 'sales_account', __( 'US: sales G/L account', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, '', '', 'text', array(), 'connection' ),
+			new CredentialField( 'freight_account', __( 'US: freight G/L account', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Empty uses the sales account.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'advanced' ),
+			new CredentialField( 'tax_gl_account', __( 'US: sales tax G/L account', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'A tax code in the tax mapping can name another account for its agency, written like STATE:2300.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'advanced' ),
+			new CredentialField( 'item_tax_type', __( 'US: tax type of product lines', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'A number from 0 to 26.', 'estasoft-enterprise-erpcrm-sync-engine' ), '1', 'number', array(), 'advanced' ),
+			new CredentialField( 'due_days', __( 'US: days until due', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, '', '0', 'number', array(), 'advanced' ),
+			new CredentialField( 'use_items', __( 'US: write the SKU as Item ID', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Yes needs an inventory item with that ID in Sage 50.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'no', 'select', $yesno, 'advanced' ),
+			new CredentialField( 'untaxed_code', __( 'Tax code for lines without tax', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'UK default T0.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'advanced' ),
+			new CredentialField( 'fee_tax_code', __( 'Tax code for fees', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Fees carry no rate. Name the tax code for fees that have tax.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'advanced' ),
+			new CredentialField( 'adjustment_account', __( 'Account for other refund amounts', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Nominal code (UK) or G/L account (US) for refund amounts that belong to no product.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'advanced' ),
+			new CredentialField( 'header_row', __( 'Heading row', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Leave it on No unless you have confirmed that your Sage 50 import skips the first row: no source says the UK import does, and a heading row it does not skip is read as an order.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'no', 'select', $yesno, 'advanced' ),
 			new CredentialField(
 				'encoding',
-				__( 'File encoding', 'estasoft-erp-crm-sync-engine' ),
+				__( 'File encoding', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				false,
 				false,
-				__( 'Windows-1252 is the ANSI text Sage 50 reads. It cannot hold Arabic and other scripts: each such character becomes a question mark, and the export lists them in its notes file. UTF-8 keeps every script; Sage 50 reading it is not verified.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Windows-1252 is the ANSI text Sage 50 reads. It cannot hold Arabic and other scripts: each such character becomes a question mark, and the export lists them in its notes file. UTF-8 keeps every script; Sage 50 reading it is not verified.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'windows-1252',
 				'select',
 				array(
-					'windows-1252' => __( 'Windows-1252', 'estasoft-erp-crm-sync-engine' ),
-					'utf-8-bom'    => __( 'UTF-8 with byte order mark', 'estasoft-erp-crm-sync-engine' ),
+					'windows-1252' => __( 'Windows-1252', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'utf-8-bom'    => __( 'UTF-8 with byte order mark', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				'advanced'
 			),
-			new CredentialField( 'record_payments', __( 'UK: record payments', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Adds a receipt row for paid orders. Needs a bank nominal for each payment method below.', 'estasoft-erp-crm-sync-engine' ), 'no', 'select', $yesno, 'advanced' ),
-			new CredentialField( 'payment_accounts', __( 'UK: bank nominal for each payment method', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'One line for each method, like: stripe = 1200', 'estasoft-erp-crm-sync-engine' ), '', 'textarea', array(), 'advanced' ),
+			new CredentialField( 'record_payments', __( 'UK: record payments', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Adds a receipt row for paid orders. Needs a bank nominal for each payment method below.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'no', 'select', $yesno, 'advanced' ),
+			new CredentialField( 'payment_accounts', __( 'UK: bank nominal for each payment method', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'One line for each method, like: stripe = 1200', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'textarea', array(), 'advanced' ),
 		);
 	}
 }

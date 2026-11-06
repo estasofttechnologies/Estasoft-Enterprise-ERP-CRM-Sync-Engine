@@ -1654,7 +1654,7 @@ export function mockBoot( overrides: Partial< BootData > = {} ): BootData {
 		nonce: 'mock-nonce',
 		adminUrl: 'https://cedarstone.example/wp-admin/',
 		pluginUrl:
-			'https://cedarstone.example/wp-content/plugins/estasoft-erp-crm-sync-engine/',
+			'https://cedarstone.example/wp-content/plugins/estasoft-enterprise-erpcrm-sync-engine/',
 		version: '0.1.0',
 		capabilities: { manage: true, configure: true },
 		storeTimezone: TIMEZONE,

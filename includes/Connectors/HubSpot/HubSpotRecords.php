@@ -74,7 +74,7 @@ final class HubSpotRecords {
 			if ( null !== $after ) {
 				$body['after'] = $after;
 			}
-			$response = $this->api->post( "/crm/objects/{$this->version}/{$type}/search", array(), $body, array( 'action' => __( 'search records', 'estasoft-erp-crm-sync-engine' ) ) );
+			$response = $this->api->post( "/crm/objects/{$this->version}/{$type}/search", array(), $body, array( 'action' => __( 'search records', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 			$json     = $response->json();
 			foreach ( (array) ( $json['results'] ?? array() ) as $row ) {
 				if ( is_array( $row ) ) {
@@ -108,7 +108,7 @@ final class HubSpotRecords {
 			$body,
 			array(
 				'allow'  => $allow,
-				'action' => __( 'create records', 'estasoft-erp-crm-sync-engine' ),
+				'action' => __( 'create records', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			)
 		);
 		return $response;
@@ -122,7 +122,7 @@ final class HubSpotRecords {
 	 * @param array<string,mixed> $properties Properties.
 	 */
 	public function update( string $type, string $id, array $properties ): ApiResponse {
-		return $this->api->patch( "/crm/objects/{$this->version}/{$type}/" . rawurlencode( $id ), array(), array( 'properties' => $properties ), array( 'action' => __( 'change records', 'estasoft-erp-crm-sync-engine' ) ) );
+		return $this->api->patch( "/crm/objects/{$this->version}/{$type}/" . rawurlencode( $id ), array(), array( 'properties' => $properties ), array( 'action' => __( 'change records', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 	}
 
 	/**
@@ -132,7 +132,7 @@ final class HubSpotRecords {
 	 * @param string $id     Record id.
 	 */
 	public function archive( string $type, string $id ): void {
-		$this->api->delete( "/crm/objects/{$this->version}/{$type}/" . rawurlencode( $id ), array(), null, array( 'action' => __( 'delete records', 'estasoft-erp-crm-sync-engine' ) ) );
+		$this->api->delete( "/crm/objects/{$this->version}/{$type}/" . rawurlencode( $id ), array(), null, array( 'action' => __( 'delete records', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 	}
 
 	/**
@@ -162,7 +162,7 @@ final class HubSpotRecords {
 			null,
 			array(
 				'allow'  => array( 403, 404 ),
-				'action' => __( 'read the property definitions', 'estasoft-erp-crm-sync-engine' ),
+				'action' => __( 'read the property definitions', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			)
 		);
 	}
@@ -180,7 +180,7 @@ final class HubSpotRecords {
 			$definition,
 			array(
 				'allow'  => array( 400, 403, 409 ),
-				'action' => __( 'create properties', 'estasoft-erp-crm-sync-engine' ),
+				'action' => __( 'create properties', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			)
 		);
 	}
@@ -189,6 +189,6 @@ final class HubSpotRecords {
 	 * One cheap read that proves the key works and may read deals (the circuit-breaker probe).
 	 */
 	public function probe(): bool {
-		return $this->api->get( "/crm/objects/{$this->version}/deals", array( 'limit' => 1 ), null, array( 'action' => __( 'read records', 'estasoft-erp-crm-sync-engine' ) ) )->isSuccess();
+		return $this->api->get( "/crm/objects/{$this->version}/deals", array( 'limit' => 1 ), null, array( 'action' => __( 'read records', 'estasoft-enterprise-erpcrm-sync-engine' ) ) )->isSuccess();
 	}
 }

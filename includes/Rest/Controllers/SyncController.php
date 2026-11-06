@@ -74,7 +74,7 @@ final class SyncController extends BaseController {
 	public function run(): array {
 		$queue = $this->serviceAs( Services::QUEUE_SERVICE, QueueService::class );
 		if ( ! $queue->syncNow() ) {
-			throw new ApiException( 'estasoft_sync_run_failed', esc_html__( 'The run could not be started. Background tasks may be switched off on this site.', 'estasoft-erp-crm-sync-engine' ), 503, 'retry' );
+			throw new ApiException( 'estasoft_sync_run_failed', esc_html__( 'The run could not be started. Background tasks may be switched off on this site.', 'estasoft-enterprise-erpcrm-sync-engine' ), 503, 'retry' );
 		}
 		return array( 'started' => true );
 	}
@@ -132,7 +132,7 @@ final class SyncController extends BaseController {
 		$pause = $this->serviceAs( Services::PAUSE_CONTROLLER, PauseController::class );
 		$done  = null === $connectionId ? $pause->pauseAll( $minutes ) > 0 : $pause->pause( $connectionId, $minutes );
 		if ( ! $done ) {
-			throw ApiException::conflict( esc_html__( 'There is no connection that can be paused.', 'estasoft-erp-crm-sync-engine' ), 'estasoft_sync_cannot_pause' );
+			throw ApiException::conflict( esc_html__( 'There is no connection that can be paused.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'estasoft_sync_cannot_pause' );
 		}
 		return $this->summary( $connectionId );
 	}
@@ -149,7 +149,7 @@ final class SyncController extends BaseController {
 		$pause = $this->serviceAs( Services::PAUSE_CONTROLLER, PauseController::class );
 		$done  = null === $connectionId ? $pause->resumeAll() > 0 : $pause->resume( $connectionId );
 		if ( ! $done ) {
-			throw ApiException::conflict( esc_html__( 'There is no paused connection to resume.', 'estasoft-erp-crm-sync-engine' ), 'estasoft_sync_cannot_resume' );
+			throw ApiException::conflict( esc_html__( 'There is no paused connection to resume.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'estasoft_sync_cannot_resume' );
 		}
 		return $this->summary( $connectionId );
 	}
@@ -169,7 +169,7 @@ final class SyncController extends BaseController {
 				return $summary;
 			}
 		}
-		throw ApiException::notFound( esc_html__( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ) );
+		throw ApiException::notFound( esc_html__( 'That connection does not exist.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**

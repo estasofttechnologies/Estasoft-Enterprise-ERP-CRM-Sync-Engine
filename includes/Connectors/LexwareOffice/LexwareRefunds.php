@@ -116,7 +116,7 @@ final class LexwareRefunds {
 		$created = $api->post( 'credit-notes', $query, $body )->json();
 		$id      = PayloadReader::text( $created['id'] ?? '' );
 		if ( '' === $id ) {
-			return SendResult::failure( Refusal::value( LexwareOfficeConnector::LABEL, 'credit note', __( 'Lexware Office did not return the new credit note.', 'estasoft-erp-crm-sync-engine' ), 'no credit note id' ) );
+			return SendResult::failure( Refusal::value( LexwareOfficeConnector::LABEL, 'credit note', __( 'Lexware Office did not return the new credit note.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'no credit note id' ) );
 		}
 		$document = $api->get( 'credit-notes/' . rawurlencode( $id ) )->json();
 		$document = array() === $document ? array( 'id' => $id ) : $document + array( 'id' => $id );
@@ -177,7 +177,7 @@ final class LexwareRefunds {
 		if ( array() === $items ) {
 			$rest = $refund->expectedTotal();
 			if ( $rest <= 0 ) {
-				return Refusal::value( LexwareOfficeConnector::LABEL, 'amount', __( 'The refund has no amount.', 'estasoft-erp-crm-sync-engine' ), 'empty refund' );
+				return Refusal::value( LexwareOfficeConnector::LABEL, 'amount', __( 'The refund has no amount.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'empty refund' );
 			}
 			$items[] = $this->item( 'Erstattung', 1.0, $rest, $special ? 0 : $default, $special );
 		}
@@ -271,7 +271,7 @@ final class LexwareRefunds {
 		return Refusal::value(
 			LexwareOfficeConnector::LABEL,
 			'order_ref',
-			__( 'Lexware Office has no invoice for the refunded order.', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Lexware Office has no invoice for the refunded order.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			'no invoice for the refund'
 		);
 	}

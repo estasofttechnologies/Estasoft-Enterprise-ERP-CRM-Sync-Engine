@@ -78,7 +78,7 @@ final class DateUtc extends BaseTransform {
 		}
 		$date = $this->parse( Text::asciiDigits( Text::trim( $text ) ), $zone );
 		if ( null === $date ) {
-			$context->warn( __( 'A date could not be read and was left empty.', 'estasoft-erp-crm-sync-engine' ) );
+			$context->warn( __( 'A date could not be read and was left empty.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			return '';
 		}
 		$moved = $date->setTimezone( $out );

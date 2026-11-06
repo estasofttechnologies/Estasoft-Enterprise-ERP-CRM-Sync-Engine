@@ -27,7 +27,7 @@ function problem(
 		case 'no_sku':
 			return {
 				tone: 'warning',
-				text: __( 'No SKU', 'estasoft-erp-crm-sync-engine' ),
+				text: __( 'No SKU', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			};
 		case 'unmatched':
 			return {
@@ -35,7 +35,7 @@ function problem(
 				text: sprintf(
 					/* translators: %s: system name */ __(
 						'SKU not found in %s',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					system
 				),
@@ -43,12 +43,15 @@ function problem(
 		case 'override':
 			return {
 				tone: 'info',
-				text: __( 'Mapped by hand', 'estasoft-erp-crm-sync-engine' ),
+				text: __(
+					'Mapped by hand',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				),
 			};
 		default:
 			return {
 				tone: 'success',
-				text: __( 'Matched', 'estasoft-erp-crm-sync-engine' ),
+				text: __( 'Matched', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			};
 	}
 }
@@ -75,20 +78,20 @@ export function ProductsPanel() {
 			<Callout tone="info">
 				{ __(
 					'Changes on this tab apply as soon as you save, and are written to the log. SKU matches have no drafts or versions.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			</Callout>
 			<Card
 				title={ __(
 					'How products are matched',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			>
 				<p>
 					{ sprintf(
 						/* translators: %s: system name */ __(
 							'SKU is the safest. The SKU of each WooCommerce product, and of each variation, is matched against the reference of the product in %s.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						system
 					) }
@@ -96,7 +99,7 @@ export function ProductsPanel() {
 				<p className="estasoft-sync-muted">
 					{ __(
 						'If there is no match, the order fails and waits in Needs attention until you map the SKU. Nothing is created in your system without you.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</p>
 			</Card>
@@ -108,13 +111,13 @@ export function ProductsPanel() {
 									'Product without a match (%d)',
 									'Products without a match (%d)',
 									list.data.total,
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								list.data.total
 							)
 						: __(
 								'Products without a match',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							)
 				}
 				flush
@@ -124,7 +127,7 @@ export function ProductsPanel() {
 						rows={ 4 }
 						label={ __(
 							'Loading products',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					/>
 				) : null }
@@ -138,12 +141,12 @@ export function ProductsPanel() {
 					<EmptyState
 						title={ __(
 							'Every product matches',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					>
 						{ __(
 							'No product is waiting for a SKU or a mapping.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</EmptyState>
 				) : null }
@@ -151,7 +154,7 @@ export function ProductsPanel() {
 					<ResponsiveTable< ProductMatch, number >
 						caption={ __(
 							'Products without a match',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						rows={ items }
 						rowKey={ ( product ) => product.product_id }
@@ -160,7 +163,7 @@ export function ProductsPanel() {
 								id: 'product',
 								header: __(
 									'Product',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								primary: true,
 								cell: ( product ) => (
@@ -176,7 +179,7 @@ export function ProductsPanel() {
 								id: 'sku',
 								header: __(
 									'SKU',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								cell: ( product ) =>
 									product.sku ? (
@@ -186,7 +189,7 @@ export function ProductsPanel() {
 									) : (
 										__(
 											'(none)',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										)
 									),
 							},
@@ -194,7 +197,7 @@ export function ProductsPanel() {
 								id: 'problem',
 								header: __(
 									'Problem',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								wide: true,
 								cell: ( product ) => {
@@ -211,7 +214,7 @@ export function ProductsPanel() {
 															'%d order is waiting on it',
 															'%d orders are waiting on it',
 															product.orders_blocked,
-															'estasoft-erp-crm-sync-engine'
+															'estasoft-enterprise-erpcrm-sync-engine'
 														),
 														product.orders_blocked
 													) }
@@ -225,7 +228,7 @@ export function ProductsPanel() {
 								id: 'action',
 								header: __(
 									'Action',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								hideHeader: true,
 								align: 'end',
@@ -238,7 +241,7 @@ export function ProductsPanel() {
 										>
 											{ __(
 												'Edit product',
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											) }
 										</Btn>
 									) : (
@@ -247,7 +250,7 @@ export function ProductsPanel() {
 											aria-label={ sprintf(
 												/* translators: %s: SKU */ __(
 													'Map this SKU %s',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												),
 												product.sku
 											) }
@@ -257,7 +260,7 @@ export function ProductsPanel() {
 										>
 											{ __(
 												'Map this SKU',
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											) }
 										</Btn>
 									),

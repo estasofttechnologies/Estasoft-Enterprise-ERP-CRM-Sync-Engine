@@ -49,7 +49,7 @@ final class DaftraTotals {
 			return $this->refused(
 				sprintf(
 					/* translators: 1: currency Daftra shows, 2: currency of the order. */
-					__( 'Daftra made the document in %1$s but the order is in %2$s.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Daftra made the document in %1$s but the order is in %2$s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$actualCurrency,
 					$currency
 				)
@@ -61,7 +61,7 @@ final class DaftraTotals {
 		$exponent = $this->amounts->exponent( '' !== $currency ? $currency : $actualCurrency );
 		$actual   = $record->totalMinor( $exponent );
 		if ( null === $actual ) {
-			$message = __( 'Daftra did not report the total of the document, so it could not be compared with the order.', 'estasoft-erp-crm-sync-engine' );
+			$message = __( 'Daftra did not report the total of the document, so it could not be compared with the order.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			if ( $fail ) {
 				return $this->refused( $message );
 			}
@@ -73,7 +73,7 @@ final class DaftraTotals {
 		}
 		$message = sprintf(
 			/* translators: 1: total Daftra shows, 2: total of the order, 3: currency code. */
-			__( 'Daftra shows %1$s but the order is %2$s (%3$s). Check the tax settings and the tax mapping.', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Daftra shows %1$s but the order is %2$s (%3$s). Check the tax settings and the tax mapping.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			$this->amounts->decimalString( $actual, $exponent ),
 			$this->amounts->decimalString( $expected, $exponent ),
 			'' !== $currency ? $currency : $actualCurrency

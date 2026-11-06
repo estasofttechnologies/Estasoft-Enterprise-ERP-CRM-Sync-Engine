@@ -221,7 +221,7 @@ final class ConnectionsController extends BaseController {
 				continue;
 			}
 			if ( ! is_array( $value ) ) {
-				$invalid = ApiException::invalid( esc_html__( 'Some fields need attention.', 'estasoft-erp-crm-sync-engine' ), array( $key => esc_html__( 'This must be a list of fields.', 'estasoft-erp-crm-sync-engine' ) ) );
+				$invalid = ApiException::invalid( esc_html__( 'Some fields need attention.', 'estasoft-enterprise-erpcrm-sync-engine' ), array( $key => esc_html__( 'This must be a list of fields.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 				throw $invalid;
 			}
 			$input[ $key ] = $value;

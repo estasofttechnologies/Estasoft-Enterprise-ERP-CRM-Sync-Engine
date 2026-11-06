@@ -118,7 +118,7 @@ final class OrdersList {
 		if ( ! current_user_can( $this->capability ) ) {
 			return $columns;
 		}
-		$label  = __( 'Sync', 'estasoft-erp-crm-sync-engine' );
+		$label  = __( 'Sync', 'estasoft-enterprise-erpcrm-sync-engine' );
 		$result = array();
 		$placed = false;
 		foreach ( $columns as $key => $title ) {
@@ -158,7 +158,7 @@ final class OrdersList {
 	public function cell( \WC_Order $order ): string {
 		$state = $this->orders->state( $order );
 		if ( '' === $state ) {
-			return '<span class="estasoft-sync-muted"><span aria-hidden="true">&mdash;</span><span class="screen-reader-text">' . esc_html__( 'Not synced', 'estasoft-erp-crm-sync-engine' ) . '</span></span>';
+			return '<span class="estasoft-sync-muted"><span aria-hidden="true">&mdash;</span><span class="screen-reader-text">' . esc_html__( 'Not synced', 'estasoft-enterprise-erpcrm-sync-engine' ) . '</span></span>';
 		}
 		return $this->chips->html( $state );
 	}
@@ -231,9 +231,9 @@ final class OrdersList {
 		if ( ! current_user_can( $this->capability ) ) {
 			return $actions;
 		}
-		$actions['estasoft_sync_retry'] = __( 'Retry failed orders', 'estasoft-erp-crm-sync-engine' );
-		$actions['estasoft_sync_again'] = __( 'Sync again', 'estasoft-erp-crm-sync-engine' );
-		$actions['estasoft_sync_skip']  = __( 'Skip sync', 'estasoft-erp-crm-sync-engine' );
+		$actions['estasoft_sync_retry'] = __( 'Retry failed orders', 'estasoft-enterprise-erpcrm-sync-engine' );
+		$actions['estasoft_sync_again'] = __( 'Sync again', 'estasoft-enterprise-erpcrm-sync-engine' );
+		$actions['estasoft_sync_skip']  = __( 'Skip sync', 'estasoft-enterprise-erpcrm-sync-engine' );
 		return $actions;
 	}
 
@@ -291,10 +291,10 @@ final class OrdersList {
 		$counts = $this->counts();
 		$active = $this->requestedState();
 		$labels = array(
-			'failed'     => __( 'Failed', 'estasoft-erp-crm-sync-engine' ),
-			'waiting'    => __( 'Waiting', 'estasoft-erp-crm-sync-engine' ),
-			'skipped'    => __( 'Skipped', 'estasoft-erp-crm-sync-engine' ),
-			'not_synced' => __( 'Not synced yet', 'estasoft-erp-crm-sync-engine' ),
+			'failed'     => __( 'Failed', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'waiting'    => __( 'Waiting', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'skipped'    => __( 'Skipped', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'not_synced' => __( 'Not synced yet', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		);
 		foreach ( $labels as $choice => $label ) {
 			$views[ 'estasoft_sync_' . $choice ] = sprintf(
@@ -317,13 +317,13 @@ final class OrdersList {
 		}
 		$active  = $this->requestedState();
 		$choices = array(
-			''           => __( 'All sync states', 'estasoft-erp-crm-sync-engine' ),
-			'failed'     => __( 'Failed', 'estasoft-erp-crm-sync-engine' ),
-			'waiting'    => __( 'Waiting', 'estasoft-erp-crm-sync-engine' ),
-			'skipped'    => __( 'Skipped', 'estasoft-erp-crm-sync-engine' ),
-			'not_synced' => __( 'Not synced yet', 'estasoft-erp-crm-sync-engine' ),
+			''           => __( 'All sync states', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'failed'     => __( 'Failed', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'waiting'    => __( 'Waiting', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'skipped'    => __( 'Skipped', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'not_synced' => __( 'Not synced yet', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		);
-		echo '<label class="screen-reader-text" for="estasoft-sync-state-filter">' . esc_html__( 'Filter by sync state', 'estasoft-erp-crm-sync-engine' ) . '</label>';
+		echo '<label class="screen-reader-text" for="estasoft-sync-state-filter">' . esc_html__( 'Filter by sync state', 'estasoft-enterprise-erpcrm-sync-engine' ) . '</label>';
 		echo '<select name="' . esc_attr( self::FILTER ) . '" id="estasoft-sync-state-filter">';
 		foreach ( $choices as $value => $label ) {
 			echo '<option value="' . esc_attr( $value ) . '"' . selected( $active, $value, false ) . '>' . esc_html( $label ) . '</option>';

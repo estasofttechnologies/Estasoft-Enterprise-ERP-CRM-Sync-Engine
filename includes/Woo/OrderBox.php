@@ -110,7 +110,7 @@ final class OrderBox {
 		}
 		add_meta_box(
 			'estasoft-sync-order-box',
-			__( 'ESTASOFT SYNC', 'estasoft-erp-crm-sync-engine' ),
+			__( 'ESTASOFT SYNC', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			array( $this, 'render' ),
 			(string) $postType,
 			'side',
@@ -175,7 +175,7 @@ final class OrderBox {
 		$orderId = isset( $_GET['order'] ) ? absint( wp_unslash( $_GET['order'] ) ) : 0;
 		check_admin_referer( $this->nonceName( $todo, $orderId ) );
 		if ( ! current_user_can( $this->capability ) ) {
-			wp_die( esc_html__( 'You are not allowed to do that.', 'estasoft-erp-crm-sync-engine' ), '', array( 'response' => 403 ) );
+			wp_die( esc_html__( 'You are not allowed to do that.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', array( 'response' => 403 ) );
 		}
 		$order  = function_exists( 'wc_get_order' ) ? wc_get_order( $orderId ) : false;
 		$result = $order instanceof \WC_Order ? $this->actions->perform( $todo, $order, $this->currentUserName() ) : 'failed';
@@ -224,20 +224,20 @@ final class OrderBox {
 	private function synced( OrderSyncInfo $info, string $system ): string {
 		$rows = array();
 		/* translators: %s: name of the connected system, for example Odoo. */
-		$rows[ sprintf( __( '%s order', 'estasoft-erp-crm-sync-engine' ), $system ) ] = $this->link( $info->externalRef, $info->externalUrl );
+		$rows[ sprintf( __( '%s order', 'estasoft-enterprise-erpcrm-sync-engine' ), $system ) ] = $this->link( $info->externalRef, $info->externalUrl );
 		if ( '' !== $info->invoiceNumber ) {
-			$rows[ __( 'Invoice', 'estasoft-erp-crm-sync-engine' ) ] = esc_html( $info->invoiceNumber );
+			$rows[ __( 'Invoice', 'estasoft-enterprise-erpcrm-sync-engine' ) ] = esc_html( $info->invoiceNumber );
 		}
 		if ( '' !== $info->invoiceStatus ) {
-			$rows[ __( 'Tax authority', 'estasoft-erp-crm-sync-engine' ) ] = esc_html( $info->invoiceStatus );
+			$rows[ __( 'Tax authority', 'estasoft-enterprise-erpcrm-sync-engine' ) ] = esc_html( $info->invoiceStatus );
 		}
-		$rows[ __( 'Last sync', 'estasoft-erp-crm-sync-engine' ) ] = esc_html( $this->times->format( $info->lastSync ) );
+		$rows[ __( 'Last sync', 'estasoft-enterprise-erpcrm-sync-engine' ) ] = esc_html( $this->times->format( $info->lastSync ) );
 		if ( null !== $info->mappingVersion ) {
 			/* translators: %d: mapping version number. */
-			$rows[ __( 'Mapping', 'estasoft-erp-crm-sync-engine' ) ] = esc_html( sprintf( __( 'Version %d', 'estasoft-erp-crm-sync-engine' ), $info->mappingVersion ) );
+			$rows[ __( 'Mapping', 'estasoft-enterprise-erpcrm-sync-engine' ) ] = esc_html( sprintf( __( 'Version %d', 'estasoft-enterprise-erpcrm-sync-engine' ), $info->mappingVersion ) );
 		}
 		/* translators: %s: name of the connected system. */
-		return $this->facts( $rows ) . $this->note( sprintf( __( 'If you change this order, an update is sent to %s.', 'estasoft-erp-crm-sync-engine' ), $system ) );
+		return $this->facts( $rows ) . $this->note( sprintf( __( 'If you change this order, an update is sent to %s.', 'estasoft-enterprise-erpcrm-sync-engine' ), $system ) );
 	}
 
 	/**
@@ -248,9 +248,9 @@ final class OrderBox {
 	private function queued( ?array $item ): string {
 		$rows = array();
 		if ( null !== $item ) {
-			$rows[ __( 'Added', 'estasoft-erp-crm-sync-engine' ) ] = esc_html( $this->times->format( (string) ( $item['created_at'] ?? '' ) ) );
+			$rows[ __( 'Added', 'estasoft-enterprise-erpcrm-sync-engine' ) ] = esc_html( $this->times->format( (string) ( $item['created_at'] ?? '' ) ) );
 		}
-		return $this->facts( $rows ) . $this->note( __( 'It will be sent within a minute. Checkout was not delayed.', 'estasoft-erp-crm-sync-engine' ) );
+		return $this->facts( $rows ) . $this->note( __( 'It will be sent within a minute. Checkout was not delayed.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**
@@ -260,7 +260,7 @@ final class OrderBox {
 	 */
 	private function syncing( string $system ): string {
 		/* translators: %s: name of the connected system. */
-		return $this->note( sprintf( __( 'It is being sent to %s now.', 'estasoft-erp-crm-sync-engine' ), $system ) );
+		return $this->note( sprintf( __( 'It is being sent to %s now.', 'estasoft-enterprise-erpcrm-sync-engine' ), $system ) );
 	}
 
 	/**
@@ -271,12 +271,12 @@ final class OrderBox {
 	private function retrying( ?array $item ): string {
 		$rows = array();
 		if ( null !== $item ) {
-			$rows[ __( 'What happened', 'estasoft-erp-crm-sync-engine' ) ] = esc_html( (string) ( $item['error_message'] ?? '' ) );
+			$rows[ __( 'What happened', 'estasoft-enterprise-erpcrm-sync-engine' ) ] = esc_html( (string) ( $item['error_message'] ?? '' ) );
 			/* translators: 1: number of tries made, 2: number of tries allowed. */
-			$rows[ __( 'Try', 'estasoft-erp-crm-sync-engine' ) ]      = esc_html( sprintf( __( '%1$d of %2$d', 'estasoft-erp-crm-sync-engine' ), (int) ( $item['attempt'] ?? 0 ), (int) ( $item['max_attempts'] ?? 0 ) ) );
-			$rows[ __( 'Next try', 'estasoft-erp-crm-sync-engine' ) ] = esc_html( $this->times->format( (string) ( $item['next_attempt_at'] ?? '' ) ) );
+			$rows[ __( 'Try', 'estasoft-enterprise-erpcrm-sync-engine' ) ]      = esc_html( sprintf( __( '%1$d of %2$d', 'estasoft-enterprise-erpcrm-sync-engine' ), (int) ( $item['attempt'] ?? 0 ), (int) ( $item['max_attempts'] ?? 0 ) ) );
+			$rows[ __( 'Next try', 'estasoft-enterprise-erpcrm-sync-engine' ) ] = esc_html( $this->times->format( (string) ( $item['next_attempt_at'] ?? '' ) ) );
 		}
-		return $this->facts( $rows ) . $this->note( __( 'Nothing to do. It will try again by itself.', 'estasoft-erp-crm-sync-engine' ) );
+		return $this->facts( $rows ) . $this->note( __( 'Nothing to do. It will try again by itself.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**
@@ -288,12 +288,12 @@ final class OrderBox {
 		$rows = array();
 		$code = null === $item ? '' : (string) ( $item['error_code'] ?? '' );
 		if ( '' !== $code ) {
-			$rows[ __( 'Code', 'estasoft-erp-crm-sync-engine' ) ] = esc_html( $code );
+			$rows[ __( 'Code', 'estasoft-enterprise-erpcrm-sync-engine' ) ] = esc_html( $code );
 		}
 		$what = null === $item ? '' : (string) ( $item['error_message'] ?? '' );
 		// The error text is the queue's own words; when the queue item cannot be found the box still says where to look.
-		$rows[ __( 'What happened', 'estasoft-erp-crm-sync-engine' ) ] = esc_html( '' === $what ? __( 'The details are in the log.', 'estasoft-erp-crm-sync-engine' ) : $what );
-		$rows[ __( 'Order', 'estasoft-erp-crm-sync-engine' ) ]         = esc_html__( 'Waits. Later steps for this order wait too.', 'estasoft-erp-crm-sync-engine' );
+		$rows[ __( 'What happened', 'estasoft-enterprise-erpcrm-sync-engine' ) ] = esc_html( '' === $what ? __( 'The details are in the log.', 'estasoft-enterprise-erpcrm-sync-engine' ) : $what );
+		$rows[ __( 'Order', 'estasoft-enterprise-erpcrm-sync-engine' ) ]         = esc_html__( 'Waits. Later steps for this order wait too.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		$remedy = ErrorCode::tryFrom( $code )?->remedy() ?? '';
 		return $this->facts( $rows ) . ( '' === $remedy ? '' : $this->note( $remedy . '.' ) );
 	}
@@ -312,14 +312,14 @@ final class OrderBox {
 			$when = $this->times->format( $skip['at'] );
 			if ( '' !== $by ) {
 				/* translators: 1: name of the person, 2: time. */
-				$rows[ __( 'Skipped', 'estasoft-erp-crm-sync-engine' ) ] = esc_html( sprintf( __( 'by %1$s, %2$s', 'estasoft-erp-crm-sync-engine' ), $by, $when ) );
+				$rows[ __( 'Skipped', 'estasoft-enterprise-erpcrm-sync-engine' ) ] = esc_html( sprintf( __( 'by %1$s, %2$s', 'estasoft-enterprise-erpcrm-sync-engine' ), $by, $when ) );
 			}
 			if ( '' !== $skip['reason'] ) {
-				$rows[ __( 'Reason', 'estasoft-erp-crm-sync-engine' ) ] = esc_html( $skip['reason'] );
+				$rows[ __( 'Reason', 'estasoft-enterprise-erpcrm-sync-engine' ) ] = esc_html( $skip['reason'] );
 			}
 		}
 		/* translators: %s: name of the connected system. */
-		return $this->facts( $rows ) . $this->note( sprintf( __( 'It is not sent to %s. You can restore it.', 'estasoft-erp-crm-sync-engine' ), $system ) );
+		return $this->facts( $rows ) . $this->note( sprintf( __( 'It is not sent to %s. You can restore it.', 'estasoft-enterprise-erpcrm-sync-engine' ), $system ) );
 	}
 
 	/**
@@ -331,24 +331,24 @@ final class OrderBox {
 	private function shadow( ?array $item, string $system ): string {
 		$rows = array();
 		if ( null !== $item ) {
-			$rows[ __( 'Built', 'estasoft-erp-crm-sync-engine' ) ] = esc_html( $this->times->format( (string) ( $item['finished_at'] ?? $item['updated_at'] ?? '' ) ) );
+			$rows[ __( 'Built', 'estasoft-enterprise-erpcrm-sync-engine' ) ] = esc_html( $this->times->format( (string) ( $item['finished_at'] ?? $item['updated_at'] ?? '' ) ) );
 		}
 		/* translators: %s: name of the connected system. */
-		return $this->facts( $rows ) . $this->note( sprintf( __( 'Nothing was sent to %s. Go live when the comparison looks right.', 'estasoft-erp-crm-sync-engine' ), $system ) );
+		return $this->facts( $rows ) . $this->note( sprintf( __( 'Nothing was sent to %s. Go live when the comparison looks right.', 'estasoft-enterprise-erpcrm-sync-engine' ), $system ) );
 	}
 
 	/**
 	 * Every product is excluded.
 	 */
 	private function excluded(): string {
-		return $this->note( __( 'Every product on this order is marked Exclude from syncing, so the order is not sent.', 'estasoft-erp-crm-sync-engine' ) );
+		return $this->note( __( 'Every product on this order is marked Exclude from syncing, so the order is not sent.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**
 	 * A draft that has not been saved: nothing to send yet.
 	 */
 	private function unsaved(): string {
-		return $this->note( __( 'Save the order first. An order that has not been saved is never added to the queue.', 'estasoft-erp-crm-sync-engine' ) );
+		return $this->note( __( 'Save the order first. An order that has not been saved is never added to the queue.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**
@@ -359,13 +359,13 @@ final class OrderBox {
 	 */
 	private function notSent( \WC_Order $order, string $system ): string {
 		if ( $this->goLive->placedAfter( $order ) ) {
-			$rows = array( __( 'Why', 'estasoft-erp-crm-sync-engine' ) => esc_html__( 'Not added to the queue yet', 'estasoft-erp-crm-sync-engine' ) );
+			$rows = array( __( 'Why', 'estasoft-enterprise-erpcrm-sync-engine' ) => esc_html__( 'Not added to the queue yet', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			/* translators: %s: name of the connected system. */
-			return $this->facts( $rows ) . $this->note( sprintf( __( 'It is added when its status moves to Processing, On hold or Completed. You can send it to %s now.', 'estasoft-erp-crm-sync-engine' ), $system ) );
+			return $this->facts( $rows ) . $this->note( sprintf( __( 'It is added when its status moves to Processing, On hold or Completed. You can send it to %s now.', 'estasoft-enterprise-erpcrm-sync-engine' ), $system ) );
 		}
-		$rows = array( __( 'Why', 'estasoft-erp-crm-sync-engine' ) => esc_html__( 'Placed before syncing went live', 'estasoft-erp-crm-sync-engine' ) );
+		$rows = array( __( 'Why', 'estasoft-enterprise-erpcrm-sync-engine' ) => esc_html__( 'Placed before syncing went live', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		/* translators: %s: name of the connected system. */
-		return $this->facts( $rows ) . $this->note( sprintf( __( 'Orders from before go-live are not sent to %s. You can send one by hand.', 'estasoft-erp-crm-sync-engine' ), $system ) );
+		return $this->facts( $rows ) . $this->note( sprintf( __( 'Orders from before go-live are not sent to %s. You can send one by hand.', 'estasoft-enterprise-erpcrm-sync-engine' ), $system ) );
 	}
 
 	/**
@@ -380,7 +380,7 @@ final class OrderBox {
 			return '';
 		}
 		/* translators: %s: product names, separated by commas. */
-		return $this->note( sprintf( __( 'Contains a product marked Exclude from syncing: %s. The order is sent without that line.', 'estasoft-erp-crm-sync-engine' ), implode( ', ', $names ) ) );
+		return $this->note( sprintf( __( 'Contains a product marked Exclude from syncing: %s. The order is sent without that line.', 'estasoft-enterprise-erpcrm-sync-engine' ), implode( ', ', $names ) ) );
 	}
 
 	/**
@@ -394,23 +394,23 @@ final class OrderBox {
 		$links = array();
 		switch ( $state ) {
 			case 'synced':
-				$links[] = $this->button( 'sync_again', __( 'Sync again', 'estasoft-erp-crm-sync-engine' ), $order, true );
+				$links[] = $this->button( 'sync_again', __( 'Sync again', 'estasoft-enterprise-erpcrm-sync-engine' ), $order, true );
 				break;
 			case 'queued':
-				$links[] = $this->button( 'retry', __( 'Sync now', 'estasoft-erp-crm-sync-engine' ), $order, true );
+				$links[] = $this->button( 'retry', __( 'Sync now', 'estasoft-enterprise-erpcrm-sync-engine' ), $order, true );
 				break;
 			case 'retrying':
-				$links[] = $this->button( 'retry', __( 'Retry now', 'estasoft-erp-crm-sync-engine' ), $order, true );
+				$links[] = $this->button( 'retry', __( 'Retry now', 'estasoft-enterprise-erpcrm-sync-engine' ), $order, true );
 				break;
 			case 'failed':
-				$links[] = $this->button( 'retry', __( 'Retry', 'estasoft-erp-crm-sync-engine' ), $order, true );
-				$links[] = $this->button( 'skip', __( 'Skip', 'estasoft-erp-crm-sync-engine' ), $order, false );
+				$links[] = $this->button( 'retry', __( 'Retry', 'estasoft-enterprise-erpcrm-sync-engine' ), $order, true );
+				$links[] = $this->button( 'skip', __( 'Skip', 'estasoft-enterprise-erpcrm-sync-engine' ), $order, false );
 				break;
 			case 'skipped':
-				$links[] = $this->button( 'restore', __( 'Restore', 'estasoft-erp-crm-sync-engine' ), $order, true );
+				$links[] = $this->button( 'restore', __( 'Restore', 'estasoft-enterprise-erpcrm-sync-engine' ), $order, true );
 				break;
 			case 'none':
-				$links[] = $this->button( 'send', __( 'Send this order', 'estasoft-erp-crm-sync-engine' ), $order, true );
+				$links[] = $this->button( 'send', __( 'Send this order', 'estasoft-enterprise-erpcrm-sync-engine' ), $order, true );
 				break;
 			default:
 				break;
@@ -419,7 +419,7 @@ final class OrderBox {
 			$links[] = sprintf(
 				'<a class="estasoft-sync-link" href="%1$s">%2$s</a>',
 				esc_url( $this->logUrl( (int) ( $item['id'] ?? 0 ) ) ),
-				'shadow' === $state ? esc_html__( 'See the comparison', 'estasoft-erp-crm-sync-engine' ) : esc_html__( 'View log', 'estasoft-erp-crm-sync-engine' )
+				'shadow' === $state ? esc_html__( 'See the comparison', 'estasoft-enterprise-erpcrm-sync-engine' ) : esc_html__( 'View log', 'estasoft-enterprise-erpcrm-sync-engine' )
 			);
 		}
 		return array() === $links ? '' : '<p class="estasoft-sync-box__actions">' . implode( ' ', $links ) . '</p>';

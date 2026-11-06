@@ -46,26 +46,26 @@ final class DatevPostingWriter {
 
 		$buckets = array();
 		foreach ( $document->lines as $index => $line ) {
-			$what = sprintf( /* translators: %d: line number */ __( 'line %d', 'estasoft-erp-crm-sync-engine' ), $index + 1 );
+			$what = sprintf( /* translators: %d: line number */ __( 'line %d', 'estasoft-enterprise-erpcrm-sync-engine' ), $index + 1 );
 			$this->bucket( $buckets, $this->code( $line->taxCode, $line->tax, $what, $settings ), $line->gross() );
 		}
 		foreach ( $document->shipping as $charge ) {
-			$code = $this->code( $charge->taxCode, $charge->tax, __( 'shipping', 'estasoft-erp-crm-sync-engine' ), $settings );
+			$code = $this->code( $charge->taxCode, $charge->tax, __( 'shipping', 'estasoft-enterprise-erpcrm-sync-engine' ), $settings );
 			if ( '' !== $settings->shippingAccount() ) {
-				$code['account'] = $this->general( $settings->shippingAccount(), $length, __( 'the shipping account', 'estasoft-erp-crm-sync-engine' ) );
+				$code['account'] = $this->general( $settings->shippingAccount(), $length, __( 'the shipping account', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$this->bucket( $buckets, $code, $charge->gross() );
 		}
 		foreach ( $document->fees as $charge ) {
 			$code = '' !== $charge->taxCode ? $charge->taxCode : $settings->feeTaxCode();
-			$this->bucket( $buckets, $this->code( $code, $charge->tax, __( 'fee', 'estasoft-erp-crm-sync-engine' ), $settings ), $charge->gross() );
+			$this->bucket( $buckets, $this->code( $code, $charge->tax, __( 'fee', 'estasoft-enterprise-erpcrm-sync-engine' ), $settings ), $charge->gross() );
 		}
 		if ( 0 !== $document->adjustment ) {
 			if ( '' === $settings->adjustmentAccount() ) {
 				throw Refusal::because(
 					sprintf(
 						/* translators: %s: amount */
-						__( 'refund amount %s has no adjustment account', 'estasoft-erp-crm-sync-engine' ),
+						__( 'refund amount %s has no adjustment account', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						Amount::decimal( $document->adjustment, $document->currency )
 					)
 				);
@@ -73,7 +73,7 @@ final class DatevPostingWriter {
 			$this->bucket(
 				$buckets,
 				array(
-					'account' => $this->general( $settings->adjustmentAccount(), $length, __( 'the adjustment account', 'estasoft-erp-crm-sync-engine' ) ),
+					'account' => $this->general( $settings->adjustmentAccount(), $length, __( 'the adjustment account', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 					'bu'      => '',
 				),
 				$document->adjustment
@@ -83,14 +83,14 @@ final class DatevPostingWriter {
 		$gross = $document->gross();
 		$sum   = array_sum( array_column( $buckets, 'gross' ) );
 		if ( 0 === $gross && 0 === $sum ) {
-			throw Refusal::because( __( 'the total is zero, so there is nothing to post', 'estasoft-erp-crm-sync-engine' ) );
+			throw Refusal::because( __( 'the total is zero, so there is nothing to post', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$diff = $gross - $sum;
 		if ( abs( $diff ) > self::TOLERANCE ) {
 			throw Refusal::because(
 				sprintf(
 					/* translators: 1: sum of the postings, 2: total of the order */
-					__( 'the postings add up to %1$s but the order total is %2$s', 'estasoft-erp-crm-sync-engine' ),
+					__( 'the postings add up to %1$s but the order total is %2$s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					Amount::decimal( $sum, $document->currency ),
 					Amount::decimal( $gross, $document->currency )
 				)
@@ -126,14 +126,14 @@ final class DatevPostingWriter {
 				throw Refusal::because(
 					sprintf(
 						/* translators: %s: payment method such as Tabby */
-						__( 'payment method %s has no account', 'estasoft-erp-crm-sync-engine' ),
+						__( 'payment method %s has no account', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						'' === $document->payment->title ? $document->payment->method : $document->payment->title
 					)
 				);
 			}
-			$bank = $this->general( $bank, $length, sprintf( /* translators: %s: payment method */ __( 'the account of payment method %s', 'estasoft-erp-crm-sync-engine' ), $document->payment->method ) );
+			$bank = $this->general( $bank, $length, sprintf( /* translators: %s: payment method */ __( 'the account of payment method %s', 'estasoft-enterprise-erpcrm-sync-engine' ), $document->payment->method ) );
 			if ( DatevYear::start( $document->payment->date, $settings->fiscalYearStart() ) !== $year ) {
-				throw Refusal::because( __( 'it was paid in another financial year than the order', 'estasoft-erp-crm-sync-engine' ) );
+				throw Refusal::because( __( 'it was paid in another financial year than the order', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$records[]          = $this->record( $gross, true, $bank, $debtor, '', $document->payment->date, $beleg, $text['text'], $document, $settings );
 			$masters['banks'][] = $bank;
@@ -202,7 +202,7 @@ final class DatevPostingWriter {
 				throw Refusal::because(
 					sprintf(
 						/* translators: %d: WooCommerce customer id */
-						__( 'customer %d does not fit the debtor range', 'estasoft-erp-crm-sync-engine' ),
+						__( 'customer %d does not fit the debtor range', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$document->customerId
 					)
 				);
@@ -214,7 +214,7 @@ final class DatevPostingWriter {
 			throw Refusal::because(
 				sprintf(
 					/* translators: 1: account, 2: number of digits */
-					__( 'debtor account %1$s is not a number with %2$d digits', 'estasoft-erp-crm-sync-engine' ),
+					__( 'debtor account %1$s is not a number with %2$d digits', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$account,
 					$length + 1
 				)
@@ -237,16 +237,16 @@ final class DatevPostingWriter {
 	private function code( string $code, int $tax, string $what, DatevSettings $settings ): array {
 		if ( '' === $code ) {
 			if ( 0 !== $tax ) {
-				throw Refusal::because( sprintf( /* translators: %s: line, for example "line 2" or "shipping" */ __( '%s has tax but no tax code', 'estasoft-erp-crm-sync-engine' ), $what ) );
+				throw Refusal::because( sprintf( /* translators: %s: line, for example "line 2" or "shipping" */ __( '%s has tax but no tax code', 'estasoft-enterprise-erpcrm-sync-engine' ), $what ) );
 			}
 			$code = $settings->untaxedCode();
 			if ( '' === $code ) {
-				throw Refusal::because( sprintf( /* translators: %s: line, for example "line 2" or "shipping" */ __( '%s has no tax code and no account for untaxed sales is set', 'estasoft-erp-crm-sync-engine' ), $what ) );
+				throw Refusal::because( sprintf( /* translators: %s: line, for example "line 2" or "shipping" */ __( '%s has no tax code and no account for untaxed sales is set', 'estasoft-enterprise-erpcrm-sync-engine' ), $what ) );
 			}
 		}
 		$parsed = DatevAccount::parse( $code, $settings->accountLength() );
 		if ( null === $parsed ) {
-			throw Refusal::because( sprintf( /* translators: %s: tax code */ __( 'tax code "%s" is not an account number', 'estasoft-erp-crm-sync-engine' ), $code ) );
+			throw Refusal::because( sprintf( /* translators: %s: tax code */ __( 'tax code "%s" is not an account number', 'estasoft-enterprise-erpcrm-sync-engine' ), $code ) );
 		}
 		return $parsed;
 	}
@@ -262,7 +262,7 @@ final class DatevPostingWriter {
 	 */
 	private function general( string $account, int $length, string $what ): string {
 		if ( ! DatevAccount::isGeneral( $account, $length ) ) {
-			throw Refusal::because( sprintf( /* translators: 1: which account, 2: maximum digits */ __( '%1$s is not a number of at most %2$d digits', 'estasoft-erp-crm-sync-engine' ), $what, $length ) );
+			throw Refusal::because( sprintf( /* translators: 1: which account, 2: maximum digits */ __( '%1$s is not a number of at most %2$d digits', 'estasoft-enterprise-erpcrm-sync-engine' ), $what, $length ) );
 		}
 		return ltrim( $account, '0' );
 	}
@@ -316,10 +316,10 @@ final class DatevPostingWriter {
 		// A number that starts with a plus sign would be read as a formula by a spreadsheet; the sign means nothing in a document number.
 		$clean = ltrim( $clean, '+-' );
 		if ( '' === $clean ) {
-			throw Refusal::because( __( 'the order number has no characters DATEV accepts in Belegfeld 1', 'estasoft-erp-crm-sync-engine' ) );
+			throw Refusal::because( __( 'the order number has no characters DATEV accepts in Belegfeld 1', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( strlen( $clean ) > 36 ) {
-			throw Refusal::because( __( 'the order number is longer than 36 characters', 'estasoft-erp-crm-sync-engine' ) );
+			throw Refusal::because( __( 'the order number is longer than 36 characters', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return $clean;
 	}

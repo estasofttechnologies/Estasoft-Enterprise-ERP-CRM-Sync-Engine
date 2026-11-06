@@ -81,16 +81,16 @@ final class SapS4HanaRefunds {
 	public function create( RefundData $refund ): array {
 		$order = $this->orders->find( $refund->orderRef );
 		if ( null === $order ) {
-			$this->refuse( 'order_ref', __( 'The order of this refund is not in S/4HANA yet.', 'estasoft-erp-crm-sync-engine' ) );
+			$this->refuse( 'order_ref', __( 'The order of this refund is not in S/4HANA yet.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$currency = strtoupper( (string) ( $order['TransactionCurrency'] ?? '' ) );
 		if ( array() === $refund->lines ) {
-			$this->refuse( 'refund_line', __( 'S/4HANA needs a product on every refund line. Refund items, or credit the amount in S/4HANA.', 'estasoft-erp-crm-sync-engine' ) );
+			$this->refuse( 'refund_line', __( 'S/4HANA needs a product on every refund line. Refund items, or credit the amount in S/4HANA.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$items = array();
 		foreach ( $refund->lines as $line ) {
 			if ( '' === $line->sku ) {
-				$this->refuse( 'refund_line[].product', __( 'A refund line names no product, which S/4HANA needs.', 'estasoft-erp-crm-sync-engine' ) );
+				$this->refuse( 'refund_line[].product', __( 'A refund line names no product, which S/4HANA needs.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$items[] = array(
 				'Material'          => $line->sku,
@@ -120,7 +120,7 @@ final class SapS4HanaRefunds {
 			$created = $this->find( $refund->reference );
 		}
 		if ( null === $created ) {
-			$this->refuse( 'CreditMemoRequest', __( 'S/4HANA accepted the credit memo request but it cannot be read back.', 'estasoft-erp-crm-sync-engine' ) );
+			$this->refuse( 'CreditMemoRequest', __( 'S/4HANA accepted the credit memo request but it cannot be read back.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return $created + array( 'OrderCurrency' => $currency );
 	}
@@ -156,14 +156,14 @@ final class SapS4HanaRefunds {
 				'TransactionCurrency',
 				sprintf(
 					/* translators: 1: currency in S/4HANA, 2: currency of the order. */
-					__( 'S/4HANA holds the credit memo request in %1$s but the order is in %2$s.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'S/4HANA holds the credit memo request in %1$s but the order is in %2$s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$actual,
 					$currency
 				)
 			);
 		}
 		$figure = $this->amounts->fromWire( $request['TotalNetAmount'] ?? null, $currency );
-		return $total->run( $this->expectedNet( $refund ), null === $figure ? null : abs( $figure ), $currency, $warnings, __( 'net amount', 'estasoft-erp-crm-sync-engine' ) );
+		return $total->run( $this->expectedNet( $refund ), null === $figure ? null : abs( $figure ), $currency, $warnings, __( 'net amount', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**

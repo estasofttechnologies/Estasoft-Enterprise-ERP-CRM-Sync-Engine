@@ -120,7 +120,7 @@ final class ShadowService {
 					'days' => esc_html(
 						sprintf(
 							/* translators: %d: longest shadow window in days. */
-							__( 'Enter a number of days from 1 to %d.', 'estasoft-erp-crm-sync-engine' ),
+							__( 'Enter a number of days from 1 to %d.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 							self::MAX_DAYS
 						)
 					),
@@ -129,7 +129,7 @@ final class ShadowService {
 		}
 		$connection = $this->connections->findWithoutSecrets( $connectionId );
 		if ( null === $connection || ConnectionStatus::Disconnected === $connection->status ) {
-			throw new JobException( esc_html__( 'That connection does not exist or is disconnected.', 'estasoft-erp-crm-sync-engine' ), 404 );
+			throw new JobException( esc_html__( 'That connection does not exist or is disconnected.', 'estasoft-enterprise-erpcrm-sync-engine' ), 404 );
 		}
 		$now     = $this->clock->now();
 		$answers = $this->onboarding->get()['answers'];
@@ -150,7 +150,7 @@ final class ShadowService {
 		$this->logger->info(
 			sprintf(
 				/* translators: %d: planned length of the shadow window in days. */
-				_n( 'Shadow mode started for %d day. Nothing is sent to your system.', 'Shadow mode started for %d days. Nothing is sent to your system.', $days, 'estasoft-erp-crm-sync-engine' ),
+				_n( 'Shadow mode started for %d day. Nothing is sent to your system.', 'Shadow mode started for %d days. Nothing is sent to your system.', $days, 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$days
 			),
 			array( 'connection_id' => $connectionId )
@@ -172,7 +172,7 @@ final class ShadowService {
 			$this->logger->info(
 				sprintf(
 					/* translators: %d: user id. */
-					__( 'Shadow mode ended by user #%d. New orders are sent to your system.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Shadow mode ended by user #%d. New orders are sent to your system.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$userId
 				)
 			);

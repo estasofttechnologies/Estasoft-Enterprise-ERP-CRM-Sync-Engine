@@ -248,7 +248,7 @@ smoke test for its system. The plugin's own tests run each connector against a f
   the problem. There is no advertising and no upgrade prompt.
 - **Nothing is output on the public site.**
 - **Trademarks:** vendor names appear only in text, with a disclaimer; no vendor logos ship.
-- **The plugin is English only.** Strings use the text domain `estasoft-erp-crm-sync-engine`; a `.pot` file is
+- **The plugin is English only.** Strings use the text domain `estasoft-enterprise-erpcrm-sync-engine`; a `.pot` file is
   generated with `bin/make-pot.sh`.
 - **Local checks.** The release zip is installed into a fresh WordPress with `bin/smoke-install.sh`
   ([SMOKE-TEST.md](SMOKE-TEST.md)). The workflow `woocommerce-smoke.yml` installs the real WooCommerce (11.2.2 at the

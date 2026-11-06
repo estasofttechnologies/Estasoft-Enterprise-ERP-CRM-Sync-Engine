@@ -52,7 +52,7 @@ final class SageRefundPayload {
 	public static function parse( array $payload, Item $item ): self|ConnectorError {
 		$orderRef = SagePayloadReader::text( $payload['order_ref'] ?? '' );
 		if ( 1 !== preg_match( '/^WC-\d+$/', $orderRef ) ) {
-			return SageErrors::refused( 'order_ref', __( 'The refund does not name the order it belongs to.', 'estasoft-erp-crm-sync-engine' ) );
+			return SageErrors::refused( 'order_ref', __( 'The refund does not name the order it belongs to.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$lines = array();
 		foreach ( SagePayloadReader::rows( $payload['refund_line'] ?? null ) as $index => $raw ) {
@@ -62,7 +62,7 @@ final class SageRefundPayload {
 					'refund_line[].amount',
 					sprintf(
 						/* translators: %d: line number. */
-						__( 'Refund line %d has no amount in minor units.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'Refund line %d has no amount in minor units.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$index + 1
 					)
 				);
@@ -94,7 +94,7 @@ final class SageRefundPayload {
 			}
 			$lines[] = array(
 				'sku'          => '',
-				'name'         => __( 'Shipping', 'estasoft-erp-crm-sync-engine' ),
+				'name'         => __( 'Shipping', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'quantity'     => '1',
 				'amount_minor' => abs( $ship ),
 				'tax'          => $tax,
@@ -104,11 +104,11 @@ final class SageRefundPayload {
 		$amount = SagePayloadReader::minor( $payload['amount'] ?? null );
 		if ( array() === $lines ) {
 			if ( null === $amount || $amount <= 0 ) {
-				return SageErrors::refused( 'refund_line', __( 'The refund has no lines and no amount.', 'estasoft-erp-crm-sync-engine' ) );
+				return SageErrors::refused( 'refund_line', __( 'The refund has no lines and no amount.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$lines[] = array(
 				'sku'          => '',
-				'name'         => __( 'Refund', 'estasoft-erp-crm-sync-engine' ),
+				'name'         => __( 'Refund', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'quantity'     => '1',
 				'amount_minor' => $amount,
 				'tax'          => null,

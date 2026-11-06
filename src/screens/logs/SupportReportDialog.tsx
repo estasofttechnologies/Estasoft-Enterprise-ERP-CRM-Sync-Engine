@@ -27,13 +27,19 @@ export function SupportReportDialog( { onClose }: { onClose: () => void } ) {
 	);
 	return (
 		<Dialog
-			title={ __( 'Support report', 'estasoft-erp-crm-sync-engine' ) }
+			title={ __(
+				'Support report',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			) }
 			size="large"
 			onClose={ onClose }
 			footer={
 				<>
 					<Btn variant="tertiary" onClick={ onClose }>
-						{ __( 'Close', 'estasoft-erp-crm-sync-engine' ) }
+						{ __(
+							'Close',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						) }
 					</Btn>
 					<Btn
 						disabled={ ! report.data }
@@ -49,18 +55,18 @@ export function SupportReportDialog( { onClose }: { onClose: () => void } ) {
 					>
 						{ __(
 							'Download as text',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</Btn>
 					<CopyButton
 						text={ () => report.data?.text ?? '' }
 						label={ __(
 							'Copy report',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						copiedLabel={ __(
 							'Report copied',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						small={ false }
 						variant="primary"
@@ -73,7 +79,7 @@ export function SupportReportDialog( { onClose }: { onClose: () => void } ) {
 					rows={ 4 }
 					label={ __(
 						'Building the report',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			) : null }
@@ -87,7 +93,7 @@ export function SupportReportDialog( { onClose }: { onClose: () => void } ) {
 				<CodeBlock
 					label={ __(
 						'Support report text',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				>
 					{ report.data.text }
@@ -96,11 +102,11 @@ export function SupportReportDialog( { onClose }: { onClose: () => void } ) {
 			<CheckField
 				label={ __(
 					'Include order numbers',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				hint={ __(
 					'Off by default. Order numbers help support find a case; they are not names or emails.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				checked={ withOrders }
 				onChange={ setWithOrders }
@@ -108,7 +114,7 @@ export function SupportReportDialog( { onClose }: { onClose: () => void } ) {
 			<p className="estasoft-sync-muted">
 				{ __(
 					'Nothing is sent anywhere. Copy the report and paste it into your support request.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			</p>
 		</Dialog>

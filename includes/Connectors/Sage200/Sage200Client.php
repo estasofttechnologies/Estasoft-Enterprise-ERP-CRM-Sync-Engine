@@ -205,7 +205,7 @@ final class Sage200Client {
 				$endpoint,
 				sprintf(
 					/* translators: %s: resource name. */
-					__( 'This Sage 200 version does not offer "%s", or the site and company chosen do not exist.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'This Sage 200 version does not offer "%s", or the site and company chosen do not exist.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$endpoint
 				),
 				'resource missing'

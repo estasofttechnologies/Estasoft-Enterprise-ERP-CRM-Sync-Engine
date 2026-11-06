@@ -93,7 +93,7 @@ final class QuickBooksDocumentBuilder {
 			$invoice['ShipAddr'] = $shipping;
 		}
 		if ( $cut ) {
-			$warnings[] = __( 'A long value was shortened to fit QuickBooks.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'A long value was shortened to fit QuickBooks.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		return $invoice;
 	}
@@ -176,7 +176,7 @@ final class QuickBooksDocumentBuilder {
 			$memo['GlobalTaxCalculation'] = $payload->pricesIncludeTax ? 'TaxInclusive' : 'TaxExcluded';
 		}
 		if ( $cut ) {
-			$warnings[] = __( 'A long description was shortened to fit QuickBooks.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'A long description was shortened to fit QuickBooks.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		return $memo;
 	}
@@ -195,7 +195,7 @@ final class QuickBooksDocumentBuilder {
 		$sku  = (string) $line['sku'];
 		$item = '' !== $sku ? ( $items[ strtolower( $sku ) ] ?? null ) : null;
 		if ( (float) $line['discount'] > 0.0 ) {
-			return QuickBooksErrors::refused( 'order_line[].discount', __( 'A discount on a single line is not supported. Send the discount as the order discount.', 'estasoft-erp-crm-sync-engine' ) );
+			return QuickBooksErrors::refused( 'order_line[].discount', __( 'A discount on a single line is not supported. Send the discount as the order discount.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( null === $item ) {
 			if ( '' !== $sku && 'free_text' !== $this->options->choice( 'unknown_sku', array( 'refuse', 'free_text' ), 'refuse' ) ) {
@@ -269,7 +269,7 @@ final class QuickBooksDocumentBuilder {
 			$option,
 			sprintf(
 				/* translators: %s: the name of a connection option. */
-				__( 'Set the name or SKU of a service item in the connection option "%s": QuickBooks needs an item on every line.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Set the name or SKU of a service item in the connection option "%s": QuickBooks needs an item on every line.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$option
 			)
 		);

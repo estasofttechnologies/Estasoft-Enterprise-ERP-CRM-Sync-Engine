@@ -87,44 +87,44 @@ final class AdminBar {
 	 * @return array{state:string,label:string,word:string}
 	 */
 	public function describe( array $picture ): array {
-		$name    = __( 'ESTASOFT SYNC', 'estasoft-erp-crm-sync-engine' );
+		$name    = __( 'ESTASOFT SYNC', 'estasoft-enterprise-erpcrm-sync-engine' );
 		$waiting = (int) $picture['waiting'];
 		$failed  = (int) $picture['failed'];
 		/* translators: %s: number of orders waiting to be sent. */
-		$waitingText = sprintf( __( '%s waiting', 'estasoft-erp-crm-sync-engine' ), number_format_i18n( $waiting ) );
+		$waitingText = sprintf( __( '%s waiting', 'estasoft-enterprise-erpcrm-sync-engine' ), number_format_i18n( $waiting ) );
 		/* translators: %s: number of orders that failed. */
-		$failedText = sprintf( __( '%s failed', 'estasoft-erp-crm-sync-engine' ), number_format_i18n( $failed ) );
+		$failedText = sprintf( __( '%s failed', 'estasoft-enterprise-erpcrm-sync-engine' ), number_format_i18n( $failed ) );
 
 		switch ( $picture['state'] ) {
 			case 'not_connected':
 				return array(
 					'state' => 'idle',
-					'label' => $name . ': ' . __( 'not connected', 'estasoft-erp-crm-sync-engine' ),
-					'word'  => __( 'Not connected.', 'estasoft-erp-crm-sync-engine' ),
+					'label' => $name . ': ' . __( 'not connected', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'word'  => __( 'Not connected.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				);
 			case 'paused':
 				return array(
 					'state' => 'paused',
-					'label' => $name . ': ' . ( $waiting > 0 ? __( 'paused', 'estasoft-erp-crm-sync-engine' ) . ', ' . $waitingText : __( 'paused', 'estasoft-erp-crm-sync-engine' ) ),
-					'word'  => __( 'Syncing is paused.', 'estasoft-erp-crm-sync-engine' ),
+					'label' => $name . ': ' . ( $waiting > 0 ? __( 'paused', 'estasoft-enterprise-erpcrm-sync-engine' ) . ', ' . $waitingText : __( 'paused', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+					'word'  => __( 'Syncing is paused.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				);
 			case 'attention':
 				return array(
 					'state' => 'failed',
 					'label' => $name . ': ' . $waitingText . ', ' . $failedText,
-					'word'  => __( 'Some orders need a person.', 'estasoft-erp-crm-sync-engine' ),
+					'word'  => __( 'Some orders need a person.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				);
 			case 'waiting':
 				return array(
 					'state' => 'waiting',
 					'label' => $name . ': ' . $waitingText,
-					'word'  => __( 'Orders are waiting to be sent.', 'estasoft-erp-crm-sync-engine' ),
+					'word'  => __( 'Orders are waiting to be sent.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				);
 		}
 		return array(
 			'state' => 'ok',
 			'label' => $name . ': ' . $waitingText,
-			'word'  => __( 'All is well.', 'estasoft-erp-crm-sync-engine' ),
+			'word'  => __( 'All is well.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		);
 	}
 }

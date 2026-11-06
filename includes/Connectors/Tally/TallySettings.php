@@ -284,10 +284,10 @@ final class TallySettings implements ExportSettings {
 	public function problems(): array {
 		$problems = array();
 		if ( '' === $this->company() ) {
-			$problems[] = __( 'Enter the company name exactly as TallyPrime shows it.', 'estasoft-erp-crm-sync-engine' );
+			$problems[] = __( 'Enter the company name exactly as TallyPrime shows it.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		if ( 1 !== preg_match( '/^[A-Z]{3}$/', $this->currency() ) ) {
-			$problems[] = __( 'Enter the currency of your books as a three-letter code, for example AED.', 'estasoft-erp-crm-sync-engine' );
+			$problems[] = __( 'Enter the currency of your books as a three-letter code, for example AED.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		return $problems;
 	}

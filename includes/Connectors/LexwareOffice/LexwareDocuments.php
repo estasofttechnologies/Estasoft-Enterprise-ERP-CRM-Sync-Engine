@@ -106,7 +106,7 @@ final class LexwareDocuments {
 		$created = $api->post( 'invoices', $open ? array( 'finalize' => true ) : array(), $body )->json();
 		$id      = PayloadReader::text( $created['id'] ?? '' );
 		if ( '' === $id ) {
-			return SendResult::failure( Refusal::value( LexwareOfficeConnector::LABEL, 'invoice', __( 'Lexware Office did not return the new invoice.', 'estasoft-erp-crm-sync-engine' ), 'no invoice id' ) );
+			return SendResult::failure( Refusal::value( LexwareOfficeConnector::LABEL, 'invoice', __( 'Lexware Office did not return the new invoice.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'no invoice id' ) );
 		}
 		$document = $api->get( 'invoices/' . rawurlencode( $id ) )->json();
 		$document = array() === $document ? array( 'id' => $id ) : $document + array( 'id' => $id );
@@ -156,7 +156,7 @@ final class LexwareDocuments {
 		}
 		$actual = $this->totalMinor( $document );
 		if ( null === $actual ) {
-			return Refusal::value( LexwareOfficeConnector::LABEL, 'totalPrice', __( 'Lexware Office returned no total for the document.', 'estasoft-erp-crm-sync-engine' ), 'no total' );
+			return Refusal::value( LexwareOfficeConnector::LABEL, 'totalPrice', __( 'Lexware Office returned no total for the document.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'no total' );
 		}
 		if ( Tolerance::accepts( $actual, $expected, $options, $rows ) ) {
 			return null;
@@ -219,7 +219,7 @@ final class LexwareDocuments {
 			'currency',
 			sprintf(
 				/* translators: %s: currency code. */
-				__( 'Lexware Office accepts euro only; the order is in %s.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Lexware Office accepts euro only; the order is in %s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'' === $currency ? '?' : $currency
 			),
 			'currency not supported'

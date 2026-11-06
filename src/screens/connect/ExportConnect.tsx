@@ -104,7 +104,7 @@ export function ExportConnect( {
 					/* translators: %s: system name */
 					__(
 						'Connect to %s with an export file',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					system
 				) }
@@ -114,7 +114,7 @@ export function ExportConnect( {
 						/* translators: 1: system name, 2: system name again */
 						__(
 							'%1$s cannot be reached over the web by this plugin, so the plugin sends nothing to it. It writes a file of your orders, you download the file here, and you import it in %2$s. Nothing leaves your website by itself.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						system,
 						system
@@ -123,13 +123,13 @@ export function ExportConnect( {
 				<p>
 					{ __(
 						'The file is made on your own website and kept in a protected folder. Only people who may manage syncing can download it.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</p>
 				<p className="estasoft-sync-muted">
 					{ __(
 						'The plugin cannot see whether the program accepted a file. An order shows as Exported when it is in a file, not when it is in your program.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</p>
 			</Card>
@@ -146,7 +146,7 @@ export function ExportConnect( {
 							/* translators: %s: system name */
 							__(
 								'Everything named in a file (ledgers, accounts, tax codes, customers) must already exist in %s, or it refuses the file. The Exports screen lists what each file uses.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							system
 						) }
@@ -158,7 +158,7 @@ export function ExportConnect( {
 					<p className="estasoft-sync-muted">
 						{ __(
 							'This system has no settings to choose. The plugin writes its standard file.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</p>
 				) : null }
@@ -200,11 +200,11 @@ export function ExportConnect( {
 							{ saved
 								? __(
 										'Save settings',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									)
 								: __(
 										'Save and continue',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									) }
 						</Btn>
 					</div>
@@ -222,7 +222,7 @@ export function ExportConnect( {
 								/* translators: %s: system name */
 								__(
 									'Saved. Files for %s are made on the Exports screen.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								system
 							) }
@@ -234,7 +234,7 @@ export function ExportConnect( {
 							>
 								{ __(
 									'Open the Exports screen',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</Link>
 						</p>

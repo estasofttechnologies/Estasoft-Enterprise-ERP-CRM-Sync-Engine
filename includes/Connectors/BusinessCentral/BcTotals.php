@@ -75,9 +75,9 @@ final class BcTotals {
 	private static function hint( array $header, bool $pricesIncludeTax ): string {
 		if ( isset( $header['pricesIncludeTax'] ) && (bool) $header['pricesIncludeTax'] !== $pricesIncludeTax ) {
 			return $pricesIncludeTax
-				? __( 'The shop sent prices with tax, but Business Central treats this customer\'s prices as without tax. Change the customer, then delete the draft document and try again.', 'estasoft-erp-crm-sync-engine' )
-				: __( 'The shop sent prices without tax, but Business Central treats this customer\'s prices as with tax. Change the customer, then delete the draft document and try again.', 'estasoft-erp-crm-sync-engine' );
+				? __( 'The shop sent prices with tax, but Business Central treats this customer\'s prices as without tax. Change the customer, then delete the draft document and try again.', 'estasoft-enterprise-erpcrm-sync-engine' )
+				: __( 'The shop sent prices without tax, but Business Central treats this customer\'s prices as with tax. Change the customer, then delete the draft document and try again.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
-		return __( 'Check the tax groups in the tax mapping and in Business Central, then delete the draft document and try again.', 'estasoft-erp-crm-sync-engine' );
+		return __( 'Check the tax groups in the tax mapping and in Business Central, then delete the draft document and try again.', 'estasoft-enterprise-erpcrm-sync-engine' );
 	}
 }

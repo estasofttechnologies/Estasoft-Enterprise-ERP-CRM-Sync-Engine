@@ -123,7 +123,7 @@ final class MoneybirdConnector extends AbstractApiConnector {
 	protected function baseUrl( Connection $connection ): string {
 		$id = trim( (string) $connection->config( 'administration_id', '' ) );
 		if ( 1 !== preg_match( '/^\d{1,30}$/', $id ) ) {
-			$error = Refusal::value( self::LABEL, 'administration_id', __( 'The administration number must be digits only.', 'estasoft-erp-crm-sync-engine' ), 'invalid administration id' );
+			$error = Refusal::value( self::LABEL, 'administration_id', __( 'The administration number must be digits only.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'invalid administration id' );
 			throw new ApiException( $error ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 		}
 		return self::ROOT . '/' . $id;
@@ -148,17 +148,17 @@ final class MoneybirdConnector extends AbstractApiConnector {
 		return array(
 			new CredentialField(
 				'administration_id',
-				__( 'Administration number', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Administration number', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				false,
 				true,
-				__( 'The digits in the address of your administration in Moneybird.', 'estasoft-erp-crm-sync-engine' )
+				__( 'The digits in the address of your administration in Moneybird.', 'estasoft-enterprise-erpcrm-sync-engine' )
 			),
 			new CredentialField(
 				'api_token',
-				__( 'API token', 'estasoft-erp-crm-sync-engine' ),
+				__( 'API token', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				true,
 				true,
-				__( 'A personal token with the scopes sales_invoices and settings.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'A personal token with the scopes sales_invoices and settings.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'',
 				'password'
 			),
@@ -220,7 +220,7 @@ final class MoneybirdConnector extends AbstractApiConnector {
 				'',
 				array(),
 				array(),
-				Refusal::value( self::LABEL, 'administration_id', __( 'The token cannot reach this administration. Check the number and the token.', 'estasoft-erp-crm-sync-engine' ), 'administration not reachable' )
+				Refusal::value( self::LABEL, 'administration_id', __( 'The token cannot reach this administration. Check the number and the token.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'administration not reachable' )
 			);
 		}
 		$rates = $this->lines()->taxRates( $api );
@@ -312,7 +312,7 @@ final class MoneybirdConnector extends AbstractApiConnector {
 			case EntityType::Customer:
 				return $this->sendCustomer( $api, $payload, $options, $item );
 			default:
-				return SendResult::failure( Refusal::value( self::LABEL, 'entity', __( 'This connector does not send this kind of item.', 'estasoft-erp-crm-sync-engine' ), 'unsupported entity' ) );
+				return SendResult::failure( Refusal::value( self::LABEL, 'entity', __( 'This connector does not send this kind of item.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'unsupported entity' ) );
 		}
 	}
 

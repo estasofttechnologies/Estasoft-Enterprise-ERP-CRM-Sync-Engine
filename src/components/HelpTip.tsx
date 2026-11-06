@@ -30,7 +30,10 @@ export function HelpTip( {
 				aria-controls={ open ? id : undefined }
 				aria-label={
 					label ??
-					__( 'What is this?', 'estasoft-erp-crm-sync-engine' )
+					__(
+						'What is this?',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					)
 				}
 				onClick={ () => setOpen( ! open ) }
 			>

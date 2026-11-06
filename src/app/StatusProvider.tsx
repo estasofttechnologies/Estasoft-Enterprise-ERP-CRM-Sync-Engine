@@ -121,7 +121,7 @@ export function StatusProvider( { children }: { children: ReactNode } ) {
 					/* translators: 1: number of items waiting, 2: number of orders that need attention */
 					__(
 						'Queue updated: %1$d waiting, %2$d need attention.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					next.waiting,
 					next.needs_attention

@@ -145,19 +145,19 @@ final class LexwareOfficeConnector extends AbstractApiConnector {
 		return array(
 			new CredentialField(
 				'api_key',
-				__( 'API key', 'estasoft-erp-crm-sync-engine' ),
+				__( 'API key', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				true,
 				true,
-				__( 'Create it at app.lexware.de/addons/public-api. Lexware shows it once.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Create it at app.lexware.de/addons/public-api. Lexware shows it once.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'',
 				'password'
 			),
 			new CredentialField(
 				'key_expires_on',
-				__( 'Key valid until', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Key valid until', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				false,
 				false,
-				__( 'YYYY-MM-DD. Lexware keys last at most 24 months. You get a warning before it ends.', 'estasoft-erp-crm-sync-engine' )
+				__( 'YYYY-MM-DD. Lexware keys last at most 24 months. You get a warning before it ends.', 'estasoft-enterprise-erpcrm-sync-engine' )
 			),
 		);
 	}
@@ -314,7 +314,7 @@ final class LexwareOfficeConnector extends AbstractApiConnector {
 				$result = $this->sendCustomer( $api, $payload, $options );
 				break;
 			default:
-				return SendResult::failure( Refusal::value( self::LABEL, 'entity', __( 'This connector does not send this kind of item.', 'estasoft-erp-crm-sync-engine' ), 'unsupported entity' ) );
+				return SendResult::failure( Refusal::value( self::LABEL, 'entity', __( 'This connector does not send this kind of item.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'unsupported entity' ) );
 		}
 		if ( null !== $result->ref ) {
 			$this->known[ $this->key( $connection, $item ) ] = $result->ref;
@@ -418,52 +418,52 @@ final class LexwareOfficeConnector extends AbstractApiConnector {
 		$codes = array(
 			array(
 				'code'         => '19',
-				'name'         => __( '19 % VAT', 'estasoft-erp-crm-sync-engine' ),
+				'name'         => __( '19 % VAT', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'rate_percent' => '19',
 			),
 			array(
 				'code'         => '7',
-				'name'         => __( '7 % VAT', 'estasoft-erp-crm-sync-engine' ),
+				'name'         => __( '7 % VAT', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'rate_percent' => '7',
 			),
 			array(
 				'code'         => '0',
-				'name'         => __( '0 % VAT (taxable at 0 %)', 'estasoft-erp-crm-sync-engine' ),
+				'name'         => __( '0 % VAT (taxable at 0 %)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'rate_percent' => '0',
 			),
 			array(
 				'code'         => 'vatfree',
-				'name'         => __( 'Tax-free', 'estasoft-erp-crm-sync-engine' ),
+				'name'         => __( 'Tax-free', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'rate_percent' => '0',
 			),
 			array(
 				'code'         => 'intraCommunitySupply',
-				'name'         => __( 'Intra-community supply', 'estasoft-erp-crm-sync-engine' ),
+				'name'         => __( 'Intra-community supply', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'rate_percent' => '0',
 			),
 			array(
 				'code'         => 'constructionService13b',
-				'name'         => __( 'Construction service, reverse charge (§ 13b)', 'estasoft-erp-crm-sync-engine' ),
+				'name'         => __( 'Construction service, reverse charge (§ 13b)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'rate_percent' => '0',
 			),
 			array(
 				'code'         => 'externalService13b',
-				'name'         => __( 'Service from abroad, reverse charge (§ 13b)', 'estasoft-erp-crm-sync-engine' ),
+				'name'         => __( 'Service from abroad, reverse charge (§ 13b)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'rate_percent' => '0',
 			),
 			array(
 				'code'         => 'thirdPartyCountryService',
-				'name'         => __( 'Service to a non-EU country', 'estasoft-erp-crm-sync-engine' ),
+				'name'         => __( 'Service to a non-EU country', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'rate_percent' => '0',
 			),
 			array(
 				'code'         => 'thirdPartyCountryDelivery',
-				'name'         => __( 'Delivery to a non-EU country (export)', 'estasoft-erp-crm-sync-engine' ),
+				'name'         => __( 'Delivery to a non-EU country (export)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'rate_percent' => '0',
 			),
 			array(
 				'code'         => 'photovoltaicEquipment',
-				'name'         => __( 'Photovoltaic equipment', 'estasoft-erp-crm-sync-engine' ),
+				'name'         => __( 'Photovoltaic equipment', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'rate_percent' => '0',
 			),
 		);

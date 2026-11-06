@@ -46,12 +46,15 @@ export function ShadowDashboard( { status }: { status: Status } ) {
 		return (
 			<>
 				<PageHeader
-					title={ __( 'Dashboard', 'estasoft-erp-crm-sync-engine' ) }
+					title={ __(
+						'Dashboard',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 				/>
 				<Callout tone="info">
 					{ __(
 						'Shadow mode is on. The comparison has not produced numbers yet.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</Callout>
 			</>
@@ -64,7 +67,7 @@ export function ShadowDashboard( { status }: { status: Status } ) {
 				kind: 'success',
 				text: __(
 					'You are live. New orders are sent to your system as they arrive.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 			} );
 		} else {
@@ -73,7 +76,7 @@ export function ShadowDashboard( { status }: { status: Status } ) {
 				kind: 'info',
 				text: __(
 					'Shadow mode ended. Nothing was sent. Choose when to go live under Setup.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 			} );
 		}
@@ -83,14 +86,17 @@ export function ShadowDashboard( { status }: { status: Status } ) {
 	return (
 		<>
 			<PageHeader
-				title={ __( 'Dashboard', 'estasoft-erp-crm-sync-engine' ) }
+				title={ __(
+					'Dashboard',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 				description={ formatFullDateTime( status.now, cfg ) }
 				actions={
 					canConfigure ? (
 						<Btn onClick={ () => setDialog( 'end' ) }>
 							{ __(
 								'End shadow mode',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Btn>
 					) : null
@@ -106,7 +112,7 @@ export function ShadowDashboard( { status }: { status: Status } ) {
 					>
 						{ __(
 							'See the comparison',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</Btn>
 				}
@@ -115,7 +121,7 @@ export function ShadowDashboard( { status }: { status: Status } ) {
 					/* translators: 1: day of shadow mode, 2: total days, 3: system name */
 					__(
 						'Shadow mode, day %1$d of %2$d. Nothing is sent to %3$s. Each order is built exactly as it would be sent and compared with the sale orders your team enters in %3$s.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					shadow.day,
 					shadow.of_days,
@@ -126,45 +132,51 @@ export function ShadowDashboard( { status }: { status: Status } ) {
 				<Kpi
 					label={ __(
 						'Orders compared',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					value={ shadow.items }
 					hint={ __(
 						'since shadow mode began',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 				<Kpi
-					label={ __( 'Match', 'estasoft-erp-crm-sync-engine' ) }
+					label={ __(
+						'Match',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 					value={ shadow.matches }
 					hint={ sprintf(
 						/* translators: %s: system name */ __(
 							'same as in %s',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						system
 					) }
 				/>
 				<Kpi
-					label={ __( 'Differ', 'estasoft-erp-crm-sync-engine' ) }
+					label={ __(
+						'Differ',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 					value={ shadow.differs }
 					hint={ __(
 						'see the comparison',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 				<Kpi
 					label={ sprintf(
 						/* translators: %s: system name */ __(
 							'Not in %s yet',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						system
 					) }
 					value={ shadow.not_found }
 					hint={ __(
 						'your team has not entered them',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			</div>
@@ -173,11 +185,11 @@ export function ShadowDashboard( { status }: { status: Status } ) {
 					<Card
 						title={ __(
 							'Before you go live',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						description={ __(
 							'Four things to check.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						flush
 					>
@@ -199,7 +211,7 @@ export function ShadowDashboard( { status }: { status: Status } ) {
 												'Review %d difference',
 												'Review %d differences',
 												shadow.differs,
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											),
 											shadow.differs
 										) }
@@ -207,7 +219,7 @@ export function ShadowDashboard( { status }: { status: Status } ) {
 									<p className="estasoft-sync-muted">
 										{ __(
 											'Check that the rules do what you want.',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										) }
 									</p>
 								</div>
@@ -217,7 +229,7 @@ export function ShadowDashboard( { status }: { status: Status } ) {
 								>
 									{ __(
 										'Open the comparison',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									) }
 								</Btn>
 							</li>
@@ -238,7 +250,7 @@ export function ShadowDashboard( { status }: { status: Status } ) {
 												'Fix %d product without a match',
 												'Fix %d products without a match',
 												unmatchedCount,
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											),
 											unmatchedCount
 										) }
@@ -246,7 +258,7 @@ export function ShadowDashboard( { status }: { status: Status } ) {
 									<p className="estasoft-sync-muted">
 										{ __(
 											'Products without a matching SKU cannot be matched in your system.',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										) }
 									</p>
 								</div>
@@ -258,7 +270,7 @@ export function ShadowDashboard( { status }: { status: Status } ) {
 								>
 									{ __(
 										'View the products',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									) }
 								</Btn>
 							</li>
@@ -272,22 +284,22 @@ export function ShadowDashboard( { status }: { status: Status } ) {
 										{ healthy
 											? __(
 													'Connection healthy',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												)
 											: __(
 													'Check the connection',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												) }
 									</p>
 									<p className="estasoft-sync-muted">
 										{ healthy
 											? __(
 													'No failures in the last days.',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												)
 											: __(
 													'The connection has had trouble. Open it to test it.',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												) }
 									</p>
 								</div>
@@ -298,13 +310,13 @@ export function ShadowDashboard( { status }: { status: Status } ) {
 									<p className="estasoft-sync-strong">
 										{ __(
 											'Go live when you are ready',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										) }
 									</p>
 									<p className="estasoft-sync-muted">
 										{ __(
 											'You can end shadow mode early. Only new orders are sent; nothing from shadow mode is back-filled.',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										) }
 									</p>
 								</div>
@@ -315,7 +327,7 @@ export function ShadowDashboard( { status }: { status: Status } ) {
 									>
 										{ __(
 											'Go live',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										) }
 									</Btn>
 								) : null }
@@ -331,12 +343,12 @@ export function ShadowDashboard( { status }: { status: Status } ) {
 				<ConfirmDialog
 					title={ __(
 						'Go live now?',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					onClose={ () => setDialog( null ) }
 					confirmLabel={ __(
 						'Go live',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					onConfirm={ () => finish( 'live' ) }
 				>
@@ -344,7 +356,7 @@ export function ShadowDashboard( { status }: { status: Status } ) {
 						{ sprintf(
 							/* translators: %s: system name */ __(
 								'New orders will be sent to %s as they arrive. Orders compared in shadow mode are not sent again.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							system
 						) }
@@ -355,19 +367,19 @@ export function ShadowDashboard( { status }: { status: Status } ) {
 				<ConfirmDialog
 					title={ __(
 						'End shadow mode?',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					onClose={ () => setDialog( null ) }
 					confirmLabel={ __(
 						'End shadow mode',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					onConfirm={ () => finish( 'end' ) }
 				>
 					<p>
 						{ __(
 							'The comparison stops. Nothing has been sent, and nothing is sent now. You can start shadow mode again or go live from the setup guide.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</p>
 				</ConfirmDialog>

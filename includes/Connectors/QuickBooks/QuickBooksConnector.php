@@ -93,15 +93,15 @@ final class QuickBooksConnector extends AbstractApiConnector implements OAuthCon
 			CredentialFields::clientSecret(),
 			CredentialFields::choice(
 				'environment',
-				__( 'Key set', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Key set', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				array(
-					'production' => __( 'Production', 'estasoft-erp-crm-sync-engine' ),
-					'sandbox'    => __( 'Sandbox (development keys)', 'estasoft-erp-crm-sync-engine' ),
+					'production' => __( 'Production', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'sandbox'    => __( 'Sandbox (development keys)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				'production',
-				__( 'Development keys work with sandbox companies only; production keys need Intuit\'s app review.', 'estasoft-erp-crm-sync-engine' )
+				__( 'Development keys work with sandbox companies only; production keys need Intuit\'s app review.', 'estasoft-enterprise-erpcrm-sync-engine' )
 			),
-			new CredentialField( 'realm_id', __( 'Company ID', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Filled in when you sign in. Leave empty.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
+			new CredentialField( 'realm_id', __( 'Company ID', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Filled in when you sign in. Leave empty.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'advanced' ),
 		);
 	}
 
@@ -115,7 +115,7 @@ final class QuickBooksConnector extends AbstractApiConnector implements OAuthCon
 	protected function baseUrl( Connection $connection ): string {
 		$realm = QuickBooksCompany::realmOf( $connection );
 		if ( '' === $realm ) {
-			$failure = QuickBooksErrors::exception( QuickBooksErrors::refused( 'realm_id', __( 'No company is chosen yet. Sign in with QuickBooks and choose the company.', 'estasoft-erp-crm-sync-engine' ) ) );
+			$failure = QuickBooksErrors::exception( QuickBooksErrors::refused( 'realm_id', __( 'No company is chosen yet. Sign in with QuickBooks and choose the company.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 			throw $failure;
 		}
 		return ( 'sandbox' === $connection->config( 'environment' ) ? self::SANDBOX : self::PRODUCTION ) . '/v3/company/' . $realm;
@@ -322,7 +322,7 @@ final class QuickBooksConnector extends AbstractApiConnector implements OAuthCon
 			EntityType::Order    => $services->orders->send( $item, $payload ),
 			EntityType::Refund   => $services->refunds->send( $item, $payload ),
 			EntityType::Customer => $services->customerSender->send( $item, $payload ),
-			default              => SendResult::failure( QuickBooksErrors::refused( 'entity', __( 'QuickBooks takes orders, refunds and customers only.', 'estasoft-erp-crm-sync-engine' ) ) ),
+			default              => SendResult::failure( QuickBooksErrors::refused( 'entity', __( 'QuickBooks takes orders, refunds and customers only.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) ),
 		};
 		$this->logWarnings( $result, $item );
 		return $result;

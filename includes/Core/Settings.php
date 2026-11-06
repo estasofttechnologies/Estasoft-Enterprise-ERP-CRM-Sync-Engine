@@ -231,7 +231,7 @@ final class Settings {
 			}
 			if ( 'notifications' === $key ) {
 				if ( ! is_array( $value ) ) {
-					$errors['notifications'] = __( 'Notification settings are not valid.', 'estasoft-erp-crm-sync-engine' );
+					$errors['notifications'] = __( 'Notification settings are not valid.', 'estasoft-enterprise-erpcrm-sync-engine' );
 					continue;
 				}
 				foreach ( $this->checkNotifications( $value, $current['notifications'] ) as $field => $result ) {
@@ -266,13 +266,13 @@ final class Settings {
 	private function checkField( string $key, mixed $value ): array {
 		switch ( $key ) {
 			case 'display_time':
-				return $this->oneOf( $value, array( 'store', 'utc' ), __( 'Choose store time or UTC.', 'estasoft-erp-crm-sync-engine' ) );
+				return $this->oneOf( $value, array( 'store', 'utc' ), __( 'Choose store time or UTC.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			case 'runtime_profile':
-				return $this->oneOf( $value, array( 'standard', 'high_volume' ), __( 'Choose Standard or High volume.', 'estasoft-erp-crm-sync-engine' ) );
+				return $this->oneOf( $value, array( 'standard', 'high_volume' ), __( 'Choose Standard or High volume.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			case 'log_retention_days':
-				return $this->oneOfInt( $value, self::RETENTION_DAYS, __( 'Choose 7, 14 or 30 days.', 'estasoft-erp-crm-sync-engine' ) );
+				return $this->oneOfInt( $value, self::RETENTION_DAYS, __( 'Choose 7, 14 or 30 days.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			case 'log_excerpt_bytes':
-				return $this->oneOfInt( $value, self::EXCERPT_BYTES, __( 'Choose nothing, 2 KB or 8 KB.', 'estasoft-erp-crm-sync-engine' ) );
+				return $this->oneOfInt( $value, self::EXCERPT_BYTES, __( 'Choose nothing, 2 KB or 8 KB.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			case 'redaction':
 			case 'delete_on_uninstall':
 			case 'admin_bar':
@@ -286,7 +286,7 @@ final class Settings {
 		}
 		return array(
 			'value' => null,
-			'error' => __( 'Unknown setting.', 'estasoft-erp-crm-sync-engine' ),
+			'error' => __( 'Unknown setting.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		);
 	}
 
@@ -315,7 +315,7 @@ final class Settings {
 						)
 						: array(
 							'value' => null,
-							'error' => __( 'Enter a time from 00:00 to 23:59.', 'estasoft-erp-crm-sync-engine' ),
+							'error' => __( 'Enter a time from 00:00 to 23:59.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						);
 					break;
 				default:
@@ -335,7 +335,7 @@ final class Settings {
 		if ( ! is_array( $value ) ) {
 			return array(
 				'value' => null,
-				'error' => __( 'Enter at least one email address.', 'estasoft-erp-crm-sync-engine' ),
+				'error' => __( 'Enter at least one email address.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			);
 		}
 		$clean = array();
@@ -345,7 +345,7 @@ final class Settings {
 				return array(
 					'value' => null,
 					/* translators: %s: the text that is not an email address. */
-					'error' => sprintf( __( '%s is not a valid email address.', 'estasoft-erp-crm-sync-engine' ), '' === $address ? '""' : $address ),
+					'error' => sprintf( __( '%s is not a valid email address.', 'estasoft-enterprise-erpcrm-sync-engine' ), '' === $address ? '""' : $address ),
 				);
 			}
 			$clean[ strtolower( $address ) ] ??= $address;
@@ -354,14 +354,14 @@ final class Settings {
 		if ( array() === $clean ) {
 			return array(
 				'value' => null,
-				'error' => __( 'Enter at least one email address.', 'estasoft-erp-crm-sync-engine' ),
+				'error' => __( 'Enter at least one email address.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			);
 		}
 		if ( count( $clean ) > Ranges::MAX_RECIPIENTS ) {
 			return array(
 				'value' => null,
 				/* translators: %d: most recipients allowed. */
-				'error' => sprintf( __( 'Use at most %d email addresses.', 'estasoft-erp-crm-sync-engine' ), Ranges::MAX_RECIPIENTS ),
+				'error' => sprintf( __( 'Use at most %d email addresses.', 'estasoft-enterprise-erpcrm-sync-engine' ), Ranges::MAX_RECIPIENTS ),
 			);
 		}
 		return array(
@@ -462,7 +462,7 @@ final class Settings {
 		return null === $bool
 			? array(
 				'value' => null,
-				'error' => __( 'Choose on or off.', 'estasoft-erp-crm-sync-engine' ),
+				'error' => __( 'Choose on or off.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			)
 			: array(
 				'value' => $bool,

@@ -103,14 +103,14 @@ export function MapSkuDialog( {
 			title={ sprintf(
 				/* translators: %s: SKU */ __(
 					'Map SKU %s',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				sku
 			) }
 			onClose={ onClose }
 			confirmLabel={ __(
 				'Save mapping',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			) }
 			confirmDisabled={ ! chosen || ! resolved }
 			onConfirm={ async () => {
@@ -140,7 +140,7 @@ export function MapSkuDialog( {
 										'SKU %1$s is mapped. %2$d order was sent back to the queue.',
 										'SKU %1$s is mapped. %2$d orders were sent back to the queue.',
 										retried,
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									sku,
 									retried
@@ -148,7 +148,7 @@ export function MapSkuDialog( {
 							: sprintf(
 									/* translators: %s: SKU */ __(
 										'SKU %s is mapped.',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									sku
 								),
@@ -161,7 +161,7 @@ export function MapSkuDialog( {
 					/* translators: 1: system name, 2: SKU */
 					__(
 						'%1$s has no product with the reference %2$s. Pick the %1$s product that this WooCommerce product should use.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					system,
 					sku
@@ -178,14 +178,14 @@ export function MapSkuDialog( {
 						>
 							{ __(
 								'Open Products',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Link>
 					}
 				>
 					{ __(
 						'This SKU is not in the list of products without a match. Open Mapping, Products to map it there.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</Callout>
 			) : null }
@@ -193,7 +193,7 @@ export function MapSkuDialog( {
 				label={ sprintf(
 					/* translators: %s: system name */ __(
 						'Search %s products',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					system
 				) }
@@ -202,19 +202,22 @@ export function MapSkuDialog( {
 				onChange={ setSearch }
 				placeholder={ __(
 					'Name or reference',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			/>
 			{ results.loading ? (
 				<Busy
-					label={ __( 'Searching…', 'estasoft-erp-crm-sync-engine' ) }
+					label={ __(
+						'Searching…',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 				/>
 			) : null }
 			{ results.error ? (
 				<Callout tone="danger" role="alert">
 					{ __(
 						'The search failed. Try again in a moment.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</Callout>
 			) : null }
@@ -222,7 +225,7 @@ export function MapSkuDialog( {
 				<p className="estasoft-sync-muted">
 					{ __(
 						'No product matches this search.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</p>
 			) : null }
@@ -230,7 +233,7 @@ export function MapSkuDialog( {
 				<ChoiceGroup
 					legend={ __(
 						'Products found',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					hideLegend
 					value={ chosen }
@@ -241,7 +244,7 @@ export function MapSkuDialog( {
 						description: sprintf(
 							/* translators: %s: product reference */ __(
 								'Reference %s',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							hit.ref
 						),
@@ -256,7 +259,7 @@ export function MapSkuDialog( {
 							'Retry the %d order that failed on this SKU',
 							'Retry the %d orders that failed on this SKU',
 							failedOrders,
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						failedOrders
 					) }

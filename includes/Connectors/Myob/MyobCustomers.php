@@ -106,7 +106,7 @@ final class MyobCustomers {
 		$response = $this->api->post( 'Contact/Customer', $this->body( $partner, $delivery, $warnings ) );
 		$uid      = MyobApi::uidFromLocation( $response );
 		if ( '' === $uid ) {
-			$failure = MyobErrors::exception( MyobErrors::refused( 'Customer', __( 'MYOB did not say where the new customer is.', 'estasoft-erp-crm-sync-engine' ), $response->status() ), $response );
+			$failure = MyobErrors::exception( MyobErrors::refused( 'Customer', __( 'MYOB did not say where the new customer is.', 'estasoft-enterprise-erpcrm-sync-engine' ), $response->status() ), $response );
 			throw $failure;
 		}
 		return $this->card( $uid );
@@ -152,7 +152,7 @@ final class MyobCustomers {
 				return null;
 			}
 		}
-		$failure = MyobErrors::exception( MyobErrors::refused( 'Customer', __( 'MYOB refused the email filter and the company file has more than 3,000 customers, too many to search without it. Link the customer by hand.', 'estasoft-erp-crm-sync-engine' ) ) );
+		$failure = MyobErrors::exception( MyobErrors::refused( 'Customer', __( 'MYOB refused the email filter and the company file has more than 3,000 customers, too many to search without it. Link the customer by hand.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		throw $failure;
 	}
 
@@ -217,7 +217,7 @@ final class MyobCustomers {
 			$body['Addresses'] = $addresses;
 		}
 		if ( $cut ) {
-			$warnings[] = __( 'A long customer value was shortened to fit MYOB.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'A long customer value was shortened to fit MYOB.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		return $body;
 	}

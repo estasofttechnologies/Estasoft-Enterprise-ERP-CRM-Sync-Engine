@@ -110,7 +110,7 @@ final class QuickBooksCustomers {
 				}
 			}
 		}
-		$failure = QuickBooksErrors::exception( QuickBooksErrors::refused( 'DisplayName', __( 'QuickBooks has no free name for this customer.', 'estasoft-erp-crm-sync-engine' ) ) );
+		$failure = QuickBooksErrors::exception( QuickBooksErrors::refused( 'DisplayName', __( 'QuickBooks has no free name for this customer.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		throw $failure;
 	}
 
@@ -162,7 +162,7 @@ final class QuickBooksCustomers {
 			$body['ShipAddr'] = $shipping;
 		}
 		if ( $cut ) {
-			$warnings[] = __( 'A long customer value was shortened to fit QuickBooks.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'A long customer value was shortened to fit QuickBooks.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		return $body;
 	}

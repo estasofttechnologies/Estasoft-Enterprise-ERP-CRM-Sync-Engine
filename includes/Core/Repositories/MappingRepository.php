@@ -214,7 +214,7 @@ final class MappingRepository extends Repository {
 					self::LIVE,
 					(array) $source['rules'],
 					/* translators: %d: version number copied. */
-					sprintf( __( 'Rolled back to version %d', 'estasoft-erp-crm-sync-engine' ), $version ),
+					sprintf( __( 'Rolled back to version %d', 'estasoft-enterprise-erpcrm-sync-engine' ), $version ),
 					$by,
 					$version
 				);

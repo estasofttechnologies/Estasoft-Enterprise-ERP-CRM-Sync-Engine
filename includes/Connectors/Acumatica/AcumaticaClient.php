@@ -128,7 +128,7 @@ final class AcumaticaClient {
 					'window',
 					sprintf(
 						/* translators: 1: row limit, 2: entity name. */
-						__( 'Acumatica has more than %1$d %2$s records in the period asked for, so the list would be incomplete. Ask for a shorter period.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'Acumatica has more than %1$d %2$s records in the period asked for, so the list would be incomplete. Ask for a shorter period.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						self::LARGE,
 						$entity
 					),
@@ -225,7 +225,7 @@ final class AcumaticaClient {
 		}
 		$url = SameOrigin::resolve( $location, $this->address );
 		if ( null === $url ) {
-			$exception = new ApiException( Problems::refused( AcumaticaConnector::LABEL, 'location', __( 'The site answered with a status address on another server, so it was not followed.', 'estasoft-erp-crm-sync-engine' ), 'foreign location' ), $response );
+			$exception = new ApiException( Problems::refused( AcumaticaConnector::LABEL, 'location', __( 'The site answered with a status address on another server, so it was not followed.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'foreign location' ), $response );
 			throw $exception;
 		}
 		for ( $i = 0; $i < self::POLLS; $i++ ) {

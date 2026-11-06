@@ -93,7 +93,7 @@ final class SuiteCrmApi {
 				return $rows;
 			}
 		}
-		SuiteCrmFailure::refuse( 'window', __( 'The list in SuiteCRM is longer than the plugin reads in one go.', 'estasoft-erp-crm-sync-engine' ) );
+		SuiteCrmFailure::refuse( 'window', __( 'The list in SuiteCRM is longer than the plugin reads in one go.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**
@@ -148,7 +148,7 @@ final class SuiteCrmApi {
 		);
 		$data     = $response->json()['data'] ?? null;
 		if ( ! is_array( $data ) || ! isset( $data['id'] ) ) {
-			SuiteCrmFailure::refuse( $module, __( 'SuiteCRM did not return the new record.', 'estasoft-erp-crm-sync-engine' ) );
+			SuiteCrmFailure::refuse( $module, __( 'SuiteCRM did not return the new record.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return self::record( $data );
 	}

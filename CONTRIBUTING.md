@@ -92,7 +92,7 @@ See [tests/README.md](tests/README.md).
   capability (`Capabilities::MANAGE` or `Capabilities::CONFIGURE`) on every state-changing path.
 - Money is an integer in minor units. Times are UTC strings. Text is utf8mb4.
 - Every visible string goes through `__()`, `_n()` or a sibling with the text domain
-  `estasoft-erp-crm-sync-engine`. Use placeholders, never concatenation, and add a `/* translators: */` comment.
+  `estasoft-enterprise-erpcrm-sync-engine`. Use placeholders, never concatenation, and add a `/* translators: */` comment.
 
 **TypeScript and CSS**
 

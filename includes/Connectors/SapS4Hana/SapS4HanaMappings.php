@@ -27,11 +27,11 @@ final class SapS4HanaMappings {
 	 * @return array<int,FieldDef>
 	 */
 	public function fields( string $mappingType ): array {
-		$fields = new DefaultFields( 'SAP S/4HANA', __( 'Product (material number, found by the SKU match)', 'estasoft-erp-crm-sync-engine' ), false, false, false );
+		$fields = new DefaultFields( 'SAP S/4HANA', __( 'Product (material number, found by the SKU match)', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, false );
 		return match ( $mappingType ) {
 			'orders'   => $fields->orders()
-				->group( __( 'Customer', 'estasoft-erp-crm-sync-engine' ) )
-				->text( 'sold_to_party', __( 'Sold-to customer number (overrides the connection setting)', 'estasoft-erp-crm-sync-engine' ) )
+				->group( __( 'Customer', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+				->text( 'sold_to_party', __( 'Sold-to customer number (overrides the connection setting)', 'estasoft-enterprise-erpcrm-sync-engine' ) )
 				->build(),
 			'products' => $fields->products()->build(),
 			'refunds'  => $fields->refunds()->build(),

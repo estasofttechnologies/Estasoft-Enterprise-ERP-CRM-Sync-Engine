@@ -83,14 +83,14 @@ Notes:
 - Round 2 rendered every board in Chromium and ran axe-core (WCAG 2.1 A and AA): no violations reported. Not yet checked: the palette on a real WordPress admin screen, in each admin color scheme, with a screen reader, or in high-contrast mode.
 - Suggested CSS custom properties: `--estasoft-sync-primary`, `-primary-hover`, `-tint`, `-canvas`, `-card`, `-border`, `-divider`, `-text`, `-text-muted`, `-accent`, plus `-state-{queued,syncing,synced,retrying,failed,paused}-{fg,bg}`.
 
-## Name and identifiers (proposed; slug not yet checked or reserved on WordPress.org)
+## Name and identifiers (the slug was assigned by WordPress.org when the zip was uploaded on 6 Nov 2026)
 
 | Use | Value |
 | --- | --- |
 | Full name | Estasoft Enterprise ERP/CRM Sync Engine |
 | Admin menu label | ESTASOFT SYNC (under WooCommerce) |
-| Slug, folder, text domain | estasoft-erp-crm-sync-engine |
-| Main file | estasoft-erp-crm-sync-engine.php |
+| Slug, folder, text domain | estasoft-enterprise-erpcrm-sync-engine |
+| Main file | estasoft-enterprise-erpcrm-sync-engine.php |
 | PHP namespace | Estasoft\SyncEngine |
 | Prefix | estasoft_sync_ ; constants ESTASOFT_SYNC_ |
 | Database tables (9) | {prefix}estasoft_sync_queue (also the outbox; dead-letter is a status), _logs, _mappings (versioned), _id_map, _state, _idempotency, _connections, _recon_runs, _recon_diffs |
@@ -110,7 +110,7 @@ The brief used generic table names (wp_erp_sync_queue and so on). They are renam
 
 WordPress.org plus a public GitHub repository. WordPress.org requires GPL-compatible code, forbids features locked behind payment, trials or quotas, serves updates only from WordPress.org, and forbids contacting external servers without explicit consent. An all-free plugin fits. No telemetry in Phase 1.
 
-The slug is chosen at submission. As far as is known it cannot be changed after approval; confirm with the plugins team before submitting.
+WordPress.org builds the slug from the plugin name when the zip is uploaded: for this plugin it is `estasoft-enterprise-erpcrm-sync-engine` (the slash of "ERP/CRM" is dropped). The plugin's text domain, folder name and main file follow that slug; the first build used `estasoft-erp-crm-sync-engine` and Plugin Check flagged the mismatch. The slug cannot be changed after approval; ask the plugins team before approval if a different one is wanted.
 
 ## Connector catalog (34 systems, proposed statuses, 2 Nov 2026)
 
@@ -193,7 +193,7 @@ A public connector contract (adapter interface plus contract test suite) lets ot
 
 ## Open (owner to decide)
 
-1. Confirm the slug, and check the name against WordPress.org and trademarks before submission.
+1. Confirm the name against trademarks (the slug is assigned, see above).
 2. Confirm the status of each of the 34 systems, especially the 7 marked Coming next, which would be the official set built after Odoo.
 3. Public GitHub repository, and its name.
 4. Minimum versions (WordPress, WooCommerce, PHP).

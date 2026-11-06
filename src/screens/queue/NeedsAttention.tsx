@@ -58,17 +58,20 @@ export function NeedsAttention() {
 			<PageHeader
 				title={ __(
 					'Needs attention',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				breadcrumb={ [
 					{
-						label: __( 'Queue', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'Queue',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						to: '/queue',
 					},
 					{
 						label: __(
 							'Needs attention',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 					},
 				] }
@@ -80,7 +83,7 @@ export function NeedsAttention() {
 									'%1$d failed order in %2$s. Failed orders are never retried by themselves, because retrying cannot fix them.',
 									'%1$d failed orders in %2$s. Failed orders are never retried by themselves, because retrying cannot fix them.',
 									total,
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								total,
 								groupsPhrase( list.length )
@@ -98,7 +101,7 @@ export function NeedsAttention() {
 						{ sprintf(
 							/* translators: %d: number of skipped orders */ __(
 								'View skipped (%d)',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							skipped
 						) }
@@ -108,7 +111,7 @@ export function NeedsAttention() {
 			<p className="estasoft-sync-muted">
 				{ __(
 					'Fix the cause once, then retry the whole group. Orders that are skipped stay in the log and are not sent.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			</p>
 			{ groups.loading ? (
@@ -116,7 +119,7 @@ export function NeedsAttention() {
 					rows={ 3 }
 					label={ __(
 						'Loading failed orders',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			) : null }
@@ -129,11 +132,14 @@ export function NeedsAttention() {
 			{ groups.data && list.length === 0 ? (
 				<EmptyState
 					as="h2"
-					title={ __( 'All clear', 'estasoft-erp-crm-sync-engine' ) }
+					title={ __(
+						'All clear',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 				>
 					{ __(
 						'No order needs a person. Failed orders will appear here, grouped by cause.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</EmptyState>
 			) : null }
@@ -159,7 +165,7 @@ export function NeedsAttention() {
 					intro={ sprintf(
 						/* translators: %s: reason, for example "Product not found in Odoo" */ __(
 							'All of them failed with: %s. If you fixed the cause, they should now pass.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						groupTitle( dialog.group, system )
 					) }
@@ -260,7 +266,7 @@ function GroupCard( {
 							{ sprintf(
 								/* translators: %s: SKU */ __(
 									'Map %s',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								causeValue( group.cause )
 							) }
@@ -278,7 +284,7 @@ function GroupCard( {
 							{ sprintf(
 								/* translators: %s: order number */ __(
 									'Open order #%s',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								first.entity_label
 							) }
@@ -290,11 +296,14 @@ function GroupCard( {
 						onClick={ () => onRetry( rows ) }
 					>
 						{ group.count === 1
-							? __( 'Retry', 'estasoft-erp-crm-sync-engine' )
+							? __(
+									'Retry',
+									'estasoft-enterprise-erpcrm-sync-engine'
+								)
 							: sprintf(
 									/* translators: %s: "3 orders" */ __(
 										'Retry %s',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									ordersPhrase( group.count )
 								) }
@@ -305,11 +314,14 @@ function GroupCard( {
 						onClick={ () => onSkip( rows ) }
 					>
 						{ group.count === 1
-							? __( 'Skip order', 'estasoft-erp-crm-sync-engine' )
+							? __(
+									'Skip order',
+									'estasoft-enterprise-erpcrm-sync-engine'
+								)
 							: sprintf(
 									/* translators: %s: "3 orders" */ __(
 										'Skip %s',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									ordersPhrase( group.count )
 								) }
@@ -321,7 +333,7 @@ function GroupCard( {
 					rows={ 1 }
 					label={ __(
 						'Loading the orders of this group',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			) : null }
@@ -336,7 +348,7 @@ function GroupCard( {
 					caption={ sprintf(
 						/* translators: %s: group title */ __(
 							'Orders in the group: %s',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						groupTitle( group, system )
 					) }
@@ -347,7 +359,7 @@ function GroupCard( {
 							id: 'order',
 							header: __(
 								'Order',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							primary: true,
 							cell: ( item ) => (
@@ -363,7 +375,7 @@ function GroupCard( {
 							id: 'customer',
 							header: __(
 								'Customer',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							cell: ( item ) => (
 								<span dir="auto">
@@ -375,7 +387,7 @@ function GroupCard( {
 							id: 'failed',
 							header: __(
 								'Failed at',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							cell: ( item ) => (
 								<DateTime value={ item.updated_at } />
@@ -385,7 +397,7 @@ function GroupCard( {
 							id: 'detail',
 							header: __(
 								'Detail',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							wide: true,
 							cell: ( item ) =>

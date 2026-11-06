@@ -124,7 +124,7 @@ final class Commands {
 		$worker = $this->serviceAs( Services::WORKER, Worker::class );
 		$this->stop->listen();
 		/* translators: 1: items at once, 2: item limit, 3: memory limit in megabytes. */
-		$this->out->log( sprintf( __( 'Worker started: %1$d at a time, stops after %2$d items or %3$d MB.', 'estasoft-erp-crm-sync-engine' ), $concurrency, $maxItems, $maxMemory ) );
+		$this->out->log( sprintf( __( 'Worker started: %1$d at a time, stops after %2$d items or %3$d MB.', 'estasoft-enterprise-erpcrm-sync-engine' ), $concurrency, $maxItems, $maxMemory ) );
 
 		$claimed = 0;
 		$reason  = '';
@@ -135,7 +135,7 @@ final class Commands {
 				$this->out->log(
 					sprintf(
 						/* translators: 1: items claimed, 2: items sent, 3: items to retry, 4: items failed, 5: seconds, 6: items so far. */
-						__( 'Claimed %1$d: %2$d sent, %3$d to retry, %4$d failed, in %5$.1f s. %6$d so far.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'Claimed %1$d: %2$d sent, %3$d to retry, %4$d failed, in %5$.1f s. %6$d so far.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$report->claimed,
 						$report->synced,
 						$report->retrying,
@@ -152,7 +152,7 @@ final class Commands {
 			}
 		}
 		/* translators: 1: why the worker stopped, 2: items claimed. */
-		$this->out->success( sprintf( __( 'Worker stopped: %1$s. %2$d items handled.', 'estasoft-erp-crm-sync-engine' ), $reason, $claimed ) );
+		$this->out->success( sprintf( __( 'Worker stopped: %1$s. %2$d items handled.', 'estasoft-enterprise-erpcrm-sync-engine' ), $reason, $claimed ) );
 	}
 
 	/**
@@ -208,17 +208,17 @@ final class Commands {
 			return;
 		}
 		$rows = array(
-			$this->row( __( 'Mode', 'estasoft-erp-crm-sync-engine' ), (string) ( $status['mode'] ?? '' ) ),
-			$this->row( __( 'Synced today', 'estasoft-erp-crm-sync-engine' ), (string) ( $status['synced_today'] ?? 0 ) ),
-			$this->row( __( 'Waiting', 'estasoft-erp-crm-sync-engine' ), (string) ( $status['waiting'] ?? 0 ) ),
-			$this->row( __( 'Needs attention', 'estasoft-erp-crm-sync-engine' ), (string) ( $status['needs_attention'] ?? 0 ) ),
-			$this->row( __( 'Skipped', 'estasoft-erp-crm-sync-engine' ), (string) ( $status['skipped'] ?? 0 ) ),
-			$this->row( __( 'Oldest waiting', 'estasoft-erp-crm-sync-engine' ), (string) ( $status['oldest_waiting_at'] ?? '-' ) ),
+			$this->row( __( 'Mode', 'estasoft-enterprise-erpcrm-sync-engine' ), (string) ( $status['mode'] ?? '' ) ),
+			$this->row( __( 'Synced today', 'estasoft-enterprise-erpcrm-sync-engine' ), (string) ( $status['synced_today'] ?? 0 ) ),
+			$this->row( __( 'Waiting', 'estasoft-enterprise-erpcrm-sync-engine' ), (string) ( $status['waiting'] ?? 0 ) ),
+			$this->row( __( 'Needs attention', 'estasoft-enterprise-erpcrm-sync-engine' ), (string) ( $status['needs_attention'] ?? 0 ) ),
+			$this->row( __( 'Skipped', 'estasoft-enterprise-erpcrm-sync-engine' ), (string) ( $status['skipped'] ?? 0 ) ),
+			$this->row( __( 'Oldest waiting', 'estasoft-enterprise-erpcrm-sync-engine' ), (string) ( $status['oldest_waiting_at'] ?? '-' ) ),
 		);
 		foreach ( $summaries as $summary ) {
 			$rows[] = $this->row(
 				/* translators: 1: connection id, 2: connection name. */
-				sprintf( __( 'Connection %1$d (%2$s)', 'estasoft-erp-crm-sync-engine' ), (int) ( $summary['id'] ?? 0 ), (string) ( $summary['label'] ?? '' ) ),
+				sprintf( __( 'Connection %1$d (%2$s)', 'estasoft-enterprise-erpcrm-sync-engine' ), (int) ( $summary['id'] ?? 0 ), (string) ( $summary['label'] ?? '' ) ),
 				(string) ( $summary['status'] ?? '' ) . ( empty( $summary['paused_until'] ) ? '' : ' (' . (string) $summary['paused_until'] . ')' )
 			);
 		}
@@ -258,23 +258,23 @@ final class Commands {
 		$ids   = null === $list ? array() : $this->ids( $list );
 
 		if ( '' === $code && array() === $ids ) {
-			$this->out->fail( __( 'Give --ids with queue item ids, or --code with an error code such as SYNC-MAP-001.', 'estasoft-erp-crm-sync-engine' ), 2 );
+			$this->out->fail( __( 'Give --ids with queue item ids, or --code with an error code such as SYNC-MAP-001.', 'estasoft-enterprise-erpcrm-sync-engine' ), 2 );
 		}
 		if ( '' !== $code && 1 !== preg_match( '/^SYNC-[A-Z]+-[0-9]{3}$/', $code ) ) {
-			$this->out->fail( __( 'The error code must look like SYNC-MAP-001.', 'estasoft-erp-crm-sync-engine' ), 2 );
+			$this->out->fail( __( 'The error code must look like SYNC-MAP-001.', 'estasoft-enterprise-erpcrm-sync-engine' ), 2 );
 		}
 		if ( '' === $code && '' !== $cause ) {
-			$this->out->fail( __( '--cause needs --code.', 'estasoft-erp-crm-sync-engine' ), 2 );
+			$this->out->fail( __( '--cause needs --code.', 'estasoft-enterprise-erpcrm-sync-engine' ), 2 );
 		}
 
 		$queue = $this->serviceAs( Services::QUEUE_SERVICE, QueueService::class );
 		$count = '' !== $code ? $queue->retryGroup( $code, '' === $cause ? null : $cause ) : $queue->retryMany( $ids );
 		if ( 0 === $count ) {
-			$this->out->warning( __( 'Nothing was retried. Only failed and retrying items can be retried.', 'estasoft-erp-crm-sync-engine' ) );
+			$this->out->warning( __( 'Nothing was retried. Only failed and retrying items can be retried.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			return;
 		}
 		/* translators: %d: number of items. */
-		$this->out->success( sprintf( _n( '%d item moved back to the queue.', '%d items moved back to the queue.', $count, 'estasoft-erp-crm-sync-engine' ), $count ) );
+		$this->out->success( sprintf( _n( '%d item moved back to the queue.', '%d items moved back to the queue.', $count, 'estasoft-enterprise-erpcrm-sync-engine' ), $count ) );
 	}
 
 	/**
@@ -303,14 +303,14 @@ final class Commands {
 		$pause = $this->serviceAs( Services::PAUSE_CONTROLLER, PauseController::class );
 		$count = $id > 0 ? ( $pause->pause( $id, $minutes > 0 ? $minutes : null ) ? 1 : 0 ) : $pause->pauseAll( $minutes > 0 ? $minutes : null );
 		if ( 0 === $count ) {
-			$this->out->fail( __( 'There is no connection that can be paused.', 'estasoft-erp-crm-sync-engine' ) );
+			$this->out->fail( __( 'There is no connection that can be paused.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$this->out->success(
 			$minutes > 0
 				/* translators: 1: number of connections, 2: minutes. */
-				? sprintf( _n( '%1$d connection paused for %2$d minutes.', '%1$d connections paused for %2$d minutes.', $count, 'estasoft-erp-crm-sync-engine' ), $count, $minutes )
+				? sprintf( _n( '%1$d connection paused for %2$d minutes.', '%1$d connections paused for %2$d minutes.', $count, 'estasoft-enterprise-erpcrm-sync-engine' ), $count, $minutes )
 				/* translators: %d: number of connections. */
-				: sprintf( _n( '%d connection paused until you resume it.', '%d connections paused until you resume them.', $count, 'estasoft-erp-crm-sync-engine' ), $count )
+				: sprintf( _n( '%d connection paused until you resume it.', '%d connections paused until you resume them.', $count, 'estasoft-enterprise-erpcrm-sync-engine' ), $count )
 		);
 	}
 
@@ -336,11 +336,11 @@ final class Commands {
 		$pause = $this->serviceAs( Services::PAUSE_CONTROLLER, PauseController::class );
 		$count = $id > 0 ? ( $pause->resume( $id ) ? 1 : 0 ) : $pause->resumeAll();
 		if ( 0 === $count ) {
-			$this->out->warning( __( 'No connection was paused.', 'estasoft-erp-crm-sync-engine' ) );
+			$this->out->warning( __( 'No connection was paused.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			return;
 		}
 		/* translators: %d: number of connections. */
-		$this->out->success( sprintf( _n( '%d connection resumed.', '%d connections resumed.', $count, 'estasoft-erp-crm-sync-engine' ), $count ) );
+		$this->out->success( sprintf( _n( '%d connection resumed.', '%d connections resumed.', $count, 'estasoft-enterprise-erpcrm-sync-engine' ), $count ) );
 	}
 
 	/**
@@ -386,23 +386,23 @@ final class Commands {
 			$progress = is_array( $run['progress'] ?? null ) ? $run['progress'] : array();
 			$now      = (int) ( $progress['done'] ?? 0 );
 			/* translators: 1: orders compared so far, 2: orders to compare. */
-			$this->out->log( sprintf( __( 'Compared %1$d of %2$d orders…', 'estasoft-erp-crm-sync-engine' ), $now, (int) ( $progress['total'] ?? 0 ) ) );
+			$this->out->log( sprintf( __( 'Compared %1$d of %2$d orders…', 'estasoft-enterprise-erpcrm-sync-engine' ), $now, (int) ( $progress['total'] ?? 0 ) ) );
 			if ( $now <= $done ) {
-				$this->out->fail( __( 'The comparison is not moving. Run it again in a minute.', 'estasoft-erp-crm-sync-engine' ) );
+				$this->out->fail( __( 'The comparison is not moving. Run it again in a minute.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$done = $now;
 		}
 		if ( 'running' === (string) ( $run['status'] ?? '' ) ) {
-			$this->out->fail( __( 'The comparison did not finish. Run it again to carry on.', 'estasoft-erp-crm-sync-engine' ) );
+			$this->out->fail( __( 'The comparison did not finish. Run it again to carry on.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( 'failed' === (string) ( $run['status'] ?? '' ) ) {
-			$this->out->fail( __( 'The connected system could not be read, so nothing was compared. Check the connection and run it again.', 'estasoft-erp-crm-sync-engine' ) );
+			$this->out->fail( __( 'The connected system could not be read, so nothing was compared. Check the connection and run it again.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$differences = (int) ( $run['differences'] ?? 0 );
 		$this->out->success(
 			sprintf(
 				/* translators: 1: orders compared, 2: orders that match, 3: differences found, 4: orders queued again. */
-				__( 'Compared %1$d orders: %2$d match, %3$d differ, %4$d queued again.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Compared %1$d orders: %2$d match, %3$d differ, %4$d queued again.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				(int) ( $run['compared'] ?? 0 ),
 				(int) ( $run['matched'] ?? 0 ),
 				$differences,
@@ -410,7 +410,7 @@ final class Commands {
 			)
 		);
 		if ( $differences > 0 ) {
-			$this->out->log( __( 'Open Reconciliation in ESTASOFT SYNC to repair or ignore the differences.', 'estasoft-erp-crm-sync-engine' ) );
+			$this->out->log( __( 'Open Reconciliation in ESTASOFT SYNC to repair or ignore the differences.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 	}
 
@@ -459,9 +459,9 @@ final class Commands {
 			$this->out->items( $format, $rows, array( 'status', 'check', 'detail' ) );
 		}
 		if ( ! empty( $result['blocked'] ) ) {
-			$this->out->fail( __( 'At least one check needs fixing before setup can finish.', 'estasoft-erp-crm-sync-engine' ) );
+			$this->out->fail( __( 'At least one check needs fixing before setup can finish.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
-		$this->out->success( __( 'No check needs fixing.', 'estasoft-erp-crm-sync-engine' ) );
+		$this->out->success( __( 'No check needs fixing.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**
@@ -473,13 +473,13 @@ final class Commands {
 	 */
 	private function stopReason( int $claimed, int $maxItems, int $maxMemory ): string {
 		if ( $this->stop->requested() ) {
-			return __( 'stop signal received', 'estasoft-erp-crm-sync-engine' );
+			return __( 'stop signal received', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		if ( $claimed >= $maxItems ) {
-			return __( 'item limit reached', 'estasoft-erp-crm-sync-engine' );
+			return __( 'item limit reached', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		if ( ( $this->memory )() >= $maxMemory * 1048576 ) {
-			return __( 'memory limit reached', 'estasoft-erp-crm-sync-engine' );
+			return __( 'memory limit reached', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		return '';
 	}
@@ -504,7 +504,7 @@ final class Commands {
 		}
 		$this->out->fail(
 			/* translators: %s: option name. */
-			sprintf( __( '--%1$s needs a value, for example --%1$s=<value>.', 'estasoft-erp-crm-sync-engine' ), $name ),
+			sprintf( __( '--%1$s needs a value, for example --%1$s=<value>.', 'estasoft-enterprise-erpcrm-sync-engine' ), $name ),
 			2
 		);
 	}
@@ -527,7 +527,7 @@ final class Commands {
 		if ( 1 !== preg_match( '/^\d+$/', $raw ) || (int) $raw < $min || (int) $raw > $max ) {
 			$this->out->fail(
 				/* translators: 1: option name, 2: smallest value, 3: largest value. */
-				sprintf( __( '--%1$s must be a whole number from %2$d to %3$d.', 'estasoft-erp-crm-sync-engine' ), $name, $min, min( $max, 1000000 ) ),
+				sprintf( __( '--%1$s must be a whole number from %2$d to %3$d.', 'estasoft-enterprise-erpcrm-sync-engine' ), $name, $min, min( $max, 1000000 ) ),
 				2
 			);
 		}
@@ -544,7 +544,7 @@ final class Commands {
 		$format = strtolower( $this->textOption( $assoc, 'format' ) ?? 'table' );
 		if ( ! in_array( $format, $allowed, true ) ) {
 			/* translators: %s: the allowed formats. */
-			$this->out->fail( sprintf( __( '--format must be one of: %s.', 'estasoft-erp-crm-sync-engine' ), implode( ', ', $allowed ) ), 2 );
+			$this->out->fail( sprintf( __( '--format must be one of: %s.', 'estasoft-enterprise-erpcrm-sync-engine' ), implode( ', ', $allowed ) ), 2 );
 		}
 		return $format;
 	}
@@ -563,7 +563,7 @@ final class Commands {
 				continue;
 			}
 			if ( 1 !== preg_match( '/^\d+$/', $part ) || (int) $part < 1 ) {
-				$this->out->fail( __( '--ids must be a comma-separated list of queue item ids.', 'estasoft-erp-crm-sync-engine' ), 2 );
+				$this->out->fail( __( '--ids must be a comma-separated list of queue item ids.', 'estasoft-enterprise-erpcrm-sync-engine' ), 2 );
 			}
 			$ids[ (int) $part ] = (int) $part;
 		}

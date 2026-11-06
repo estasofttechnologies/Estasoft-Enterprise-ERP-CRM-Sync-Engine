@@ -237,21 +237,21 @@ final class DatevSettings implements ExportSettings {
 	public function problems(): array {
 		$problems = array();
 		if ( $this->consultant() < 1001 ) {
-			$problems[] = __( 'Enter the consultant number (Beraternummer) your tax adviser gave you, between 1001 and 9999999.', 'estasoft-erp-crm-sync-engine' );
+			$problems[] = __( 'Enter the consultant number (Beraternummer) your tax adviser gave you, between 1001 and 9999999.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		if ( $this->client() < 1 ) {
-			$problems[] = __( 'Enter the client number (Mandantennummer), between 1 and 99999.', 'estasoft-erp-crm-sync-engine' );
+			$problems[] = __( 'Enter the client number (Mandantennummer), between 1 and 99999.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		if ( '' === $this->fiscalYearStart() ) {
-			$problems[] = __( 'Enter the first day of the financial year as month and day, for example 01-01.', 'estasoft-erp-crm-sync-engine' );
+			$problems[] = __( 'Enter the first day of the financial year as month and day, for example 01-01.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		if ( 1 !== preg_match( '/^[A-Z]{3}$/', $this->currency() ) ) {
-			$problems[] = __( 'Enter the currency of the books as a three-letter code, for example EUR.', 'estasoft-erp-crm-sync-engine' );
+			$problems[] = __( 'Enter the currency of the books as a three-letter code, for example EUR.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		if ( ! DatevAccount::isPersonal( $this->debtorAccount(), $this->accountLength() ) ) {
 			$problems[] = sprintf(
 				/* translators: %d: number of digits */
-				__( 'The debtor account must be a number with %d digits (one more than the account length).', 'estasoft-erp-crm-sync-engine' ),
+				__( 'The debtor account must be a number with %d digits (one more than the account length).', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$this->accountLength() + 1
 			);
 		}

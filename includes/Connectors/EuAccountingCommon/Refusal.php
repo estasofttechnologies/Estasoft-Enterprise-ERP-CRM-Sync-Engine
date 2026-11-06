@@ -119,7 +119,7 @@ final class Refusal {
 			$field,
 			sprintf(
 				/* translators: 1: the shop's total, 2: the total the accounting system worked out. */
-				__( 'The totals differ: the shop says %1$s, the system worked out %2$s.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'The totals differ: the shop says %1$s, the system worked out %2$s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$shop,
 				$vendor
 			),

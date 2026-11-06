@@ -120,12 +120,12 @@ final class Notices {
 		echo '<div class="notice notice-' . esc_attr( $kind ) . ' estasoft-sync-notice" data-estasoft-sync-notice="' . esc_attr( $notice['id'] ) . '">';
 		echo '<p>' . esc_html( $notice['text'] ) . '</p>';
 		if ( isset( $notice['key_line'] ) ) {
-			echo '<p>' . esc_html__( 'Add this line to wp-config.php, above the line that says “That’s all, stop editing!”, then reload the page.', 'estasoft-erp-crm-sync-engine' ) . '</p>';
+			echo '<p>' . esc_html__( 'Add this line to wp-config.php, above the line that says “That’s all, stop editing!”, then reload the page.', 'estasoft-enterprise-erpcrm-sync-engine' ) . '</p>';
 			echo '<p><code>' . esc_html( $notice['key_line'] ) . '</code></p>';
 		}
 		echo '<p><a class="button button-primary" href="' . esc_url( $this->urls->route( $notice['action_route'] ) ) . '">' . esc_html( $notice['action_label'] ) . '</a>';
 		if ( $notice['dismissible'] ) {
-			echo ' <a class="button" href="' . esc_url( $this->dismissUrl( $notice['id'] ) ) . '">' . esc_html__( 'Not now', 'estasoft-erp-crm-sync-engine' ) . '</a>';
+			echo ' <a class="button" href="' . esc_url( $this->dismissUrl( $notice['id'] ) ) . '">' . esc_html__( 'Not now', 'estasoft-enterprise-erpcrm-sync-engine' ) . '</a>';
 		}
 		echo '</p></div>';
 	}

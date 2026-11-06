@@ -130,7 +130,7 @@ final class OracleFusionOrders {
 				$this->options->referenceAttribute(),
 				sprintf(
 					/* translators: %d: number of characters. */
-					__( 'The order reference is longer than the %d characters Oracle Fusion takes in this field.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The order reference is longer than the %d characters Oracle Fusion takes in this field.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$this->options->referenceLength()
 				)
 			);
@@ -143,7 +143,7 @@ final class OracleFusionOrders {
 			$created = $this->find( $data->reference );
 		}
 		if ( null === $created ) {
-			$this->refuse( 'CustomerTransactionId', __( 'Oracle Fusion accepted the invoice but it cannot be read back.', 'estasoft-erp-crm-sync-engine' ) );
+			$this->refuse( 'CustomerTransactionId', __( 'Oracle Fusion accepted the invoice but it cannot be read back.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return $created;
 	}
@@ -175,7 +175,7 @@ final class OracleFusionOrders {
 		return Problem::validation(
 			$this->system,
 			'InvoiceStatus',
-			__( 'The transaction is in Oracle Fusion but its status is Incomplete. Complete or delete it in Oracle Fusion Receivables, then try again.', 'estasoft-erp-crm-sync-engine' )
+			__( 'The transaction is in Oracle Fusion but its status is Incomplete. Complete or delete it in Oracle Fusion Receivables, then try again.', 'estasoft-enterprise-erpcrm-sync-engine' )
 		);
 	}
 
@@ -196,7 +196,7 @@ final class OracleFusionOrders {
 				'InvoiceCurrencyCode',
 				sprintf(
 					/* translators: 1: currency in Fusion, 2: currency of the shop. */
-					__( 'Oracle Fusion holds the invoice in %1$s but the shop charged in %2$s.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Oracle Fusion holds the invoice in %1$s but the shop charged in %2$s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$actual,
 					$data->currency
 				)
@@ -207,7 +207,7 @@ final class OracleFusionOrders {
 		if ( null === $error ) {
 			return null;
 		}
-		return Problem::validation( $this->system, 'total', (string) $error->context['reason'] . ' ' . __( 'The invoice stays in Oracle Fusion; correct or delete it there.', 'estasoft-erp-crm-sync-engine' ) );
+		return Problem::validation( $this->system, 'total', (string) $error->context['reason'] . ' ' . __( 'The invoice stays in Oracle Fusion; correct or delete it there.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**
@@ -227,7 +227,7 @@ final class OracleFusionOrders {
 			return null;
 		}
 		$error = $total->run( $shop['minor'], $figure['minor'], $shop['currency'], new Warnings(), 'total' );
-		return null === $error ? null : Problem::validation( $this->system, 'total', (string) $error->context['reason'] . ' ' . __( 'The invoice stays in Oracle Fusion; correct or delete it there.', 'estasoft-erp-crm-sync-engine' ) );
+		return null === $error ? null : Problem::validation( $this->system, 'total', (string) $error->context['reason'] . ' ' . __( 'The invoice stays in Oracle Fusion; correct or delete it there.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**
@@ -296,9 +296,9 @@ final class OracleFusionOrders {
 	 */
 	public function requireSettings( string $billTo ): void {
 		$this->requireUnit();
-		$this->mustHave( 'transaction_source', $this->options->transactionSource(), __( 'Enter the transaction source in the connection settings.', 'estasoft-erp-crm-sync-engine' ) );
-		$this->mustHave( 'transaction_type', $this->options->transactionType(), __( 'Enter the transaction type in the connection settings.', 'estasoft-erp-crm-sync-engine' ) );
-		$this->mustHave( 'bill_to_account', $billTo, __( 'Enter the number of the customer account all web orders are billed to in the connection settings.', 'estasoft-erp-crm-sync-engine' ) );
+		$this->mustHave( 'transaction_source', $this->options->transactionSource(), __( 'Enter the transaction source in the connection settings.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
+		$this->mustHave( 'transaction_type', $this->options->transactionType(), __( 'Enter the transaction type in the connection settings.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
+		$this->mustHave( 'bill_to_account', $billTo, __( 'Enter the number of the customer account all web orders are billed to in the connection settings.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**
@@ -307,7 +307,7 @@ final class OracleFusionOrders {
 	 * @throws ApiException With SYNC-VAL-002 when it is missing.
 	 */
 	public function requireUnit(): void {
-		$this->mustHave( 'business_unit', $this->options->businessUnit(), __( 'Enter the business unit in the connection settings.', 'estasoft-erp-crm-sync-engine' ) );
+		$this->mustHave( 'business_unit', $this->options->businessUnit(), __( 'Enter the business unit in the connection settings.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**
@@ -340,7 +340,7 @@ final class OracleFusionOrders {
 		if ( 0 !== $freight ) {
 			$body['FreightAmount'] = $this->amounts->toNumber( $freight, $data->currency );
 		}
-		$note = $data->noteWithPayment( __( 'Payment', 'estasoft-erp-crm-sync-engine' ) );
+		$note = $data->noteWithPayment( __( 'Payment', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		$last = $this->marker->append( '', $data->totalMinor, $data->currency );
 		$room = self::COMMENTS_LENGTH - ( '' === $last ? 0 : strlen( $last ) + 1 );
 		$text = $this->marker->append( $warnings->fit( 'Comments', $note, $room ), $data->totalMinor, $data->currency );

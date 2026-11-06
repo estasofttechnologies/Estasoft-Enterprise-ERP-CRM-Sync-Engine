@@ -100,7 +100,7 @@ final class BcRefundSender {
 					'order_ref',
 					sprintf(
 						/* translators: %s: order reference such as WC-123. */
-						__( 'The order %s is not in Business Central yet, so the refund has nothing to refer to.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'The order %s is not in Business Central yet, so the refund has nothing to refer to.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$data->orderRef
 					),
 					'original order missing'
@@ -134,7 +134,7 @@ final class BcRefundSender {
 		}
 		$id = OData::guid( $memo['id'] ?? null );
 		if ( null === $id ) {
-			return SendResult::failure( Failures::invalid( $this->system, 'document', __( 'Business Central did not return the id of the document.', 'estasoft-erp-crm-sync-engine' ), 'no document id' ) );
+			return SendResult::failure( Failures::invalid( $this->system, 'document', __( 'Business Central did not return the id of the document.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'no document id' ) );
 		}
 		$came = strtoupper( trim( (string) ( $memo['currencyCode'] ?? '' ) ) );
 		if ( '' !== $came && $came !== $currency ) {
@@ -208,7 +208,7 @@ final class BcRefundSender {
 	private function plan( BcRefundData $data, array $items ): array|ConnectorError {
 		$lines = array( BcLine::comment( sprintf( 'Refund of %s', $data->orderRef ) ) );
 		if ( '' !== $data->reason ) {
-			$lines[] = BcLine::comment( sprintf( /* translators: %s: reason of the refund. */ __( 'Reason: %s', 'estasoft-erp-crm-sync-engine' ), $data->reason ) );
+			$lines[] = BcLine::comment( sprintf( /* translators: %s: reason of the refund. */ __( 'Reason: %s', 'estasoft-enterprise-erpcrm-sync-engine' ), $data->reason ) );
 		}
 		foreach ( $data->lines as $line ) {
 			$row  = $items[ $line['sku'] ] ?? null;
@@ -231,7 +231,7 @@ final class BcRefundSender {
 				$number,
 				sprintf(
 					/* translators: 1: product name, 2: quantity. */
-					__( '%1$s (quantity %2$s)', 'estasoft-erp-crm-sync-engine' ),
+					__( '%1$s (quantity %2$s)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$name,
 					(string) $qty
 				),
@@ -239,7 +239,7 @@ final class BcRefundSender {
 				$line['amount']
 			);
 		}
-		foreach ( array( array( 'shipping', $data->shippingMinor, __( 'Shipping refund', 'estasoft-erp-crm-sync-engine' ) ), array( 'refund', $data->otherMinor, __( 'Refund', 'estasoft-erp-crm-sync-engine' ) ) ) as $extra ) {
+		foreach ( array( array( 'shipping', $data->shippingMinor, __( 'Shipping refund', 'estasoft-enterprise-erpcrm-sync-engine' ) ), array( 'refund', $data->otherMinor, __( 'Refund', 'estasoft-enterprise-erpcrm-sync-engine' ) ) ) as $extra ) {
 			if ( $extra[1] <= 0 ) {
 				continue;
 			}

@@ -46,13 +46,13 @@ final class BcPlan {
 		}
 		$extras = array();
 		if ( null !== $order->shipping ) {
-			$extras[] = array( 'shipping', $order->shipping, __( 'Shipping', 'estasoft-erp-crm-sync-engine' ), 1 );
+			$extras[] = array( 'shipping', $order->shipping, __( 'Shipping', 'estasoft-enterprise-erpcrm-sync-engine' ), 1 );
 		}
 		foreach ( $order->fees as $fee ) {
-			$extras[] = array( 'fee', $fee, __( 'Fee', 'estasoft-erp-crm-sync-engine' ), 1 );
+			$extras[] = array( 'fee', $fee, __( 'Fee', 'estasoft-enterprise-erpcrm-sync-engine' ), 1 );
 		}
 		if ( null !== $order->discount ) {
-			$extras[] = array( 'discount', $order->discount, __( 'Discount', 'estasoft-erp-crm-sync-engine' ), -1 );
+			$extras[] = array( 'discount', $order->discount, __( 'Discount', 'estasoft-enterprise-erpcrm-sync-engine' ), -1 );
 		}
 		foreach ( $extras as $extra ) {
 			$line = self::extraLine( $extra[0], $extra[1], $extra[2], $extra[3], $options, $system );
@@ -61,7 +61,7 @@ final class BcPlan {
 			}
 			$lines[] = $line;
 		}
-		$note = trim( $order->note . ( '' !== $order->paymentReference ? ( '' !== $order->note ? ' | ' : '' ) . sprintf( /* translators: %s: payment reference. */ __( 'Payment %s', 'estasoft-erp-crm-sync-engine' ), $order->paymentReference ) : '' ) );
+		$note = trim( $order->note . ( '' !== $order->paymentReference ? ( '' !== $order->note ? ' | ' : '' ) . sprintf( /* translators: %s: payment reference. */ __( 'Payment %s', 'estasoft-enterprise-erpcrm-sync-engine' ), $order->paymentReference ) : '' ) );
 		if ( '' !== $note ) {
 			$lines[] = BcLine::comment( $note );
 		}
@@ -86,7 +86,7 @@ final class BcPlan {
 				$options->lineOptionName( $kind ),
 				sprintf(
 					/* translators: %s: name of the connection option. */
-					__( 'Business Central needs an item or a G/L account for this amount. Set the option %s.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Business Central needs an item or a G/L account for this amount. Set the option %s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$options->lineOptionName( $kind )
 				),
 				$kind . ' target missing'

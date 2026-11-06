@@ -84,7 +84,7 @@ final class ErpnextErrorMapper {
 				array(
 					'system' => $system,
 					'field'  => '' !== $type ? $type : 'request',
-					'reason' => '' !== $message ? $message : __( 'The site refused the request.', 'estasoft-erp-crm-sync-engine' ),
+					'reason' => '' !== $message ? $message : __( 'The site refused the request.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				$status,
 				null,
@@ -152,7 +152,7 @@ final class ErpnextErrorMapper {
 			array(
 				'system' => $system,
 				'field'  => 'address',
-				'reason' => __( 'This address did not answer like an ERPNext site. Check the address (no /app or /desk at the end).', 'estasoft-erp-crm-sync-engine' ),
+				'reason' => __( 'This address did not answer like an ERPNext site. Check the address (no /app or /desk at the end).', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			),
 			$status,
 			null,

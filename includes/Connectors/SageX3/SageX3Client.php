@@ -80,7 +80,7 @@ final class SageX3Client {
 			}
 			$url = SameOrigin::resolve( $next, $this->origin );
 			if ( null === $url ) {
-				$exception = new ApiException( Problems::refused( $this->system, 'address', __( 'The server pointed to the next page on another server, so it was not followed.', 'estasoft-erp-crm-sync-engine' ), 'foreign next link' ), $response );
+				$exception = new ApiException( Problems::refused( $this->system, 'address', __( 'The server pointed to the next page on another server, so it was not followed.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'foreign next link' ), $response );
 				throw $exception;
 			}
 			$response = $this->api->get( $url, array(), null, array( 'action' => 'read ' . $classCode ) );
@@ -222,6 +222,6 @@ final class SageX3Client {
 				'login page'
 			);
 		}
-		return Problems::refused( $this->system, 'address', __( 'This address did not answer like Sage X3 web services. Check the address and the folder.', 'estasoft-erp-crm-sync-engine' ), 'not x3' );
+		return Problems::refused( $this->system, 'address', __( 'This address did not answer like Sage X3 web services. Check the address and the folder.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'not x3' );
 	}
 }

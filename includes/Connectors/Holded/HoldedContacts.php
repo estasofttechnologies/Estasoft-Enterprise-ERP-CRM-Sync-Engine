@@ -158,7 +158,7 @@ final class HoldedContacts {
 				array(
 					'system' => HoldedConnector::LABEL,
 					'field'  => 'contact',
-					'reason' => __( 'Holded did not return the id of the new contact.', 'estasoft-erp-crm-sync-engine' ),
+					'reason' => __( 'Holded did not return the id of the new contact.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				null,
 				null,

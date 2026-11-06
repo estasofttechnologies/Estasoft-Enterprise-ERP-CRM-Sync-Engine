@@ -56,7 +56,7 @@ final class SapS4HanaErrors {
 				ErrorCode::Val002,
 				$base + array(
 					'field'  => 'If-Match',
-					'reason' => __( 'The record changed while it was being processed. Try again.', 'estasoft-erp-crm-sync-engine' ),
+					'reason' => __( 'The record changed while it was being processed. Try again.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				$status,
 				null,
@@ -71,7 +71,7 @@ final class SapS4HanaErrors {
 		return new ConnectorError(
 			ErrorCode::Val002,
 			$base + array(
-				'field'  => __( 'the request', 'estasoft-erp-crm-sync-engine' ),
+				'field'  => __( 'the request', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'reason' => $text,
 			),
 			$status,

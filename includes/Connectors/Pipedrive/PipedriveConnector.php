@@ -78,10 +78,10 @@ final class PipedriveConnector extends AbstractSalesConnector {
 	 */
 	protected function credentialDefinition(): array {
 		return array(
-			new CredentialField( 'company_domain', __( 'Company address', 'estasoft-erp-crm-sync-engine' ), false, true, __( 'The part before .pipedrive.com in your Pipedrive address.', 'estasoft-erp-crm-sync-engine' ), '', 'text' ),
-			new CredentialField( 'api_token', __( 'Personal API token', 'estasoft-erp-crm-sync-engine' ), true, true, __( 'Saved encrypted. It is never shown again.', 'estasoft-erp-crm-sync-engine' ), '', 'password' ),
-			new CredentialField( 'pipeline_id', __( 'Pipeline id', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Leave empty to use your default pipeline.', 'estasoft-erp-crm-sync-engine' ), '', 'number', array(), 'advanced' ),
-			new CredentialField( 'stage_id', __( 'Stage id', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Leave empty to use the first stage of the pipeline.', 'estasoft-erp-crm-sync-engine' ), '', 'number', array(), 'advanced' ),
+			new CredentialField( 'company_domain', __( 'Company address', 'estasoft-enterprise-erpcrm-sync-engine' ), false, true, __( 'The part before .pipedrive.com in your Pipedrive address.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text' ),
+			new CredentialField( 'api_token', __( 'Personal API token', 'estasoft-enterprise-erpcrm-sync-engine' ), true, true, __( 'Saved encrypted. It is never shown again.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'password' ),
+			new CredentialField( 'pipeline_id', __( 'Pipeline id', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Leave empty to use your default pipeline.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'number', array(), 'advanced' ),
+			new CredentialField( 'stage_id', __( 'Stage id', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Leave empty to use the first stage of the pipeline.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'number', array(), 'advanced' ),
 		);
 	}
 
@@ -97,7 +97,7 @@ final class PipedriveConnector extends AbstractSalesConnector {
 		$typed = (string) strtok( $typed, '/' );
 		$typed = (string) preg_replace( '~\.pipedrive\.com$~', '', $typed );
 		if ( 1 !== preg_match( '/^[a-z0-9][a-z0-9-]{0,62}$/', $typed ) ) {
-			throw new ApiException( $this->invalid( 'company_domain', __( 'Enter the part of your Pipedrive address before .pipedrive.com.', 'estasoft-erp-crm-sync-engine' ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
+			throw new ApiException( $this->invalid( 'company_domain', __( 'Enter the part of your Pipedrive address before .pipedrive.com.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 		}
 		return 'https://' . $typed . '.pipedrive.com';
 	}
@@ -352,7 +352,7 @@ final class PipedriveConnector extends AbstractSalesConnector {
 		}
 		$dealId = (string) ( $deal['id'] ?? '' );
 		if ( '' === $dealId ) {
-			return SendResult::failure( $this->invalid( 'deal', __( 'Pipedrive did not return the new deal.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( $this->invalid( 'deal', __( 'Pipedrive did not return the new deal.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		if ( null !== $products ) {
 			$this->attachProducts( $api, $options, $dealId, $order, $products );
@@ -380,7 +380,7 @@ final class PipedriveConnector extends AbstractSalesConnector {
 			$warnings[] = $problem;
 		}
 		if ( $cut ) {
-			$warnings[] = __( 'The order summary was cut because it was very long.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'The order summary was cut because it was very long.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		$ref = new ExternalRef(
 			$dealId,
@@ -411,7 +411,7 @@ final class PipedriveConnector extends AbstractSalesConnector {
 		$deal = $this->findDeal( $api, $this->reference( $connection ), $refund->orderRef );
 		if ( null === $deal ) {
 			/* translators: 1: order reference */
-			return SendResult::failure( $this->invalid( 'order', sprintf( __( 'The order %s is not in Pipedrive yet.', 'estasoft-erp-crm-sync-engine' ), $refund->orderRef ) ) );
+			return SendResult::failure( $this->invalid( 'order', sprintf( __( 'The order %s is not in Pipedrive yet.', 'estasoft-enterprise-erpcrm-sync-engine' ), $refund->orderRef ) ) );
 		}
 		$dealId = (string) $deal['id'];
 		$note   = $this->findNote( $api, $dealId, $refund->reference );

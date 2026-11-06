@@ -33,7 +33,7 @@ function NotOffered( { system, items }: { system: string; items: Missing[] } ) {
 			title={ sprintf(
 				/* translators: %s: system name */ __(
 					'Not offered for %s',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				system
 			) }
@@ -62,24 +62,36 @@ function paymentRows(): { id: string; label: string; note: string }[] {
 	return [
 		{
 			id: 'cod',
-			label: __( 'Cash on delivery', 'estasoft-erp-crm-sync-engine' ),
-			note: __( 'Paid when delivered', 'estasoft-erp-crm-sync-engine' ),
+			label: __(
+				'Cash on delivery',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
+			note: __(
+				'Paid when delivered',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 		},
 		{
 			id: 'card',
-			label: __( 'Card payments', 'estasoft-erp-crm-sync-engine' ),
+			label: __(
+				'Card payments',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			note: '',
 		},
 		{
 			id: 'bank',
-			label: __( 'Bank transfer', 'estasoft-erp-crm-sync-engine' ),
+			label: __(
+				'Bank transfer',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			note: '',
 		},
 		{
 			id: 'other',
 			label: __(
 				'Any other payment method',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			note: '',
 		},
@@ -108,10 +120,13 @@ export function AccountingWhat( { connection, value, onChange }: KindProps ) {
 	if ( ! caps.stock_in ) {
 		notOffered.push( {
 			key: 'stock',
-			title: __( 'Warehouses and stock', 'estasoft-erp-crm-sync-engine' ),
+			title: __(
+				'Warehouses and stock',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			text: __(
 				'An accounting system does not run your warehouse. Stock from the system is only offered when it tracks inventory, and then only to read quantities.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 		} );
 	}
@@ -120,11 +135,11 @@ export function AccountingWhat( { connection, value, onChange }: KindProps ) {
 			key: 'tracking',
 			title: __(
 				'Tracking numbers and prices',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			text: __(
 				'Tracking numbers and prices stay in WooCommerce.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 		} );
 	}
@@ -135,7 +150,7 @@ export function AccountingWhat( { connection, value, onChange }: KindProps ) {
 				title={ sprintf(
 					/* translators: %s: system name */ __(
 						'What should sync to %s?',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					system
 				) }
@@ -146,7 +161,7 @@ export function AccountingWhat( { connection, value, onChange }: KindProps ) {
 							{ sprintf(
 								/* translators: %s: system name */ __(
 									'Orders in %s',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								system
 							) }
@@ -154,7 +169,7 @@ export function AccountingWhat( { connection, value, onChange }: KindProps ) {
 						<SelectField
 							label={ __(
 								'Create',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 							value={ value.accounting_create }
 							onChange={ ( next ) =>
@@ -168,28 +183,28 @@ export function AccountingWhat( { connection, value, onChange }: KindProps ) {
 									value: 'invoice',
 									label: __(
 										'Invoice only',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 								},
 								{
 									value: 'invoice_payment',
 									label: __(
 										'Invoice and payment',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 								},
 								{
 									value: 'draft_invoice',
 									label: __(
 										'Draft invoice, for you to check',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 								},
 							] }
 							hint={ sprintf(
 								/* translators: %s: system name */ __(
 									'%s issues the invoice. This plugin does not sign tax invoices.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								system
 							) }
@@ -200,13 +215,16 @@ export function AccountingWhat( { connection, value, onChange }: KindProps ) {
 				value.accounting_create === 'invoice_payment' ? (
 					<fieldset className="estasoft-sync-fieldset">
 						<legend className="estasoft-sync-subtitle">
-							{ __( 'Payments', 'estasoft-erp-crm-sync-engine' ) }
+							{ __(
+								'Payments',
+								'estasoft-enterprise-erpcrm-sync-engine'
+							) }
 						</legend>
 						<p className="estasoft-sync-muted">
 							{ sprintf(
 								/* translators: 1: system name, 2: system name again */ __(
 									'For each WooCommerce payment method, type the account in %1$s that the payment is paid into, exactly as %2$s shows it. A payment is recorded only for an order that is paid.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								system,
 								system
@@ -218,7 +236,7 @@ export function AccountingWhat( { connection, value, onChange }: KindProps ) {
 						>
 							caption={ __(
 								'Payment methods and the account each is paid into',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 							rows={ paymentRows() }
 							rowKey={ ( row ) => row.id }
@@ -227,11 +245,11 @@ export function AccountingWhat( { connection, value, onChange }: KindProps ) {
 									id: 'method',
 									header: __(
 										'Payment method in WooCommerce',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									label: __(
 										'Payment method',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									primary: true,
 									cell: ( row ) => (
@@ -252,13 +270,13 @@ export function AccountingWhat( { connection, value, onChange }: KindProps ) {
 									header: sprintf(
 										/* translators: %s: system name */ __(
 											'Pay into this %s account',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										),
 										system
 									),
 									label: __(
 										'Account',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									wide: true,
 									cell: ( row ) => (
@@ -267,7 +285,7 @@ export function AccountingWhat( { connection, value, onChange }: KindProps ) {
 											label={ sprintf(
 												/* translators: 1: payment method, 2: system name */ __(
 													'Account in %2$s for %1$s',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												),
 												row.label,
 												system
@@ -297,13 +315,13 @@ export function AccountingWhat( { connection, value, onChange }: KindProps ) {
 						<legend className="estasoft-sync-subtitle">
 							{ __(
 								'Customers',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</legend>
 						<SelectField
 							label={ __(
 								'When a customer is new',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 							value={
 								value.customer_match === 'match_only'
@@ -321,14 +339,14 @@ export function AccountingWhat( { connection, value, onChange }: KindProps ) {
 									value: 'match_create',
 									label: __(
 										'Match by email, create if missing',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 								},
 								{
 									value: 'match_only',
 									label: __(
 										'Only match, never create',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 								},
 							] }
@@ -338,12 +356,15 @@ export function AccountingWhat( { connection, value, onChange }: KindProps ) {
 				{ caps.refunds !== false ? (
 					<fieldset className="estasoft-sync-fieldset">
 						<legend className="estasoft-sync-subtitle">
-							{ __( 'Refunds', 'estasoft-erp-crm-sync-engine' ) }
+							{ __(
+								'Refunds',
+								'estasoft-enterprise-erpcrm-sync-engine'
+							) }
 						</legend>
 						<CheckField
 							label={ __(
 								'Send refunds as credit notes',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 							checked={ value.send_refunds }
 							onChange={ ( next ) => set( 'send_refunds', next ) }
@@ -355,17 +376,17 @@ export function AccountingWhat( { connection, value, onChange }: KindProps ) {
 						<legend className="estasoft-sync-subtitle">
 							{ __(
 								'Invoice details',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</legend>
 						<CheckField
 							label={ __(
 								'Save the invoice number and a link on the order',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 							hint={ __(
 								'Shown in the order screen and in the Invoices tab.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 							checked={ value.save_invoice_link }
 							onChange={ ( next ) =>
@@ -380,7 +401,7 @@ export function AccountingWhat( { connection, value, onChange }: KindProps ) {
 							{ sprintf(
 								/* translators: %s: system name */ __(
 									'Stock from %s',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								system
 							) }
@@ -388,7 +409,7 @@ export function AccountingWhat( { connection, value, onChange }: KindProps ) {
 						<CheckField
 							label={ __(
 								'Update WooCommerce stock',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 							checked={ value.stock_in }
 							onChange={ ( next ) => set( 'stock_in', next ) }
@@ -397,17 +418,20 @@ export function AccountingWhat( { connection, value, onChange }: KindProps ) {
 				) : null }
 				<fieldset className="estasoft-sync-fieldset">
 					<legend className="estasoft-sync-subtitle">
-						{ __( 'Tax', 'estasoft-erp-crm-sync-engine' ) }
+						{ __(
+							'Tax',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						) }
 					</legend>
 					<p>
 						{ __(
 							'Each order uses the',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }{ ' ' }
 						<Link to="/mapping/tax" className="estasoft-sync-link">
 							{ __(
 								'tax mapping',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Link>
 						.
@@ -418,11 +442,11 @@ export function AccountingWhat( { connection, value, onChange }: KindProps ) {
 			<Card
 				title={ __(
 					'When both sides change something',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				description={ __(
 					'Choosing one winner per field stops the two systems from overwriting each other.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			>
 				{ caps.stock_in ? (
@@ -430,7 +454,7 @@ export function AccountingWhat( { connection, value, onChange }: KindProps ) {
 						{ sprintf(
 							/* translators: %s: system name */ __(
 								'Stock quantity: %s wins. WooCommerce never writes stock to it.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							system
 						) }
@@ -439,7 +463,7 @@ export function AccountingWhat( { connection, value, onChange }: KindProps ) {
 				<SelectField
 					label={ __(
 						'Customer address',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					value={ value.winner_address }
 					onChange={ ( next ) =>
@@ -453,7 +477,7 @@ export function AccountingWhat( { connection, value, onChange }: KindProps ) {
 							value: 'woo',
 							label: __(
 								'WooCommerce wins',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 						},
 						{
@@ -461,7 +485,7 @@ export function AccountingWhat( { connection, value, onChange }: KindProps ) {
 							label: sprintf(
 								/* translators: %s: system name */ __(
 									'%s wins',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								system
 							),
@@ -478,31 +502,37 @@ function statusRows(): { id: string; label: string }[] {
 	return [
 		{
 			id: 'pending',
-			label: __( 'Pending payment', 'estasoft-erp-crm-sync-engine' ),
+			label: __(
+				'Pending payment',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 		},
 		{
 			id: 'processing',
-			label: __( 'Processing', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'Processing', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		},
 		{
 			id: 'on-hold',
-			label: __( 'On hold', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'On hold', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		},
 		{
 			id: 'failed',
-			label: __( 'Failed payment', 'estasoft-erp-crm-sync-engine' ),
+			label: __(
+				'Failed payment',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 		},
 		{
 			id: 'completed',
-			label: __( 'Completed', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'Completed', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		},
 		{
 			id: 'refunded',
-			label: __( 'Refunded', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'Refunded', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		},
 		{
 			id: 'cancelled',
-			label: __( 'Cancelled', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'Cancelled', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		},
 	];
 }
@@ -544,20 +574,23 @@ export function CrmWhat( { connection, value, onChange }: KindProps ) {
 				title={ sprintf(
 					/* translators: %s: system name */ __(
 						'What should sync to %s?',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					system
 				) }
 			>
 				<fieldset className="estasoft-sync-fieldset">
 					<legend className="estasoft-sync-subtitle">
-						{ __( 'Customers', 'estasoft-erp-crm-sync-engine' ) }
+						{ __(
+							'Customers',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						) }
 					</legend>
 					<SelectField
 						label={ sprintf(
 							/* translators: %s: system name */ __(
 								'Create in %s',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							system
 						) }
@@ -573,14 +606,14 @@ export function CrmWhat( { connection, value, onChange }: KindProps ) {
 								value: 'contact_company',
 								label: __(
 									'A contact for every customer, plus a company when filled',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 							},
 							{
 								value: 'contacts_only',
 								label: __(
 									'Contacts only',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 							},
 						] }
@@ -588,7 +621,7 @@ export function CrmWhat( { connection, value, onChange }: KindProps ) {
 					<CheckField
 						label={ __(
 							'Match by email, so repeat customers never become duplicates',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						checked={ value.crm_match_email }
 						onChange={ ( next ) => set( 'crm_match_email', next ) }
@@ -596,7 +629,10 @@ export function CrmWhat( { connection, value, onChange }: KindProps ) {
 				</fieldset>
 				<fieldset className="estasoft-sync-fieldset">
 					<legend className="estasoft-sync-subtitle">
-						{ __( 'Pipeline', 'estasoft-erp-crm-sync-engine' ) }
+						{ __(
+							'Pipeline',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						) }
 					</legend>
 					{ pipelineField ? (
 						pipelineField.type === 'select' &&
@@ -604,7 +640,7 @@ export function CrmWhat( { connection, value, onChange }: KindProps ) {
 							<SelectField
 								label={ __(
 									'Show deals in',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 								value={ pipelineValue }
 								onChange={ ( next ) => {
@@ -619,14 +655,14 @@ export function CrmWhat( { connection, value, onChange }: KindProps ) {
 								} ) ) }
 								hint={ __(
 									'Deal stages below come from this pipeline.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							/>
 						) : (
 							<TextField
 								label={ __(
 									'Show deals in',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 								value={ pipelineValue }
 								onChange={ setPipeline }
@@ -637,7 +673,7 @@ export function CrmWhat( { connection, value, onChange }: KindProps ) {
 									pipelineField.hint ||
 									__(
 										'Type the pipeline as it is named in your system. Leave it empty for the default pipeline.',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									)
 								}
 							/>
@@ -647,7 +683,7 @@ export function CrmWhat( { connection, value, onChange }: KindProps ) {
 							{ sprintf(
 								/* translators: %s: system name */ __(
 									'Deals go to the default pipeline of %s.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								system
 							) }
@@ -661,12 +697,15 @@ export function CrmWhat( { connection, value, onChange }: KindProps ) {
 				</fieldset>
 				<fieldset className="estasoft-sync-fieldset">
 					<legend className="estasoft-sync-subtitle">
-						{ __( 'Orders', 'estasoft-erp-crm-sync-engine' ) }
+						{ __(
+							'Orders',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						) }
 					</legend>
 					<SelectField
 						label={ __(
 							'Show each order as',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						value={ value.crm_order_as }
 						onChange={ ( next ) =>
@@ -680,21 +719,21 @@ export function CrmWhat( { connection, value, onChange }: KindProps ) {
 								value: 'deal_per_order',
 								label: __(
 									'One deal per order',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 							},
 							{
 								value: 'deal_per_customer',
 								label: __(
 									'One deal per customer, updated each time',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 							},
 							{
 								value: 'note_only',
 								label: __(
 									'A note on the contact only',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 							},
 						] }
@@ -704,17 +743,17 @@ export function CrmWhat( { connection, value, onChange }: KindProps ) {
 					<legend className="estasoft-sync-subtitle">
 						{ __(
 							'Customer value',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</legend>
 					<CheckField
 						label={ __(
 							'Keep these contact properties up to date',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						hint={ __(
 							'Total spent, number of orders, date of the last order.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						checked={ value.crm_keep_value }
 						onChange={ ( next ) => set( 'crm_keep_value', next ) }
@@ -722,16 +761,19 @@ export function CrmWhat( { connection, value, onChange }: KindProps ) {
 				</fieldset>
 				<fieldset className="estasoft-sync-fieldset">
 					<legend className="estasoft-sync-subtitle">
-						{ __( 'Marketing', 'estasoft-erp-crm-sync-engine' ) }
+						{ __(
+							'Marketing',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						) }
 					</legend>
 					<CheckField
 						label={ __(
 							'Respect marketing consent',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						hint={ __(
 							'A contact is marked marketing-ready only if the customer ticked the box. Turning this off marks every customer, which can break marketing laws.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						checked={ value.crm_marketing_consent }
 						onChange={ ( next ) =>
@@ -743,12 +785,12 @@ export function CrmWhat( { connection, value, onChange }: KindProps ) {
 			<Card
 				title={ __(
 					'Order status to deal stage',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				description={ sprintf(
 					/* translators: %s: system name */ __(
 						'Type the stage of your own pipeline, as it is named in %s. Leave a row empty to leave the deal where it is.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					system
 				) }
@@ -760,7 +802,7 @@ export function CrmWhat( { connection, value, onChange }: KindProps ) {
 				>
 					caption={ __(
 						'WooCommerce order status and the deal stage for it',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					rows={ statusRows() }
 					rowKey={ ( row ) => row.id }
@@ -769,11 +811,11 @@ export function CrmWhat( { connection, value, onChange }: KindProps ) {
 							id: 'status',
 							header: __(
 								'WooCommerce order status',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							label: __(
 								'Order status',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							primary: true,
 							cell: ( row ) => (
@@ -787,13 +829,13 @@ export function CrmWhat( { connection, value, onChange }: KindProps ) {
 							header: sprintf(
 								/* translators: %s: system name */ __(
 									'%s deal stage',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								system
 							),
 							label: __(
 								'Deal stage',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							wide: true,
 							cell: ( row ) => (
@@ -802,7 +844,7 @@ export function CrmWhat( { connection, value, onChange }: KindProps ) {
 									label={ sprintf(
 										/* translators: 1: order status, 2: system name */ __(
 											'%2$s deal stage for %1$s',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										),
 										row.label,
 										system
@@ -829,11 +871,11 @@ export function CrmWhat( { connection, value, onChange }: KindProps ) {
 						key: 'inventory',
 						title: __(
 							'Stock, tracking numbers, tax invoices and refund documents',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						text: __(
 							'A CRM does not hold inventory or issue tax invoices. A refund moves the deal to a refunded stage and adds a note.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 					},
 				] }

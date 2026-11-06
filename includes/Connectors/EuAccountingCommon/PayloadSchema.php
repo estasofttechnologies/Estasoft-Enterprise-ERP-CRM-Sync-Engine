@@ -33,7 +33,7 @@ final class PayloadSchema {
 		return match ( $mappingType ) {
 			'orders'    => self::orderFields( $texts, $rates ),
 			'customers' => self::customerFields( FieldCatalogBuilder::make() )->build(),
-			'products'  => FieldCatalogBuilder::make()->group( __( 'Product', 'estasoft-erp-crm-sync-engine' ) )->sku( 'product.sku', __( 'SKU (the product number in the system)', 'estasoft-erp-crm-sync-engine' ), true )->build(),
+			'products'  => FieldCatalogBuilder::make()->group( __( 'Product', 'estasoft-enterprise-erpcrm-sync-engine' ) )->sku( 'product.sku', __( 'SKU (the product number in the system)', 'estasoft-enterprise-erpcrm-sync-engine' ), true )->build(),
 			'refunds'   => self::refundFields(),
 			default     => array(),
 		};
@@ -66,21 +66,21 @@ final class PayloadSchema {
 	 * @return array<int,FieldDef>
 	 */
 	private static function orderFields( array $texts, bool $rates ): array {
-		$b      = FieldCatalogBuilder::make()->group( __( 'Order', 'estasoft-erp-crm-sync-engine' ) )
-			->field( 'currency', __( 'Currency', 'estasoft-erp-crm-sync-engine' ), 'currency', true )
-			->datetime( 'date', __( 'Order date', 'estasoft-erp-crm-sync-engine' ), true )
-			->longText( 'note', __( 'Order note', 'estasoft-erp-crm-sync-engine' ) )
-			->text( 'coupons', __( 'Coupon codes', 'estasoft-erp-crm-sync-engine' ) )
-			->money( 'total', __( 'Order total, with tax (for the total check)', 'estasoft-erp-crm-sync-engine' ) )
-			->money( 'excluded_total', __( 'Part of the total that belongs to products left out', 'estasoft-erp-crm-sync-engine' ) )
-			->boolean( 'prices_include_tax', __( 'Mapped prices include tax', 'estasoft-erp-crm-sync-engine' ) );
+		$b      = FieldCatalogBuilder::make()->group( __( 'Order', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->field( 'currency', __( 'Currency', 'estasoft-enterprise-erpcrm-sync-engine' ), 'currency', true )
+			->datetime( 'date', __( 'Order date', 'estasoft-enterprise-erpcrm-sync-engine' ), true )
+			->longText( 'note', __( 'Order note', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->text( 'coupons', __( 'Coupon codes', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->money( 'total', __( 'Order total, with tax (for the total check)', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->money( 'excluded_total', __( 'Part of the total that belongs to products left out', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->boolean( 'prices_include_tax', __( 'Mapped prices include tax', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		$labels = array(
-			'header'       => __( 'Document heading', 'estasoft-erp-crm-sync-engine' ),
-			'title'        => __( 'Document title', 'estasoft-erp-crm-sync-engine' ),
-			'introduction' => __( 'Text above the items', 'estasoft-erp-crm-sync-engine' ),
-			'remark'       => __( 'Text below the items', 'estasoft-erp-crm-sync-engine' ),
-			'head_text'    => __( 'Text above the items', 'estasoft-erp-crm-sync-engine' ),
-			'foot_text'    => __( 'Text below the items', 'estasoft-erp-crm-sync-engine' ),
+			'header'       => __( 'Document heading', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'title'        => __( 'Document title', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'introduction' => __( 'Text above the items', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'remark'       => __( 'Text below the items', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'head_text'    => __( 'Text above the items', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'foot_text'    => __( 'Text below the items', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		);
 		foreach ( $texts as $key ) {
 			if ( isset( $labels[ $key ] ) ) {
@@ -88,27 +88,27 @@ final class PayloadSchema {
 			}
 		}
 		self::customerFields( $b );
-		$b->group( __( 'Order lines', 'estasoft-erp-crm-sync-engine' ) )
-			->sku( 'lines[].sku', __( 'SKU', 'estasoft-erp-crm-sync-engine' ) )
-			->text( 'lines[].name', __( 'Product name', 'estasoft-erp-crm-sync-engine' ) )
-			->number( 'lines[].quantity', __( 'Quantity', 'estasoft-erp-crm-sync-engine' ), true )
-			->money( 'lines[].total', __( 'Line total after discount, without tax', 'estasoft-erp-crm-sync-engine' ), true )
-			->taxCode( 'lines[].tax_code', __( 'Tax code', 'estasoft-erp-crm-sync-engine' ) )
-			->group( __( 'Shipping and fees', 'estasoft-erp-crm-sync-engine' ) )
-			->text( 'shipping.name', __( 'Shipping name', 'estasoft-erp-crm-sync-engine' ) )
-			->money( 'shipping.total', __( 'Shipping, without tax', 'estasoft-erp-crm-sync-engine' ) )
-			->taxCode( 'shipping.tax_code', __( 'Shipping tax code', 'estasoft-erp-crm-sync-engine' ) )
-			->text( 'fees[].name', __( 'Fee name', 'estasoft-erp-crm-sync-engine' ) )
-			->money( 'fees[].total', __( 'Fee, without tax', 'estasoft-erp-crm-sync-engine' ) )
-			->taxCode( 'fees[].tax_code', __( 'Fee tax code', 'estasoft-erp-crm-sync-engine' ) )
-			->group( __( 'Payment', 'estasoft-erp-crm-sync-engine' ) )
-			->datetime( 'payment.date', __( 'Payment date', 'estasoft-erp-crm-sync-engine' ) )
-			->text( 'payment.reference', __( 'Payment reference', 'estasoft-erp-crm-sync-engine' ) );
+		$b->group( __( 'Order lines', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->sku( 'lines[].sku', __( 'SKU', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->text( 'lines[].name', __( 'Product name', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->number( 'lines[].quantity', __( 'Quantity', 'estasoft-enterprise-erpcrm-sync-engine' ), true )
+			->money( 'lines[].total', __( 'Line total after discount, without tax', 'estasoft-enterprise-erpcrm-sync-engine' ), true )
+			->taxCode( 'lines[].tax_code', __( 'Tax code', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->group( __( 'Shipping and fees', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->text( 'shipping.name', __( 'Shipping name', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->money( 'shipping.total', __( 'Shipping, without tax', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->taxCode( 'shipping.tax_code', __( 'Shipping tax code', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->text( 'fees[].name', __( 'Fee name', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->money( 'fees[].total', __( 'Fee, without tax', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->taxCode( 'fees[].tax_code', __( 'Fee tax code', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->group( __( 'Payment', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->datetime( 'payment.date', __( 'Payment date', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->text( 'payment.reference', __( 'Payment reference', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		if ( $rates ) {
-			$b->group( __( 'Tax rates', 'estasoft-erp-crm-sync-engine' ) )
-				->number( 'lines[].tax_rate', __( 'Tax rate of the line in percent', 'estasoft-erp-crm-sync-engine' ) )
-				->number( 'shipping.tax_rate', __( 'Tax rate of shipping in percent', 'estasoft-erp-crm-sync-engine' ) )
-				->number( 'fees[].tax_rate', __( 'Tax rate of the fee in percent', 'estasoft-erp-crm-sync-engine' ) );
+			$b->group( __( 'Tax rates', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+				->number( 'lines[].tax_rate', __( 'Tax rate of the line in percent', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+				->number( 'shipping.tax_rate', __( 'Tax rate of shipping in percent', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+				->number( 'fees[].tax_rate', __( 'Tax rate of the fee in percent', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return $b->build();
 	}
@@ -119,19 +119,19 @@ final class PayloadSchema {
 	 * @param FieldCatalogBuilder $b Builder.
 	 */
 	private static function customerFields( FieldCatalogBuilder $b ): FieldCatalogBuilder {
-		return $b->group( __( 'Customer', 'estasoft-erp-crm-sync-engine' ) )
-			->field( 'customer.email', __( 'Email', 'estasoft-erp-crm-sync-engine' ), 'email', true )
-			->text( 'customer.first_name', __( 'First name', 'estasoft-erp-crm-sync-engine' ) )
-			->text( 'customer.last_name', __( 'Last name', 'estasoft-erp-crm-sync-engine' ), true )
-			->text( 'customer.company', __( 'Company', 'estasoft-erp-crm-sync-engine' ) )
-			->field( 'customer.phone', __( 'Phone', 'estasoft-erp-crm-sync-engine' ), 'phone' )
-			->text( 'customer.street', __( 'Street', 'estasoft-erp-crm-sync-engine' ) )
-			->text( 'customer.supplement', __( 'Address line 2', 'estasoft-erp-crm-sync-engine' ) )
-			->text( 'customer.zip', __( 'Postcode', 'estasoft-erp-crm-sync-engine' ) )
-			->text( 'customer.city', __( 'City', 'estasoft-erp-crm-sync-engine' ) )
-			->text( 'customer.state', __( 'State', 'estasoft-erp-crm-sync-engine' ) )
-			->field( 'customer.country', __( 'Country', 'estasoft-erp-crm-sync-engine' ), 'country' )
-			->text( 'customer.vat_id', __( 'VAT id', 'estasoft-erp-crm-sync-engine' ) );
+		return $b->group( __( 'Customer', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->field( 'customer.email', __( 'Email', 'estasoft-enterprise-erpcrm-sync-engine' ), 'email', true )
+			->text( 'customer.first_name', __( 'First name', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->text( 'customer.last_name', __( 'Last name', 'estasoft-enterprise-erpcrm-sync-engine' ), true )
+			->text( 'customer.company', __( 'Company', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->field( 'customer.phone', __( 'Phone', 'estasoft-enterprise-erpcrm-sync-engine' ), 'phone' )
+			->text( 'customer.street', __( 'Street', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->text( 'customer.supplement', __( 'Address line 2', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->text( 'customer.zip', __( 'Postcode', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->text( 'customer.city', __( 'City', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->text( 'customer.state', __( 'State', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->field( 'customer.country', __( 'Country', 'estasoft-enterprise-erpcrm-sync-engine' ), 'country' )
+			->text( 'customer.vat_id', __( 'VAT id', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**
@@ -140,23 +140,23 @@ final class PayloadSchema {
 	 * @return array<int,FieldDef>
 	 */
 	private static function refundFields(): array {
-		return FieldCatalogBuilder::make()->group( __( 'Refund', 'estasoft-erp-crm-sync-engine' ) )
-			->text( 'order_ref', __( 'Reference of the refunded order (WC-…)', 'estasoft-erp-crm-sync-engine' ), true )
-			->field( 'customer.email', __( 'Customer email', 'estasoft-erp-crm-sync-engine' ), 'email' )
-			->datetime( 'order_date', __( 'Date of the refunded order', 'estasoft-erp-crm-sync-engine' ) )
-			->field( 'currency', __( 'Currency', 'estasoft-erp-crm-sync-engine' ), 'currency' )
-			->datetime( 'date', __( 'Refund date', 'estasoft-erp-crm-sync-engine' ) )
-			->text( 'reason', __( 'Reason', 'estasoft-erp-crm-sync-engine' ) )
-			->money( 'amount', __( 'Refund amount, with tax', 'estasoft-erp-crm-sync-engine' ), true )
-			->money( 'excluded_amount', __( 'Part that belongs to products left out', 'estasoft-erp-crm-sync-engine' ) )
-			->money( 'shipping_amount', __( 'Refunded shipping, with tax', 'estasoft-erp-crm-sync-engine' ) )
-			->money( 'other_amount', __( 'Other refunded amount, with tax', 'estasoft-erp-crm-sync-engine' ) )
-			->group( __( 'Refunded lines', 'estasoft-erp-crm-sync-engine' ) )
-			->sku( 'lines[].sku', __( 'SKU', 'estasoft-erp-crm-sync-engine' ) )
-			->text( 'lines[].name', __( 'Product name', 'estasoft-erp-crm-sync-engine' ) )
-			->number( 'lines[].quantity', __( 'Quantity', 'estasoft-erp-crm-sync-engine' ) )
-			->money( 'lines[].amount', __( 'Amount, without tax', 'estasoft-erp-crm-sync-engine' ) )
-			->money( 'lines[].tax_amount', __( 'Tax of the line', 'estasoft-erp-crm-sync-engine' ) )
+		return FieldCatalogBuilder::make()->group( __( 'Refund', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->text( 'order_ref', __( 'Reference of the refunded order (WC-…)', 'estasoft-enterprise-erpcrm-sync-engine' ), true )
+			->field( 'customer.email', __( 'Customer email', 'estasoft-enterprise-erpcrm-sync-engine' ), 'email' )
+			->datetime( 'order_date', __( 'Date of the refunded order', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->field( 'currency', __( 'Currency', 'estasoft-enterprise-erpcrm-sync-engine' ), 'currency' )
+			->datetime( 'date', __( 'Refund date', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->text( 'reason', __( 'Reason', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->money( 'amount', __( 'Refund amount, with tax', 'estasoft-enterprise-erpcrm-sync-engine' ), true )
+			->money( 'excluded_amount', __( 'Part that belongs to products left out', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->money( 'shipping_amount', __( 'Refunded shipping, with tax', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->money( 'other_amount', __( 'Other refunded amount, with tax', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->group( __( 'Refunded lines', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->sku( 'lines[].sku', __( 'SKU', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->text( 'lines[].name', __( 'Product name', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->number( 'lines[].quantity', __( 'Quantity', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->money( 'lines[].amount', __( 'Amount, without tax', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->money( 'lines[].tax_amount', __( 'Tax of the line', 'estasoft-enterprise-erpcrm-sync-engine' ) )
 			->build();
 	}
 

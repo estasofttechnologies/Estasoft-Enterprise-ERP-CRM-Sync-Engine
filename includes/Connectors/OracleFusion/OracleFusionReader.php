@@ -158,6 +158,6 @@ final class OracleFusionReader {
 	 * The failure for a pod that does not show a total.
 	 */
 	private function noTotal(): ConnectorError {
-		return Problem::validation( $this->system, 'TotalAmount', __( 'Oracle Fusion does not return a total for its invoices, so the nightly check cannot compare amounts.', 'estasoft-erp-crm-sync-engine' ) );
+		return Problem::validation( $this->system, 'TotalAmount', __( 'Oracle Fusion does not return a total for its invoices, so the nightly check cannot compare amounts.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 }

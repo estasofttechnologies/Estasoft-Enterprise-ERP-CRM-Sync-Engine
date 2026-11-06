@@ -60,12 +60,15 @@ export function OrderDetail( { id }: { id: number } ) {
 		return (
 			<>
 				<PageHeader
-					title={ __( 'Order', 'estasoft-erp-crm-sync-engine' ) }
+					title={ __(
+						'Order',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 					breadcrumb={ [
 						{
 							label: __(
 								'Queue',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							to: '/queue',
 						},
@@ -75,7 +78,7 @@ export function OrderDetail( { id }: { id: number } ) {
 					rows={ 4 }
 					label={ __(
 						'Loading the order',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			</>
@@ -85,12 +88,15 @@ export function OrderDetail( { id }: { id: number } ) {
 		return (
 			<>
 				<PageHeader
-					title={ __( 'Order', 'estasoft-erp-crm-sync-engine' ) }
+					title={ __(
+						'Order',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 					breadcrumb={ [
 						{
 							label: __(
 								'Queue',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							to: '/queue',
 						},
@@ -101,7 +107,7 @@ export function OrderDetail( { id }: { id: number } ) {
 					onRetry={ () => void detail.reload() }
 					title={ __(
 						'This order could not be loaded.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			</>
@@ -139,20 +145,23 @@ export function OrderDetail( { id }: { id: number } ) {
 				title={ sprintf(
 					/* translators: %s: order number such as #10485 */ __(
 						'Order %s',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					label
 				) }
 				breadcrumb={ [
 					{
-						label: __( 'Queue', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'Queue',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						to: '/queue',
 					},
 					{
 						label: sprintf(
 							/* translators: %s: order number */ __(
 								'Order %s',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							label
 						),
@@ -163,12 +172,12 @@ export function OrderDetail( { id }: { id: number } ) {
 						? /* translators: <event/> is the kind of event such as "Order created", <when/> the clock time it was placed, <total/> the order total with its currency */
 							__(
 								'<event/> · placed <when/> · <total/>',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							)
 						: /* translators: <event/> is the kind of event such as "Order created", <when/> the clock time it was placed */
 							__(
 								'<event/> · placed <when/>',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 					{
 						event: (
@@ -184,7 +193,7 @@ export function OrderDetail( { id }: { id: number } ) {
 							<Btn onClick={ () => setDialog( 'retry' ) }>
 								{ __(
 									'Retry this order',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</Btn>
 						) : null }
@@ -192,7 +201,7 @@ export function OrderDetail( { id }: { id: number } ) {
 							<Btn onClick={ () => setDialog( 'restore' ) }>
 								{ __(
 									'Restore this order',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</Btn>
 						) : null }
@@ -203,7 +212,7 @@ export function OrderDetail( { id }: { id: number } ) {
 							<Btn onClick={ () => setDialog( 'skip' ) }>
 								{ __(
 									'Skip this order',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</Btn>
 						) : null }
@@ -211,7 +220,7 @@ export function OrderDetail( { id }: { id: number } ) {
 							text={ () => supportText( item ) }
 							label={ __(
 								'Copy support details',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 							small={ false }
 						/>
@@ -245,7 +254,7 @@ export function OrderDetail( { id }: { id: number } ) {
 									<strong>
 										{ __(
 											'What to do',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										) }
 									</strong>{ ' ' }
 									<span className="estasoft-sync-muted">
@@ -262,7 +271,7 @@ export function OrderDetail( { id }: { id: number } ) {
 										{ sprintf(
 											/* translators: %s: SKU */ __(
 												'Map %s',
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											),
 											sku
 										) }
@@ -277,14 +286,14 @@ export function OrderDetail( { id }: { id: number } ) {
 					<Card
 						title={ __(
 							'What happened',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					>
 						{ item.timeline.length === 0 ? (
 							<p className="estasoft-sync-muted">
 								{ __(
 									'Nothing has been logged for this item yet.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</p>
 						) : (
@@ -328,18 +337,18 @@ export function OrderDetail( { id }: { id: number } ) {
 					<Card
 						title={ __(
 							'What we sent',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						description={ __(
 							'Redacted. Names, emails, phones and addresses are removed.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					>
 						{ item.request_excerpt ? (
 							<CodeBlock
 								label={ __(
 									'Request excerpt',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							>
 								{ item.request_excerpt }
@@ -348,7 +357,7 @@ export function OrderDetail( { id }: { id: number } ) {
 							<p className="estasoft-sync-muted">
 								{ __(
 									'No request was kept for this item. Excerpts are kept as set under Settings, General.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</p>
 						) }
@@ -357,20 +366,20 @@ export function OrderDetail( { id }: { id: number } ) {
 						title={ sprintf(
 							/* translators: %s: system name */ __(
 								'What %s answered',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							system
 						) }
 						description={ __(
 							'Redacted. Cut at the size set under Settings.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					>
 						{ item.response_excerpt ? (
 							<CodeBlock
 								label={ __(
 									'Answer excerpt',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							>
 								{ item.response_excerpt }
@@ -379,7 +388,7 @@ export function OrderDetail( { id }: { id: number } ) {
 							<p className="estasoft-sync-muted">
 								{ __(
 									'No answer was kept for this item.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</p>
 						) }
@@ -389,7 +398,7 @@ export function OrderDetail( { id }: { id: number } ) {
 					<Card
 						title={ __(
 							'The order',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					>
 						<KeyValueList
@@ -398,7 +407,7 @@ export function OrderDetail( { id }: { id: number } ) {
 								{
 									label: __(
 										'Customer',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									value: (
 										<span dir="auto">
@@ -409,14 +418,14 @@ export function OrderDetail( { id }: { id: number } ) {
 								{
 									label: __(
 										'Total',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									value: formatMoney( item.total, cfg ),
 								},
 								{
 									label: __(
 										'Step',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									value: eventLabel(
 										item.event,
@@ -426,12 +435,12 @@ export function OrderDetail( { id }: { id: number } ) {
 								{
 									label: __(
 										'Try',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									value: sprintf(
 										/* translators: 1: attempt, 2: maximum */ __(
 											'%1$d of %2$d',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										),
 										Math.max( item.attempt, 1 ),
 										item.max_attempts
@@ -442,7 +451,7 @@ export function OrderDetail( { id }: { id: number } ) {
 											{
 												label: __(
 													'Next try',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												),
 												value: (
 													<DateTime
@@ -460,7 +469,7 @@ export function OrderDetail( { id }: { id: number } ) {
 												label: sprintf(
 													/* translators: %s: system name */ __(
 														'Number in %s',
-														'estasoft-erp-crm-sync-engine'
+														'estasoft-enterprise-erpcrm-sync-engine'
 													),
 													system
 												),
@@ -485,7 +494,7 @@ export function OrderDetail( { id }: { id: number } ) {
 					<Card
 						title={ __(
 							'Related',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					>
 						<ul className="estasoft-sync-list estasoft-sync-list--plain">
@@ -498,7 +507,7 @@ export function OrderDetail( { id }: { id: number } ) {
 										{ sprintf(
 											/* translators: %s: order number */ __(
 												'Open order %s in WooCommerce',
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											),
 											label
 										) }
@@ -514,7 +523,7 @@ export function OrderDetail( { id }: { id: number } ) {
 										{ sprintf(
 											/* translators: %d: mapping version */ __(
 												'Mapping version %d',
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											),
 											item.mapping_version
 										) }
@@ -529,7 +538,7 @@ export function OrderDetail( { id }: { id: number } ) {
 									{ sprintf(
 										/* translators: %s: system name */ __(
 											'Connection: %s',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										),
 										system
 									) }
@@ -543,7 +552,7 @@ export function OrderDetail( { id }: { id: number } ) {
 									>
 										{ __(
 											'The log entry',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										) }
 									</Link>
 								</li>
@@ -554,7 +563,7 @@ export function OrderDetail( { id }: { id: number } ) {
 						<Card
 							title={ __(
 								'Other steps of this order',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 							flush
 						>
@@ -597,7 +606,7 @@ export function OrderDetail( { id }: { id: number } ) {
 				<Btn variant="tertiary" onClick={ () => navigate( '/queue' ) }>
 					{ __(
 						'Back to the queue',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</Btn>
 			</p>
@@ -648,16 +657,22 @@ function skuFromMessage( message: string ): string {
 function stateHint( item: QueueItemDetail ): string {
 	switch ( item.state ) {
 		case 'failed':
-			return __( 'Needs a person', 'estasoft-erp-crm-sync-engine' );
+			return __(
+				'Needs a person',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			);
 		case 'retrying':
 			return __(
 				'The plugin will try again on its own',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 		case 'skipped':
 			return (
 				item.skip_reason ??
-				__( 'Skipped by a person', 'estasoft-erp-crm-sync-engine' )
+				__(
+					'Skipped by a person',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				)
 			);
 		default:
 			return '';

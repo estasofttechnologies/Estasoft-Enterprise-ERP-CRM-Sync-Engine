@@ -332,24 +332,24 @@ function toApiError( status: number, raw: string ): ApiError {
 		if ( status === 401 || status === 403 ) {
 			message = __(
 				'You do not have permission to do this.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 		} else if ( status === 404 ) {
 			message = __(
 				'That could not be found. It may have been removed.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 		} else {
 			message = __(
 				'Something went wrong on the server. Try again in a moment.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 		}
 	}
 	if ( code === 'rest_cookie_invalid_nonce' ) {
 		message = __(
 			'Your sign-in has expired. Reload the page and try again.',
-			'estasoft-erp-crm-sync-engine'
+			'estasoft-enterprise-erpcrm-sync-engine'
 		);
 	}
 	return new ApiError(
@@ -436,7 +436,7 @@ async function send(
 			'client_offline',
 			__(
 				'Could not reach your site. Check your connection and try again.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			0
 		);
@@ -465,7 +465,7 @@ async function parseBody< T >(
 			'client_bad_response',
 			__(
 				'The server sent an answer this page could not read. Reload and try again.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			response.status
 		);

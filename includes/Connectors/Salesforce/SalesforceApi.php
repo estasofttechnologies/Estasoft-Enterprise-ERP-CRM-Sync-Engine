@@ -62,7 +62,7 @@ final class SalesforceApi {
 	 */
 	public function query( string $soql ): array {
 		$rows     = array();
-		$response = $this->api->get( "/services/data/{$this->version}/query", array( 'q' => $soql ), null, array( 'action' => __( 'read records', 'estasoft-erp-crm-sync-engine' ) ) );
+		$response = $this->api->get( "/services/data/{$this->version}/query", array( 'q' => $soql ), null, array( 'action' => __( 'read records', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		for ( $page = 0; $page < self::MAX_PAGES; ++$page ) {
 			$this->note( $response );
 			$json = $response->json();
@@ -75,7 +75,7 @@ final class SalesforceApi {
 			if ( ! empty( $json['done'] ) || ! is_string( $next ) || '' === $next ) {
 				break;
 			}
-			$response = $this->api->get( $next, array(), null, array( 'action' => __( 'read records', 'estasoft-erp-crm-sync-engine' ) ) );
+			$response = $this->api->get( $next, array(), null, array( 'action' => __( 'read records', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		return $rows;
 	}
@@ -94,7 +94,7 @@ final class SalesforceApi {
 			$fields,
 			array(
 				'headers' => $headers,
-				'action'  => __( 'create records', 'estasoft-erp-crm-sync-engine' ),
+				'action'  => __( 'create records', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			)
 		);
 		$this->note( $response );
@@ -109,7 +109,7 @@ final class SalesforceApi {
 	 * @param array<string,mixed> $fields Field values.
 	 */
 	public function update( string $type, string $id, array $fields ): void {
-		$this->note( $this->api->patch( "/services/data/{$this->version}/sobjects/{$type}/" . rawurlencode( $id ), array(), $fields, array( 'action' => __( 'change records', 'estasoft-erp-crm-sync-engine' ) ) ) );
+		$this->note( $this->api->patch( "/services/data/{$this->version}/sobjects/{$type}/" . rawurlencode( $id ), array(), $fields, array( 'action' => __( 'change records', 'estasoft-enterprise-erpcrm-sync-engine' ) ) ) );
 	}
 
 	/**
@@ -119,7 +119,7 @@ final class SalesforceApi {
 	 * @param string $id   Record id.
 	 */
 	public function delete( string $type, string $id ): void {
-		$this->note( $this->api->delete( "/services/data/{$this->version}/sobjects/{$type}/" . rawurlencode( $id ), array(), null, array( 'action' => __( 'delete records', 'estasoft-erp-crm-sync-engine' ) ) ) );
+		$this->note( $this->api->delete( "/services/data/{$this->version}/sobjects/{$type}/" . rawurlencode( $id ), array(), null, array( 'action' => __( 'delete records', 'estasoft-enterprise-erpcrm-sync-engine' ) ) ) );
 	}
 
 	/**
@@ -143,7 +143,7 @@ final class SalesforceApi {
 	 * @return array{createable:bool,fields:array<int,string>}
 	 */
 	public function describe( string $type ): array {
-		$response = $this->api->get( "/services/data/{$this->version}/sobjects/{$type}/describe", array(), null, array( 'action' => __( 'read the object definition', 'estasoft-erp-crm-sync-engine' ) ) );
+		$response = $this->api->get( "/services/data/{$this->version}/sobjects/{$type}/describe", array(), null, array( 'action' => __( 'read the object definition', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		$this->note( $response );
 		$json   = $response->json();
 		$fields = array();
@@ -178,7 +178,7 @@ final class SalesforceApi {
 	 * @return array<int,string>
 	 */
 	public function versions(): array {
-		$rows = $this->api->get( '/services/data/', array(), null, array( 'action' => __( 'read the API versions', 'estasoft-erp-crm-sync-engine' ) ) )->json();
+		$rows = $this->api->get( '/services/data/', array(), null, array( 'action' => __( 'read the API versions', 'estasoft-enterprise-erpcrm-sync-engine' ) ) )->json();
 		$out  = array();
 		foreach ( $rows as $row ) {
 			if ( is_array( $row ) && isset( $row['version'] ) ) {

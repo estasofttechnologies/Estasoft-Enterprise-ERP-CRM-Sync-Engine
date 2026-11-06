@@ -46,7 +46,7 @@ final class SevdeskErrorMapper {
 			ErrorCode::Val002,
 			array(
 				'system' => SevdeskConnector::LABEL,
-				'field'  => __( 'the request', 'estasoft-erp-crm-sync-engine' ),
+				'field'  => __( 'the request', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'reason' => $message,
 			),
 			500,

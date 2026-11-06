@@ -193,49 +193,49 @@ final class AcumaticaConnector extends AbstractApiConnector implements OAuthConn
 	protected function credentialDefinition(): array {
 		$advanced = static fn( string $name, string $label, string $hint = '', string $type = 'text', array $options = array(), string $initial = '' ): CredentialField => new CredentialField( $name, $label, false, false, $hint, $initial, $type, $options, 'advanced' );
 		return array(
-			CredentialFields::address( 'address', __( 'Site address', 'estasoft-erp-crm-sync-engine' ), __( 'The https address of your Acumatica site, with its instance folder if it has one, for example https://acme.acumatica.com', 'estasoft-erp-crm-sync-engine' ) ),
-			CredentialFields::clientId( 'client_id', __( 'The Client ID of the connected application. It ends with @ and your tenant name.', 'estasoft-erp-crm-sync-engine' ) ),
-			CredentialFields::clientSecret( 'client_secret', __( 'The shared secret you added to the connected application. Saved encrypted.', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'branch', __( 'Branch', 'estasoft-erp-crm-sync-engine' ), __( 'Only needed when the user can work in several branches.', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'endpoint_version', __( 'Endpoint version', 'estasoft-erp-crm-sync-engine' ), __( 'Version of the Default endpoint, 22.200.001 to 25.200.001. Empty: 24.200.001.', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'order_type', __( 'Order type', 'estasoft-erp-crm-sync-engine' ), __( 'Empty: SO.', 'estasoft-erp-crm-sync-engine' ) ),
+			CredentialFields::address( 'address', __( 'Site address', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'The https address of your Acumatica site, with its instance folder if it has one, for example https://acme.acumatica.com', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			CredentialFields::clientId( 'client_id', __( 'The Client ID of the connected application. It ends with @ and your tenant name.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			CredentialFields::clientSecret( 'client_secret', __( 'The shared secret you added to the connected application. Saved encrypted.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'branch', __( 'Branch', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Only needed when the user can work in several branches.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'endpoint_version', __( 'Endpoint version', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Version of the Default endpoint, 22.200.001 to 25.200.001. Empty: 24.200.001.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'order_type', __( 'Order type', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Empty: SO.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			$advanced(
 				'customer_policy',
-				__( 'Customers', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Customers', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'',
 				'select',
 				array(
-					'match_or_create' => __( 'Match by email, create when missing', 'estasoft-erp-crm-sync-engine' ),
-					'match_only'      => __( 'Match by email only', 'estasoft-erp-crm-sync-engine' ),
-					'always_create'   => __( 'Always create a customer', 'estasoft-erp-crm-sync-engine' ),
+					'match_or_create' => __( 'Match by email, create when missing', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'match_only'      => __( 'Match by email only', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'always_create'   => __( 'Always create a customer', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				'match_or_create'
 			),
-			$advanced( 'customer_class', __( 'Customer class for new customers', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'warehouse', __( 'Warehouse for order lines', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'shipping_item', __( 'Inventory ID for shipping', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'fee_item', __( 'Inventory ID for fees', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'discount_item', __( 'Inventory ID for discounts', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'refund_item', __( 'Inventory ID for refunds without lines', 'estasoft-erp-crm-sync-engine' ) ),
+			$advanced( 'customer_class', __( 'Customer class for new customers', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'warehouse', __( 'Warehouse for order lines', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'shipping_item', __( 'Inventory ID for shipping', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'fee_item', __( 'Inventory ID for fees', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'discount_item', __( 'Inventory ID for discounts', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'refund_item', __( 'Inventory ID for refunds without lines', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			$advanced(
 				'refund_state',
-				__( 'Credit memos', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Credit memos', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'',
 				'select',
 				array(
-					'hold'    => __( 'Leave on hold', 'estasoft-erp-crm-sync-engine' ),
-					'release' => __( 'Release', 'estasoft-erp-crm-sync-engine' ),
+					'hold'    => __( 'Leave on hold', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'release' => __( 'Release', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				'hold'
 			),
 			$advanced(
 				'total_mismatch',
-				__( 'When Acumatica totals differ from the shop', 'estasoft-erp-crm-sync-engine' ),
+				__( 'When Acumatica totals differ from the shop', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'',
 				'select',
 				array(
-					'fail' => __( 'Stop and leave on hold', 'estasoft-erp-crm-sync-engine' ),
-					'warn' => __( 'Continue with a warning', 'estasoft-erp-crm-sync-engine' ),
+					'fail' => __( 'Stop and leave on hold', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'warn' => __( 'Continue with a warning', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				'fail'
 			),
@@ -260,19 +260,19 @@ final class AcumaticaConnector extends AbstractApiConnector implements OAuthConn
 			$reason = array() === $usable
 				? sprintf(
 					/* translators: %s: versions the site offers. */
-					__( 'The site offers only these Default endpoint versions: %s. This connector supports 22.200.001 to 25.200.001.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The site offers only these Default endpoint versions: %s. This connector supports 22.200.001 to 25.200.001.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					implode( ', ', $offered )
 				)
 				: sprintf(
 					/* translators: 1: version asked for, 2: version to enter. */
-					__( 'The site does not offer Default endpoint %1$s. Enter %2$s as the endpoint version.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The site does not offer Default endpoint %1$s. Enter %2$s as the endpoint version.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$version,
 					$usable[0]
 				);
 			return new TestResult( false, $label, '', array(), array(), Problems::refused( self::LABEL, 'endpoint_version', $reason ) );
 		}
 		if ( ! AcumaticaSite::supports( $version ) ) {
-			return new TestResult( false, $label, '', array(), array(), Problems::refused( self::LABEL, 'endpoint_version', __( 'This connector supports Default endpoint versions 22.200.001 to 25.200.001.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return new TestResult( false, $label, '', array(), array(), Problems::refused( self::LABEL, 'endpoint_version', __( 'This connector supports Default endpoint versions 22.200.001 to 25.200.001.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 
 		$client      = $this->client( $connection );
@@ -305,7 +305,7 @@ final class AcumaticaConnector extends AbstractApiConnector implements OAuthConn
 					'endpoint_version',
 					sprintf(
 						/* translators: %s: entity names. */
-						__( 'Acumatica did not accept the fields this connector reads from: %s. Check the endpoint version and that the user may open these forms.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'Acumatica did not accept the fields this connector reads from: %s. Check the endpoint version and that the user may open these forms.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						implode( ', ', $refused )
 					)
 				)
@@ -367,8 +367,8 @@ final class AcumaticaConnector extends AbstractApiConnector implements OAuthConn
 		return match ( $mappingType ) {
 			'orders'    => FieldSets::orders( self::LABEL ),
 			'customers' => FieldSets::customers(),
-			'products'  => FieldSets::products( __( 'Inventory ID', 'estasoft-erp-crm-sync-engine' ) ),
-			'refunds'   => FieldSets::refunds( self::LABEL, __( 'Credit memo', 'estasoft-erp-crm-sync-engine' ) ),
+			'products'  => FieldSets::products( __( 'Inventory ID', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			'refunds'   => FieldSets::refunds( self::LABEL, __( 'Credit memo', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			'stock'     => FieldSets::stock( self::LABEL ),
 			'tracking'  => FieldSets::tracking( self::LABEL ),
 			default     => array(),
@@ -440,7 +440,7 @@ final class AcumaticaConnector extends AbstractApiConnector implements OAuthConn
 		if ( EntityType::Customer === $item->entityType ) {
 			return $this->sendCustomer( $connection, $payload, $item );
 		}
-		return SendResult::failure( Problems::refused( self::LABEL, 'entity', __( 'This kind of item cannot be sent to Acumatica.', 'estasoft-erp-crm-sync-engine' ), 'unsupported entity' ) );
+		return SendResult::failure( Problems::refused( self::LABEL, 'entity', __( 'This kind of item cannot be sent to Acumatica.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'unsupported entity' ) );
 	}
 
 	/**
@@ -580,7 +580,7 @@ final class AcumaticaConnector extends AbstractApiConnector implements OAuthConn
 			$name    = '' !== $category['name'] ? $category['name'] : $category['id'];
 			$codes[] = array(
 				'code'         => $category['id'],
-				'name'         => $name . ' (' . __( 'rate set by the tax zone', 'estasoft-erp-crm-sync-engine' ) . ')',
+				'name'         => $name . ' (' . __( 'rate set by the tax zone', 'estasoft-enterprise-erpcrm-sync-engine' ) . ')',
 				'rate_percent' => '0',
 			);
 		}
@@ -652,7 +652,7 @@ final class AcumaticaConnector extends AbstractApiConnector implements OAuthConn
 			return SendResult::failure( Problems::missingEmail( $item->entityId ) );
 		}
 		if ( '' === ( $partner['name'] ?? '' ) && '' === ( $partner['company_name'] ?? '' ) ) {
-			return SendResult::failure( Problems::refused( self::LABEL, 'partner.name', __( 'The customer name is empty.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( Problems::refused( self::LABEL, 'partner.name', __( 'The customer name is empty.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$services = $this->services( $connection );
 		$resolved = $services['customers']->resolve( $partner );

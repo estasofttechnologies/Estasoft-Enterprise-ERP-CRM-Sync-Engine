@@ -77,7 +77,7 @@ final class Sage300OrderSender {
 			return 'PONumber';
 		}
 		$found = $this->metadata->firstOf( 'OE', 'OEOrders', array( 'PONumber', 'Reference' ) );
-		return '' !== $found ? $found : Problems::refused( $this->system, 'reference_property', __( 'The Order Entry order of this Sage 300 has no PO number or Reference property. Enter the property that can hold the shop order number in the connection settings.', 'estasoft-erp-crm-sync-engine' ) );
+		return '' !== $found ? $found : Problems::refused( $this->system, 'reference_property', __( 'The Order Entry order of this Sage 300 has no PO number or Reference property. Enter the property that can hold the shop order number in the connection settings.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**
@@ -206,7 +206,7 @@ final class Sage300OrderSender {
 				'currency',
 				sprintf(
 					/* translators: 1: currency of the shop order, 2: customer number, 3: currency of that customer. */
-					__( 'The order is in %1$s but customer %2$s in Sage 300 is in %3$s, and Sage 300 orders follow the customer\'s currency.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The order is in %1$s but customer %2$s in Sage 300 is in %3$s, and Sage 300 orders follow the customer\'s currency.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$payload->currency,
 					$customer['id'],
 					$customer['currency']
@@ -225,7 +225,7 @@ final class Sage300OrderSender {
 			return $group;
 		}
 		if ( ! $this->hasUnitPrice() ) {
-			return Problems::refused( $this->system, 'order_line[].price_unit', __( 'The Order Entry order lines of this Sage 300 have no UnitPrice property, so the shop price cannot be sent.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $this->system, 'order_line[].price_unit', __( 'The Order Entry order lines of this Sage 300 have no UnitPrice property, so the shop price cannot be sent.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 
 		$exponent = $this->amounts->exponent( $payload->currency );
@@ -270,7 +270,7 @@ final class Sage300OrderSender {
 		if ( ! isset( $stored[ $property ] ) && ! isset( $stored['OrderNumber'] ) && ! isset( $stored['OrderUniquifier'] ) ) {
 			$found = $this->find( $payload->clientRef );
 			if ( null === $found ) {
-				return Problems::refused( $this->system, 'OEOrders', __( 'Sage 300 did not return the new order.', 'estasoft-erp-crm-sync-engine' ) );
+				return Problems::refused( $this->system, 'OEOrders', __( 'Sage 300 did not return the new order.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$stored = $found;
 		}
@@ -284,16 +284,16 @@ final class Sage300OrderSender {
 	 */
 	private function precheck( OrderPayload $payload ): ?ConnectorError {
 		if ( '' === $payload->currency ) {
-			return Problems::refused( $this->system, 'currency', __( 'The order has no currency.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $this->system, 'currency', __( 'The order has no currency.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( Text::exceeds( $payload->clientRef, self::REF_MAX ) ) {
-			return Problems::refused( $this->system, 'client_ref', __( 'The order reference is longer than the PO number of Sage 300 takes.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $this->system, 'client_ref', __( 'The order reference is longer than the PO number of Sage 300 takes.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( $payload->pricesIncludeTax ) {
 			return Problems::refused(
 				$this->system,
 				'prices_include_tax',
-				__( 'Sage 300 works out tax itself from the tax group and this connector sends prices without tax. Set the shop to show prices without tax in the mapping.', 'estasoft-erp-crm-sync-engine' )
+				__( 'Sage 300 works out tax itself from the tax group and this connector sends prices without tax. Set the shop to show prices without tax in the mapping.', 'estasoft-enterprise-erpcrm-sync-engine' )
 			);
 		}
 		foreach ( $payload->extras as $extra ) {
@@ -304,7 +304,7 @@ final class Sage300OrderSender {
 					$option,
 					sprintf(
 						/* translators: %s: option name. */
-						__( 'The order has a shipping, fee or discount amount, so the connection settings need the miscellaneous charge code in "%s".', 'estasoft-erp-crm-sync-engine' ),
+						__( 'The order has a shipping, fee or discount amount, so the connection settings need the miscellaneous charge code in "%s".', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$option
 					)
 				);
@@ -349,10 +349,10 @@ final class Sage300OrderSender {
 		}
 		$number = $this->options->text( 'customer_number' );
 		if ( '' === $number ) {
-			return Problems::refused( $this->system, 'customer_number', __( 'Enter the customer number that should receive the web orders in the connection settings.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $this->system, 'customer_number', __( 'Enter the customer number that should receive the web orders in the connection settings.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$customer = $this->lookups->customer( $number );
-		return $customer ?? Problems::refused( $this->system, 'customer_number', __( 'Sage 300 has no customer with the number given in the connection settings.', 'estasoft-erp-crm-sync-engine' ) );
+		return $customer ?? Problems::refused( $this->system, 'customer_number', __( 'Sage 300 has no customer with the number given in the connection settings.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**
@@ -366,14 +366,14 @@ final class Sage300OrderSender {
 	public function byEmail( string $email ): array|ConnectorError {
 		$property = $this->metadata->containing( 'AR', 'ARCustomers', 'Email' );
 		if ( '' === $property ) {
-			return Problems::refused( $this->system, 'customer_policy', __( 'The customers of this Sage 300 have no email property, so buyers cannot be matched. Use the fixed customer setting.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $this->system, 'customer_policy', __( 'The customers of this Sage 300 have no email property, so buyers cannot be matched. Use the fixed customer setting.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$row = '' === trim( $email ) ? null : $this->client->first( 'AR/ARCustomers', $property . ' eq ' . Sage300Client::literal( trim( $email ) ) );
 		if ( null === $row || ! isset( $row['CustomerNumber'] ) || ! is_scalar( $row['CustomerNumber'] ) ) {
 			return Problems::refused(
 				$this->system,
 				'partner.email',
-				__( 'No customer in Sage 300 has this email address and the customer setting is "match only". Create the customer there or use the fixed customer setting.', 'estasoft-erp-crm-sync-engine' )
+				__( 'No customer in Sage 300 has this email address and the customer setting is "match only". Create the customer there or use the fixed customer setting.', 'estasoft-enterprise-erpcrm-sync-engine' )
 			);
 		}
 		return array(
@@ -408,7 +408,7 @@ final class Sage300OrderSender {
 			}
 		}
 		if ( count( $codes ) > 1 || ( 1 === count( $codes ) && $none && $payload->taxesMapped ) ) {
-			return Problems::refused( $this->system, 'order_line[].tax', __( 'Sage 300 applies one tax group to a whole order. This order has lines with different tax groups, or with and without one.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $this->system, 'order_line[].tax', __( 'Sage 300 applies one tax group to a whole order. This order has lines with different tax groups, or with and without one.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( array() === $codes ) {
 			return '';
@@ -419,7 +419,7 @@ final class Sage300OrderSender {
 			return Problems::missingTax( $this->system, $code );
 		}
 		if ( null !== $this->metadata->entity( 'OE', 'OEOrders' ) && ! $this->metadata->has( 'OE', 'OEOrders', 'TaxGroup' ) ) {
-			return Problems::refused( $this->system, 'order_line[].tax', __( 'The Order Entry order of this Sage 300 has no TaxGroup property, so a tax group cannot be sent. Leave the tax mapping empty.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $this->system, 'order_line[].tax', __( 'The Order Entry order of this Sage 300 has no TaxGroup property, so a tax group cannot be sent. Leave the tax mapping empty.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return $groups[ strtolower( $code ) ]['id'];
 	}
@@ -441,13 +441,13 @@ final class Sage300OrderSender {
 					'total_property',
 					sprintf(
 						/* translators: %s: order number. */
-						__( 'Order %s was made but its answer has no total (OrderTotal, TotalOrderAmount or OrderTotalAmount), so it could not be compared with the shop; price lists in Sage 300 can change the prices unnoticed. The order stays in Sage 300. Enter the property that holds the total in "total_property", or choose "Continue with a warning".', 'estasoft-erp-crm-sync-engine' ),
+						__( 'Order %s was made but its answer has no total (OrderTotal, TotalOrderAmount or OrderTotalAmount), so it could not be compared with the shop; price lists in Sage 300 can change the prices unnoticed. The order stays in Sage 300. Enter the property that holds the total in "total_property", or choose "Continue with a warning".', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						'' !== $number ? $number : $payload->clientRef
 					),
 					'total missing'
 				);
 			}
-			$warnings[] = __( 'Sage 300 did not return an order total, so the total was not verified.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'Sage 300 did not return an order total, so the total was not verified.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			return null;
 		}
 		$number = trim( (string) ( $order['OrderNumber'] ?? $order['OrderUniquifier'] ?? '' ) );
@@ -457,7 +457,7 @@ final class Sage300OrderSender {
 			return null;
 		}
 		if ( $check->isStrict() ) {
-			return $check->error( $diff, __( 'The order stays in Sage 300. Delete it there after fixing the tax setup; the next try makes a new one.', 'estasoft-erp-crm-sync-engine' ) );
+			return $check->error( $diff, __( 'The order stays in Sage 300. Delete it there after fixing the tax setup; the next try makes a new one.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$warnings[] = $diff['message'];
 		return null;

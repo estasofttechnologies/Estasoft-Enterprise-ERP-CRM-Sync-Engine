@@ -59,7 +59,7 @@ final class DvCurrencies {
 						'currency',
 						sprintf(
 							/* translators: 1: currency code, 2: decimal places the currency row keeps, 3: decimal places the currency has. */
-							__( 'The currency %1$s is set up with %2$d decimal places in Dynamics 365 but has %3$d. Change its precision, then try again.', 'estasoft-erp-crm-sync-engine' ),
+							__( 'The currency %1$s is set up with %2$d decimal places in Dynamics 365 but has %3$d. Change its precision, then try again.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 							$iso,
 							$precision,
 							Amounts::exponent( $iso )
@@ -74,7 +74,7 @@ final class DvCurrencies {
 						'pricing_decimal_precision',
 						sprintf(
 							/* translators: 1: currency code, 2: decimal places of the organization's pricing precision, 3: decimal places the currency has. */
-							__( 'Prices in %1$s need %3$d decimal places, but the Pricing Decimal Precision of Dynamics 365 is %2$d, so product prices would be rounded. Raise the setting Pricing Decimal Precision (Advanced settings, Administration, System Settings, General), then try again.', 'estasoft-erp-crm-sync-engine' ),
+							__( 'Prices in %1$s need %3$d decimal places, but the Pricing Decimal Precision of Dynamics 365 is %2$d, so product prices would be rounded. Raise the setting Pricing Decimal Precision (Advanced settings, Administration, System Settings, General), then try again.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 							$iso,
 							$pricing,
 							Amounts::exponent( $iso )
@@ -94,7 +94,7 @@ final class DvCurrencies {
 			'currency',
 			sprintf(
 				/* translators: %s: currency code. */
-				__( 'The currency %s is not set up in Dynamics 365 (Advanced settings, Business management, Currencies).', 'estasoft-erp-crm-sync-engine' ),
+				__( 'The currency %s is not set up in Dynamics 365 (Advanced settings, Business management, Currencies).', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$iso
 			),
 			'currency missing'

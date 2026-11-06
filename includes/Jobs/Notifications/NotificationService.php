@@ -104,7 +104,7 @@ final class NotificationService {
 	public function sendTest( string $recipient = '' ): array {
 		$recipient = trim( $recipient );
 		if ( '' !== $recipient && false === is_email( $recipient ) ) {
-			throw new ValidationException( array( 'recipient' => esc_html__( 'Enter a valid email address.', 'estasoft-erp-crm-sync-engine' ) ) );
+			throw new ValidationException( array( 'recipient' => esc_html__( 'Enter a valid email address.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$to   = '' === $recipient ? $this->recipients() : array( $recipient );
 		$site = $this->environment->siteName();
@@ -112,15 +112,15 @@ final class NotificationService {
 			$to,
 			sprintf(
 				/* translators: %s: site name. */
-				__( '[%s] Test email from Estasoft Sync', 'estasoft-erp-crm-sync-engine' ),
+				__( '[%s] Test email from Estasoft Sync', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$site
 			),
 			array(
-				__( 'This is a test. If you can read it, alert emails reach this address.', 'estasoft-erp-crm-sync-engine' ),
-				__( 'Estasoft Sync sends alerts for a paused connection, a daily list of failed orders and a queue that backs up. Nothing is sent to any outside service.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'This is a test. If you can read it, alert emails reach this address.', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				__( 'Estasoft Sync sends alerts for a paused connection, a daily list of failed orders and a queue that backs up. Nothing is sent to any outside service.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			),
 			$this->urls->app( '/settings/notifications' ),
-			__( 'Open notification settings', 'estasoft-erp-crm-sync-engine' )
+			__( 'Open notification settings', 'estasoft-enterprise-erpcrm-sync-engine' )
 		);
 		return array(
 			'sent' => $sent,
@@ -154,42 +154,42 @@ final class NotificationService {
 		$system  = '' !== (string) $connection['label'] ? (string) $connection['label'] : (string) $connection['connector'];
 		$lines   = 'key_missing' === $reason
 			? array(
-				__( 'The encryption key is missing from wp-config.php, so syncing is paused. Orders wait in the queue.', 'estasoft-erp-crm-sync-engine' ),
-				__( 'Open the plugin, copy the line it shows into wp-config.php, and syncing resumes.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'The encryption key is missing from wp-config.php, so syncing is paused. Orders wait in the queue.', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				__( 'Open the plugin, copy the line it shows into wp-config.php, and syncing resumes.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			)
 			: ( 'sign_in' === $reason
 			? array(
 				sprintf(
 					/* translators: %s: name of the connected system. */
-					__( '%s refused the sign-in, so syncing is paused. Orders wait in the queue.', 'estasoft-erp-crm-sync-engine' ),
+					__( '%s refused the sign-in, so syncing is paused. Orders wait in the queue.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$system
 				),
-				__( 'Open Connections, check the user and the key, and test the connection again. Syncing resumes when it works.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Open Connections, check the user and the key, and test the connection again. Syncing resumes when it works.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			)
 			: array(
 				sprintf(
 					/* translators: %s: name of the connected system. */
-					__( '%s did not answer several times in a row, so syncing is paused. Orders wait in the queue.', 'estasoft-erp-crm-sync-engine' ),
+					__( '%s did not answer several times in a row, so syncing is paused. Orders wait in the queue.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$system
 				),
-				__( 'The plugin checks again every few minutes and resumes by itself when the system answers.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'The plugin checks again every few minutes and resumes by itself when the system answers.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			) );
 		$lines[] = sprintf(
 			/* translators: %d: number of orders waiting. */
-			_n( '%d item is waiting.', '%d items are waiting.', $waiting, 'estasoft-erp-crm-sync-engine' ),
+			_n( '%d item is waiting.', '%d items are waiting.', $waiting, 'estasoft-enterprise-erpcrm-sync-engine' ),
 			$waiting
 		);
 		$sent = $this->mail(
 			$this->recipients(),
 			sprintf(
 				/* translators: 1: site name, 2: name of the connected system. */
-				__( '[%1$s] Syncing with %2$s is paused', 'estasoft-erp-crm-sync-engine' ),
+				__( '[%1$s] Syncing with %2$s is paused', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$this->environment->siteName(),
 				$system
 			),
 			$lines,
 			$this->urls->app( '/connections' ),
-			__( 'Open Connections', 'estasoft-erp-crm-sync-engine' )
+			__( 'Open Connections', 'estasoft-enterprise-erpcrm-sync-engine' )
 		);
 		// "Already told" only once the mail system accepted the message; if it did not, the next pause event tries again.
 		if ( $sent ) {
@@ -240,14 +240,14 @@ final class NotificationService {
 		$lines = array(
 			sprintf(
 				/* translators: %d: number of failed orders. */
-				_n( '%d item needs your attention. It will not be tried again until you act.', '%d items need your attention. They will not be tried again until you act.', $failed, 'estasoft-erp-crm-sync-engine' ),
+				_n( '%d item needs your attention. It will not be tried again until you act.', '%d items need your attention. They will not be tried again until you act.', $failed, 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$failed
 			),
 		);
 		foreach ( array_slice( $items, 0, self::LIST ) as $item ) {
 			$lines[] = sprintf(
 				/* translators: 1: order number, 2: error code, 3: what went wrong. */
-				__( '#%1$s, %2$s: %3$s', 'estasoft-erp-crm-sync-engine' ),
+				__( '#%1$s, %2$s: %3$s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				(string) ( '' !== (string) ( $item['entity_label'] ?? '' ) ? $item['entity_label'] : $item['entity_id'] ),
 				(string) ( $item['error_code'] ?? '-' ),
 				mb_substr( (string) ( $item['error_message'] ?? '' ), 0, 160 )
@@ -256,7 +256,7 @@ final class NotificationService {
 		if ( $failed > self::LIST ) {
 			$lines[] = sprintf(
 				/* translators: %d: number of items not listed. */
-				__( 'And %d more. Open the queue to see them all.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'And %d more. Open the queue to see them all.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$failed - self::LIST
 			);
 		}
@@ -264,13 +264,13 @@ final class NotificationService {
 			$this->recipients(),
 			sprintf(
 				/* translators: 1: site name, 2: number of failed orders. */
-				_n( '[%1$s] %2$d order needs attention', '[%1$s] %2$d orders need attention', $failed, 'estasoft-erp-crm-sync-engine' ),
+				_n( '[%1$s] %2$d order needs attention', '[%1$s] %2$d orders need attention', $failed, 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$this->environment->siteName(),
 				$failed
 			),
 			$lines,
 			$this->urls->app( '/queue?state=failed' ),
-			__( 'Open the queue', 'estasoft-erp-crm-sync-engine' )
+			__( 'Open the queue', 'estasoft-enterprise-erpcrm-sync-engine' )
 		);
 		// The day counts as done only when the mail was accepted. If it was not, try again in an hour rather than at every tick.
 		if ( $sent ) {
@@ -315,20 +315,20 @@ final class NotificationService {
 			$this->recipients(),
 			sprintf(
 				/* translators: %s: site name. */
-				__( '[%s] The sync queue is backing up', 'estasoft-erp-crm-sync-engine' ),
+				__( '[%s] The sync queue is backing up', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$this->environment->siteName()
 			),
 			array(
 				sprintf(
 					/* translators: 1: number of items waiting, 2: the limit set in the settings. */
-					__( '%1$d items are waiting, which is more than the limit of %2$d.', 'estasoft-erp-crm-sync-engine' ),
+					__( '%1$d items are waiting, which is more than the limit of %2$d.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$waiting,
 					$threshold
 				),
-				__( 'Check that the connection is not paused and that background tasks are running. You get this email once until the queue is back under the limit.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Check that the connection is not paused and that background tasks are running. You get this email once until the queue is back under the limit.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			),
 			$this->urls->app( '/queue?state=waiting' ),
-			__( 'Open the queue', 'estasoft-erp-crm-sync-engine' )
+			__( 'Open the queue', 'estasoft-enterprise-erpcrm-sync-engine' )
 		);
 		if ( $sent ) {
 			// "Already told" only once the mail system accepted the message; otherwise the next check tries again.
@@ -395,7 +395,7 @@ final class NotificationService {
 		$html .= '<p style="margin:16px 0 0;"><a href="' . esc_url( $link ) . '">' . esc_html( $linkLabel ) . '</a></p></div>';
 		$sent  = $this->mailer->send( $to, $subject, $text, $html );
 		if ( ! $sent ) {
-			$this->logger->warning( __( 'An alert email could not be sent. Check that your site can send email.', 'estasoft-erp-crm-sync-engine' ) );
+			$this->logger->warning( __( 'An alert email could not be sent. Check that your site can send email.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return $sent;
 	}

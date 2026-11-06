@@ -114,7 +114,7 @@ final class FortnoxConnector extends AbstractApiConnector implements OAuthConnec
 	 */
 	protected function credentialDefinition(): array {
 		return array(
-			CredentialFields::clientId( 'client_id', __( 'Shown on the integration in the Fortnox Developer Portal.', 'estasoft-erp-crm-sync-engine' ) ),
+			CredentialFields::clientId( 'client_id', __( 'Shown on the integration in the Fortnox Developer Portal.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			CredentialFields::clientSecret(),
 		);
 	}
@@ -319,7 +319,7 @@ final class FortnoxConnector extends AbstractApiConnector implements OAuthConnec
 			if ( EntityType::Customer === $item->entityType ) {
 				return $this->sendCustomer( $connection, $item, $payload );
 			}
-			return SendResult::failure( FortnoxFailure::invalid( 'entity', __( 'This connector does not send that kind of item.', 'estasoft-erp-crm-sync-engine' ) )->error );
+			return SendResult::failure( FortnoxFailure::invalid( 'entity', __( 'This connector does not send that kind of item.', 'estasoft-enterprise-erpcrm-sync-engine' ) )->error );
 		} catch ( FortnoxFailure $failure ) {
 			return SendResult::failure( $failure->error );
 		} catch ( \Throwable $throwable ) {
@@ -434,7 +434,7 @@ final class FortnoxConnector extends AbstractApiConnector implements OAuthConnec
 			$out[] = array(
 				'code'         => $rate,
 				/* translators: %s: VAT rate in percent. */
-				'name'         => sprintf( __( 'VAT %s %%', 'estasoft-erp-crm-sync-engine' ), $rate ),
+				'name'         => sprintf( __( 'VAT %s %%', 'estasoft-enterprise-erpcrm-sync-engine' ), $rate ),
 				'rate_percent' => $rate,
 			);
 		}
@@ -474,14 +474,14 @@ final class FortnoxConnector extends AbstractApiConnector implements OAuthConnec
 			);
 		}
 		if ( '' === ( $partner['name'] ?? '' ) && '' === ( $partner['company_name'] ?? '' ) ) {
-			FortnoxFailure::refuse( 'partner.name', __( 'The customer name is empty.', 'estasoft-erp-crm-sync-engine' ) );
+			FortnoxFailure::refuse( 'partner.name', __( 'The customer name is empty.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$lookups = $this->lookups( $connection );
 		$row     = $lookups->customerByEmail( $partner['email'] );
 		$created = false;
 		if ( null === $row ) {
 			if ( 'match_only' === $this->options( $connection )->choice( 'customer_policy', array( 'match_or_create', 'match_only' ), 'match_or_create' ) ) {
-				FortnoxFailure::refuse( 'partner.email', __( 'No customer with this email address exists in Fortnox.', 'estasoft-erp-crm-sync-engine' ) );
+				FortnoxFailure::refuse( 'partner.email', __( 'No customer with this email address exists in Fortnox.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$row     = $lookups->createCustomer( $partner );
 			$created = true;

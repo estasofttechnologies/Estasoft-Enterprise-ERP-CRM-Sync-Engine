@@ -122,17 +122,17 @@ final class HoldedRefundSender {
 
 		$order = $this->orderDocument( $api, $options->documentType(), $refund, $date );
 		if ( null === $order ) {
-			return SendResult::failure( $this->refused( 'order', __( 'The order of this refund is not in Holded yet.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( $this->refused( 'order', __( 'The order of this refund is not in Holded yet.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		if ( '' === $order->contactId() ) {
-			return SendResult::failure( $this->refused( 'order', __( 'Holded did not say which contact the order belongs to.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( $this->refused( 'order', __( 'Holded did not say which contact the order belongs to.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		if ( 'salesorder' === $options->documentType() ) {
-			$warnings[] = __( 'The order is a sales order in Holded. The credit note has no invoice to correct; use invoices if you need that.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'The order is a sales order in Holded. The credit note has no invoice to correct; use invoices if you need that.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		$currency = '' !== $order->currency() ? $order->currency() : $refund->currency;
 		if ( '' === $currency ) {
-			return SendResult::failure( $this->refused( 'currency', __( 'Holded did not report the currency of the order and the refund has none.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( $this->refused( 'currency', __( 'Holded did not report the currency of the order and the refund has none.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$rows  = $this->rows( $api, $connection, $refund );
 		$built = $this->lines->build( $rows, $currency, false );
@@ -211,7 +211,7 @@ final class HoldedRefundSender {
 			}
 			$rows[] = array(
 				'sku'         => $link,
-				'name'        => '' !== $name ? $name : __( 'Refund', 'estasoft-erp-crm-sync-engine' ),
+				'name'        => '' !== $name ? $name : __( 'Refund', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'quantity'    => (float) $line['quantity'] > 0.0 ? (float) $line['quantity'] : 1.0,
 				'total_minor' => (int) $line['amount_minor'],
 				'tax_code'    => '',
@@ -219,13 +219,13 @@ final class HoldedRefundSender {
 			);
 		}
 		if ( $refund->shippingMinor > 0 ) {
-			$rows[] = $this->plain( __( 'Shipping', 'estasoft-erp-crm-sync-engine' ), $refund->shippingMinor );
+			$rows[] = $this->plain( __( 'Shipping', 'estasoft-enterprise-erpcrm-sync-engine' ), $refund->shippingMinor );
 		}
 		if ( $refund->otherMinor > 0 ) {
-			$rows[] = $this->plain( __( 'Other refund', 'estasoft-erp-crm-sync-engine' ), $refund->otherMinor );
+			$rows[] = $this->plain( __( 'Other refund', 'estasoft-enterprise-erpcrm-sync-engine' ), $refund->otherMinor );
 		}
 		if ( array() === $rows ) {
-			$rows[] = $this->plain( __( 'Refund', 'estasoft-erp-crm-sync-engine' ), $refund->expectedTotal() );
+			$rows[] = $this->plain( __( 'Refund', 'estasoft-enterprise-erpcrm-sync-engine' ), $refund->expectedTotal() );
 		}
 		return $rows;
 	}
@@ -261,13 +261,13 @@ final class HoldedRefundSender {
 		$text = '' !== $refund->reason
 			? sprintf(
 				/* translators: 1: order reference, 2: refund reason. */
-				__( 'Refund of %1$s: %2$s', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Refund of %1$s: %2$s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$refund->orderRef,
 				$refund->reason
 			)
 			: sprintf(
 				/* translators: %s: order reference. */
-				__( 'Refund of %s', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Refund of %s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$refund->orderRef
 			);
 		return HoldedPayloadReader::shorten( $line . "\n" . $text, 2000 );
@@ -285,7 +285,7 @@ final class HoldedRefundSender {
 		$context['reason'] = trim(
 			(string) ( $context['reason'] ?? '' ) . ' ' . sprintf(
 				/* translators: %s: credit note number in Holded. */
-				__( 'The credit note %s is in Holded. Correct or cancel it there and sync the refund again.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'The credit note %s is in Holded. Correct or cancel it there and sync the refund again.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$name
 			)
 		);

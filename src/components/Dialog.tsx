@@ -132,7 +132,10 @@ export function ConfirmDialog( {
 						disabled={ action.busy }
 					>
 						{ cancelLabel ??
-							__( 'Cancel', 'estasoft-erp-crm-sync-engine' ) }
+							__(
+								'Cancel',
+								'estasoft-enterprise-erpcrm-sync-engine'
+							) }
 					</Btn>
 					<Btn
 						variant="primary"

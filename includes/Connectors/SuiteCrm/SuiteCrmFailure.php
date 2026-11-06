@@ -68,7 +68,7 @@ final class SuiteCrmFailure extends \RuntimeException {
 	 * The answer was not the JSON:API: the server returned a page, so URL rewriting or the address is wrong.
 	 */
 	public static function notApi(): self {
-		return self::invalid( 'address', __( 'The server did not answer like the SuiteCRM API. Check the address, the version and that URL rewriting is switched on.', 'estasoft-erp-crm-sync-engine' ) );
+		return self::invalid( 'address', __( 'The server did not answer like the SuiteCRM API. Check the address, the version and that URL rewriting is switched on.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**

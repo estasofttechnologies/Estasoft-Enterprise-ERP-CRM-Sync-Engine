@@ -111,7 +111,7 @@ final class QuickBooksApi {
 		if ( isset( $data[ $key ] ) && is_array( $data[ $key ] ) ) {
 			return $data[ $key ];
 		}
-		$failure = QuickBooksErrors::exception( QuickBooksErrors::refused( $key, __( 'QuickBooks answered without the record.', 'estasoft-erp-crm-sync-engine' ), $response->status() ), $response );
+		$failure = QuickBooksErrors::exception( QuickBooksErrors::refused( $key, __( 'QuickBooks answered without the record.', 'estasoft-enterprise-erpcrm-sync-engine' ), $response->status() ), $response );
 		throw $failure;
 	}
 

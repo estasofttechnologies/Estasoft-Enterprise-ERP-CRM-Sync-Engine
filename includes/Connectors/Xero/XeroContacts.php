@@ -159,7 +159,7 @@ final class XeroContacts {
 			if ( 1 === preg_match( '/^[\x20-\x7E]+$/', $email ) ) {
 				$contact['EmailAddress'] = XeroPayloadReader::limit( $email, 255, $cut );
 			} else {
-				$warnings[] = __( 'The email address has letters Xero does not accept, so the contact was saved without it.', 'estasoft-erp-crm-sync-engine' );
+				$warnings[] = __( 'The email address has letters Xero does not accept, so the contact was saved without it.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			}
 		}
 		if ( '' !== $number ) {
@@ -189,7 +189,7 @@ final class XeroContacts {
 			$contact['Addresses'] = $addresses;
 		}
 		if ( $cut ) {
-			$warnings[] = __( 'A long customer value was shortened to fit Xero.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'A long customer value was shortened to fit Xero.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		return $contact;
 	}

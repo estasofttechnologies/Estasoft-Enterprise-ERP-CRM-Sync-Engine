@@ -53,11 +53,11 @@ final class PayloadReader {
 		}
 		$currency = strtoupper( $this->text( $payload['currency'] ?? '' ) );
 		if ( 1 !== preg_match( '/^[A-Z]{3}$/', $currency ) ) {
-			return $this->invalid( 'currency', __( 'The order has no valid currency code.', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->invalid( 'currency', __( 'The order has no valid currency code.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$total = $this->minor( $payload['total'] ?? null );
 		if ( null === $total || $total < 0 ) {
-			return $this->invalid( 'total', __( 'The order total is missing or not a number.', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->invalid( 'total', __( 'The order total is missing or not a number.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$excluded = $this->minor( $payload['excluded_total'] ?? 0 ) ?? 0;
 		$lines    = $this->lines( $payload['lines'] ?? array() );
@@ -65,7 +65,7 @@ final class PayloadReader {
 			return $lines;
 		}
 		if ( array() === $lines ) {
-			return $this->invalid( 'lines', __( 'The order has no product lines.', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->invalid( 'lines', __( 'The order has no product lines.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$fees = array();
 		foreach ( (array) ( $payload['fees'] ?? array() ) as $fee ) {
@@ -113,11 +113,11 @@ final class PayloadReader {
 		$currency = strtoupper( $this->text( $payload['currency'] ?? '' ) );
 		$amount   = $this->minor( $payload['amount'] ?? null );
 		if ( null === $amount || $amount <= 0 ) {
-			return $this->invalid( 'amount', __( 'The refund amount is missing or not above zero.', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->invalid( 'amount', __( 'The refund amount is missing or not above zero.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$order = $this->text( $payload['order_ref'] ?? '' );
 		if ( 1 !== preg_match( '/^WC-\d+$/', $order ) ) {
-			return $this->invalid( 'order_ref', __( 'The refund does not name its order.', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->invalid( 'order_ref', __( 'The refund does not name its order.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return new RefundData( $item->clientReference(), $order, abs( $amount ), 1 === preg_match( '/^[A-Z]{3}$/', $currency ) ? $currency : '', $this->text( $payload['reason'] ?? '' ), $this->date( $payload['date'] ?? '' ) );
 	}
@@ -153,7 +153,7 @@ final class PayloadReader {
 			$quantity = $this->text( $line['quantity'] ?? '' );
 			$unit     = $this->minor( $line['unit_price'] ?? null );
 			if ( 1 !== preg_match( '/^\d+(\.\d+)?$/', $quantity ) || (float) $quantity <= 0 || null === $unit || $unit < 0 ) {
-				return $this->invalid( 'lines', __( 'A product line has no valid quantity or price.', 'estasoft-erp-crm-sync-engine' ) );
+				return $this->invalid( 'lines', __( 'A product line has no valid quantity or price.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$total = $this->minor( $line['total'] ?? null );
 			if ( null === $total ) {

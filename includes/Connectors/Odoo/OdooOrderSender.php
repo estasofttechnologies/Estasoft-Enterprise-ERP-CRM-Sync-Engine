@@ -195,7 +195,7 @@ final class OdooOrderSender {
 			$removed = $this->discard( $orderId );
 			$reason  = sprintf(
 				/* translators: 1: Odoo order number, 2: currency Odoo used, 3: currency of the shop order. */
-				__( 'Odoo made %1$s in %2$s but the shop order is in %3$s. Check the price list and the currency settings in Odoo.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Odoo made %1$s in %2$s but the shop order is in %3$s. Check the price list and the currency settings in Odoo.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'' !== $number ? $number : (string) $orderId,
 				'' !== $actual ? $actual : '?',
 				$currency
@@ -236,8 +236,8 @@ final class OdooOrderSender {
 	 */
 	private function outcome( bool $removed ): string {
 		return $removed
-			? __( 'The quotation was removed from Odoo and nothing was confirmed.', 'estasoft-erp-crm-sync-engine' )
-			: __( 'The quotation stays in Odoo as a draft and was not confirmed: delete it in Odoo before the order is sent again.', 'estasoft-erp-crm-sync-engine' );
+			? __( 'The quotation was removed from Odoo and nothing was confirmed.', 'estasoft-enterprise-erpcrm-sync-engine' )
+			: __( 'The quotation stays in Odoo as a draft and was not confirmed: delete it in Odoo before the order is sent again.', 'estasoft-enterprise-erpcrm-sync-engine' );
 	}
 
 	/**
@@ -421,7 +421,7 @@ final class OdooOrderSender {
 	 */
 	private function pricelistFor( string $currency ): int {
 		if ( '' === $currency ) {
-			$exception = $this->refused( 'currency', __( 'The order has no currency, and Odoo\'s company has none either.', 'estasoft-erp-crm-sync-engine' ) );
+			$exception = $this->refused( 'currency', __( 'The order has no currency, and Odoo\'s company has none either.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			throw $exception;
 		}
 		$id = $this->catalog->pricelistId( $currency );
@@ -435,13 +435,13 @@ final class OdooOrderSender {
 				'' !== $wanted
 					? sprintf(
 						/* translators: 1: price list named in the connection options, 2: order currency code. */
-						__( 'The price list "%1$s" does not exist in Odoo, or is not in %2$s, the currency of the order.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'The price list "%1$s" does not exist in Odoo, or is not in %2$s, the currency of the order.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$wanted,
 						$currency
 					)
 					: sprintf(
 						/* translators: %s: order currency code. */
-						__( 'The order is in %1$s but Odoo has no active price list in %1$s. Add one in Odoo, or switch on making a price list in the connection options.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'The order is in %1$s but Odoo has no active price list in %1$s. Add one in Odoo, or switch on making a price list in the connection options.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$currency
 					)
 			);
@@ -467,7 +467,7 @@ final class OdooOrderSender {
 				'payment_term',
 				sprintf(
 					/* translators: %s: payment term name from the mapping. */
-					__( 'Odoo has no payment term called "%s". Create it in Odoo or remove the payment term rule.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Odoo has no payment term called "%s". Create it in Odoo or remove the payment term rule.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$payload->paymentTerm
 				)
 			);
@@ -493,7 +493,7 @@ final class OdooOrderSender {
 				'warehouse',
 				sprintf(
 					/* translators: %s: warehouse code or name from the mapping. */
-					__( 'Odoo has no warehouse "%s".', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Odoo has no warehouse "%s".', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$payload->warehouse
 				)
 			);
@@ -511,7 +511,7 @@ final class OdooOrderSender {
 			array(
 				'system' => OdooErrorMapper::SYSTEM,
 				'field'  => 'client_order_ref',
-				'reason' => __( 'This order is not in Odoo, so there is nothing to cancel.', 'estasoft-erp-crm-sync-engine' ),
+				'reason' => __( 'This order is not in Odoo, so there is nothing to cancel.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			),
 			null,
 			null,

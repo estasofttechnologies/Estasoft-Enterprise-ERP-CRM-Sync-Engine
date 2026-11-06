@@ -40,7 +40,7 @@ final class TotalCheck {
 		if ( null === $found || 0 === $found ) {
 			return array(
 				'error'   => null,
-				'warning' => __( 'The system has not calculated a total for this order yet, so it could not be compared with the shop total.', 'estasoft-erp-crm-sync-engine' ),
+				'warning' => __( 'The system has not calculated a total for this order yet, so it could not be compared with the shop total.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			);
 		}
 		if ( Amounts::near( $found, $expected ) ) {
@@ -56,7 +56,7 @@ final class TotalCheck {
 				'error'   => null,
 				'warning' => sprintf(
 					/* translators: 1: the shop's total, 2: the other system's total. */
-					__( 'The shop total is %1$s and the total in the system is %2$s.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The shop total is %1$s and the total in the system is %2$s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$shop,
 					$theirs
 				),

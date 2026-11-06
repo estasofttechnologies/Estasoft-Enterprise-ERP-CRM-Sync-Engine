@@ -110,7 +110,7 @@ final class SapBusinessOneConnector extends AbstractApiConnector {
 	protected function baseUrl( Connection $connection ): string {
 		$address = $this->address( (string) $connection->config( 'address', '' ) );
 		if ( '' === $address ) {
-			$problem = Problem::validation( self::SYSTEM, 'address', __( 'Enter the Service Layer address as https://host:port.', 'estasoft-erp-crm-sync-engine' ) );
+			$problem = Problem::validation( self::SYSTEM, 'address', __( 'Enter the Service Layer address as https://host:port.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			throw new ApiException( $problem ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 		}
 		return $address . '/b1s/' . SapBusinessOneOptions::from( $connection )->apiVersion();
@@ -150,16 +150,16 @@ final class SapBusinessOneConnector extends AbstractApiConnector {
 	 */
 	protected function credentialDefinition(): array {
 		return array(
-			CredentialFields::address( 'address', __( 'Service Layer address', 'estasoft-erp-crm-sync-engine' ), __( 'For example https://sap.example.com:50000. The address of the Service Layer your website can reach.', 'estasoft-erp-crm-sync-engine' ) ),
-			new CredentialField( 'database', __( 'Company database', 'estasoft-erp-crm-sync-engine' ), false, true, __( 'The CompanyDB name from the SLD. Capitals count.', 'estasoft-erp-crm-sync-engine' ) ),
-			CredentialFields::username( 'user', __( 'User', 'estasoft-erp-crm-sync-engine' ), __( 'A licensed SAP user made for the shop.', 'estasoft-erp-crm-sync-engine' ) ),
-			CredentialFields::password( 'password', __( 'Password', 'estasoft-erp-crm-sync-engine' ), __( 'Saved encrypted. It is never shown again.', 'estasoft-erp-crm-sync-engine' ) ),
+			CredentialFields::address( 'address', __( 'Service Layer address', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'For example https://sap.example.com:50000. The address of the Service Layer your website can reach.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			new CredentialField( 'database', __( 'Company database', 'estasoft-enterprise-erpcrm-sync-engine' ), false, true, __( 'The CompanyDB name from the SLD. Capitals count.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			CredentialFields::username( 'user', __( 'User', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'A licensed SAP user made for the shop.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			CredentialFields::password( 'password', __( 'Password', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Saved encrypted. It is never shown again.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			CredentialFields::choice(
 				'api_version',
-				__( 'Service Layer version', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Service Layer version', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				array(
-					'v2' => __( 'v2 (OData v4)', 'estasoft-erp-crm-sync-engine' ),
-					'v1' => __( 'v1 (OData v3, older installations)', 'estasoft-erp-crm-sync-engine' ),
+					'v2' => __( 'v2 (OData v4)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'v1' => __( 'v1 (OData v3, older installations)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				'v2'
 			),
@@ -211,7 +211,7 @@ final class SapBusinessOneConnector extends AbstractApiConnector {
 			ErrorCode::Auth004,
 			array(
 				'system' => self::SYSTEM,
-				'action' => __( 'read orders, customers and items', 'estasoft-erp-crm-sync-engine' ),
+				'action' => __( 'read orders, customers and items', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			),
 			403,
 			null,
@@ -319,7 +319,7 @@ final class SapBusinessOneConnector extends AbstractApiConnector {
 			EntityType::Order    => $this->sendOrder( $connection, $item, $payload ),
 			EntityType::Refund   => $this->sendRefund( $connection, $item, $payload ),
 			EntityType::Customer => $this->sendCustomer( $connection, $payload ),
-			default              => SendResult::failure( Problem::validation( self::SYSTEM, 'entity', __( 'This connector does not send this kind of record.', 'estasoft-erp-crm-sync-engine' ) ) ),
+			default              => SendResult::failure( Problem::validation( self::SYSTEM, 'entity', __( 'This connector does not send this kind of record.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) ),
 		};
 	}
 
@@ -488,7 +488,7 @@ final class SapBusinessOneConnector extends AbstractApiConnector {
 				$error     = Problem::validation(
 					self::SYSTEM,
 					'credit note total',
-					(string) $error->context['reason'] . ' ' . ( $cancelled ? __( 'The credit note was cancelled. Credit the customer in SAP.', 'estasoft-erp-crm-sync-engine' ) : __( 'The credit note could not be cancelled and stays in SAP; cancel or correct it there.', 'estasoft-erp-crm-sync-engine' ) )
+					(string) $error->context['reason'] . ' ' . ( $cancelled ? __( 'The credit note was cancelled. Credit the customer in SAP.', 'estasoft-enterprise-erpcrm-sync-engine' ) : __( 'The credit note could not be cancelled and stays in SAP; cancel or correct it there.', 'estasoft-enterprise-erpcrm-sync-engine' ) )
 				);
 			}
 			return SendResult::failure( $error );

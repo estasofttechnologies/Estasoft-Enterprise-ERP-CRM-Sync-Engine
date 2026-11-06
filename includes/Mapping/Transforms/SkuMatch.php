@@ -43,7 +43,7 @@ final class SkuMatch extends BaseTransform {
 		$resolver = $context->environment->products;
 		$sku      = is_scalar( $value ) ? Text::trim( Text::toString( $value ) ) : '';
 		if ( null === $resolver ) {
-			$context->warn( __( 'No product matching is available, so the SKU was sent as it is.', 'estasoft-erp-crm-sync-engine' ) );
+			$context->warn( __( 'No product matching is available, so the SKU was sent as it is.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			return $value;
 		}
 		$found = $resolver->resolve(
@@ -86,7 +86,7 @@ final class SkuMatch extends BaseTransform {
 		}
 		$name = null === $context->row() ? null : $context->read( 'lines[].name' );
 		/* translators: %s: product name. The product has no SKU. */
-		return sprintf( __( '%s (no SKU)', 'estasoft-erp-crm-sync-engine' ), is_scalar( $name ) ? Text::toString( $name ) : __( 'A product', 'estasoft-erp-crm-sync-engine' ) );
+		return sprintf( __( '%s (no SKU)', 'estasoft-enterprise-erpcrm-sync-engine' ), is_scalar( $name ) ? Text::toString( $name ) : __( 'A product', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**

@@ -44,16 +44,15 @@ entry for every service, generated from the connector documents and checked in C
 | No direct file writes outside uploads | The only writes are the export files and their folders under `wp-content/uploads/estasoft-sync/` (`ExportStore`, one work file in `LedgerExportConnector`), each with a `phpcs:ignore` that says why; nothing is written to the plugin folder. |
 | Capabilities and nonces | Two capabilities, `estasoft_sync_manage` and `estasoft_sync_configure`. Every REST route has a permission callback; only the signed inbound webhook is open to everyone (it checks an HMAC). Both `admin-post` actions and the product box check a nonce and a capability. There is no `admin-ajax` action. See [PLUGIN-CHECK-NOTES.md](PLUGIN-CHECK-NOTES.md). |
 | Uninstall | Data is kept on deactivation and on deletion unless "Delete all data when the plugin is deleted" is on; then the nine tables, options, meta, capabilities and the exports folder go. Both paths are in the smoke test. |
-| Internationalisation | Every string uses the text domain `estasoft-erp-crm-sync-engine`; no `.pot` file is committed yet (needs WP-CLI: `bin/make-pot.sh`, an owner action). |
+| Internationalisation | Every string uses the text domain `estasoft-enterprise-erpcrm-sync-engine`; no `.pot` file is committed yet (needs WP-CLI: `bin/make-pot.sh`, an owner action). |
 | Requirements | `Requires Plugins: woocommerce`; a guard shows a notice instead of a fatal error when PHP, WordPress, sodium or WooCommerce is missing (smoke test). |
 
 ## Trademark and name notes
 
-- **Plugin name and slug.** "Estasoft Enterprise ERP/CRM Sync Engine", slug `estasoft-erp-crm-sync-engine`. "ERP" and
+- **Plugin name and slug.** "Estasoft Enterprise ERP/CRM Sync Engine", slug `estasoft-enterprise-erpcrm-sync-engine`. "ERP" and
   "CRM" are generic terms. The name does not contain "Woo", "WooCommerce", "Odoo" or any vendor name.
-  **Owner action:** the slug is only reserved when the plugin is approved. Open
-  <https://wordpress.org/plugins/estasoft-erp-crm-sync-engine/> before submitting; a "not found" page means the
-  slug is free.
+  WordPress.org assigned this slug when the zip was uploaded (6 Nov 2026); the text domain, the folder and the main
+  file use it.
 - **WooCommerce** is a trademark of Automattic Inc. The plugin needs WooCommerce (`Requires Plugins: woocommerce`)
   and says so; the name does not start with or imitate it.
 - **Vendors.** Names appear only as text: in the readme (supported systems, External services), in the setup

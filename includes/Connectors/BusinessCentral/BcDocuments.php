@@ -214,7 +214,7 @@ final class BcDocuments {
 		return Failures::invalid(
 			$this->system,
 			'document',
-			__( 'The document in Business Central was changed after it was created: its lines are not the ones the shop sent. Delete the draft in Business Central and try again.', 'estasoft-erp-crm-sync-engine' ),
+			__( 'The document in Business Central was changed after it was created: its lines are not the ones the shop sent. Delete the draft in Business Central and try again.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			'lines differ'
 		);
 	}

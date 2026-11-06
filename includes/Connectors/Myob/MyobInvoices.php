@@ -80,7 +80,7 @@ final class MyobInvoices {
 		$uid      = MyobApi::uidFromLocation( $response );
 		$invoice  = '' !== $uid ? $this->get( $uid ) : $this->find( $reference );
 		if ( null === $invoice ) {
-			$failure = MyobErrors::exception( MyobErrors::refused( 'Invoice', __( 'MYOB accepted the invoice but did not say where it is.', 'estasoft-erp-crm-sync-engine' ), $response->status() ), $response );
+			$failure = MyobErrors::exception( MyobErrors::refused( 'Invoice', __( 'MYOB accepted the invoice but did not say where it is.', 'estasoft-enterprise-erpcrm-sync-engine' ), $response->status() ), $response );
 			throw $failure;
 		}
 		return $invoice;

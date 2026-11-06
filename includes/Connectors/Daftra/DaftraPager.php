@@ -82,7 +82,7 @@ final class DaftraPager {
 			array(
 				'system' => DaftraConnector::LABEL,
 				'field'  => $path,
-				'reason' => __( 'The list is longer than the connector reads in one pass. Narrow the search.', 'estasoft-erp-crm-sync-engine' ),
+				'reason' => __( 'The list is longer than the connector reads in one pass. Narrow the search.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			),
 			null,
 			null,

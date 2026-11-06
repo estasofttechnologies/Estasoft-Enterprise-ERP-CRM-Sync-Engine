@@ -52,40 +52,55 @@ export function SettingsPage( { tab }: { tab: SettingsTab } ) {
 	const { canConfigure } = useApp();
 	const nav = (
 		<TabNav
-			label={ __( 'Settings pages', 'estasoft-erp-crm-sync-engine' ) }
+			label={ __(
+				'Settings pages',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			) }
 			items={ [
 				{
-					label: __( 'General', 'estasoft-erp-crm-sync-engine' ),
+					label: __(
+						'General',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					),
 					to: '/settings',
 					current: tab === 'general',
 				},
 				{
 					label: __(
 						'Notifications',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					to: '/settings/notifications',
 					current: tab === 'notifications',
 				},
 				{
-					label: __( 'Performance', 'estasoft-erp-crm-sync-engine' ),
+					label: __(
+						'Performance',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					),
 					to: '/settings/performance',
 					current: tab === 'performance',
 				},
 				{
-					label: __( 'Access', 'estasoft-erp-crm-sync-engine' ),
+					label: __(
+						'Access',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					),
 					to: '/settings/access',
 					current: tab === 'access',
 				},
 				{
-					label: __( 'Tools', 'estasoft-erp-crm-sync-engine' ),
+					label: __(
+						'Tools',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					),
 					to: '/settings/tools',
 					current: tab === 'tools',
 				},
 				{
 					label: __(
 						'Readiness check',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					to: '/settings/readiness',
 					current: tab === 'readiness',
@@ -97,7 +112,10 @@ export function SettingsPage( { tab }: { tab: SettingsTab } ) {
 		return (
 			<>
 				<PageHeader
-					title={ __( 'Settings', 'estasoft-erp-crm-sync-engine' ) }
+					title={ __(
+						'Settings',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 				/>
 				{ nav }
 				<ReadinessPage />
@@ -108,7 +126,10 @@ export function SettingsPage( { tab }: { tab: SettingsTab } ) {
 		return (
 			<>
 				<PageHeader
-					title={ __( 'Settings', 'estasoft-erp-crm-sync-engine' ) }
+					title={ __(
+						'Settings',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 				/>
 				{ nav }
 				<AccessTab />
@@ -118,20 +139,23 @@ export function SettingsPage( { tab }: { tab: SettingsTab } ) {
 	return (
 		<>
 			<PageHeader
-				title={ __( 'Settings', 'estasoft-erp-crm-sync-engine' ) }
+				title={ __(
+					'Settings',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 			/>
 			{ nav }
 			<p className="estasoft-sync-muted">
 				{ __(
 					'This plugin has no usage tracking and talks only to the system you connect, and only after you set it up.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			</p>
 			{ ! canConfigure ? (
 				<Callout tone="info">
 					{ __(
 						'Only administrators can change settings. You can see them here.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</Callout>
 			) : null }
@@ -196,13 +220,13 @@ function SettingsForm( {
 			draft.notifications.recipients.length > 10
 				? __(
 						'Use up to 10 addresses.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					)
 				: bad
 					? sprintf(
 							/* translators: %s: the address */ __(
 								'“%s” is not an email address.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							bad
 						)
@@ -216,7 +240,10 @@ function SettingsForm( {
 		display.refresh();
 		notify( {
 			kind: 'success',
-			text: __( 'Settings saved.', 'estasoft-erp-crm-sync-engine' ),
+			text: __(
+				'Settings saved.',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 		} );
 	} );
 
@@ -226,7 +253,7 @@ function SettingsForm( {
 				rows={ 5 }
 				label={ __(
 					'Loading settings',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			/>
 		);
@@ -260,7 +287,10 @@ function SettingsForm( {
 				disabled={ ! canConfigure }
 			>
 				<legend className="estasoft-sync-sr-only">
-					{ __( 'Settings', 'estasoft-erp-crm-sync-engine' ) }
+					{ __(
+						'Settings',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 				</legend>
 				{ tab === 'general' ? (
 					<GeneralTab draft={ draft } set={ set } />
@@ -308,7 +338,7 @@ function SettingsForm( {
 										'Fix %d field to save',
 										'Fix %d fields to save',
 										errorCount,
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									errorCount
 								)
@@ -333,12 +363,17 @@ type SetFn = < K extends keyof Settings >(
 function GeneralTab( { draft, set }: { draft: Settings; set: SetFn } ) {
 	const { status } = useStatus();
 	return (
-		<Card title={ __( 'General', 'estasoft-erp-crm-sync-engine' ) }>
+		<Card
+			title={ __( 'General', 'estasoft-enterprise-erpcrm-sync-engine' ) }
+		>
 			<h3 className="estasoft-sync-subtitle">
-				{ __( 'Time', 'estasoft-erp-crm-sync-engine' ) }
+				{ __( 'Time', 'estasoft-enterprise-erpcrm-sync-engine' ) }
 			</h3>
 			<SelectField
-				label={ __( 'Show times in', 'estasoft-erp-crm-sync-engine' ) }
+				label={ __(
+					'Show times in',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 				value={ draft.display_time }
 				onChange={ ( value ) =>
 					set( 'display_time', value as Settings[ 'display_time' ] )
@@ -349,26 +384,32 @@ function GeneralTab( { draft, set }: { draft: Settings; set: SetFn } ) {
 						label: sprintf(
 							/* translators: %s: time zone such as Asia/Dubai */ __(
 								'Store time (%s)',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							status?.store_timezone ?? 'UTC'
 						),
 					},
 					{
 						value: 'utc',
-						label: __( 'UTC', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'UTC',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 					},
 				] }
 				hint={ __(
 					'Data is always stored in UTC.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			/>
 			<h3 className="estasoft-sync-subtitle">
-				{ __( 'Logs', 'estasoft-erp-crm-sync-engine' ) }
+				{ __( 'Logs', 'estasoft-enterprise-erpcrm-sync-engine' ) }
 			</h3>
 			<SelectField
-				label={ __( 'Keep logs for', 'estasoft-erp-crm-sync-engine' ) }
+				label={ __(
+					'Keep logs for',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 				value={ String( draft.log_retention_days ) }
 				onChange={ ( value ) =>
 					set(
@@ -379,35 +420,50 @@ function GeneralTab( { draft, set }: { draft: Settings; set: SetFn } ) {
 				options={ [
 					{
 						value: '7',
-						label: __( '7 days', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'7 days',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 					},
 					{
 						value: '14',
-						label: __( '14 days', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'14 days',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 					},
 					{
 						value: '30',
-						label: __( '30 days', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'30 days',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 					},
 				] }
 			/>
 			<CheckField
 				label={ __(
 					'Remove names, emails and addresses from messages',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				hint={ __(
 					'Recommended. Turning it off is logged.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				checked={ draft.redaction }
 				onChange={ ( value ) => set( 'redaction', value ) }
 			/>
 			<h3 className="estasoft-sync-subtitle">
-				{ __( 'Detail in logs', 'estasoft-erp-crm-sync-engine' ) }
+				{ __(
+					'Detail in logs',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 			</h3>
 			<SelectField
-				label={ __( 'Keep at most', 'estasoft-erp-crm-sync-engine' ) }
+				label={ __(
+					'Keep at most',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 				value={ String( draft.log_excerpt_bytes ) }
 				onChange={ ( value ) =>
 					set(
@@ -420,48 +476,51 @@ function GeneralTab( { draft, set }: { draft: Settings; set: SetFn } ) {
 						value: '2048',
 						label: __(
 							'2 KB of each request and answer',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 					},
 					{
 						value: '8192',
 						label: __(
 							'8 KB of each request and answer',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 					},
 					{
 						value: '0',
-						label: __( 'Nothing', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'Nothing',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 					},
 				] }
 				hint={ __(
 					'Smaller logs keep your database light.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			/>
 			<h3 className="estasoft-sync-subtitle">
-				{ __( 'Admin bar', 'estasoft-erp-crm-sync-engine' ) }
+				{ __( 'Admin bar', 'estasoft-enterprise-erpcrm-sync-engine' ) }
 			</h3>
 			<CheckField
 				label={ __(
 					'Show the sync state in the admin bar',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				checked={ draft.admin_bar }
 				onChange={ ( value ) => set( 'admin_bar', value ) }
 			/>
 			<h3 className="estasoft-sync-subtitle">
-				{ __( 'Uninstall', 'estasoft-erp-crm-sync-engine' ) }
+				{ __( 'Uninstall', 'estasoft-enterprise-erpcrm-sync-engine' ) }
 			</h3>
 			<CheckField
 				label={ __(
 					'Delete all plugin data when the plugin is deleted',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				hint={ __(
 					'Off by default, so reinstalling keeps your mapping and history.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				checked={ draft.delete_on_uninstall }
 				onChange={ ( value ) => set( 'delete_on_uninstall', value ) }
@@ -504,7 +563,7 @@ function NotificationsTab( {
 					'Test email sent to %d recipient. If it does not arrive, check spam, or use an SMTP plugin. WordPress hands the message to your mail setup; it cannot see whether it was delivered.',
 					'Test email sent to %d recipients. If it does not arrive, check spam, or use an SMTP plugin. WordPress hands the message to your mail setup; it cannot see whether it was delivered.',
 					result.sent_to.length,
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				result.sent_to.length
 			)
@@ -513,16 +572,19 @@ function NotificationsTab( {
 	return (
 		<>
 			<Card
-				title={ __( 'Notifications', 'estasoft-erp-crm-sync-engine' ) }
+				title={ __(
+					'Notifications',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 				description={ __(
 					'Notices inside WordPress always show. These are emails.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			>
 				<TextField
 					label={ __(
 						'Send emails to',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					value={ text }
 					onChange={ ( value ) => {
@@ -538,7 +600,7 @@ function NotificationsTab( {
 					error={ error }
 					hint={ __(
 						'Separate addresses with commas. Up to 10. Defaults to the site administrator email.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					autoComplete="email"
 					spellCheck={ false }
@@ -546,17 +608,17 @@ function NotificationsTab( {
 				<h3 className="estasoft-sync-subtitle">
 					{ __(
 						'Connection paused',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</h3>
 				<CheckField
 					label={ __(
 						'Email me when a connection pauses',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					hint={ __(
 						'Sent once per incident, when your system stops answering or a sign-in expires. Not sent again until it recovers.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					checked={ n.on_paused }
 					onChange={ ( value ) => setNotify( 'on_paused', value ) }
@@ -564,7 +626,7 @@ function NotificationsTab( {
 				<CheckField
 					label={ __(
 						'Email me when a sign-in or key expires',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					checked={ n.on_signin_expired }
 					onChange={ ( value ) =>
@@ -572,22 +634,28 @@ function NotificationsTab( {
 					}
 				/>
 				<h3 className="estasoft-sync-subtitle">
-					{ __( 'Failed orders', 'estasoft-erp-crm-sync-engine' ) }
+					{ __(
+						'Failed orders',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 				</h3>
 				<CheckField
 					label={ __(
 						'Email a daily list of failed orders',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					hint={ __(
 						'Sent at the time below, only on days when something failed.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					checked={ n.daily_digest }
 					onChange={ ( value ) => setNotify( 'daily_digest', value ) }
 				/>
 				<SelectField
-					label={ __( 'Send at', 'estasoft-erp-crm-sync-engine' ) }
+					label={ __(
+						'Send at',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 					value={ n.digest_time }
 					onChange={ ( value ) => setNotify( 'digest_time', value ) }
 					disabled={ ! n.daily_digest }
@@ -606,38 +674,46 @@ function NotificationsTab( {
 						label: sprintf(
 							/* translators: %s: clock time */ __(
 								'%s store time',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							value
 						),
 					} ) ) }
 				/>
 				<h3 className="estasoft-sync-subtitle">
-					{ __( 'Queue backlog', 'estasoft-erp-crm-sync-engine' ) }
+					{ __(
+						'Queue backlog',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 				</h3>
 				<CheckField
 					label={ __(
 						'Email me when many items are waiting',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					hint={ __(
 						'Uses the warning limit set under Performance.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					checked={ n.on_backlog }
 					onChange={ ( value ) => setNotify( 'on_backlog', value ) }
 				/>
 				<h3 className="estasoft-sync-subtitle">
-					{ __( 'Sent from', 'estasoft-erp-crm-sync-engine' ) }
+					{ __(
+						'Sent from',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 				</h3>
 				<p className="estasoft-sync-muted">
 					{ __(
 						'WordPress sends these with wp_mail. If emails do not arrive, use an SMTP plugin. No outside email service is used.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</p>
 			</Card>
-			<Card title={ __( 'Test', 'estasoft-erp-crm-sync-engine' ) }>
+			<Card
+				title={ __( 'Test', 'estasoft-enterprise-erpcrm-sync-engine' ) }
+			>
 				<div className="estasoft-sync-actions">
 					<Btn
 						busy={ test.busy }
@@ -646,27 +722,27 @@ function NotificationsTab( {
 					>
 						{ __(
 							'Send a test email',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</Btn>
 					<span className="estasoft-sync-muted">
 						{ recipientsDirty
 							? __(
 									'Save your changes first. The test goes to the saved recipients, not to what is typed above.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								)
 							: saved.length > 0
 								? sprintf(
 										/* translators: %s: saved email addresses, separated by commas */
 										__(
 											'Sends a short message to the saved recipients: %s.',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										),
 										saved.join( ', ' )
 									)
 								: __(
 										'Sends a short message to the saved recipients. None are set, so it goes to the site administrator email.',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									) }
 					</span>
 				</div>
@@ -701,11 +777,14 @@ function PerformanceTab( {
 			<Card
 				title={ __(
 					'How the queue runs',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			>
 				<ChoiceGroup
-					legend={ __( 'Runtime', 'estasoft-erp-crm-sync-engine' ) }
+					legend={ __(
+						'Runtime',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 					hideLegend
 					value={ draft.runtime_profile }
 					onChange={ ( value ) =>
@@ -719,22 +798,22 @@ function PerformanceTab( {
 							value: 'standard',
 							label: __(
 								'Standard',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							description: __(
 								'Uses WordPress background tasks. Right for most shops, up to a few hundred orders an hour.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 						},
 						{
 							value: 'high_volume',
 							label: __(
 								'High volume',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							description: __(
 								'A background program started from the command line runs the queue. Needs shell access on your server. Redis is used if it is found.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 						},
 					] }
@@ -743,11 +822,11 @@ function PerformanceTab( {
 			<Card
 				title={ __(
 					'Set up a real cron job',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				description={ __(
 					'Paths and user are examples. Ask your host if you are not sure.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			>
 				<pre
@@ -756,7 +835,7 @@ function PerformanceTab( {
 					role="region"
 					aria-label={ __(
 						'Cron line and worker command',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				>
 					<code>
@@ -770,14 +849,14 @@ function PerformanceTab( {
 						text="* * * * * cd /var/www/html && wp action-scheduler run --group=estasoft-sync"
 						label={ __(
 							'Copy the cron line',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					/>
 					<CopyButton
 						text="wp estasoft-sync worker --concurrency=2"
 						label={ __(
 							'Copy the worker command',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					/>
 				</div>
@@ -785,7 +864,7 @@ function PerformanceTab( {
 			<Card
 				title={ __(
 					'What this server has',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				flush
 			>
@@ -793,7 +872,7 @@ function PerformanceTab( {
 					<caption className="estasoft-sync-sr-only">
 						{ __(
 							'What this server has',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</caption>
 					<thead>
@@ -801,19 +880,19 @@ function PerformanceTab( {
 							<th scope="col">
 								{ __(
 									'Check',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</th>
 							<th scope="col">
 								{ __(
 									'Found',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</th>
 							<th scope="col">
 								{ __(
 									'Meaning',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</th>
 						</tr>
@@ -823,7 +902,7 @@ function PerformanceTab( {
 							<th scope="row">
 								{ __(
 									'Scheduled tasks',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</th>
 							<td>
@@ -831,14 +910,14 @@ function PerformanceTab( {
 									<StatusBadge tone="warning">
 										{ __(
 											'On site visits',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										) }
 									</StatusBadge>
 								) : (
 									<StatusBadge tone="success">
 										{ __(
 											'Real cron job',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										) }
 									</StatusBadge>
 								) }
@@ -847,11 +926,11 @@ function PerformanceTab( {
 								{ status?.cron_on_visits
 									? __(
 											'Timing slips when traffic is quiet. Use a real cron job.',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										)
 									: __(
 											'Timing is steady.',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										) }
 							</td>
 						</tr>
@@ -859,14 +938,14 @@ function PerformanceTab( {
 							<th scope="row">
 								{ __(
 									'Capacity test',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</th>
 							<td>
 								<StatusBadge tone="neutral">
 									{ __(
 										'Not run',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									) }
 								</StatusBadge>
 							</td>
@@ -877,7 +956,7 @@ function PerformanceTab( {
 								>
 									{ __(
 										'Run a capacity test',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									) }
 								</Btn>
 							</td>
@@ -885,11 +964,16 @@ function PerformanceTab( {
 					</tbody>
 				</table>
 			</Card>
-			<Card title={ __( 'Limits', 'estasoft-erp-crm-sync-engine' ) }>
+			<Card
+				title={ __(
+					'Limits',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
+			>
 				<TextField
 					label={ __(
 						'Items at the same time (all connections together)',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					type="number"
 					min={ 1 }
@@ -901,13 +985,13 @@ function PerformanceTab( {
 					error={ errors.global_concurrency }
 					hint={ __(
 						'Each connection also has its own limit, on its connection page. The lower of the two applies.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 				<TextField
 					label={ __(
 						'Warn me when more than this many items are waiting',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					type="number"
 					min={ 10 }

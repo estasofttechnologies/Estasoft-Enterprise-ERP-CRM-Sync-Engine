@@ -49,7 +49,7 @@ function UntestedTag( { name }: { name: string } ) {
 			<Tag>
 				{ __(
 					'Not yet tested with a live account',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			</Tag>
 			<HelpTip
@@ -57,7 +57,7 @@ function UntestedTag( { name }: { name: string } ) {
 					/* translators: %s: system name */
 					__(
 						'What “not yet tested” means for %s',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					name
 				) }
@@ -67,7 +67,7 @@ function UntestedTag( { name }: { name: string } ) {
 						/* translators: %s: system name */
 						__(
 							'This connector was built from the public documentation of %s and checked with automated tests that use recorded examples. It has not been tried with a live account yet.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						name
 					) }
@@ -75,7 +75,7 @@ function UntestedTag( { name }: { name: string } ) {
 				<p>
 					{ __(
 						'You can use Shadow mode to check the results before anything is sent. Shadow mode changes nothing in either system.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</p>
 			</HelpTip>
@@ -105,13 +105,13 @@ function WhichProduct( {
 		<Card
 			title={ __(
 				'Which product do you use?',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			) }
 			description={ sprintf(
 				/* translators: %s: system name such as "Sage 200, Sage 300 and Sage X3" */
 				__(
 					'%s is a family of products, and each connects its own way.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				entry.name
 			) }
@@ -119,7 +119,7 @@ function WhichProduct( {
 			<ChoiceGroup
 				legend={ __(
 					'Which product do you use?',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				hideLegend
 				value={ variant ?? '' }
@@ -132,7 +132,7 @@ function WhichProduct( {
 						item.available === false
 							? __(
 									'Not available yet.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								)
 							: undefined,
 				} ) ) }
@@ -194,7 +194,7 @@ export function ChooseSystem( {
 				rows={ 5 }
 				label={ __(
 					'Loading the list of systems',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			/>
 		);
@@ -206,7 +206,7 @@ export function ChooseSystem( {
 				onRetry={ () => void catalog.reload() }
 				title={ __(
 					'The list of systems could not be loaded.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			/>
 		);
@@ -219,29 +219,29 @@ export function ChooseSystem( {
 	}[] = [
 		{
 			type: 'accounting',
-			title: __( 'Accounting', 'estasoft-erp-crm-sync-engine' ),
+			title: __( 'Accounting', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			note: __(
 				'Accounting systems can sync orders as invoices, customers, and refunds as credit notes. Stock only if the system tracks it.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 		},
 		{
 			type: 'erp',
 			title: __(
 				'ERP and business suites',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			note: __(
 				'ERP and business suites can sync orders, customers, refunds, stock and tracking numbers.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 		},
 		{
 			type: 'crm',
-			title: __( 'CRM', 'estasoft-erp-crm-sync-engine' ),
+			title: __( 'CRM', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			note: __(
 				'CRMs can sync customers and show each order as a deal.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 		},
 	];
@@ -249,51 +249,66 @@ export function ChooseSystem( {
 	return (
 		<div className="estasoft-sync-choose">
 			<SegmentedFilter< CatalogFilter >
-				label={ __( 'Filter systems', 'estasoft-erp-crm-sync-engine' ) }
+				label={ __(
+					'Filter systems',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 				value={ filter }
 				onChange={ setFilter }
 				options={ [
 					{
 						value: 'all',
-						label: __( 'All', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'All',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						count: counts.all,
 					},
 					{
 						value: 'erp',
-						label: __( 'ERP', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'ERP',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						count: counts.erp,
 					},
 					{
 						value: 'accounting',
 						label: __(
 							'Accounting',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						count: counts.accounting,
 					},
 					{
 						value: 'crm',
-						label: __( 'CRM', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'CRM',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						count: counts.crm,
 					},
 					{
 						value: 'uae',
 						label: __(
 							'In the UAE',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						count: counts.uae,
 					},
 				] }
 			/>
 			<TextField
-				label={ __( 'Find a system', 'estasoft-erp-crm-sync-engine' ) }
+				label={ __(
+					'Find a system',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 				type="search"
 				value={ query }
 				onChange={ setQuery }
 				placeholder={ __(
 					'For example Xero or SAP',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				spellCheck={ false }
 			/>
@@ -302,12 +317,15 @@ export function ChooseSystem( {
 					/* translators: %d: number of systems */
 					__(
 						'All %d systems are official connectors, and every feature is free. Each row says how you connect and what you need first, because that differs: some need only a key, some need an app that you create, and a few use a file. Every connector is built from the vendor’s public documentation and checked with recorded examples, and none has been tried with a live account yet, so use Shadow mode to check the results before anything is sent. A system that cannot be selected yet says why in its row. You can add more than one system later. Is yours missing? See',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					entries.length
 				) }{ ' ' }
 				<Link to="/connections/other" className="estasoft-sync-link">
-					{ __( 'Other systems', 'estasoft-erp-crm-sync-engine' ) }
+					{ __(
+						'Other systems',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 				</Link>
 				.
 			</p>
@@ -321,7 +339,7 @@ export function ChooseSystem( {
 						{ sprintf(
 							/* translators: %s: region such as "the UAE" */ __(
 								'Suggested for a store in %s',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							suggestion.region
 						) }
@@ -329,7 +347,7 @@ export function ChooseSystem( {
 					<p className="estasoft-sync-muted">
 						{ __(
 							'Based on your store currency. You can change your mind later and add more than one system.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</p>
 					<div className="estasoft-sync-grid estasoft-sync-grid--cards">
@@ -359,14 +377,14 @@ export function ChooseSystem( {
 											? sprintf(
 													/* translators: %s: system name */ __(
 														'%s, selected',
-														'estasoft-erp-crm-sync-engine'
+														'estasoft-enterprise-erpcrm-sync-engine'
 													),
 													entry.name
 												)
 											: sprintf(
 													/* translators: %s: system name */ __(
 														'Select %s',
-														'estasoft-erp-crm-sync-engine'
+														'estasoft-enterprise-erpcrm-sync-engine'
 													),
 													entry.name
 												)
@@ -376,11 +394,11 @@ export function ChooseSystem( {
 									{ selected === entry.name
 										? __(
 												'Selected',
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											)
 										: __(
 												'Select',
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											) }
 								</Btn>
 							</div>
@@ -394,7 +412,7 @@ export function ChooseSystem( {
 					as="h2"
 					title={ __(
 						'No system matches',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					action={
 						<Link
@@ -403,7 +421,7 @@ export function ChooseSystem( {
 						>
 							{ __(
 								'Other systems',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Link>
 					}
@@ -412,13 +430,13 @@ export function ChooseSystem( {
 						? sprintf(
 								/* translators: %s: the text searched for */ __(
 									'Nothing matches “%s”. Check the spelling, or ask for it under Other systems.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								query
 							)
 						: __(
 								'Nothing matches this filter. Try another one.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 				</EmptyState>
 			) : (
@@ -448,7 +466,7 @@ export function ChooseSystem( {
 								caption={ sprintf(
 									/* translators: %s: group name */ __(
 										'%s systems',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									group.title
 								) }
@@ -464,7 +482,7 @@ export function ChooseSystem( {
 										id: 'system',
 										header: __(
 											'System',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										),
 										primary: true,
 										cell: ( entry ) => (
@@ -482,7 +500,7 @@ export function ChooseSystem( {
 													<Tag>
 														{ __(
 															'Community',
-															'estasoft-erp-crm-sync-engine'
+															'estasoft-enterprise-erpcrm-sync-engine'
 														) }
 													</Tag>
 												) : null }
@@ -493,11 +511,11 @@ export function ChooseSystem( {
 										id: 'how',
 										header: __(
 											'How you connect, and what you need first',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										),
 										label: __(
 											'How you connect, and what you need first',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										),
 										wide: true,
 										cell: ( entry ) => (
@@ -533,7 +551,7 @@ export function ChooseSystem( {
 															/* translators: %s: why the system cannot be chosen yet */
 															__(
 																'Cannot be selected yet: %s',
-																'estasoft-erp-crm-sync-engine'
+																'estasoft-enterprise-erpcrm-sync-engine'
 															),
 															entry.unavailable_reason
 														) }
@@ -546,7 +564,7 @@ export function ChooseSystem( {
 													<span className="estasoft-sync-muted estasoft-sync-block">
 														{ __(
 															'The connector for this system is not in this release yet.',
-															'estasoft-erp-crm-sync-engine'
+															'estasoft-enterprise-erpcrm-sync-engine'
 														) }
 													</span>
 												) : null }
@@ -563,7 +581,7 @@ export function ChooseSystem( {
 										id: 'select',
 										header: __(
 											'Select',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										),
 										hideHeader: true,
 										align: 'end',
@@ -575,14 +593,14 @@ export function ChooseSystem( {
 													aria-label={ sprintf(
 														/* translators: %s: system name */ __(
 															'%s is not available yet',
-															'estasoft-erp-crm-sync-engine'
+															'estasoft-enterprise-erpcrm-sync-engine'
 														),
 														entry.name
 													) }
 												>
 													{ __(
 														'Not available yet',
-														'estasoft-erp-crm-sync-engine'
+														'estasoft-enterprise-erpcrm-sync-engine'
 													) }
 												</Btn>
 											) : (
@@ -601,14 +619,14 @@ export function ChooseSystem( {
 															? sprintf(
 																	/* translators: %s: system name */ __(
 																		'%s, selected',
-																		'estasoft-erp-crm-sync-engine'
+																		'estasoft-enterprise-erpcrm-sync-engine'
 																	),
 																	entry.name
 																)
 															: sprintf(
 																	/* translators: %s: system name */ __(
 																		'Select %s',
-																		'estasoft-erp-crm-sync-engine'
+																		'estasoft-enterprise-erpcrm-sync-engine'
 																	),
 																	entry.name
 																)
@@ -620,11 +638,11 @@ export function ChooseSystem( {
 													{ selected === entry.name
 														? __(
 																'Selected',
-																'estasoft-erp-crm-sync-engine'
+																'estasoft-enterprise-erpcrm-sync-engine'
 															)
 														: __(
 																'Select',
-																'estasoft-erp-crm-sync-engine'
+																'estasoft-enterprise-erpcrm-sync-engine'
 															) }
 												</Btn>
 											),

@@ -178,41 +178,41 @@ final class HoldedConnector extends AbstractApiConnector {
 	protected function credentialDefinition(): array {
 		$advanced = static fn( string $name, string $label, string $hint, string $preset = '', string $type = 'text', array $options = array() ): CredentialField => new CredentialField( $name, $label, false, false, $hint, $preset, $type, $options, 'advanced' );
 		return array(
-			CredentialFields::apiKey( 'api_key', __( 'API key', 'estasoft-erp-crm-sync-engine' ), __( 'Create it in Holded under Settings, Developers. Saved encrypted. It is never shown again.', 'estasoft-erp-crm-sync-engine' ) ),
+			CredentialFields::apiKey( 'api_key', __( 'API key', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Create it in Holded under Settings, Developers. Saved encrypted. It is never shown again.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			$advanced(
 				'document_type',
-				__( 'Orders become', 'estasoft-erp-crm-sync-engine' ),
-				__( 'An invoice is numbered at once and cannot be deleted by the plugin. A sales order can.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Orders become', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				__( 'An invoice is numbered at once and cannot be deleted by the plugin. A sales order can.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'invoice',
 				'select',
 				array(
-					'invoice'    => __( 'Invoices', 'estasoft-erp-crm-sync-engine' ),
-					'salesorder' => __( 'Sales orders', 'estasoft-erp-crm-sync-engine' ),
+					'invoice'    => __( 'Invoices', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'salesorder' => __( 'Sales orders', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				)
 			),
-			$advanced( 'warehouse_id', __( 'Warehouse', 'estasoft-erp-crm-sync-engine' ), __( 'The warehouse number documents are booked to. Empty: none.', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'sales_channel_id', __( 'Sales channel', 'estasoft-erp-crm-sync-engine' ), __( 'The number of a sales channel in Holded. Empty: none.', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'payment_method_id', __( 'Payment method', 'estasoft-erp-crm-sync-engine' ), __( 'The number of a payment method in Holded. Empty: none.', 'estasoft-erp-crm-sync-engine' ) ),
+			$advanced( 'warehouse_id', __( 'Warehouse', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'The warehouse number documents are booked to. Empty: none.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'sales_channel_id', __( 'Sales channel', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'The number of a sales channel in Holded. Empty: none.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'payment_method_id', __( 'Payment method', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'The number of a payment method in Holded. Empty: none.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			$advanced(
 				'unknown_sku',
-				__( 'A product Holded does not know', 'estasoft-erp-crm-sync-engine' ),
-				__( 'Stop the order, or send the line as text without a product.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'A product Holded does not know', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				__( 'Stop the order, or send the line as text without a product.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'refuse',
 				'select',
 				array(
-					'refuse'    => __( 'Stop the order', 'estasoft-erp-crm-sync-engine' ),
-					'free_text' => __( 'Send a text line', 'estasoft-erp-crm-sync-engine' ),
+					'refuse'    => __( 'Stop the order', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'free_text' => __( 'Send a text line', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				)
 			),
 			$advanced(
 				'total_mismatch',
-				__( 'A total that differs from the shop', 'estasoft-erp-crm-sync-engine' ),
-				__( 'Stop before the document is made, or make it and warn.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'A total that differs from the shop', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				__( 'Stop before the document is made, or make it and warn.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'fail',
 				'select',
 				array(
-					'fail' => __( 'Stop the document', 'estasoft-erp-crm-sync-engine' ),
-					'warn' => __( 'Warn and go on', 'estasoft-erp-crm-sync-engine' ),
+					'fail' => __( 'Stop the document', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'warn' => __( 'Warn and go on', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				)
 			),
 		);
@@ -288,7 +288,7 @@ final class HoldedConnector extends AbstractApiConnector {
 				array(
 					'system' => self::LABEL,
 					'field'  => 'warehouse_id',
-					'reason' => __( 'Holded has no warehouse with this number.', 'estasoft-erp-crm-sync-engine' ),
+					'reason' => __( 'Holded has no warehouse with this number.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				null,
 				null,
@@ -353,7 +353,7 @@ final class HoldedConnector extends AbstractApiConnector {
 					array(
 						'system' => self::LABEL,
 						'field'  => $item->entityType->value,
-						'reason' => __( 'This connector does not send this kind of item.', 'estasoft-erp-crm-sync-engine' ),
+						'reason' => __( 'This connector does not send this kind of item.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					),
 					null,
 					null,
@@ -451,7 +451,7 @@ final class HoldedConnector extends AbstractApiConnector {
 				'code'         => $rate,
 				'name'         => sprintf(
 					/* translators: %s: tax rate in percent. */
-					__( 'VAT %s%%', 'estasoft-erp-crm-sync-engine' ),
+					__( 'VAT %s%%', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$rate
 				),
 				'rate_percent' => $this->amounts->decimalString( (int) $this->amounts->basisPoints( $rate ), 2 ),

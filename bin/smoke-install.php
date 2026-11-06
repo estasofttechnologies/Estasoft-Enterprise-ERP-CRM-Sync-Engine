@@ -4,7 +4,7 @@
  *
  *   SMOKE_CORE=/path/to/wordpress SMOKE_CONTENT=/path/to/wp-content SMOKE_DB=name php bin/smoke-install.php <phase> [argument]
  *
- * The plugin under test is the UNZIPPED release zip in $SMOKE_CONTENT/plugins/estasoft-erp-crm-sync-engine, never the repository. Each phase loads
+ * The plugin under test is the UNZIPPED release zip in $SMOKE_CONTENT/plugins/estasoft-enterprise-erpcrm-sync-engine, never the repository. Each phase loads
  * WordPress with WP_DEBUG and a debug.log, prints "ok   ..." or "FAIL ..." lines and exits 1 when a check failed. A phase that changes state
  * (activation, uninstall) runs in its own process, so every phase sees a real WordPress request.
  *
@@ -20,8 +20,8 @@ if ( 'cli' !== PHP_SAPI ) {
 	exit( 2 );
 }
 
-const ESTASOFT_SMOKE_SLUG      = 'estasoft-erp-crm-sync-engine';
-const ESTASOFT_SMOKE_PLUGIN    = 'estasoft-erp-crm-sync-engine/estasoft-erp-crm-sync-engine.php';
+const ESTASOFT_SMOKE_SLUG      = 'estasoft-enterprise-erpcrm-sync-engine';
+const ESTASOFT_SMOKE_PLUGIN    = 'estasoft-enterprise-erpcrm-sync-engine/estasoft-enterprise-erpcrm-sync-engine.php';
 const ESTASOFT_SMOKE_NAMESPACE = 'estasoft-sync/v1';
 
 $estasoft_smoke_failures = 0;

@@ -184,51 +184,51 @@ final class WafeqConnector extends AbstractApiConnector {
 	protected function credentialDefinition(): array {
 		$advanced = static fn( string $name, string $label, string $hint, string $preset = '', string $type = 'text', array $options = array() ): CredentialField => new CredentialField( $name, $label, false, false, $hint, $preset, $type, $options, 'advanced' );
 		return array(
-			CredentialFields::apiKey( 'api_key', __( 'API key', 'estasoft-erp-crm-sync-engine' ), __( 'Make it under Developer, API Keys in Wafeq, then press Enable API. Saved encrypted. It is never shown again.', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'sales_account', __( 'Sales account', 'estasoft-erp-crm-sync-engine' ), __( 'The revenue account (its ID, code or exact name) that invoice lines are booked to. Empty: the only revenue account.', 'estasoft-erp-crm-sync-engine' ) ),
+			CredentialFields::apiKey( 'api_key', __( 'API key', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Make it under Developer, API Keys in Wafeq, then press Enable API. Saved encrypted. It is never shown again.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'sales_account', __( 'Sales account', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'The revenue account (its ID, code or exact name) that invoice lines are booked to. Empty: the only revenue account.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			$advanced(
 				'invoice_state',
-				__( 'Invoices', 'estasoft-erp-crm-sync-engine' ),
-				__( 'Finalized invoices are posted. Drafts wait for a person to finalize them in Wafeq.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Invoices', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				__( 'Finalized invoices are posted. Drafts wait for a person to finalize them in Wafeq.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'finalized',
 				'select',
 				array(
-					'finalized' => __( 'Finalize after the total is checked', 'estasoft-erp-crm-sync-engine' ),
-					'draft'     => __( 'Leave as draft', 'estasoft-erp-crm-sync-engine' ),
+					'finalized' => __( 'Finalize after the total is checked', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'draft'     => __( 'Leave as draft', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				)
 			),
 			$advanced(
 				'record_payment',
-				__( 'Record payments', 'estasoft-erp-crm-sync-engine' ),
-				__( 'Paid orders also create a payment in Wafeq. Needs the payment account below.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Record payments', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				__( 'Paid orders also create a payment in Wafeq. Needs the payment account below.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'no',
 				'select',
 				array(
-					'no'  => __( 'No', 'estasoft-erp-crm-sync-engine' ),
-					'yes' => __( 'Yes', 'estasoft-erp-crm-sync-engine' ),
+					'no'  => __( 'No', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'yes' => __( 'Yes', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				)
 			),
-			$advanced( 'payment_account', __( 'Payment account', 'estasoft-erp-crm-sync-engine' ), __( 'The bank or cash account (ID, code or exact name) that receives the money.', 'estasoft-erp-crm-sync-engine' ) ),
+			$advanced( 'payment_account', __( 'Payment account', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'The bank or cash account (ID, code or exact name) that receives the money.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			$advanced(
 				'unknown_sku',
-				__( 'A product Wafeq does not know', 'estasoft-erp-crm-sync-engine' ),
-				__( 'Stop the order, or send the line as text without an item.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'A product Wafeq does not know', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				__( 'Stop the order, or send the line as text without an item.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'refuse',
 				'select',
 				array(
-					'refuse'    => __( 'Stop the order', 'estasoft-erp-crm-sync-engine' ),
-					'free_text' => __( 'Send a text line', 'estasoft-erp-crm-sync-engine' ),
+					'refuse'    => __( 'Stop the order', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'free_text' => __( 'Send a text line', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				)
 			),
-			$advanced( 'invoice_number_prefix', __( 'Invoice number prefix', 'estasoft-erp-crm-sync-engine' ), __( 'Put before the order number to make the invoice number.', 'estasoft-erp-crm-sync-engine' ), 'WC-' ),
+			$advanced( 'invoice_number_prefix', __( 'Invoice number prefix', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Put before the order number to make the invoice number.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'WC-' ),
 			$advanced(
 				'place_of_supply',
-				__( 'Place of supply (UAE only)', 'estasoft-erp-crm-sync-engine' ),
-				__( 'UAE organisations must name the emirate of supply.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Place of supply (UAE only)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				__( 'UAE organisations must name the emirate of supply.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'',
 				'select',
 				array(
-					''               => __( 'Not needed', 'estasoft-erp-crm-sync-engine' ),
+					''               => __( 'Not needed', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					'ABU_DHABI'      => 'Abu Dhabi',
 					'AJMAN'          => 'Ajman',
 					'DUBAI'          => 'Dubai',
@@ -236,23 +236,23 @@ final class WafeqConnector extends AbstractApiConnector {
 					'RAS_AL_KHAIMAH' => 'Ras Al Khaimah',
 					'SHARJAH'        => 'Sharjah',
 					'UMM_AL_QUWAIN'  => 'Umm Al Quwain',
-					'OUTSIDE_UAE'    => __( 'Outside the UAE', 'estasoft-erp-crm-sync-engine' ),
+					'OUTSIDE_UAE'    => __( 'Outside the UAE', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				)
 			),
 			$advanced(
 				'tax_authority_report',
-				__( 'Report to the tax authority', 'estasoft-erp-crm-sync-engine' ),
-				__( 'Wafeq reports finalized invoices by itself on some plans. Choose Yes to ask Wafeq to report each invoice this plugin finalizes; check your plan first.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Report to the tax authority', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				__( 'Wafeq reports finalized invoices by itself on some plans. Choose Yes to ask Wafeq to report each invoice this plugin finalizes; check your plan first.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'no',
 				'select',
 				array(
-					'no'  => __( 'No, leave it to Wafeq', 'estasoft-erp-crm-sync-engine' ),
-					'yes' => __( 'Yes, ask Wafeq to report', 'estasoft-erp-crm-sync-engine' ),
+					'no'  => __( 'No, leave it to Wafeq', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'yes' => __( 'Yes, ask Wafeq to report', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				)
 			),
 			$advanced(
 				'language',
-				__( 'Document language', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Document language', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'',
 				'en',
 				'select',
@@ -263,13 +263,13 @@ final class WafeqConnector extends AbstractApiConnector {
 			),
 			$advanced(
 				'total_mismatch',
-				__( 'A total that differs from the shop', 'estasoft-erp-crm-sync-engine' ),
-				__( 'Stop before finalizing, or finalize and warn.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'A total that differs from the shop', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				__( 'Stop before finalizing, or finalize and warn.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'fail',
 				'select',
 				array(
-					'fail' => __( 'Stop the invoice', 'estasoft-erp-crm-sync-engine' ),
-					'warn' => __( 'Warn and go on', 'estasoft-erp-crm-sync-engine' ),
+					'fail' => __( 'Stop the invoice', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'warn' => __( 'Warn and go on', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				)
 			),
 		);
@@ -387,7 +387,7 @@ final class WafeqConnector extends AbstractApiConnector {
 					array(
 						'system' => self::LABEL,
 						'field'  => $item->entityType->value,
-						'reason' => __( 'This connector does not send this kind of item.', 'estasoft-erp-crm-sync-engine' ),
+						'reason' => __( 'This connector does not send this kind of item.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					),
 					null,
 					null,
@@ -485,7 +485,7 @@ final class WafeqConnector extends AbstractApiConnector {
 			}
 			$codes[] = array(
 				'code'         => $rate['id'],
-				'name'         => null === $rate['rate_bp'] ? $rate['name'] . ' (' . __( 'rate unknown', 'estasoft-erp-crm-sync-engine' ) . ')' : $rate['name'],
+				'name'         => null === $rate['rate_bp'] ? $rate['name'] . ' (' . __( 'rate unknown', 'estasoft-enterprise-erpcrm-sync-engine' ) . ')' : $rate['name'],
 				'rate_percent' => null === $rate['rate_bp'] ? '0' : $this->amounts->decimalString( $rate['rate_bp'], 2 ),
 			);
 		}

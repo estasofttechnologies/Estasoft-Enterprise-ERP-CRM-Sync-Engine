@@ -67,11 +67,11 @@ final class OrderData {
 	public static function parse( array $payload, string $system ): self|ConnectorError {
 		$currency = strtoupper( self::text( $payload['currency'] ?? '' ) );
 		if ( 1 !== preg_match( '/^[A-Z]{3}$/', $currency ) ) {
-			return Failures::invalid( $system, 'currency', __( 'The order has no currency code.', 'estasoft-erp-crm-sync-engine' ), 'currency missing' );
+			return Failures::invalid( $system, 'currency', __( 'The order has no currency code.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'currency missing' );
 		}
 		$rows = $payload['order_line'] ?? array();
 		if ( ! is_array( $rows ) || array() === $rows ) {
-			return Failures::invalid( $system, 'order_line', __( 'The order has no product lines.', 'estasoft-erp-crm-sync-engine' ), 'no lines' );
+			return Failures::invalid( $system, 'order_line', __( 'The order has no product lines.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'no lines' );
 		}
 		$lines = array();
 		foreach ( array_values( $rows ) as $index => $row ) {
@@ -85,7 +85,7 @@ final class OrderData {
 		foreach ( array( 'total', 'excluded_total' ) as $key ) {
 			$amounts[ $key ] = self::minor( $payload[ $key ] ?? null );
 			if ( false === $amounts[ $key ] ) {
-				return Failures::invalid( $system, $key, __( 'Amounts must be whole numbers of the smallest currency unit.', 'estasoft-erp-crm-sync-engine' ), 'amount' );
+				return Failures::invalid( $system, $key, __( 'Amounts must be whole numbers of the smallest currency unit.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'amount' );
 			}
 		}
 		$shipping = self::extra( $payload['shipping'] ?? null, 'shipping', $system );
@@ -167,18 +167,18 @@ final class OrderData {
 	private static function line( array $row, string $system, int $index ): OrderLine|ConnectorError {
 		$sku = self::text( $row['product'] ?? '' );
 		if ( '' === $sku ) {
-			return Failures::invalid( $system, 'order_line[].product', __( 'A line has no product reference (SKU).', 'estasoft-erp-crm-sync-engine' ), 'line ' . $index . ' has no product' );
+			return Failures::invalid( $system, 'order_line[].product', __( 'A line has no product reference (SKU).', 'estasoft-enterprise-erpcrm-sync-engine' ), 'line ' . $index . ' has no product' );
 		}
 		$quantity = $row['quantity'] ?? null;
 		if ( is_string( $quantity ) && is_numeric( $quantity ) ) {
 			$quantity = $quantity + 0;
 		}
 		if ( ! ( is_int( $quantity ) || is_float( $quantity ) ) || $quantity <= 0 ) {
-			return Failures::invalid( $system, 'order_line[].quantity', __( 'A line needs a quantity above zero.', 'estasoft-erp-crm-sync-engine' ), 'line ' . $index . ' quantity' );
+			return Failures::invalid( $system, 'order_line[].quantity', __( 'A line needs a quantity above zero.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'line ' . $index . ' quantity' );
 		}
 		$price = self::minor( $row['price_unit'] ?? null );
 		if ( ! is_int( $price ) || $price < 0 ) {
-			return Failures::invalid( $system, 'order_line[].price_unit', __( 'A line needs a price in whole numbers of the smallest currency unit.', 'estasoft-erp-crm-sync-engine' ), 'line ' . $index . ' price' );
+			return Failures::invalid( $system, 'order_line[].price_unit', __( 'A line needs a price in whole numbers of the smallest currency unit.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'line ' . $index . ' price' );
 		}
 		$tax = self::minor( self::first( $row['tax_amount'] ?? null ) );
 		return new OrderLine( $sku, self::text( $row['name'] ?? '' ), $quantity, $price, self::text( $row['tax'] ?? '' ), is_int( $tax ) ? $tax : 0 );
@@ -197,7 +197,7 @@ final class OrderData {
 		}
 		$total = self::minor( $value['total'] ?? null );
 		if ( ! is_int( $total ) || $total < 0 ) {
-			return Failures::invalid( $system, $field . '.total', __( 'Amounts must be whole numbers of the smallest currency unit.', 'estasoft-erp-crm-sync-engine' ), 'extra amount' );
+			return Failures::invalid( $system, $field . '.total', __( 'Amounts must be whole numbers of the smallest currency unit.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'extra amount' );
 		}
 		if ( 0 === $total ) {
 			return null;

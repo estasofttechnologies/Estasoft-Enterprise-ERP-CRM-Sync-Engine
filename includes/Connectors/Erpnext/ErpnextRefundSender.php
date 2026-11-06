@@ -165,11 +165,11 @@ final class ErpnextRefundSender {
 	private function create( RefundPayload $payload ): array|ConnectorError {
 		$order = $this->orders->findOrder( $payload->orderRef );
 		if ( null === $order ) {
-			return Problems::refused( $this->system, 'order_ref', sprintf( /* translators: %s: order reference. */ __( 'The order %s is not in ERPNext, so it cannot be refunded there. Send the order first.', 'estasoft-erp-crm-sync-engine' ), $payload->orderRef ), 'order not found' );
+			return Problems::refused( $this->system, 'order_ref', sprintf( /* translators: %s: order reference. */ __( 'The order %s is not in ERPNext, so it cannot be refunded there. Send the order first.', 'estasoft-enterprise-erpcrm-sync-engine' ), $payload->orderRef ), 'order not found' );
 		}
 		$so = $this->client->get( 'Sales Order', (string) $order['name'] );
 		if ( null === $so ) {
-			return Problems::refused( $this->system, 'order_ref', __( 'The order disappeared from ERPNext.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $this->system, 'order_ref', __( 'The order disappeared from ERPNext.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$currency = strtoupper( (string) ( $so['currency'] ?? '' ) );
 		$exponent = $this->amounts->exponent( $currency );
@@ -189,13 +189,13 @@ final class ErpnextRefundSender {
 		$refundItem   = $this->options->text( 'refund_item' );
 		if ( $payload->shippingMinor > 0 ) {
 			if ( '' === $shippingItem ) {
-				return Problems::refused( $this->system, 'shipping_item', __( 'The refund includes shipping, so the connection settings need the shipping item code.', 'estasoft-erp-crm-sync-engine' ) );
+				return Problems::refused( $this->system, 'shipping_item', __( 'The refund includes shipping, so the connection settings need the shipping item code.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$skus[] = $shippingItem;
 		}
 		if ( $payload->isAmountOnly() ) {
 			if ( '' === $refundItem || null === $payload->amountMinor || $payload->amountMinor <= 0 ) {
-				return Problems::refused( $this->system, 'refund_line', __( 'This refund has no product lines. Enter an item code for refunds without lines in the connection settings ("refund_item"), or refund by line.', 'estasoft-erp-crm-sync-engine' ) );
+				return Problems::refused( $this->system, 'refund_line', __( 'This refund has no product lines. Enter an item code for refunds without lines in the connection settings ("refund_item"), or refund by line.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$skus[] = $refundItem;
 		}
@@ -262,13 +262,13 @@ final class ErpnextRefundSender {
 		}
 		$stored = $this->client->insert( 'Sales Invoice', $doc );
 		if ( '' === (string) ( $stored['name'] ?? '' ) ) {
-			return Problems::refused( $this->system, 'sales_invoice', __( 'ERPNext did not return the new credit note.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $this->system, 'sales_invoice', __( 'ERPNext did not return the new credit note.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 
 		$check = new TotalCheck( $this->options, $this->amounts, $this->system );
 		$diff  = $check->difference( $payload->amountMinor, abs( (float) ( $stored['grand_total'] ?? 0 ) ), $currency, (string) $stored['name'] );
 		if ( null !== $diff && $check->isStrict() ) {
-			return $check->error( $diff, __( 'The credit note stays in ERPNext as a draft. Delete it there after fixing the tax setup; the next try makes a new one.', 'estasoft-erp-crm-sync-engine' ) );
+			return $check->error( $diff, __( 'The credit note stays in ERPNext as a draft. Delete it there after fixing the tax setup; the next try makes a new one.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return array_intersect_key( $stored, array_flip( array( 'name', 'docstatus', 'status', 'grand_total', 'currency' ) ) ) + array(
 			'docstatus' => 0,
@@ -288,7 +288,7 @@ final class ErpnextRefundSender {
 			return $gross;
 		}
 		if ( null === $template['rate'] ) {
-			return Problems::refused( $this->system, 'taxes_and_charges', __( 'The refunded shipping includes tax, and the tax template has rows that are not plain percentages, so the tax cannot be taken out exactly.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $this->system, 'taxes_and_charges', __( 'The refunded shipping includes tax, and the tax template has rows that are not plain percentages, so the tax cannot be taken out exactly.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return TaxPricing::withoutTax( $gross, (int) $template['rate'] );
 	}

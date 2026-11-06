@@ -28,39 +28,45 @@ export function groupTitle( group: AttentionGroup, system: string ): string {
 		case 'SYNC-MAP-001':
 			return sprintf(
 				/* translators: %s: system name such as Odoo */
-				__( 'Product not found in %s', 'estasoft-erp-crm-sync-engine' ),
+				__(
+					'Product not found in %s',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				),
 				system
 			);
 		case 'SYNC-MAP-002':
 			return __(
 				'Tax code is not mapped',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 		case 'SYNC-MAP-003':
 			return __(
 				'Customer email is missing',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 		case 'SYNC-VAL-001':
 			return __(
 				'Buyer tax number is not valid',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 		case 'SYNC-VAL-002':
 			return sprintf(
 				/* translators: %s: system name such as Odoo */
-				__( '%s rejected a field', 'estasoft-erp-crm-sync-engine' ),
+				__(
+					'%s rejected a field',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				),
 				system
 			);
 		case 'SYNC-CFG-001':
 			return __(
 				'No live mapping version',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 		case 'SYNC-COMP-001':
 			return __(
 				'The tax authority rejected an invoice',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 		default: {
 			const info = ERROR_CATALOG[ group.error_code ];
@@ -90,7 +96,7 @@ export function groupSentence( group: AttentionGroup, system: string ): string {
 					'%1$d order failed: product %2$s not found in %3$s',
 					'%1$d orders failed: product %2$s not found in %3$s',
 					n,
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				n,
 				causeValue( group.cause ),
@@ -104,7 +110,7 @@ export function groupSentence( group: AttentionGroup, system: string ): string {
 							'%1$d order failed: buyer tax number is not valid for %2$s',
 							'%1$d orders failed: buyer tax number is not valid for %2$s',
 							n,
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						n,
 						group.cause
@@ -115,7 +121,7 @@ export function groupSentence( group: AttentionGroup, system: string ): string {
 							'%d order failed: buyer tax number is not valid',
 							'%d orders failed: buyer tax number is not valid',
 							n,
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						n
 					);
@@ -126,7 +132,7 @@ export function groupSentence( group: AttentionGroup, system: string ): string {
 					'%d order failed: tax code is not mapped',
 					'%d orders failed: tax code is not mapped',
 					n,
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				n
 			);
@@ -137,7 +143,7 @@ export function groupSentence( group: AttentionGroup, system: string ): string {
 					'%d order failed: customer email is missing',
 					'%d orders failed: customer email is missing',
 					n,
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				n
 			);
@@ -148,7 +154,7 @@ export function groupSentence( group: AttentionGroup, system: string ): string {
 					'%1$d order failed: %2$s',
 					'%1$d orders failed: %2$s',
 					n,
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				n,
 				groupTitle( group, system )

@@ -8,11 +8,11 @@ import { Icon } from './Icon';
  */
 export function getStepLabels(): string[] {
 	return [
-		__( 'Check your store', 'estasoft-erp-crm-sync-engine' ),
-		__( 'Connect a system', 'estasoft-erp-crm-sync-engine' ),
-		__( 'Choose what to sync', 'estasoft-erp-crm-sync-engine' ),
-		__( 'Preview an order', 'estasoft-erp-crm-sync-engine' ),
-		__( 'Go live', 'estasoft-erp-crm-sync-engine' ),
+		__( 'Check your store', 'estasoft-enterprise-erpcrm-sync-engine' ),
+		__( 'Connect a system', 'estasoft-enterprise-erpcrm-sync-engine' ),
+		__( 'Choose what to sync', 'estasoft-enterprise-erpcrm-sync-engine' ),
+		__( 'Preview an order', 'estasoft-enterprise-erpcrm-sync-engine' ),
+		__( 'Go live', 'estasoft-enterprise-erpcrm-sync-engine' ),
 	];
 }
 
@@ -28,7 +28,10 @@ export function Steps( { current }: { current: number } ) {
 	return (
 		<ol
 			className="estasoft-sync-steps"
-			aria-label={ __( 'Setup steps', 'estasoft-erp-crm-sync-engine' ) }
+			aria-label={ __(
+				'Setup steps',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			) }
 		>
 			{ steps.map( ( label, index ) => {
 				const number = index + 1;
@@ -56,7 +59,7 @@ export function Steps( { current }: { current: number } ) {
 									{ ' ' +
 										__(
 											'(done)',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										) }
 								</span>
 							) : null }
@@ -66,7 +69,7 @@ export function Steps( { current }: { current: number } ) {
 										sprintf(
 											/* translators: 1: current step, 2: number of steps */ __(
 												'(step %1$d of %2$d)',
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											),
 											number,
 											steps.length

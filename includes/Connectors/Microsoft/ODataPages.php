@@ -54,7 +54,7 @@ final class ODataPages {
 						array(
 							'system' => $this->system,
 							'field'  => 'list',
-							'reason' => __( 'The list was longer than the connector reads in one pass. Narrow the date window.', 'estasoft-erp-crm-sync-engine' ),
+							'reason' => __( 'The list was longer than the connector reads in one pass. Narrow the date window.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						),
 						null,
 						null,

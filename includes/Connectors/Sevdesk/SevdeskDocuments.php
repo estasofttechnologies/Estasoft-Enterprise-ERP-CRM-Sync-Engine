@@ -106,7 +106,7 @@ final class SevdeskDocuments {
 				Refusal::value(
 					SevdeskConnector::LABEL,
 					'' === $userId ? 'contactPerson' : 'addressCountry',
-					'' === $userId ? __( 'sevDesk has no user to name as contact person.', 'estasoft-erp-crm-sync-engine' ) : __( 'sevDesk does not know the country of the billing address.', 'estasoft-erp-crm-sync-engine' ),
+					'' === $userId ? __( 'sevDesk has no user to name as contact person.', 'estasoft-enterprise-erpcrm-sync-engine' ) : __( 'sevDesk does not know the country of the billing address.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					'reference data missing'
 				)
 			);
@@ -155,7 +155,7 @@ final class SevdeskDocuments {
 		$objects = (array) ( $created['objects'] ?? array() );
 		$id      = (string) ( $objects['invoice']['id'] ?? '' );
 		if ( '' === $id ) {
-			return SendResult::failure( Refusal::value( SevdeskConnector::LABEL, 'invoice', __( 'sevDesk did not return the new invoice.', 'estasoft-erp-crm-sync-engine' ), 'no invoice id' ) );
+			return SendResult::failure( Refusal::value( SevdeskConnector::LABEL, 'invoice', __( 'sevDesk did not return the new invoice.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'no invoice id' ) );
 		}
 		$warnings = array_merge( $warnings, $built['warnings'] );
 		return $this->finish( $api, $id, $order, $options, $warnings, true );
@@ -176,7 +176,7 @@ final class SevdeskDocuments {
 	private function finish( ApiClient $api, string $id, OrderPayload $order, Options $options, array $warnings, bool $fresh ): SendResult {
 		$invoice = $this->read( $api, $id );
 		if ( null === $invoice ) {
-			return SendResult::failure( Refusal::value( SevdeskConnector::LABEL, 'invoice', __( 'sevDesk could not read the invoice back.', 'estasoft-erp-crm-sync-engine' ), 'read back failed' ) );
+			return SendResult::failure( Refusal::value( SevdeskConnector::LABEL, 'invoice', __( 'sevDesk could not read the invoice back.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'read back failed' ) );
 		}
 		$problem = $this->check( $invoice, $order->totalMinor, $options, $warnings, $order->rows(), $order->date );
 		if ( null !== $problem ) {
@@ -252,7 +252,7 @@ final class SevdeskDocuments {
 		}
 		$actual = SevdeskJson::minor( $document['sumGross'] ?? null );
 		if ( null === $actual ) {
-			return Refusal::value( SevdeskConnector::LABEL, 'sumGross', __( 'sevDesk returned no total for the document.', 'estasoft-erp-crm-sync-engine' ), 'no total' );
+			return Refusal::value( SevdeskConnector::LABEL, 'sumGross', __( 'sevDesk returned no total for the document.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'no total' );
 		}
 		if ( Tolerance::accepts( $actual, $expected, $options, $rows ) ) {
 			return null;
@@ -342,7 +342,7 @@ final class SevdeskDocuments {
 			'currency',
 			sprintf(
 				/* translators: %s: currency code. */
-				__( 'The sevDesk connector supports euro only; the document is in %s.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'The sevDesk connector supports euro only; the document is in %s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'' === $currency ? '?' : $currency
 			),
 			'currency not supported'

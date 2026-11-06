@@ -57,7 +57,7 @@ final class ValueMap extends BaseTransform {
 			return $args['else'];
 		}
 		if ( $this->flag( $args, 'strict' ) ) {
-			$context->warn( __( 'A value had no entry in the lookup table and was left empty.', 'estasoft-erp-crm-sync-engine' ) );
+			$context->warn( __( 'A value had no entry in the lookup table and was left empty.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			return '';
 		}
 		return $value;

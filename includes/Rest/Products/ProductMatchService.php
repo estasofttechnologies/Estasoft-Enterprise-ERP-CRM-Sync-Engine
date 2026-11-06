@@ -84,7 +84,7 @@ final class ProductMatchService {
 		$connection = $this->connections->find( $connectionId );
 		$connector  = null === $connection ? null : $this->registry->get( $connection->connector );
 		if ( null === $connection || null === $connector ) {
-			throw ApiException::notFound( esc_html__( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ) );
+			throw ApiException::notFound( esc_html__( 'That connection does not exist.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$result = $connector->searchProducts( $connection, $query );
 		if ( $result instanceof ConnectorError ) {
@@ -116,7 +116,7 @@ final class ProductMatchService {
 	public function map( int $connectionId, int $productId, ?string $externalId, ?string $externalRef = null ): array {
 		$product = $this->products->find( $productId );
 		if ( null === $product ) {
-			throw ApiException::notFound( esc_html__( 'That product does not exist.', 'estasoft-erp-crm-sync-engine' ) );
+			throw ApiException::notFound( esc_html__( 'That product does not exist.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$this->matcher->setOverride( $connectionId, $productId, $externalId, $externalRef, '' === $product['sku'] ? null : $product['sku'] );
 		return $this->shape( $connectionId, $product, $this->blockedBySku() );

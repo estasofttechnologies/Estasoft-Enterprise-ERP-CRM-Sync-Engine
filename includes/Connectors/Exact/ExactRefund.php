@@ -60,11 +60,11 @@ final class ExactRefund {
 	public static function parse( array $payload, Item $item, string $today ): self|ConnectorError {
 		$orderRef = ExactPayload::text( $payload['order_ref'] ?? '' );
 		if ( 1 !== preg_match( '/^WC-\d+$/', $orderRef ) ) {
-			return self::refused( 'order_ref', __( 'The refund does not name its order.', 'estasoft-erp-crm-sync-engine' ) );
+			return self::refused( 'order_ref', __( 'The refund does not name its order.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$amount = ExactPayload::minor( $payload['amount'] ?? null );
 		if ( null === $amount || 0 === $amount ) {
-			return self::refused( 'amount', __( 'The refund amount is missing.', 'estasoft-erp-crm-sync-engine' ) );
+			return self::refused( 'amount', __( 'The refund amount is missing.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$lines = array();
 		foreach ( ExactPayload::rows( $payload['refund_line'] ?? null ) as $row ) {

@@ -205,7 +205,7 @@ abstract class LedgerExportConnector extends AbstractExportConnector {
 	public function appendOrder( ExportBatch $batch, Item $item, array $payload ): void {
 		$connection = $batch->connection();
 		if ( null === $connection ) {
-			throw ExportException::refused( __( 'The order was not sent through a connection.', 'estasoft-erp-crm-sync-engine' ) );
+			throw ExportException::refused( __( 'The order was not sent through a connection.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$settings = $this->settingsFor( $connection );
 		$problems = $settings->problems();
@@ -284,7 +284,7 @@ abstract class LedgerExportConnector extends AbstractExportConnector {
 		$masters     = $this->renderMasters( $summary['masters'] );
 		$attachments = '' === $masters ? array() : array(
 			array(
-				'name'     => __( 'Masters list', 'estasoft-erp-crm-sync-engine' ),
+				'name'     => __( 'Masters list', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'filename' => 'masters.txt',
 				'mime'     => 'text/plain; charset=utf-8',
 				'contents' => $masters,
@@ -293,7 +293,7 @@ abstract class LedgerExportConnector extends AbstractExportConnector {
 		$notes       = $this->renderLost( $summary['lost_orders'], $this->charsetFor( $settings ) );
 		if ( '' !== $notes ) {
 			$attachments[] = array(
-				'name'     => __( 'Notes', 'estasoft-erp-crm-sync-engine' ),
+				'name'     => __( 'Notes', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'filename' => 'notes.txt',
 				'mime'     => 'text/plain; charset=utf-8',
 				'contents' => $notes,
@@ -498,13 +498,13 @@ abstract class LedgerExportConnector extends AbstractExportConnector {
 				$entry['item_id'],
 				$entry['order'],
 				isset( $entry['row']['v'] ) && self::ROW_VERSION !== $entry['row']['v']
-					? __( 'it was saved by another version of the plugin and cannot be written to this file; send it again', 'estasoft-erp-crm-sync-engine' )
-					: __( 'it could not be written to this file; send it again', 'estasoft-erp-crm-sync-engine' )
+					? __( 'it was saved by another version of the plugin and cannot be written to this file; send it again', 'estasoft-enterprise-erpcrm-sync-engine' )
+					: __( 'it could not be written to this file; send it again', 'estasoft-enterprise-erpcrm-sync-engine' )
 			);
 		}
 		foreach ( $batch->includedIds() as $itemId ) {
 			if ( ! isset( $seen[ $itemId ] ) ) {
-				$batch->leaveOut( $itemId, (string) $itemId, __( 'its saved row could not be read; send it again', 'estasoft-erp-crm-sync-engine' ) );
+				$batch->leaveOut( $itemId, (string) $itemId, __( 'its saved row could not be read; send it again', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 		}
 	}
@@ -522,7 +522,7 @@ abstract class LedgerExportConnector extends AbstractExportConnector {
 		}
 		return sprintf(
 			/* translators: 1: order id, 2: the characters, such as "ل, ي (2)" */
-			__( 'Order %1$s: %2$s', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Order %1$s: %2$s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			$order,
 			implode( ', ', $parts ) . ( count( $chars ) > 20 ? ', ...' : '' )
 		);
@@ -541,10 +541,10 @@ abstract class LedgerExportConnector extends AbstractExportConnector {
 		$lines   = array();
 		$lines[] = sprintf(
 			/* translators: %s: character set such as windows-1252 */
-			__( 'These characters cannot be written in %s. Each one is written as a question mark in the file.', 'estasoft-erp-crm-sync-engine' ),
+			__( 'These characters cannot be written in %s. Each one is written as a question mark in the file.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			$charset->label()
 		);
-		$lines[] = __( 'Choose UTF-8 with byte order mark as the file encoding in the connection settings if your system reads it, and make the file again.', 'estasoft-erp-crm-sync-engine' );
+		$lines[] = __( 'Choose UTF-8 with byte order mark as the file encoding in the connection settings if your system reads it, and make the file again.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		$lines[] = '';
 		foreach ( $orders as $entry ) {
 			$lines[] = $this->lostLine( $entry['order'], $entry['chars'] );
@@ -565,7 +565,7 @@ abstract class LedgerExportConnector extends AbstractExportConnector {
 			$this->deps->logger->warning(
 				sprintf(
 					/* translators: 1: number of characters, 2: number of orders, 3: system name, 4: character set */
-					__( '%1$d characters in %2$d orders cannot be written in %4$s and were written as question marks in the %3$s file. See the notes file of the export.', 'estasoft-erp-crm-sync-engine' ),
+					__( '%1$d characters in %2$d orders cannot be written in %4$s and were written as question marks in the %3$s file. See the notes file of the export.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$count,
 					$orders,
 					$this->label(),
@@ -591,7 +591,7 @@ abstract class LedgerExportConnector extends AbstractExportConnector {
 			}
 			$names = array_map( 'strval', array_keys( $found[ $kind ] ) );
 			sort( $names, SORT_STRING );
-			$lines[] = sprintf( /* translators: 1: heading such as Ledgers, 2: number of names */ __( '%1$s (%2$d)', 'estasoft-erp-crm-sync-engine' ), $heading, count( $names ) );
+			$lines[] = sprintf( /* translators: 1: heading such as Ledgers, 2: number of names */ __( '%1$s (%2$d)', 'estasoft-enterprise-erpcrm-sync-engine' ), $heading, count( $names ) );
 			foreach ( $names as $name ) {
 				$lines[] = '  ' . $name;
 			}
@@ -614,7 +614,7 @@ abstract class LedgerExportConnector extends AbstractExportConnector {
 			$this->deps->logger->warning(
 				sprintf(
 					/* translators: 1: number of texts, 2: system name */
-					_n( '%1$d text was shortened to fit the %2$s file.', '%1$d texts were shortened to fit the %2$s file.', $cut, 'estasoft-erp-crm-sync-engine' ),
+					_n( '%1$d text was shortened to fit the %2$s file.', '%1$d texts were shortened to fit the %2$s file.', $cut, 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$cut,
 					$this->label()
 				),

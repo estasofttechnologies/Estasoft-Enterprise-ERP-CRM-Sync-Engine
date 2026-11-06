@@ -10,7 +10,7 @@
 #   4. Copies the runtime files into a staging folder, leaving out everything listed in .distignore.
 #   5. Verifies the staging folder (allowed top-level entries only, no hidden or developer files, every
 #      PHP file guarded, plugin header and text domain correct, build output present).
-#   6. Zips it as estasoft-erp-crm-sync-engine/ and verifies the zip again from the inside.
+#   6. Zips it as estasoft-enterprise-erpcrm-sync-engine/ and verifies the zip again from the inside.
 #   7. Prints the file list, the size and a SHA-256 checksum.
 #
 # --dry-run does steps 1, 2, 4 and 5 and prints the file list, but does not run npm and writes no zip. Missing

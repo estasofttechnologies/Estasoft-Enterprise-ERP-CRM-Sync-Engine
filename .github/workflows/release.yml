@@ -159,7 +159,7 @@ jobs:
     # Required reviewers on this environment are the manual approval. Nothing below runs until they approve.
     environment:
       name: wordpress-org
-      url: https://wordpress.org/plugins/estasoft-erp-crm-sync-engine/
+      url: https://wordpress.org/plugins/estasoft-enterprise-erpcrm-sync-engine/
     permissions:
       contents: read
     steps:
@@ -188,7 +188,7 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/release"
           unzip -q dist/*.zip -d "$RUNNER_TEMP/release"
-          test -f "$RUNNER_TEMP/release/estasoft-erp-crm-sync-engine/estasoft-erp-crm-sync-engine.php"
+          test -f "$RUNNER_TEMP/release/estasoft-enterprise-erpcrm-sync-engine/estasoft-enterprise-erpcrm-sync-engine.php"
 
       # BUILD_DIR makes the action deploy the unpacked folder as it is and ignore .distignore.
       # VERSION is set explicitly so the "v" in the tag name can never end up in the SVN tag folder.
@@ -200,6 +200,6 @@ jobs:
         env:
           SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
           SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
-          SLUG: estasoft-erp-crm-sync-engine
+          SLUG: estasoft-enterprise-erpcrm-sync-engine
           VERSION: ${{ needs.build.outputs.version }}
-          BUILD_DIR: ${{ runner.temp }}/release/estasoft-erp-crm-sync-engine
+          BUILD_DIR: ${{ runner.temp }}/release/estasoft-enterprise-erpcrm-sync-engine

@@ -87,7 +87,7 @@ final class Sage200RefundSender {
 		$warn  = array();
 		if ( null !== $diff ) {
 			if ( $check->isStrict() ) {
-				return SendResult::failure( $check->error( $diff, __( 'The return stays in Sage 200. Delete it there after fixing the tax setup; the next try makes a new one.', 'estasoft-erp-crm-sync-engine' ) ) );
+				return SendResult::failure( $check->error( $diff, __( 'The return stays in Sage 200. Delete it there after fixing the tax setup; the next try makes a new one.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 			}
 			$warn[] = $diff['message'];
 		}
@@ -148,7 +148,7 @@ final class Sage200RefundSender {
 				'order_ref',
 				sprintf(
 					/* translators: %s: order reference. */
-					__( 'The order %s is not in Sage 200, so it cannot be refunded there. Send the order first.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The order %s is not in Sage 200, so it cannot be refunded there. Send the order first.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$payload->orderRef
 				),
 				'order not found'
@@ -159,13 +159,13 @@ final class Sage200RefundSender {
 		$codes    = array_map( static fn( array $line ): string => (string) $line['sku'], $payload->lines );
 		if ( $payload->shippingMinor > 0 ) {
 			if ( '' === $shipping ) {
-				return Problems::refused( $this->system, 'shipping_product', __( 'The refund includes shipping, so the connection settings need the shipping product code.', 'estasoft-erp-crm-sync-engine' ) );
+				return Problems::refused( $this->system, 'shipping_product', __( 'The refund includes shipping, so the connection settings need the shipping product code.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$codes[] = $shipping;
 		}
 		if ( $payload->isAmountOnly() ) {
 			if ( '' === $generic || null === $payload->amountMinor || $payload->amountMinor <= 0 ) {
-				return Problems::refused( $this->system, 'refund_line', __( 'This refund has no product lines. Enter a product code for refunds without lines in the connection settings ("refund_product"), or refund by line.', 'estasoft-erp-crm-sync-engine' ) );
+				return Problems::refused( $this->system, 'refund_line', __( 'This refund has no product lines. Enter a product code for refunds without lines in the connection settings ("refund_product"), or refund by line.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$codes[] = $generic;
 		}
@@ -213,7 +213,7 @@ final class Sage200RefundSender {
 			$stored = $this->find( $payload->clientRef ) ?? array();
 		}
 		if ( array() === $stored ) {
-			return Problems::refused( $this->system, 'sop_returns', __( 'Sage 200 did not return the new return.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $this->system, 'sop_returns', __( 'Sage 200 did not return the new return.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return $this->orders->withTotals( $stored, 'sop_returns' );
 	}

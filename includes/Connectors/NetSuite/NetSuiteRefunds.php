@@ -80,12 +80,12 @@ final class NetSuiteRefunds {
 	public function create( RefundData $refund, Warnings $warnings ): array {
 		$order = $this->orders->find( $refund->orderRef );
 		if ( null === $order ) {
-			$problem = Problem::validation( $this->system, 'order_ref', __( 'The order of this refund is not in NetSuite yet.', 'estasoft-erp-crm-sync-engine' ) );
+			$problem = Problem::validation( $this->system, 'order_ref', __( 'The order of this refund is not in NetSuite yet.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			throw new ApiException( $problem ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 		}
 		$invoice = $this->orders->invoiceOf( (string) $order['id'] );
 		if ( null === $invoice || ! isset( $invoice['id'] ) ) {
-			$problem = Problem::validation( $this->system, 'invoice', __( 'NetSuite has no invoice for this order, so there is nothing to credit. Set documents to "order and invoice" or credit it in NetSuite.', 'estasoft-erp-crm-sync-engine' ) );
+			$problem = Problem::validation( $this->system, 'invoice', __( 'NetSuite has no invoice for this order, so there is nothing to credit. Set documents to "order and invoice" or credit it in NetSuite.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			throw new ApiException( $problem ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 		}
 		$currency = $this->orders->currencyCodeOf( $order );
@@ -106,7 +106,7 @@ final class NetSuiteRefunds {
 			$id  = null === $row ? '' : (string) $row['id'];
 		}
 		if ( '' === $id ) {
-			$problem = Problem::validation( $this->system, 'creditMemo', __( 'NetSuite accepted the credit memo but did not say which record it is.', 'estasoft-erp-crm-sync-engine' ) );
+			$problem = Problem::validation( $this->system, 'creditMemo', __( 'NetSuite accepted the credit memo but did not say which record it is.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			throw new ApiException( $problem ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 		}
 		$this->gateway->write(
@@ -157,7 +157,7 @@ final class NetSuiteRefunds {
 				'currency',
 				sprintf(
 					/* translators: 1: currency of the credit memo, 2: currency of the order. */
-					__( 'NetSuite holds the credit memo in %1$s but the order is in %2$s.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'NetSuite holds the credit memo in %1$s but the order is in %2$s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$symbol,
 					$currency
 				)
@@ -165,9 +165,9 @@ final class NetSuiteRefunds {
 		}
 		$actual = null === ( $row['foreigntotal'] ?? null ) ? null : $this->amounts->fromWire( $row['foreigntotal'], $currency );
 		if ( null === $actual ) {
-			return Problem::validation( $this->system, 'total', __( 'NetSuite did not show the total of the credit memo, so it could not be compared with the refund.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problem::validation( $this->system, 'total', __( 'NetSuite did not show the total of the credit memo, so it could not be compared with the refund.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
-		return $total->run( $expected, abs( $actual ), $currency, $warnings, __( 'credit memo total', 'estasoft-erp-crm-sync-engine' ) );
+		return $total->run( $expected, abs( $actual ), $currency, $warnings, __( 'credit memo total', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**
@@ -231,7 +231,7 @@ final class NetSuiteRefunds {
 	private function lines( RefundData $refund, string $currency ): array {
 		if ( array() === $refund->lines ) {
 			if ( '' === $this->options->refundItem() || null === $refund->amountMinor ) {
-				$problem = Problem::validation( $this->system, 'refund_item', __( 'The refund names no products. Enter the id of an item for such refunds in the connection options.', 'estasoft-erp-crm-sync-engine' ) );
+				$problem = Problem::validation( $this->system, 'refund_item', __( 'The refund names no products. Enter the id of an item for such refunds in the connection options.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 				throw new ApiException( $problem ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 			}
 			return array(

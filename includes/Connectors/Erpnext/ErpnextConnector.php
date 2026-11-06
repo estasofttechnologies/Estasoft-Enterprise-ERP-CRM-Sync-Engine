@@ -117,63 +117,63 @@ final class ErpnextConnector extends AbstractApiConnector {
 	protected function credentialDefinition(): array {
 		$advanced = static fn( string $name, string $label, string $hint = '', string $type = 'text', array $options = array(), string $initial = '' ): CredentialField => new CredentialField( $name, $label, false, false, $hint, $initial, $type, $options, 'advanced' );
 		return array(
-			CredentialFields::address( 'address', __( 'Site address', 'estasoft-erp-crm-sync-engine' ), __( 'The https address of your ERPNext site, for example https://erp.example.com', 'estasoft-erp-crm-sync-engine' ) ),
-			CredentialFields::apiKey( 'api_key', __( 'API key', 'estasoft-erp-crm-sync-engine' ), __( 'From the user: API Access, Generate Keys. Saved encrypted.', 'estasoft-erp-crm-sync-engine' ) ),
-			CredentialFields::apiKey( 'api_secret', __( 'API secret', 'estasoft-erp-crm-sync-engine' ), __( 'Shown once when the keys are generated. Saved encrypted. It is never shown again.', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'company', __( 'Company', 'estasoft-erp-crm-sync-engine' ), __( 'Only needed when the site has several companies.', 'estasoft-erp-crm-sync-engine' ) ),
+			CredentialFields::address( 'address', __( 'Site address', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'The https address of your ERPNext site, for example https://erp.example.com', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			CredentialFields::apiKey( 'api_key', __( 'API key', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'From the user: API Access, Generate Keys. Saved encrypted.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			CredentialFields::apiKey( 'api_secret', __( 'API secret', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Shown once when the keys are generated. Saved encrypted. It is never shown again.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'company', __( 'Company', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Only needed when the site has several companies.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			$advanced(
 				'documents',
-				__( 'Documents to make', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Documents to make', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'',
 				'select',
 				array(
-					'order'                 => __( 'Sales Order', 'estasoft-erp-crm-sync-engine' ),
-					'order_invoice'         => __( 'Sales Order and Sales Invoice', 'estasoft-erp-crm-sync-engine' ),
-					'order_invoice_payment' => __( 'Sales Order, Sales Invoice and Payment Entry', 'estasoft-erp-crm-sync-engine' ),
+					'order'                 => __( 'Sales Order', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'order_invoice'         => __( 'Sales Order and Sales Invoice', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'order_invoice_payment' => __( 'Sales Order, Sales Invoice and Payment Entry', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				'order'
 			),
 			$advanced(
 				'customer_policy',
-				__( 'Customers', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Customers', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'',
 				'select',
 				array(
-					'match_or_create' => __( 'Match by email, create when missing', 'estasoft-erp-crm-sync-engine' ),
-					'match_only'      => __( 'Match by email only', 'estasoft-erp-crm-sync-engine' ),
-					'always_create'   => __( 'Always create a customer', 'estasoft-erp-crm-sync-engine' ),
+					'match_or_create' => __( 'Match by email, create when missing', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'match_only'      => __( 'Match by email only', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'always_create'   => __( 'Always create a customer', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				'match_or_create'
 			),
-			$advanced( 'customer_group', __( 'Customer group for new customers', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'territory', __( 'Territory for new customers', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'price_list', __( 'Selling price list', 'estasoft-erp-crm-sync-engine' ), __( 'Empty: the first enabled selling price list in the order currency.', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'warehouse', __( 'Warehouse for order lines', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'delivery_days', __( 'Days from the order date to the delivery date', 'estasoft-erp-crm-sync-engine' ), '', 'number', array(), '0' ),
-			$advanced( 'shipping_item', __( 'Item code for shipping', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'fee_item', __( 'Item code for fees', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'refund_item', __( 'Item code for refunds without lines', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'payment_account', __( 'Account that receives payments', 'estasoft-erp-crm-sync-engine' ), __( 'Needed for the Payment Entry option.', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'mode_of_payment', __( 'Mode of payment', 'estasoft-erp-crm-sync-engine' ) ),
+			$advanced( 'customer_group', __( 'Customer group for new customers', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'territory', __( 'Territory for new customers', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'price_list', __( 'Selling price list', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Empty: the first enabled selling price list in the order currency.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'warehouse', __( 'Warehouse for order lines', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'delivery_days', __( 'Days from the order date to the delivery date', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'number', array(), '0' ),
+			$advanced( 'shipping_item', __( 'Item code for shipping', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'fee_item', __( 'Item code for fees', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'refund_item', __( 'Item code for refunds without lines', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'payment_account', __( 'Account that receives payments', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Needed for the Payment Entry option.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'mode_of_payment', __( 'Mode of payment', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			$advanced(
 				'refund_state',
-				__( 'Credit notes', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Credit notes', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'',
 				'select',
 				array(
-					'draft' => __( 'Leave as draft', 'estasoft-erp-crm-sync-engine' ),
-					'post'  => __( 'Submit', 'estasoft-erp-crm-sync-engine' ),
+					'draft' => __( 'Leave as draft', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'post'  => __( 'Submit', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				'draft'
 			),
 			$advanced(
 				'total_mismatch',
-				__( 'When ERPNext totals differ from the shop', 'estasoft-erp-crm-sync-engine' ),
+				__( 'When ERPNext totals differ from the shop', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'',
 				'select',
 				array(
-					'fail' => __( 'Stop and leave a draft', 'estasoft-erp-crm-sync-engine' ),
-					'warn' => __( 'Continue with a warning', 'estasoft-erp-crm-sync-engine' ),
+					'fail' => __( 'Stop and leave a draft', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'warn' => __( 'Continue with a warning', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				'fail'
 			),
@@ -203,7 +203,7 @@ final class ErpnextConnector extends AbstractApiConnector {
 				'',
 				array(),
 				array(),
-				Problems::refused( self::LABEL, 'version', __( 'Use ERPNext 14 or later.', 'estasoft-erp-crm-sync-engine' ) )
+				Problems::refused( self::LABEL, 'version', __( 'Use ERPNext 14 or later.', 'estasoft-enterprise-erpcrm-sync-engine' ) )
 			);
 		}
 
@@ -283,8 +283,8 @@ final class ErpnextConnector extends AbstractApiConnector {
 		return match ( $mappingType ) {
 			'orders'    => FieldSets::orders( self::LABEL ),
 			'customers' => FieldSets::customers(),
-			'products'  => FieldSets::products( __( 'Item code', 'estasoft-erp-crm-sync-engine' ) ),
-			'refunds'   => FieldSets::refunds( self::LABEL, __( 'Credit note', 'estasoft-erp-crm-sync-engine' ) ),
+			'products'  => FieldSets::products( __( 'Item code', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			'refunds'   => FieldSets::refunds( self::LABEL, __( 'Credit note', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			'stock'     => FieldSets::stock( self::LABEL ),
 			'tracking'  => FieldSets::tracking( self::LABEL ),
 			default     => array(),
@@ -358,7 +358,7 @@ final class ErpnextConnector extends AbstractApiConnector {
 		if ( EntityType::Customer === $item->entityType ) {
 			return $this->sendCustomer( $connection, $payload, $item );
 		}
-		return SendResult::failure( Problems::refused( self::LABEL, 'entity', __( 'This kind of item cannot be sent to ERPNext.', 'estasoft-erp-crm-sync-engine' ), 'unsupported entity' ) );
+		return SendResult::failure( Problems::refused( self::LABEL, 'entity', __( 'This kind of item cannot be sent to ERPNext.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'unsupported entity' ) );
 	}
 
 	/**
@@ -534,7 +534,7 @@ final class ErpnextConnector extends AbstractApiConnector {
 			return SendResult::failure( Problems::missingEmail( $item->entityId ) );
 		}
 		if ( '' === ( $partner['name'] ?? '' ) && '' === ( $partner['company_name'] ?? '' ) ) {
-			return SendResult::failure( Problems::refused( self::LABEL, 'partner.name', __( 'The customer name is empty.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( Problems::refused( self::LABEL, 'partner.name', __( 'The customer name is empty.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$resolved = $this->services( $connection )['customers']->resolveParts( $partner, array() );
 		if ( $resolved instanceof ConnectorError ) {

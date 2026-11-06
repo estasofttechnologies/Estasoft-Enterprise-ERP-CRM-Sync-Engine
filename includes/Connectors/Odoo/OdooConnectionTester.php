@@ -218,12 +218,12 @@ final class OdooConnectionTester {
 	 */
 	private function describe( string $key ): string {
 		return match ( $key ) {
-			'read_products'       => __( 'read products', 'estasoft-erp-crm-sync-engine' ),
-			'read_customers'      => __( 'read customers', 'estasoft-erp-crm-sync-engine' ),
-			'create_customers'    => __( 'create customers', 'estasoft-erp-crm-sync-engine' ),
-			'create_sale_orders'  => __( 'create sale orders', 'estasoft-erp-crm-sync-engine' ),
-			'confirm_sale_orders' => __( 'confirm sale orders', 'estasoft-erp-crm-sync-engine' ),
-			'create_credit_notes' => __( 'create credit notes', 'estasoft-erp-crm-sync-engine' ),
+			'read_products'       => __( 'read products', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'read_customers'      => __( 'read customers', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'create_customers'    => __( 'create customers', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'create_sale_orders'  => __( 'create sale orders', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'confirm_sale_orders' => __( 'confirm sale orders', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'create_credit_notes' => __( 'create credit notes', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			default               => $key,
 		};
 	}

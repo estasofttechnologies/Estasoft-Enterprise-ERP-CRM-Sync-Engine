@@ -117,7 +117,7 @@ tests/js/                one test file per area, plus helpers.tsx and setup.ts
 - **Theme.** Product colours are CSS variables named `--estasoft-sync-*`, defined in `src/styles/_tokens.scss` on `.estasoft-sync`, `.estasoft-sync-overlay` (dialogs) and `.estasoft-sync-popover` (menus), because those two render in portals. The rest of the look comes from WordPress components and the admin colour scheme variables.
 - **Responsive.** Up to 782 px tables become cards (`ResponsiveTable` keeps real table roles and labels every cell), the tab bar becomes a sections menu, touch targets are at least 44 px, and dialogs below 520 px become bottom sheets.
 - **Accessibility.** Status is always an icon plus a word. Focus ring is 2 px navy. Animations stop under `prefers-reduced-motion`. Every screen has a jest-axe test, and the mock build was also checked with axe in Chrome (colour contrast included) on every route at 1280 and 390 px wide.
-- **Text.** Every string goes through `__`, `_n` or `sprintf` with the literal text domain `estasoft-erp-crm-sync-engine` and a translator comment where a placeholder is used. ESLint enforces it.
+- **Text.** Every string goes through `__`, `_n` or `sprintf` with the literal text domain `estasoft-enterprise-erpcrm-sync-engine` and a translator comment where a placeholder is used. ESLint enforces it.
 
 ## The connect experience
 

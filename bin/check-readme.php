@@ -201,7 +201,7 @@ if ( isset( $headers['Requires Plugins'] ) && 'woocommerce' !== $headers['Requir
 }
 
 // The main plugin file is the source of truth for several fields.
-$plugin_file = $root . '/estasoft-erp-crm-sync-engine.php';
+$plugin_file = $root . '/estasoft-enterprise-erpcrm-sync-engine.php';
 if ( is_readable( $plugin_file ) ) {
 	$header_block = (string) file_get_contents( $plugin_file, false, null, 0, 4096 );
 	$pairs        = array(

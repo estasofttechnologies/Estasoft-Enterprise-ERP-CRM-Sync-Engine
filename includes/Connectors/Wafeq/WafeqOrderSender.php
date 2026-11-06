@@ -106,7 +106,7 @@ final class WafeqOrderSender {
 			return SendResult::failure( $parsed );
 		}
 		if ( '' === $parsed->currency ) {
-			return SendResult::failure( $this->refused( 'currency', __( 'The order has no currency.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( $this->refused( 'currency', __( 'The order has no currency.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$reference = $this->ids->reference( $item );
 		$found     = $this->docs->findInvoices( $api, $reference );
@@ -273,10 +273,10 @@ final class WafeqOrderSender {
 		$this->docs->patchInvoice( $api, $record->id(), $changes );
 		$after = $this->docs->invoice( $api, $record->id() );
 		if ( $wantFinal && ! $after->isFinalized() ) {
-			return $this->refused( 'status', __( 'Wafeq did not finalize the invoice.', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->refused( 'status', __( 'Wafeq did not finalize the invoice.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( '' !== $parsed->date && '' !== $after->date() && $after->date() !== $parsed->date ) {
-			$warnings[] = __( 'Wafeq changed the date of the invoice.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'Wafeq changed the date of the invoice.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		return $after;
 	}
@@ -309,7 +309,7 @@ final class WafeqOrderSender {
 		$exponent = $this->amounts->exponent( $parsed->currency );
 		$total    = $record->totalMinor( $exponent ) ?? $parsed->totalMinor;
 		if ( null === $total || $total <= 0 ) {
-			$warnings[] = __( 'The payment was not recorded because the invoice total is not known.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'The payment was not recorded because the invoice total is not known.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			return null;
 		}
 		$amount = $this->amounts->number( $total, $exponent );
@@ -359,7 +359,7 @@ final class WafeqOrderSender {
 			}
 			$warnings[] = sprintf(
 				/* translators: %s: reason Wafeq gave. */
-				__( 'Wafeq did not accept the request to report the invoice to the tax authority: %s', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Wafeq did not accept the request to report the invoice to the tax authority: %s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				(string) ( $exception->error()->context['reason'] ?? '' )
 			);
 			return 'refused';

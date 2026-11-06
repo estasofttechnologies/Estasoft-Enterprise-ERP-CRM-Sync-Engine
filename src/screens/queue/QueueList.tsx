@@ -112,7 +112,7 @@ export function rowMenuItems(
 			label: sprintf(
 				/* translators: %s: order number */ __(
 					'Open order %s',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				label
 			),
@@ -123,7 +123,7 @@ export function rowMenuItems(
 			label: sprintf(
 				/* translators: %s: order number */ __(
 					'Open details of %s',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				label
 			),
@@ -135,7 +135,7 @@ export function rowMenuItems(
 			label: sprintf(
 				/* translators: 1: number in the system such as S00490, 2: system name */ __(
 					'Open %1$s in %2$s',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				item.external_ref,
 				handlers.system
@@ -146,17 +146,23 @@ export function rowMenuItems(
 	}
 	if ( handlers.canManage && item.state === 'skipped' ) {
 		items.push( {
-			label: __( 'Restore…', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'Restore…', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			onClick: handlers.restore,
 		} );
 	}
 	items.push( {
-		label: __( 'View in the log', 'estasoft-erp-crm-sync-engine' ),
+		label: __(
+			'View in the log',
+			'estasoft-enterprise-erpcrm-sync-engine'
+		),
 		onClick: () => navigate( routeTo( '/logs', { search: label } ) ),
 	} );
 	if ( item.state === 'failed' || item.state === 'retrying' ) {
 		items.push( {
-			label: __( 'Copy support details', 'estasoft-erp-crm-sync-engine' ),
+			label: __(
+				'Copy support details',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			onClick: handlers.copy,
 		} );
 	}
@@ -167,7 +173,10 @@ export function rowMenuItems(
 			item.state === 'queued' )
 	) {
 		items.push( {
-			label: __( 'Skip this order…', 'estasoft-erp-crm-sync-engine' ),
+			label: __(
+				'Skip this order…',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			onClick: handlers.skip,
 			separated: true,
 		} );
@@ -273,7 +282,7 @@ export function QueueList() {
 			kind: 'success',
 			text: __(
 				'Sync started. Waiting orders are being sent now, oldest first.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 		} );
 		await Promise.all( [ list.reload(), reloadStatus() ] );
@@ -306,7 +315,7 @@ export function QueueList() {
 					'%1$d item today: %2$d synced, %3$d waiting, %4$d failed, %5$d skipped.',
 					'%1$d items today: %2$d synced, %3$d waiting, %4$d failed, %5$d skipped.',
 					Object.values( counts ).reduce( ( sum, n ) => sum + n, 0 ),
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				Object.values( counts ).reduce( ( sum, n ) => sum + n, 0 ),
 				counts.synced,
@@ -319,8 +328,8 @@ export function QueueList() {
 	const columns: Column< QueueItem >[] = [
 		{
 			id: 'order',
-			header: __( 'Order', 'estasoft-erp-crm-sync-engine' ),
-			label: __( 'Order', 'estasoft-erp-crm-sync-engine' ),
+			header: __( 'Order', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			label: __( 'Order', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			primary: true,
 			cell: ( item ) => (
 				<>
@@ -338,7 +347,7 @@ export function QueueList() {
 		},
 		{
 			id: 'state',
-			header: __( 'State', 'estasoft-erp-crm-sync-engine' ),
+			header: __( 'State', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			cell: ( item ) => (
 				<ItemStateChip
 					state={ item.state }
@@ -348,18 +357,21 @@ export function QueueList() {
 		},
 		{
 			id: 'what',
-			header: __( 'What happened', 'estasoft-erp-crm-sync-engine' ),
+			header: __(
+				'What happened',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			wide: true,
 			cell: ( item ) => whatHappened( item, system, cfg ),
 		},
 		{
 			id: 'updated',
-			header: __( 'Updated', 'estasoft-erp-crm-sync-engine' ),
+			header: __( 'Updated', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			cell: ( item ) => <DateTime value={ item.updated_at } />,
 		},
 		{
 			id: 'actions',
-			header: __( 'Actions', 'estasoft-erp-crm-sync-engine' ),
+			header: __( 'Actions', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			hideHeader: true,
 			align: 'end',
 			cell: ( item ) => (
@@ -378,7 +390,10 @@ export function QueueList() {
 									)
 							}
 						>
-							{ __( 'Retry', 'estasoft-erp-crm-sync-engine' ) }
+							{ __(
+								'Retry',
+								'estasoft-enterprise-erpcrm-sync-engine'
+							) }
 						</Btn>
 					) : null }
 					{ canManage && item.state === 'retrying' ? (
@@ -397,7 +412,7 @@ export function QueueList() {
 						>
 							{ __(
 								'Retry now',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Btn>
 					) : null }
@@ -408,14 +423,17 @@ export function QueueList() {
 								setDialog( { kind: 'restore', item } )
 							}
 						>
-							{ __( 'Restore', 'estasoft-erp-crm-sync-engine' ) }
+							{ __(
+								'Restore',
+								'estasoft-enterprise-erpcrm-sync-engine'
+							) }
 						</Btn>
 					) : null }
 					<RowMenu
 						label={ sprintf(
 							/* translators: %s: order number */ __(
 								'More actions for order #%s',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							item.entity_label
 						) }
@@ -439,14 +457,14 @@ export function QueueList() {
 														kind: 'success',
 														text: __(
 															'Support details copied.',
-															'estasoft-erp-crm-sync-engine'
+															'estasoft-enterprise-erpcrm-sync-engine'
 														),
 													}
 												: {
 														kind: 'warning',
 														text: __(
 															'Copy failed. Open the order and select the details by hand.',
-															'estasoft-erp-crm-sync-engine'
+															'estasoft-enterprise-erpcrm-sync-engine'
 														),
 													}
 										)
@@ -466,7 +484,10 @@ export function QueueList() {
 	return (
 		<>
 			<PageHeader
-				title={ __( 'Queue', 'estasoft-erp-crm-sync-engine' ) }
+				title={ __(
+					'Queue',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 				description={ summary }
 				actions={
 					canManage ? (
@@ -477,7 +498,7 @@ export function QueueList() {
 							>
 								{ __(
 									'Pause syncing',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</Btn>
 							<Btn
@@ -488,7 +509,7 @@ export function QueueList() {
 							>
 								{ __(
 									'Sync now',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</Btn>
 						</>
@@ -506,7 +527,7 @@ export function QueueList() {
 						{ sprintf(
 							/* translators: %s: "5 orders" */ __(
 								'Review %s that need attention, grouped by cause',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							ordersPhrase( failedTotal )
 						) }
@@ -516,7 +537,7 @@ export function QueueList() {
 			<SegmentedFilter< Filter >
 				label={ __(
 					'Filter by state',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				value={ filter }
 				onChange={ ( value ) =>
@@ -528,7 +549,10 @@ export function QueueList() {
 				options={ [
 					{
 						value: 'all',
-						label: __( 'All', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'All',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						count: counts
 							? Object.values( counts ).reduce(
 									( sum, n ) => sum + n,
@@ -538,40 +562,58 @@ export function QueueList() {
 					},
 					{
 						value: 'waiting',
-						label: __( 'Waiting', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'Waiting',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						count: status?.waiting,
 					},
 					{
 						value: 'failed',
-						label: __( 'Failed', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'Failed',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						count: counts?.failed,
 					},
 					{
 						value: 'synced',
-						label: __( 'Synced', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'Synced',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						count: counts?.synced,
 					},
 					{
 						value: 'skipped',
-						label: __( 'Skipped', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'Skipped',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						count: counts?.skipped,
 					},
 				] }
 			/>
 			<div className="estasoft-sync-filters" role="search">
 				<TextField
-					label={ __( 'Find', 'estasoft-erp-crm-sync-engine' ) }
+					label={ __(
+						'Find',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 					type="search"
 					value={ search }
 					onChange={ setSearch }
 					placeholder={ __(
 						'Order number, SKU or email',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					spellCheck={ false }
 				/>
 				<SelectField
-					label={ __( 'Type', 'estasoft-erp-crm-sync-engine' ) }
+					label={ __(
+						'Type',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 					value={ type }
 					onChange={ ( value ) =>
 						update( { type: value || undefined, page: undefined } )
@@ -580,42 +622,45 @@ export function QueueList() {
 						{
 							label: __(
 								'All types',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							value: '',
 						},
 						{
 							label: __(
 								'Orders',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							value: 'order',
 						},
 						{
 							label: __(
 								'Refunds',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							value: 'refund',
 						},
 						{
 							label: __(
 								'Customers',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							value: 'customer',
 						},
 						{
 							label: __(
 								'Stock',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							value: 'stock',
 						},
 					] }
 				/>
 				<SelectField
-					label={ __( 'Day', 'estasoft-erp-crm-sync-engine' ) }
+					label={ __(
+						'Day',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 					value={ day }
 					onChange={ ( value ) =>
 						update( {
@@ -627,28 +672,28 @@ export function QueueList() {
 						{
 							label: __(
 								'Today',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							value: 'today',
 						},
 						{
 							label: __(
 								'Yesterday',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							value: 'yesterday',
 						},
 						{
 							label: __(
 								'Last 7 days',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							value: '7d',
 						},
 						{
 							label: __(
 								'Last 30 days',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							value: '30d',
 						},
@@ -662,7 +707,7 @@ export function QueueList() {
 					role="region"
 					aria-label={ __(
 						'Selected orders',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				>
 					<p aria-live="polite">
@@ -670,7 +715,7 @@ export function QueueList() {
 							/* translators: 1: number selected, 2: number failed, 3: number retrying */
 							__(
 								'%1$d selected: %2$d failed, %3$d retrying.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							selected.size,
 							failedSelected,
@@ -691,7 +736,7 @@ export function QueueList() {
 									{ sprintf(
 										/* translators: %d: number of failed orders */ __(
 											'Show all %d failed',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										),
 										failedTotal
 									) }
@@ -715,7 +760,7 @@ export function QueueList() {
 						>
 							{ __(
 								'Retry selected',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Btn>
 						<Btn
@@ -733,7 +778,7 @@ export function QueueList() {
 						>
 							{ __(
 								'Skip selected',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Btn>
 						<Btn
@@ -752,7 +797,7 @@ export function QueueList() {
 						>
 							{ __(
 								'Restore selected',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Btn>
 						<Btn
@@ -760,7 +805,10 @@ export function QueueList() {
 							variant="tertiary"
 							onClick={ () => setSelected( new Set() ) }
 						>
-							{ __( 'Clear', 'estasoft-erp-crm-sync-engine' ) }
+							{ __(
+								'Clear',
+								'estasoft-enterprise-erpcrm-sync-engine'
+							) }
 						</Btn>
 					</div>
 					{ canRetry.length === 0 ||
@@ -799,7 +847,7 @@ export function QueueList() {
 				<LoadingState
 					label={ __(
 						'Loading the queue',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					rows={ 6 }
 				/>
@@ -810,7 +858,7 @@ export function QueueList() {
 					onRetry={ () => void list.reload() }
 					title={ __(
 						'The queue could not be loaded.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			) : null }
@@ -820,20 +868,20 @@ export function QueueList() {
 						as="h2"
 						title={ __(
 							'Nothing is waiting',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						action={
 							<Btn small onClick={ () => navigate( '/logs' ) }>
 								{ __(
 									'Open the log',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</Btn>
 						}
 					>
 						{ __(
 							'New orders appear here and are sent as soon as the next scheduled task runs, usually within a minute.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</EmptyState>
 				) : (
@@ -841,7 +889,7 @@ export function QueueList() {
 						as="h2"
 						title={ __(
 							'No items match',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						action={
 							<Btn
@@ -853,7 +901,7 @@ export function QueueList() {
 							>
 								{ __(
 									'Clear filters',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</Btn>
 						}
@@ -862,13 +910,13 @@ export function QueueList() {
 							? sprintf(
 									/* translators: %s: the text searched for */ __(
 										'Nothing matches “%s” for this view. Try another day or clear the filters.',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									urlSearch
 								)
 							: __(
 									'Nothing matches these filters. Try another day or clear the filters.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 					</EmptyState>
 				)
@@ -878,7 +926,7 @@ export function QueueList() {
 					<ResponsiveTable< QueueItem, number >
 						caption={ __(
 							'Queue items',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						columns={ columns }
 						rows={ items }
@@ -911,7 +959,7 @@ export function QueueList() {
 											sprintf(
 												/* translators: %s: order number */ __(
 													'Select order #%s',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												),
 												byId.get( id )?.entity_label ??
 													String( id )

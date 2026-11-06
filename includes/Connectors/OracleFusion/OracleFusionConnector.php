@@ -82,7 +82,7 @@ final class OracleFusionConnector extends AbstractApiConnector {
 		$parts = wp_parse_url( trim( (string) $connection->config( 'address', '' ) ) );
 		$host  = is_array( $parts ) ? strtolower( (string) ( $parts['host'] ?? '' ) ) : '';
 		if ( ! is_array( $parts ) || '' === $host || 1 !== preg_match( '/^[a-z0-9.\-\[\]:]+$/', $host ) || 'https' !== strtolower( (string) ( $parts['scheme'] ?? '' ) ) || isset( $parts['user'] ) || isset( $parts['pass'] ) ) {
-			$problem = Problem::validation( self::SYSTEM, 'address', __( 'Enter the address of the Oracle Fusion pod, for example https://example.fa.us2.oraclecloud.com.', 'estasoft-erp-crm-sync-engine' ) );
+			$problem = Problem::validation( self::SYSTEM, 'address', __( 'Enter the address of the Oracle Fusion pod, for example https://example.fa.us2.oraclecloud.com.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			throw new ApiException( $problem ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 		}
 		$port = isset( $parts['port'] ) && (int) $parts['port'] > 0 && (int) $parts['port'] < 65536 ? ':' . (int) $parts['port'] : '';
@@ -133,27 +133,27 @@ final class OracleFusionConnector extends AbstractApiConnector {
 	 */
 	protected function credentialDefinition(): array {
 		return array(
-			CredentialFields::address( 'address', __( 'Address of the Fusion pod', 'estasoft-erp-crm-sync-engine' ), __( 'For example https://example.fa.us2.oraclecloud.com. Only the host is used.', 'estasoft-erp-crm-sync-engine' ) ),
+			CredentialFields::address( 'address', __( 'Address of the Fusion pod', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'For example https://example.fa.us2.oraclecloud.com. Only the host is used.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			CredentialFields::choice(
 				'auth_method',
-				__( 'Sign-in', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Sign-in', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				array(
-					'oauth' => __( 'OAuth 2.0 (client ID and secret)', 'estasoft-erp-crm-sync-engine' ),
-					'basic' => __( 'Fusion user and password', 'estasoft-erp-crm-sync-engine' ),
+					'oauth' => __( 'OAuth 2.0 (client ID and secret)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'basic' => __( 'Fusion user and password', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				'oauth'
 			),
-			new CredentialField( 'identity_url', __( 'Identity domain address', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'OAuth: the address of the identity domain, for example https://idcs-1234.identity.oraclecloud.com.', 'estasoft-erp-crm-sync-engine' ), '', 'url', array(), 'app' ),
-			new CredentialField( 'scope', __( 'Scope', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'OAuth: exactly as the application shows it, urn:opc:resource:fusion:<POD>:erp/.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'app' ),
-			CredentialFields::clientId( 'client_id', __( 'OAuth: the Client ID of the confidential application.', 'estasoft-erp-crm-sync-engine' ) ),
+			new CredentialField( 'identity_url', __( 'Identity domain address', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'OAuth: the address of the identity domain, for example https://idcs-1234.identity.oraclecloud.com.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'url', array(), 'app' ),
+			new CredentialField( 'scope', __( 'Scope', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'OAuth: exactly as the application shows it, urn:opc:resource:fusion:<POD>:erp/.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'app' ),
+			CredentialFields::clientId( 'client_id', __( 'OAuth: the Client ID of the confidential application.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			CredentialFields::clientSecret( 'client_secret' ),
-			CredentialFields::username( 'user', __( 'Fusion user', 'estasoft-erp-crm-sync-engine' ), __( 'Basic sign-in only.', 'estasoft-erp-crm-sync-engine' ) ),
-			CredentialFields::password( 'password', __( 'Password', 'estasoft-erp-crm-sync-engine' ), __( 'Basic sign-in only. Saved encrypted. It is never shown again.', 'estasoft-erp-crm-sync-engine' ) ),
-			new CredentialField( 'business_unit', __( 'Business unit', 'estasoft-erp-crm-sync-engine' ), false, true, __( 'The name of the business unit that owns the invoices.', 'estasoft-erp-crm-sync-engine' ) ),
-			new CredentialField( 'transaction_source', __( 'Transaction source', 'estasoft-erp-crm-sync-engine' ), false, true, __( 'The name of the Receivables transaction source for web orders.', 'estasoft-erp-crm-sync-engine' ) ),
-			new CredentialField( 'transaction_type', __( 'Transaction type', 'estasoft-erp-crm-sync-engine' ), false, true, __( 'The name of the invoice transaction type.', 'estasoft-erp-crm-sync-engine' ) ),
-			new CredentialField( 'payment_terms', __( 'Payment terms', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Optional. Empty leaves them to the customer account.', 'estasoft-erp-crm-sync-engine' ) ),
-			new CredentialField( 'bill_to_account', __( 'Customer account number', 'estasoft-erp-crm-sync-engine' ), false, true, __( 'The customer account all web orders are billed to.', 'estasoft-erp-crm-sync-engine' ) ),
+			CredentialFields::username( 'user', __( 'Fusion user', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Basic sign-in only.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			CredentialFields::password( 'password', __( 'Password', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Basic sign-in only. Saved encrypted. It is never shown again.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			new CredentialField( 'business_unit', __( 'Business unit', 'estasoft-enterprise-erpcrm-sync-engine' ), false, true, __( 'The name of the business unit that owns the invoices.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			new CredentialField( 'transaction_source', __( 'Transaction source', 'estasoft-enterprise-erpcrm-sync-engine' ), false, true, __( 'The name of the Receivables transaction source for web orders.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			new CredentialField( 'transaction_type', __( 'Transaction type', 'estasoft-enterprise-erpcrm-sync-engine' ), false, true, __( 'The name of the invoice transaction type.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			new CredentialField( 'payment_terms', __( 'Payment terms', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Optional. Empty leaves them to the customer account.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			new CredentialField( 'bill_to_account', __( 'Customer account number', 'estasoft-enterprise-erpcrm-sync-engine' ), false, true, __( 'The customer account all web orders are billed to.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 		);
 	}
 
@@ -186,7 +186,7 @@ final class OracleFusionConnector extends AbstractApiConnector {
 			ErrorCode::Auth004,
 			array(
 				'system' => self::SYSTEM,
-				'action' => __( 'read invoices and items', 'estasoft-erp-crm-sync-engine' ),
+				'action' => __( 'read invoices and items', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			),
 			403,
 			null,
@@ -195,7 +195,7 @@ final class OracleFusionConnector extends AbstractApiConnector {
 		);
 		return new TestResult(
 			null === $error,
-			__( 'REST 11.13.18.05', 'estasoft-erp-crm-sync-engine' ),
+			__( 'REST 11.13.18.05', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			$kit->options->businessUnit(),
 			array(),
 			$permissions,
@@ -281,7 +281,7 @@ final class OracleFusionConnector extends AbstractApiConnector {
 		return match ( $item->entityType ) {
 			EntityType::Order  => $this->sendOrder( $connection, $item, $payload ),
 			EntityType::Refund => $this->sendRefund( $connection, $item, $payload ),
-			default            => SendResult::failure( Problem::validation( self::SYSTEM, 'entity', __( 'This connector does not send this kind of record.', 'estasoft-erp-crm-sync-engine' ) ) ),
+			default            => SendResult::failure( Problem::validation( self::SYSTEM, 'entity', __( 'This connector does not send this kind of record.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) ),
 		};
 	}
 
@@ -384,7 +384,7 @@ final class OracleFusionConnector extends AbstractApiConnector {
 			return SendResult::failure( $parsed );
 		}
 		if ( $parsed->pricesIncludeTax ) {
-			return SendResult::failure( Problem::validation( self::SYSTEM, 'prices_include_tax', __( 'Oracle Fusion takes unit prices before tax. Map the prices without tax.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( Problem::validation( self::SYSTEM, 'prices_include_tax', __( 'Oracle Fusion takes unit prices before tax. Map the prices without tax.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$kit->orders->requireSettings( $kit->orders->billTo( $parsed ) );
 		$warnings = new Warnings();

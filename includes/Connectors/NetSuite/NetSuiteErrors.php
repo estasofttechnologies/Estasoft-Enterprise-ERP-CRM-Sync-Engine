@@ -62,13 +62,13 @@ final class NetSuiteErrors {
 			return new ConnectorError( ErrorCode::Rate001, $base + array( 'n' => $wait ), 429, $wait, null, 'concurrency limit' );
 		}
 		if ( 'INSUFFICIENT_PERMISSION' === $code ) {
-			return new ConnectorError( ErrorCode::Auth004, $base + array( 'action' => __( 'do this', 'estasoft-erp-crm-sync-engine' ) ), $status, null, null, 'insufficient permission' );
+			return new ConnectorError( ErrorCode::Auth004, $base + array( 'action' => __( 'do this', 'estasoft-enterprise-erpcrm-sync-engine' ) ), $status, null, null, 'insufficient permission' );
 		}
 		if ( in_array( $status, array( 400, 409, 422 ), true ) && '' !== (string) ( $details['detail'] ?? '' ) ) {
 			return new ConnectorError(
 				ErrorCode::Val002,
 				$base + array(
-					'field'  => '' !== (string) ( $details['o:errorPath'] ?? '' ) ? (string) $details['o:errorPath'] : __( 'the request', 'estasoft-erp-crm-sync-engine' ),
+					'field'  => '' !== (string) ( $details['o:errorPath'] ?? '' ) ? (string) $details['o:errorPath'] : __( 'the request', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					'reason' => (string) $details['detail'],
 				),
 				$status,

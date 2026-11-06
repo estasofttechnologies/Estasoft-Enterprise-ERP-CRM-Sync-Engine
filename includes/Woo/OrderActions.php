@@ -87,7 +87,7 @@ final class OrderActions {
 				$this->mirror->mirrorById( $itemId );
 				return $done ? 'restored' : 'nothing';
 			default:
-				$reason = __( 'Skipped from the order screen.', 'estasoft-erp-crm-sync-engine' );
+				$reason = __( 'Skipped from the order screen.', 'estasoft-enterprise-erpcrm-sync-engine' );
 				$done   = $this->queue->skip( $itemId, $reason );
 				if ( $done ) {
 					$this->mirror->noteSkip( $order, $reason, $by, gmdate( 'Y-m-d H:i:s' ) );

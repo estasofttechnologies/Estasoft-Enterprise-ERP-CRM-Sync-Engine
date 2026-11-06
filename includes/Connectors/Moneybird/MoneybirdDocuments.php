@@ -159,7 +159,7 @@ final class MoneybirdDocuments {
 		$created = $api->post( 'sales_invoices.json', array(), array( 'sales_invoice' => $invoice ) )->json();
 		$id      = PayloadReader::text( $created['id'] ?? '' );
 		if ( '' === $id ) {
-			return SendResult::failure( Refusal::value( MoneybirdConnector::LABEL, 'invoice', __( 'Moneybird did not return the new invoice.', 'estasoft-erp-crm-sync-engine' ), 'no invoice id' ) );
+			return SendResult::failure( Refusal::value( MoneybirdConnector::LABEL, 'invoice', __( 'Moneybird did not return the new invoice.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'no invoice id' ) );
 		}
 		return $this->finish( $api, $id, $order, $options, $built['warnings'], true );
 	}
@@ -179,7 +179,7 @@ final class MoneybirdDocuments {
 	private function finish( ApiClient $api, string $id, OrderPayload $order, Options $options, array $warnings, bool $fresh ): SendResult {
 		$invoice = $this->read( $api, $id );
 		if ( null === $invoice ) {
-			return SendResult::failure( Refusal::value( MoneybirdConnector::LABEL, 'invoice', __( 'Moneybird could not read the invoice back.', 'estasoft-erp-crm-sync-engine' ), 'read back failed' ) );
+			return SendResult::failure( Refusal::value( MoneybirdConnector::LABEL, 'invoice', __( 'Moneybird could not read the invoice back.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'read back failed' ) );
 		}
 		$problem = $this->check( $invoice, $order->currency, $order->totalMinor, $options, $warnings, $order->rows(), $order->date );
 		if ( null !== $problem ) {
@@ -257,7 +257,7 @@ final class MoneybirdDocuments {
 				'currency',
 				sprintf(
 					/* translators: 1: currency of the order, 2: currency of the document Moneybird made. */
-					__( 'The order is in %1$s but Moneybird made the invoice in %2$s.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The order is in %1$s but Moneybird made the invoice in %2$s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$currency,
 					$actualCurrency
 				),
@@ -273,7 +273,7 @@ final class MoneybirdDocuments {
 		$exponent = $this->amounts->exponent( '' !== $actualCurrency ? $actualCurrency : $currency );
 		$actual   = $this->amounts->toMinor( $invoice['total_price_incl_tax'] ?? null, $exponent );
 		if ( null === $actual ) {
-			return Refusal::value( MoneybirdConnector::LABEL, 'total_price_incl_tax', __( 'Moneybird returned no total for the invoice.', 'estasoft-erp-crm-sync-engine' ), 'no total' );
+			return Refusal::value( MoneybirdConnector::LABEL, 'total_price_incl_tax', __( 'Moneybird returned no total for the invoice.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'no total' );
 		}
 		if ( Tolerance::accepts( $actual, $expected, $options, $rows ) ) {
 			return null;

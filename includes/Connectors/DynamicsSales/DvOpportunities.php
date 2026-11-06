@@ -155,7 +155,7 @@ final class DvOpportunities {
 						'error'   => Failures::invalid(
 							$this->system,
 							'opportunity',
-							__( 'The deal in Dynamics 365 was changed after it was created: its products are not the ones the shop sent. Delete the deal and try again.', 'estasoft-erp-crm-sync-engine' ),
+							__( 'The deal in Dynamics 365 was changed after it was created: its products are not the ones the shop sent. Delete the deal and try again.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 							'lines differ'
 						),
 					);

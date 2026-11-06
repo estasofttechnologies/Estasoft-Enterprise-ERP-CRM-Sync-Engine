@@ -139,7 +139,7 @@ final class RuleEngine {
 		$context->enter( $rule->id, $rule->target, $rule->firstSource(), $rule->code(), null );
 
 		if ( null !== $rule->when && Text::toString( $this->scalarOf( $order->get( $rule->when['source'] ) ) ) !== $rule->when['equals'] ) {
-			$diagnostics->note( $rule->id, $rule->target, __( 'Skipped: the condition on this rule is not met.', 'estasoft-erp-crm-sync-engine' ) );
+			$diagnostics->note( $rule->id, $rule->target, __( 'Skipped: the condition on this rule is not met.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			return false;
 		}
 
@@ -152,7 +152,7 @@ final class RuleEngine {
 				$failure = MappingException::requiredMissing( $rule->code() ?? ErrorCode::Val002, $rule->id, $rule->target, $context->messageContext() );
 				throw $failure;
 			}
-			$diagnostics->note( $rule->id, $rule->target, __( 'No rows, so the field is left out.', 'estasoft-erp-crm-sync-engine' ) );
+			$diagnostics->note( $rule->id, $rule->target, __( 'No rows, so the field is left out.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			return false;
 		}
 
@@ -161,7 +161,7 @@ final class RuleEngine {
 			$value = $this->pipeline( $rule, $plain, $context );
 			$this->enforce( $rule, $value, $context );
 			if ( Text::isEmpty( $value ) ) {
-				$diagnostics->note( $rule->id, $rule->target, __( 'No value, so the field is left out.', 'estasoft-erp-crm-sync-engine' ) );
+				$diagnostics->note( $rule->id, $rule->target, __( 'No value, so the field is left out.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 				return false;
 			}
 			$target->set( $rule->target, $value );
@@ -185,7 +185,7 @@ final class RuleEngine {
 		}
 		$context->enter( $rule->id, $rule->target, $rule->firstSource(), $rule->code(), null );
 		if ( ! $wrote ) {
-			$diagnostics->note( $rule->id, $rule->target, __( 'No value, so the field is left out.', 'estasoft-erp-crm-sync-engine' ) );
+			$diagnostics->note( $rule->id, $rule->target, __( 'No value, so the field is left out.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return $wrote && ! self::same( $plainRows, $valueRows );
 	}

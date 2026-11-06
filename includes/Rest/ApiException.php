@@ -186,7 +186,7 @@ final class ApiException extends \RuntimeException {
 	public static function generic(): self {
 		return new self(
 			self::GENERIC,
-			esc_html__( 'Something went wrong on the server. Try again in a moment. If it keeps happening, copy the support report from Settings and send it to support.', 'estasoft-erp-crm-sync-engine' ),
+			esc_html__( 'Something went wrong on the server. Try again in a moment. If it keeps happening, copy the support report from Settings and send it to support.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			500,
 			ErrorClass::Info->value
 		);

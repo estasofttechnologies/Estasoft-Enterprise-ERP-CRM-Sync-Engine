@@ -107,7 +107,7 @@ final class MyobErrors {
 				ErrorCode::Auth004,
 				array(
 					'system' => self::SYSTEM,
-					'action' => __( 'do this in MYOB (the signed-in user needs access to the company file, and the company file login must be right if the file asks for one)', 'estasoft-erp-crm-sync-engine' ),
+					'action' => __( 'do this in MYOB (the signed-in user needs access to the company file, and the company file login must be right if the file asks for one)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				$status,
 				null,
@@ -220,7 +220,7 @@ final class MyobErrors {
 			'tax',
 			sprintf(
 				/* translators: %s: a MYOB tax code such as GST. */
-				__( 'MYOB has no tax code "%s". Choose a code from the list in Tax mapping, then retry.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'MYOB has no tax code "%s". Choose a code from the list in Tax mapping, then retry.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$code
 			)
 		);

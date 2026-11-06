@@ -84,7 +84,7 @@ final class GoLiveService {
 	 */
 	public function goLive( string $mode, int $userId ): array {
 		if ( ! in_array( $mode, array( 'shadow', 'live' ), true ) ) {
-			throw new ValidationException( array( 'mode' => esc_html__( 'Choose shadow or live.', 'estasoft-erp-crm-sync-engine' ) ) );
+			throw new ValidationException( array( 'mode' => esc_html__( 'Choose shadow or live.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		// Before anything else: an order created after this moment is a real order, whatever happens below.
 		$now   = $this->clock->now();
@@ -116,7 +116,7 @@ final class GoLiveService {
 		$this->logger->info(
 			sprintf(
 				/* translators: 1: number of waiting items skipped, 2: user id. */
-				_n( 'Setup finished by user #%2$d. %1$d order placed before go-live will not be sent.', 'Setup finished by user #%2$d. %1$d orders placed before go-live will not be sent.', $skipped, 'estasoft-erp-crm-sync-engine' ),
+				_n( 'Setup finished by user #%2$d. %1$d order placed before go-live will not be sent.', 'Setup finished by user #%2$d. %1$d orders placed before go-live will not be sent.', $skipped, 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$skipped,
 				$userId
 			),
@@ -142,7 +142,7 @@ final class GoLiveService {
 			( $this->inbound )( $connectionId, $stock, $track );
 		} catch ( \Throwable $e ) {
 			$this->logger->warning(
-				__( 'Stock or tracking could not be switched on. Switch them on from the Stock and Tracking screens.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Stock or tracking could not be switched on. Switch them on from the Stock and Tracking screens.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				array(
 					'connection_id' => $connectionId,
 					'error'         => get_class( $e ),
@@ -215,7 +215,7 @@ final class GoLiveService {
 			}
 		}
 		if ( null === $first ) {
-			throw new JobException( esc_html__( 'Connect a system before you go live.', 'estasoft-erp-crm-sync-engine' ), 409 );
+			throw new JobException( esc_html__( 'Connect a system before you go live.', 'estasoft-enterprise-erpcrm-sync-engine' ), 409 );
 		}
 		return $first;
 	}

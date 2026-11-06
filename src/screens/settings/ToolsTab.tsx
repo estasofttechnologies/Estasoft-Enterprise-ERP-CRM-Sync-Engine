@@ -42,7 +42,7 @@ export function ToolsTab() {
 			text: sprintf(
 				/* translators: %s: file name */ __(
 					'Settings exported to %s. Credentials, orders and logs are not in the file.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				result.filename
 			),
@@ -63,7 +63,7 @@ export function ToolsTab() {
 				<Callout tone="info">
 					{ __(
 						'Only administrators can use the tools.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</Callout>
 			) : null }
@@ -72,20 +72,26 @@ export function ToolsTab() {
 					{ errorText( error ) }
 				</Callout>
 			) : null }
-			<Card title={ __( 'Tools', 'estasoft-erp-crm-sync-engine' ) } flush>
+			<Card
+				title={ __(
+					'Tools',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
+				flush
+			>
 				<ul className="estasoft-sync-attlist">
 					<li className="estasoft-sync-att">
 						<div className="estasoft-sync-att__text">
 							<p className="estasoft-sync-strong">
 								{ __(
 									'Export settings',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</p>
 							<p className="estasoft-sync-muted">
 								{ __(
 									'Mapping, rules, limits and notification settings as a file. Credentials, orders and logs are not included.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</p>
 						</div>
@@ -96,7 +102,10 @@ export function ToolsTab() {
 							disabled={ ! canConfigure }
 							onClick={ () => void exportSettings.run() }
 						>
-							{ __( 'Export', 'estasoft-erp-crm-sync-engine' ) }
+							{ __(
+								'Export',
+								'estasoft-enterprise-erpcrm-sync-engine'
+							) }
 						</Btn>
 					</li>
 					<li className="estasoft-sync-att">
@@ -104,13 +113,13 @@ export function ToolsTab() {
 							<p className="estasoft-sync-strong">
 								{ __(
 									'Import settings',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</p>
 							<p className="estasoft-sync-muted">
 								{ __(
 									'Shows what will change before anything is applied. Mapping arrives as drafts, never live.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</p>
 						</div>
@@ -138,7 +147,7 @@ export function ToolsTab() {
 						>
 							{ __(
 								'Choose a file',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Btn>
 					</li>
@@ -147,13 +156,13 @@ export function ToolsTab() {
 							<p className="estasoft-sync-strong">
 								{ __(
 									'Run a capacity test',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</p>
 							<p className="estasoft-sync-muted">
 								{ __(
 									'Sends test items through a connection that sends nothing, and reports how many your server handles a minute.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</p>
 						</div>
@@ -163,7 +172,10 @@ export function ToolsTab() {
 							disabled={ ! canConfigure }
 							onClick={ () => setDialog( 'capacity' ) }
 						>
-							{ __( 'Run test', 'estasoft-erp-crm-sync-engine' ) }
+							{ __(
+								'Run test',
+								'estasoft-enterprise-erpcrm-sync-engine'
+							) }
 						</Btn>
 					</li>
 					<li className="estasoft-sync-att">
@@ -171,13 +183,13 @@ export function ToolsTab() {
 							<p className="estasoft-sync-strong">
 								{ __(
 									'Clear the logs',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</p>
 							<p className="estasoft-sync-muted">
 								{ __(
 									'Removes log entries. Orders and the queue are kept.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</p>
 						</div>
@@ -190,7 +202,7 @@ export function ToolsTab() {
 						>
 							{ __(
 								'Clear logs',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Btn>
 					</li>
@@ -199,13 +211,13 @@ export function ToolsTab() {
 							<p className="estasoft-sync-strong">
 								{ __(
 									'Delete all plugin data',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</p>
 							<p className="estasoft-sync-muted">
 								{ __(
 									'Removes the queue, logs, mappings and saved credentials. Nothing in WooCommerce or your ERP is deleted.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</p>
 						</div>
@@ -218,7 +230,7 @@ export function ToolsTab() {
 						>
 							{ __(
 								'Delete data',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Btn>
 					</li>
@@ -232,12 +244,12 @@ export function ToolsTab() {
 				<ConfirmDialog
 					title={ __(
 						'Clear the logs?',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					tone="danger"
 					confirmLabel={ __(
 						'Clear logs',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					onClose={ () => setDialog( null ) }
 					onConfirm={ async () => {
@@ -250,7 +262,7 @@ export function ToolsTab() {
 									'Logs cleared: %d entry removed. The queue, orders and settings are kept.',
 									'Logs cleared: %d entries removed. The queue, orders and settings are kept.',
 									result.cleared,
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								result.cleared
 							),
@@ -260,13 +272,13 @@ export function ToolsTab() {
 					<p>
 						{ __(
 							'This removes all log entries. The queue, orders and settings are kept.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</p>
 					<p className="estasoft-sync-muted">
 						{ __(
 							'Support reports will have nothing to show until new events happen.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</p>
 				</ConfirmDialog>
@@ -284,11 +296,11 @@ export function ToolsTab() {
 				<ConfirmDialog
 					title={ __(
 						'Import settings?',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					confirmLabel={ __(
 						'Import',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					onClose={ () => setDialog( null ) }
 					onConfirm={ async () => {
@@ -297,7 +309,7 @@ export function ToolsTab() {
 							kind: 'success',
 							text: __(
 								'Settings imported. Mapping arrived as drafts; review and publish them when you are ready.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 						} );
 					} }
@@ -305,7 +317,7 @@ export function ToolsTab() {
 					<p>
 						{ __(
 							'This is what will change:',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</p>
 					<ul className="estasoft-sync-list">
@@ -313,7 +325,7 @@ export function ToolsTab() {
 							<li>
 								{ __(
 									'Nothing differs from your current settings.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</li>
 						) : (
@@ -325,7 +337,7 @@ export function ToolsTab() {
 					<p className="estasoft-sync-muted">
 						{ __(
 							'Mapping arrives as drafts that you review and publish yourself. Tax mapping, limits and notification settings apply as soon as you import. No credentials are in the file.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</p>
 				</ConfirmDialog>
@@ -349,12 +361,12 @@ function DeleteDialog( {
 		<ConfirmDialog
 			title={ __(
 				'Delete all plugin data?',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			) }
 			tone="danger"
 			confirmLabel={ __(
 				'Delete everything',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			) }
 			confirmDisabled={ typed !== DELETE_WORD }
 			onClose={ onClose }
@@ -362,7 +374,7 @@ function DeleteDialog( {
 				<Btn variant="tertiary" onClick={ onExport }>
 					{ __(
 						'Export settings first',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</Btn>
 			}
@@ -372,7 +384,7 @@ function DeleteDialog( {
 					kind: 'success',
 					text: __(
 						'All plugin data was deleted. Syncing has stopped.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 				} );
 				onDeleted();
@@ -381,19 +393,19 @@ function DeleteDialog( {
 			<p>
 				{ __(
 					'This removes the queue, logs, mapping versions, saved credentials and settings from this site. It cannot be undone.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			</p>
 			<p className="estasoft-sync-muted">
 				{ __(
 					'WooCommerce orders, customers and products stay as they are. Nothing in your system is deleted. Syncing stops.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			</p>
 			<Callout tone="warning">
 				{ __(
 					'The plugin also forgets which orders it already sent. If you connect again afterwards, orders that were already sent can be sent a second time.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			</Callout>
 			<div className="estasoft-sync-typed">
@@ -401,7 +413,7 @@ function DeleteDialog( {
 					label={ sprintf(
 						/* translators: %s: the word to type */ __(
 							'Type %s to confirm',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						DELETE_WORD
 					) }

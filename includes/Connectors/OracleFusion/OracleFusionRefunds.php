@@ -80,28 +80,28 @@ final class OracleFusionRefunds {
 	public function create( RefundData $refund, Warnings $warnings ): array {
 		$this->orders->requireUnit();
 		if ( strlen( $refund->reference ) > $this->options->referenceLength() ) {
-			$this->refuse( $this->options->referenceAttribute(), __( 'The refund reference is longer than Oracle Fusion takes in this field.', 'estasoft-erp-crm-sync-engine' ) );
+			$this->refuse( $this->options->referenceAttribute(), __( 'The refund reference is longer than Oracle Fusion takes in this field.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$invoice = $this->orders->find( $refund->orderRef );
 		if ( null === $invoice ) {
-			$this->refuse( 'order_ref', __( 'The invoice of this refund is not in Oracle Fusion yet.', 'estasoft-erp-crm-sync-engine' ) );
+			$this->refuse( 'order_ref', __( 'The invoice of this refund is not in Oracle Fusion yet.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$currency = strtoupper( (string) ( $invoice['InvoiceCurrencyCode'] ?? '' ) );
 		if ( '' === $currency ) {
-			$this->refuse( 'InvoiceCurrencyCode', __( 'Oracle Fusion did not show the currency of the invoice, so the credit memo cannot be made in the same currency.', 'estasoft-erp-crm-sync-engine' ) );
+			$this->refuse( 'InvoiceCurrencyCode', __( 'Oracle Fusion did not show the currency of the invoice, so the credit memo cannot be made in the same currency.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$source = (string) ( $invoice['TransactionSource'] ?? $this->options->transactionSource() );
 		if ( '' === $source ) {
-			$this->refuse( 'transaction_source', __( 'Enter the transaction source in the connection settings.', 'estasoft-erp-crm-sync-engine' ) );
+			$this->refuse( 'transaction_source', __( 'Enter the transaction source in the connection settings.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$billTo = (string) ( $invoice['BillToCustomerNumber'] ?? $this->options->billToAccount() );
 		if ( '' === $billTo ) {
-			$this->refuse( 'BillToCustomerNumber', __( 'Oracle Fusion did not show the customer account of the invoice.', 'estasoft-erp-crm-sync-engine' ) );
+			$this->refuse( 'BillToCustomerNumber', __( 'Oracle Fusion did not show the customer account of the invoice.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$expected = $this->expected( $refund );
 		$comment  = sprintf(
 			/* translators: 1: refund reference, 2: order reference. */
-			__( 'Refund %1$s of order %2$s', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Refund %1$s of order %2$s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			$refund->reference,
 			$refund->orderRef
 		) . ( '' === $refund->reason ? '' : ': ' . $refund->reason );
@@ -125,7 +125,7 @@ final class OracleFusionRefunds {
 			$draft = $this->find( $refund->reference );
 		}
 		if ( null === $draft || ! isset( $draft['CustomerTransactionId'] ) ) {
-			$this->refuse( 'CustomerTransactionId', __( 'Oracle Fusion accepted the credit memo but it cannot be read back.', 'estasoft-erp-crm-sync-engine' ) );
+			$this->refuse( 'CustomerTransactionId', __( 'Oracle Fusion accepted the credit memo but it cannot be read back.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$id    = (string) $draft['CustomerTransactionId'];
 		$draft = ( $this->gateway->one( self::RESOURCE, $id ) ?? array() ) + $draft;
@@ -180,15 +180,15 @@ final class OracleFusionRefunds {
 				'InvoiceCurrencyCode',
 				sprintf(
 					/* translators: 1: currency of the credit memo, 2: currency of the order. */
-					__( 'Oracle Fusion holds the credit memo in %1$s but the invoice is in %2$s.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Oracle Fusion holds the credit memo in %1$s but the invoice is in %2$s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$actual,
 					$currency
 				)
 			);
 		}
 		$figure = $this->orders->totalOf( $memo, false );
-		$error  = $total->run( $expected, null === $figure ? null : abs( $figure['minor'] ), $currency, $warnings, __( 'credit memo total', 'estasoft-erp-crm-sync-engine' ) );
-		return null === $error ? null : Problem::validation( $this->system, 'credit memo total', (string) $error->context['reason'] . ' ' . __( 'The credit memo stays in Oracle Fusion; correct or reverse it there.', 'estasoft-erp-crm-sync-engine' ) );
+		$error  = $total->run( $expected, null === $figure ? null : abs( $figure['minor'] ), $currency, $warnings, __( 'credit memo total', 'estasoft-enterprise-erpcrm-sync-engine' ) );
+		return null === $error ? null : Problem::validation( $this->system, 'credit memo total', (string) $error->context['reason'] . ' ' . __( 'The credit memo stays in Oracle Fusion; correct or reverse it there.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**
@@ -214,17 +214,17 @@ final class OracleFusionRefunds {
 		if ( '' !== $actual && $actual !== $currency ) {
 			return sprintf(
 				/* translators: 1: currency of the draft, 2: currency of the invoice. */
-				__( 'Oracle Fusion holds the draft credit memo in %1$s but the invoice is in %2$s.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Oracle Fusion holds the draft credit memo in %1$s but the invoice is in %2$s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$actual,
 				$currency
 			);
 		}
 		$figure = $this->orders->totalOf( $draft, false );
 		if ( null === $figure ) {
-			return __( 'Oracle Fusion shows no total for the draft credit memo, so it cannot be checked that it credits the customer.', 'estasoft-erp-crm-sync-engine' );
+			return __( 'Oracle Fusion shows no total for the draft credit memo, so it cannot be checked that it credits the customer.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		if ( $figure['minor'] > 0 ) {
-			return __( 'Oracle Fusion would book this credit memo as a debit (its total is positive). If this pod wants negative credit memo lines, set the option credit_line_sign to negative.', 'estasoft-erp-crm-sync-engine' );
+			return __( 'Oracle Fusion would book this credit memo as a debit (its total is positive). If this pod wants negative credit memo lines, set the option credit_line_sign to negative.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		return null;
 	}
@@ -241,7 +241,7 @@ final class OracleFusionRefunds {
 		$removed = $this->gateway->delete( self::RESOURCE, $id );
 		$this->refuse(
 			'credit memo',
-			$reason . ' ' . ( $removed ? __( 'The draft credit memo was deleted.', 'estasoft-erp-crm-sync-engine' ) : __( 'The draft credit memo could not be deleted and stays in Oracle Fusion as Incomplete; delete it there.', 'estasoft-erp-crm-sync-engine' ) )
+			$reason . ' ' . ( $removed ? __( 'The draft credit memo was deleted.', 'estasoft-enterprise-erpcrm-sync-engine' ) : __( 'The draft credit memo could not be deleted and stays in Oracle Fusion as Incomplete; delete it there.', 'estasoft-enterprise-erpcrm-sync-engine' ) )
 		);
 	}
 
@@ -270,7 +270,7 @@ final class OracleFusionRefunds {
 	private function lines( RefundData $refund, string $currency, Warnings $warnings ): array {
 		$lines = array();
 		foreach ( $refund->lines as $index => $line ) {
-			$text = '' === $line->sku ? __( 'Refund', 'estasoft-erp-crm-sync-engine' ) : '[' . $line->sku . '] ' . __( 'Refund', 'estasoft-erp-crm-sync-engine' );
+			$text = '' === $line->sku ? __( 'Refund', 'estasoft-enterprise-erpcrm-sync-engine' ) : '[' . $line->sku . '] ' . __( 'Refund', 'estasoft-enterprise-erpcrm-sync-engine' );
 			$row  = array(
 				'LineNumber'       => $index + 1,
 				'Description'      => $warnings->fit( 'Description', $text, OracleFusionOrders::DESCRIPTION_LENGTH ),
@@ -289,11 +289,11 @@ final class OracleFusionRefunds {
 			return $lines;
 		}
 		if ( null === $refund->amountMinor || $refund->amountMinor <= 0 ) {
-			$this->refuse( 'amount', __( 'The refund has no amount.', 'estasoft-erp-crm-sync-engine' ) );
+			$this->refuse( 'amount', __( 'The refund has no amount.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$row = array(
 			'LineNumber'       => 1,
-			'Description'      => $warnings->fit( 'Description', sprintf( /* translators: %s: order reference. */ __( 'Refund of order %s', 'estasoft-erp-crm-sync-engine' ), $refund->orderRef ), OracleFusionOrders::DESCRIPTION_LENGTH ),
+			'Description'      => $warnings->fit( 'Description', sprintf( /* translators: %s: order reference. */ __( 'Refund of order %s', 'estasoft-enterprise-erpcrm-sync-engine' ), $refund->orderRef ), OracleFusionOrders::DESCRIPTION_LENGTH ),
 			'Quantity'         => $this->signed( 1 ),
 			'UnitSellingPrice' => $this->amounts->toNumber( $refund->amountMinor, $currency ),
 		);

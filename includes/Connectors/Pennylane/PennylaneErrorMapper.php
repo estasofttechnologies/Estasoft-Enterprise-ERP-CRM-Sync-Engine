@@ -35,7 +35,7 @@ final class PennylaneErrorMapper {
 				ErrorCode::Auth005,
 				array(
 					'system' => PennylaneConnector::LABEL,
-					'date'   => __( 'its end date', 'estasoft-erp-crm-sync-engine' ),
+					'date'   => __( 'its end date', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				401,
 				null,
@@ -52,10 +52,10 @@ final class PennylaneErrorMapper {
 					'action' => '' !== $scope
 						? sprintf(
 							/* translators: %s: name of the Pennylane token scope. */
-							__( 'use the token scope %s', 'estasoft-erp-crm-sync-engine' ),
+							__( 'use the token scope %s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 							$scope
 						)
-						: __( 'do this', 'estasoft-erp-crm-sync-engine' ),
+						: __( 'do this', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				403,
 				null,
@@ -83,7 +83,7 @@ final class PennylaneErrorMapper {
 				ErrorCode::Val002,
 				array(
 					'system' => PennylaneConnector::LABEL,
-					'field'  => __( 'the document', 'estasoft-erp-crm-sync-engine' ),
+					'field'  => __( 'the document', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					'reason' => mb_substr( trim( $text . ( '' !== $details ? ' (' . $details . ')' : '' ) ), 0, 180 ),
 				),
 				$status,

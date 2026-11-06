@@ -93,12 +93,12 @@ final class ZohoCrmConnector extends AbstractSalesConnector implements OAuthConn
 	 */
 	protected function credentialDefinition(): array {
 		return array(
-			CredentialFields::choice( 'data_centre', __( 'Zoho data centre', 'estasoft-erp-crm-sync-engine' ), ZohoDataCentre::options(), 'com', __( 'The address you use to sign in to Zoho decides this.', 'estasoft-erp-crm-sync-engine' ) ),
+			CredentialFields::choice( 'data_centre', __( 'Zoho data centre', 'estasoft-enterprise-erpcrm-sync-engine' ), ZohoDataCentre::options(), 'com', __( 'The address you use to sign in to Zoho decides this.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			CredentialFields::clientId(),
 			CredentialFields::clientSecret(),
-			new CredentialField( 'stage_paid', __( 'Deal stage for paid orders', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Leave empty for Closed Won.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
-			new CredentialField( 'stage_unpaid', __( 'Deal stage for unpaid orders', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Leave empty for Qualification.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
-			new CredentialField( 'pipeline', __( 'Pipeline name', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Needed when your Deals use pipelines. Test connection lists the names it finds.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
+			new CredentialField( 'stage_paid', __( 'Deal stage for paid orders', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Leave empty for Closed Won.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'advanced' ),
+			new CredentialField( 'stage_unpaid', __( 'Deal stage for unpaid orders', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Leave empty for Qualification.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'advanced' ),
+			new CredentialField( 'pipeline', __( 'Pipeline name', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Needed when your Deals use pipelines. Test connection lists the names it finds.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'advanced' ),
 		);
 	}
 
@@ -257,11 +257,11 @@ final class ZohoCrmConnector extends AbstractSalesConnector implements OAuthConn
 		$names = implode( ', ', array_slice( $pipelines['names'], 0, 8 ) );
 		if ( 'unknown' === $pipelines['status'] ) {
 			/* translators: 1: pipeline names found in Zoho CRM */
-			return $this->invalid( 'pipeline', sprintf( __( 'Zoho CRM has no pipeline with that name. Its pipelines are: %s.', 'estasoft-erp-crm-sync-engine' ), $names ) );
+			return $this->invalid( 'pipeline', sprintf( __( 'Zoho CRM has no pipeline with that name. Its pipelines are: %s.', 'estasoft-enterprise-erpcrm-sync-engine' ), $names ) );
 		}
 		if ( 'ambiguous' === $pipelines['status'] ) {
 			/* translators: 1: pipeline names found in Zoho CRM */
-			return $this->invalid( 'pipeline', sprintf( __( 'Zoho CRM has several pipelines (%s). Enter the one new orders go to in the connection settings.', 'estasoft-erp-crm-sync-engine' ), $names ) );
+			return $this->invalid( 'pipeline', sprintf( __( 'Zoho CRM has several pipelines (%s). Enter the one new orders go to in the connection settings.', 'estasoft-enterprise-erpcrm-sync-engine' ), $names ) );
 		}
 		return null;
 	}
@@ -500,7 +500,7 @@ final class ZohoCrmConnector extends AbstractSalesConnector implements OAuthConn
 		}
 		$dealId = (string) $deal['id'];
 		if ( '' === $dealId ) {
-			return SendResult::failure( $this->invalid( 'Deals', __( 'Zoho CRM did not return the new deal.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( $this->invalid( 'Deals', __( 'Zoho CRM did not return the new deal.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 
 		$read    = $zoho->record( 'Deals', $dealId, 'Amount,Currency' ) ?? array();
@@ -518,7 +518,7 @@ final class ZohoCrmConnector extends AbstractSalesConnector implements OAuthConn
 			$warnings[] = $problem;
 		}
 		if ( $cut ) {
-			$warnings[] = __( 'The order summary was cut because Zoho CRM limits notes to 32,000 characters.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'The order summary was cut because Zoho CRM limits notes to 32,000 characters.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		$ref = new ExternalRef(
 			$dealId,
@@ -549,7 +549,7 @@ final class ZohoCrmConnector extends AbstractSalesConnector implements OAuthConn
 		$deal = $this->findDeal( $zoho, $this->reference( $connection ), $refund->orderRef );
 		if ( null === $deal ) {
 			/* translators: 1: order reference */
-			return SendResult::failure( $this->invalid( 'Deals', sprintf( __( 'The order %s is not in Zoho CRM yet.', 'estasoft-erp-crm-sync-engine' ), $refund->orderRef ) ) );
+			return SendResult::failure( $this->invalid( 'Deals', sprintf( __( 'The order %s is not in Zoho CRM yet.', 'estasoft-enterprise-erpcrm-sync-engine' ), $refund->orderRef ) ) );
 		}
 		$dealId = (string) $deal['id'];
 		$note   = $this->findNote( $zoho, $dealId, $refund->reference );

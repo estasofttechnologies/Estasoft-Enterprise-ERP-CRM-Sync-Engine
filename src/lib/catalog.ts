@@ -15,25 +15,40 @@ export type CatalogFilter = 'all' | ConnectorType | 'uae';
 export function methodLabel( method: string ): string {
 	switch ( method ) {
 		case 'key':
-			return __( 'Paste a key', 'estasoft-erp-crm-sync-engine' );
+			return __(
+				'Paste a key',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			);
 		case 'own_app':
 			return __(
 				'Your own app, then sign in',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 		case 'cloud_app':
 			return __(
 				'Cloud app from your admin',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 		case 'server_login':
-			return __( 'Server sign-in', 'estasoft-erp-crm-sync-engine' );
+			return __(
+				'Server sign-in',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			);
 		case 'export_file':
-			return __( 'Export file', 'estasoft-erp-crm-sync-engine' );
+			return __(
+				'Export file',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			);
 		case 'none':
-			return __( 'No public API yet', 'estasoft-erp-crm-sync-engine' );
+			return __(
+				'No public API yet',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			);
 		default:
-			return __( 'To be confirmed', 'estasoft-erp-crm-sync-engine' );
+			return __(
+				'To be confirmed',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			);
 	}
 }
 
@@ -48,37 +63,37 @@ export function methodExplanation( method: string ): string {
 		case 'key':
 			return __(
 				'You create a key inside the system and paste it here. No sign-in page.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 		case 'own_app':
 			return __(
 				'You create an app in the vendor’s developer area, paste its ID and secret, then sign in.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 		case 'cloud_app':
 			return __(
 				'Your company administrators create an app in the cloud directory. No sign-in page; the plugin uses the app’s own identity.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 		case 'server_login':
 			return __(
 				'An address, a company database, a user and a password, for a server that your website must be able to reach.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 		case 'export_file':
 			return __(
 				'A desktop program, or a link that only the vendor can approve. The plugin writes a file of your orders and you import it. Nothing runs outside WordPress.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 		case 'none':
 			return __(
 				'The vendor publishes no way to connect. Listed so you can see it is planned; it cannot be selected until the vendor opens an API.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 		default:
 			return __(
 				'The way to connect depends on the version you run, or was not fully documented.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 	}
 }
@@ -92,11 +107,11 @@ export function methodExplanation( method: string ): string {
 export function typeLabel( type: ConnectorType ): string {
 	switch ( type ) {
 		case 'erp':
-			return __( 'ERP', 'estasoft-erp-crm-sync-engine' );
+			return __( 'ERP', 'estasoft-enterprise-erpcrm-sync-engine' );
 		case 'accounting':
-			return __( 'Accounting', 'estasoft-erp-crm-sync-engine' );
+			return __( 'Accounting', 'estasoft-enterprise-erpcrm-sync-engine' );
 		case 'crm':
-			return __( 'CRM', 'estasoft-erp-crm-sync-engine' );
+			return __( 'CRM', 'estasoft-enterprise-erpcrm-sync-engine' );
 	}
 }
 

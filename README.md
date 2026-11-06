@@ -85,7 +85,7 @@ nothing. The table is generated from the connector documents (`php bin/generate-
 
 ## Install
 
-**From a release.** Download `estasoft-erp-crm-sync-engine-<version>.zip` from the
+**From a release.** Download `estasoft-enterprise-erpcrm-sync-engine-<version>.zip` from the
 [releases page](https://github.com/estasofttechnologies/estasoft-enterprise-erp-crm-sync-engine/releases), then
 in WordPress choose Plugins > Add New > Upload Plugin. Activate WooCommerce first, then the plugin, then open
 WooCommerce > ESTASOFT SYNC. Credentials are encrypted with your site's WordPress security keys, so there is nothing to
@@ -98,7 +98,7 @@ saved credentials readable even if you change the WordPress security keys.
 git clone https://github.com/estasofttechnologies/estasoft-enterprise-erp-crm-sync-engine.git
 cd estasoft-enterprise-erp-crm-sync-engine
 npm ci && npm run build
-bin/build-zip.sh          # writes dist/estasoft-erp-crm-sync-engine-<version>.zip
+bin/build-zip.sh          # writes dist/estasoft-enterprise-erpcrm-sync-engine-<version>.zip
 ```
 
 ## Development

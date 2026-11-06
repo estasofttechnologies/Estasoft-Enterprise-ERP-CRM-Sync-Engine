@@ -133,7 +133,7 @@ final class ErrorClassifier {
 				$context + array(
 					'field'  => 'address',
 					/* translators: %d: HTTP status code, for example 301. */
-					'reason' => sprintf( __( 'The address redirects to another address (HTTP %d). Use the final address in the connection settings.', 'estasoft-erp-crm-sync-engine' ), $status ),
+					'reason' => sprintf( __( 'The address redirects to another address (HTTP %d). Use the final address in the connection settings.', 'estasoft-enterprise-erpcrm-sync-engine' ), $status ),
 				),
 				$status
 			);
@@ -159,7 +159,7 @@ final class ErrorClassifier {
 			$context + array(
 				'field'  => 'request',
 				/* translators: %d: HTTP status code. */
-				'reason' => sprintf( __( 'The answer was HTTP %d.', 'estasoft-erp-crm-sync-engine' ), $status ),
+				'reason' => sprintf( __( 'The answer was HTTP %d.', 'estasoft-enterprise-erpcrm-sync-engine' ), $status ),
 			),
 			$status
 		);

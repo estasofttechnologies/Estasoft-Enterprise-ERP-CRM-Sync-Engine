@@ -47,13 +47,13 @@ final class PipedriveErrorMapper {
 			return new ConnectorError( ErrorCode::Rate001, array( 'n' => self::LONG_WAIT ), 403, self::LONG_WAIT, null, 'blocked after too many calls' );
 		}
 		if ( 403 === $status ) {
-			return new ConnectorError( ErrorCode::Auth004, array( 'action' => __( 'do this', 'estasoft-erp-crm-sync-engine' ) ), 403, null, null, 'forbidden' );
+			return new ConnectorError( ErrorCode::Auth004, array( 'action' => __( 'do this', 'estasoft-enterprise-erpcrm-sync-engine' ) ), 403, null, null, 'forbidden' );
 		}
 		if ( $status >= 400 && $status < 500 && 401 !== $status && 408 !== $status ) {
 			$text = trim( (string) ( $body['error'] ?? '' ) . ' ' . (string) ( $body['error_info'] ?? '' ) );
 			if ( '' === $text ) {
 				/* translators: 1: HTTP status */
-				$text = sprintf( __( 'The system answered with status %d.', 'estasoft-erp-crm-sync-engine' ), $status );
+				$text = sprintf( __( 'The system answered with status %d.', 'estasoft-enterprise-erpcrm-sync-engine' ), $status );
 			}
 			return new ConnectorError(
 				ErrorCode::Val002,

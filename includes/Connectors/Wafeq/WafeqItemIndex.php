@@ -208,7 +208,7 @@ final class WafeqItemIndex {
 			array(
 				'system' => WafeqConnector::LABEL,
 				'field'  => 'items/',
-				'reason' => __( 'The item list is longer than the connector reads. Map the products to Wafeq items by hand.', 'estasoft-erp-crm-sync-engine' ),
+				'reason' => __( 'The item list is longer than the connector reads. Map the products to Wafeq items by hand.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			),
 			null,
 			null,

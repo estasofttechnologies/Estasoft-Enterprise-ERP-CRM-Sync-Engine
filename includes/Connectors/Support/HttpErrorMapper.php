@@ -45,7 +45,7 @@ final class HttpErrorMapper {
 		if ( 403 === $status ) {
 			return new ConnectorError(
 				ErrorCode::Auth004,
-				$base + array( 'action' => '' !== $action ? $action : __( 'do this', 'estasoft-erp-crm-sync-engine' ) ),
+				$base + array( 'action' => '' !== $action ? $action : __( 'do this', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 				403,
 				null,
 				null,
@@ -66,10 +66,10 @@ final class HttpErrorMapper {
 		return new ConnectorError(
 			ErrorCode::Val002,
 			$base + array(
-				'field'  => __( 'the request', 'estasoft-erp-crm-sync-engine' ),
+				'field'  => __( 'the request', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'reason' => '' !== $reason ? $reason : sprintf(
 					/* translators: %d: HTTP status code. */
-					__( 'The system answered with status %d.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The system answered with status %d.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$status
 				),
 			),
@@ -99,7 +99,7 @@ final class HttpErrorMapper {
 				ErrorCode::Val002,
 				$base + array(
 					'field'  => 'address',
-					'reason' => __( 'The address is not allowed.', 'estasoft-erp-crm-sync-engine' ),
+					'reason' => __( 'The address is not allowed.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				null,
 				null,

@@ -17,7 +17,7 @@ export function NotConnected() {
 			as="h2"
 			title={ __(
 				'Connect a system first',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			) }
 			action={
 				canConfigure ? (
@@ -25,14 +25,17 @@ export function NotConnected() {
 						variant="primary"
 						onClick={ () => navigate( '/setup' ) }
 					>
-						{ __( 'Start setup', 'estasoft-erp-crm-sync-engine' ) }
+						{ __(
+							'Start setup',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						) }
 					</Btn>
 				) : undefined
 			}
 		>
 			{ __(
 				'This page works with a connected system. Until then there is nothing to set here.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			) }
 		</EmptyState>
 	);

@@ -139,7 +139,7 @@ final class InboundHandler {
 	public function enable( int $connectionId ): string {
 		$connection = $this->connections->findWithoutSecrets( $connectionId );
 		if ( null === $connection || ConnectionStatus::Disconnected === $connection->status ) {
-			throw new JobException( esc_html__( 'That connection does not exist or is disconnected.', 'estasoft-erp-crm-sync-engine' ), 404 );
+			throw new JobException( esc_html__( 'That connection does not exist or is disconnected.', 'estasoft-enterprise-erpcrm-sync-engine' ), 404 );
 		}
 		if ( ! $this->box->keyAvailable() ) {
 			$refusal = new JobException( esc_html( ErrorCode::Cfg002->template() ), 409, ErrorCode::Cfg002, array( 'key_line' => $this->box->generateKeyLine() ) );
@@ -171,7 +171,7 @@ final class InboundHandler {
 	 */
 	public function disable( int $connectionId ): void {
 		if ( null === $this->connections->findWithoutSecrets( $connectionId ) ) {
-			throw new JobException( esc_html__( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ), 404 );
+			throw new JobException( esc_html__( 'That connection does not exist.', 'estasoft-enterprise-erpcrm-sync-engine' ), 404 );
 		}
 		try {
 			$this->connections->update(
@@ -201,15 +201,15 @@ final class InboundHandler {
 		$connection = $this->connections->findWithoutSecrets( $connectionId );
 		if ( null === $connection || ConnectionStatus::Disconnected === $connection->status || ! $this->enabled( $connectionId ) ) {
 			$this->logRefusal( 0, 404, true );
-			throw new InboundRefused( esc_html__( 'Not found.', 'estasoft-erp-crm-sync-engine' ), 404 );
+			throw new InboundRefused( esc_html__( 'Not found.', 'estasoft-enterprise-erpcrm-sync-engine' ), 404 );
 		}
 		if ( $this->tooMany( $connectionId, $source ?? ( $this->remoteAddress )() ) ) {
 			$this->logRefusal( $connectionId, 429, true );
-			throw new InboundRefused( esc_html__( 'Too many requests. Try again in a minute.', 'estasoft-erp-crm-sync-engine' ), 429 );
+			throw new InboundRefused( esc_html__( 'Too many requests. Try again in a minute.', 'estasoft-enterprise-erpcrm-sync-engine' ), 429 );
 		}
 		if ( strlen( $rawBody ) > self::MAX_BODY ) {
 			$this->logRefusal( $connectionId, 413 );
-			throw new InboundRefused( esc_html__( 'The message is too large.', 'estasoft-erp-crm-sync-engine' ), 413 );
+			throw new InboundRefused( esc_html__( 'The message is too large.', 'estasoft-enterprise-erpcrm-sync-engine' ), 413 );
 		}
 		$normal = array();
 		foreach ( $headers as $name => $value ) {
@@ -220,17 +220,17 @@ final class InboundHandler {
 		$stamp     = $this->timestamp( $header );
 		if ( '' === $signature || null === $stamp || abs( $this->clock->now()->getTimestamp() - $stamp ) > self::WINDOW ) {
 			$this->logRefusal( $connectionId, 401 );
-			throw new InboundRefused( esc_html__( 'The signature or the time is wrong.', 'estasoft-erp-crm-sync-engine' ), 401 );
+			throw new InboundRefused( esc_html__( 'The signature or the time is wrong.', 'estasoft-enterprise-erpcrm-sync-engine' ), 401 );
 		}
 		$secret = $this->secret( $connectionId );
 		if ( '' === $secret || ! hash_equals( hash_hmac( 'sha256', $header . '.' . $rawBody, $secret ), $signature ) ) {
 			$this->logRefusal( $connectionId, 401 );
-			throw new InboundRefused( esc_html__( 'The signature or the time is wrong.', 'estasoft-erp-crm-sync-engine' ), 401 );
+			throw new InboundRefused( esc_html__( 'The signature or the time is wrong.', 'estasoft-enterprise-erpcrm-sync-engine' ), 401 );
 		}
 		$seen = 'estasoft_sync_inb_seen_' . substr( hash( 'sha256', $connectionId . ':' . $signature ), 0, 40 );
 		if ( false !== $this->transients->get( $seen ) ) {
 			$this->logRefusal( $connectionId, 409 );
-			throw new InboundRefused( esc_html__( 'This message was already received.', 'estasoft-erp-crm-sync-engine' ), 409 );
+			throw new InboundRefused( esc_html__( 'This message was already received.', 'estasoft-enterprise-erpcrm-sync-engine' ), 409 );
 		}
 		$this->transients->set( $seen, 1, self::REPLAY_TTL );
 		( $this->schedule )( $connectionId, $this->entity( $rawBody ) );

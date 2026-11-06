@@ -39,7 +39,7 @@ export function ExternalLink( {
 				{ ' ' +
 					__(
 						'(opens in a new tab)',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 			</span>
 		</a>

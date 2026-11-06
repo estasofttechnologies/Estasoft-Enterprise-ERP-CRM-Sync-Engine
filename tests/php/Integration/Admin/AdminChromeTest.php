@@ -174,7 +174,7 @@ final class AdminChromeTest extends RestIntegrationCase {
 		$this->assertSame( array( 'wp-element', 'wp-i18n' ), $script->deps, 'dependencies from index.asset.php' );
 		$this->assertSame( 'abc123', $script->ver, 'version from index.asset.php' );
 		$this->assertSame( 1, $script->extra['group'], 'in the footer' );
-		$this->assertSame( 'estasoft-erp-crm-sync-engine', $script->textdomain );
+		$this->assertSame( 'estasoft-enterprise-erpcrm-sync-engine', $script->textdomain );
 
 		$before = wp_scripts()->get_data( Assets::HANDLE, 'before' );
 		$inline = implode( '', (array) $before );
@@ -382,7 +382,7 @@ final class AdminChromeTest extends RestIntegrationCase {
 	}
 
 	public function test_the_plugins_screen_gets_settings_and_setup_guide_links_before_the_others(): void {
-		$links = new PluginLinks( 'estasoft-erp-crm-sync-engine/estasoft-erp-crm-sync-engine.php', $this->urls );
+		$links = new PluginLinks( 'estasoft-enterprise-erpcrm-sync-engine/estasoft-enterprise-erpcrm-sync-engine.php', $this->urls );
 		$out   = $links->links( array( 'deactivate' => '<a>Deactivate</a>' ) );
 		$this->assertSame( array( 'estasoft-sync-settings', 'estasoft-sync-setup', 'deactivate' ), array_keys( $out ) );
 		$this->assertStringContainsString( 'href="' . esc_url( admin_url( 'admin.php?page=estasoft-sync' ) ) . '#/settings"', $out['estasoft-sync-settings'] );

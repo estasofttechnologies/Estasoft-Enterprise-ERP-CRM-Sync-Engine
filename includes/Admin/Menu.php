@@ -69,7 +69,7 @@ final class Menu {
 	 * Add the submenu page. Runs on `admin_menu`.
 	 */
 	public function addPage(): void {
-		$title = __( 'ESTASOFT SYNC', 'estasoft-erp-crm-sync-engine' );
+		$title = __( 'ESTASOFT SYNC', 'estasoft-enterprise-erpcrm-sync-engine' );
 		$hook  = add_submenu_page(
 			self::PARENT,
 			$title,
@@ -107,7 +107,7 @@ final class Menu {
 			$failed,
 			esc_html( number_format_i18n( $failed ) ),
 			/* translators: %s: number of failed orders. */
-			esc_html( sprintf( _n( '%s failed order', '%s failed orders', $failed, 'estasoft-erp-crm-sync-engine' ), number_format_i18n( $failed ) ) )
+			esc_html( sprintf( _n( '%s failed order', '%s failed orders', $failed, 'estasoft-enterprise-erpcrm-sync-engine' ), number_format_i18n( $failed ) ) )
 		);
 	}
 
@@ -116,16 +116,16 @@ final class Menu {
 	 */
 	public function render(): void {
 		echo '<div id="' . esc_attr( self::ROOT_ID ) . '" class="wrap estasoft-sync">';
-		echo '<h1 class="screen-reader-text">' . esc_html__( 'ESTASOFT SYNC', 'estasoft-erp-crm-sync-engine' ) . '</h1>';
+		echo '<h1 class="screen-reader-text">' . esc_html__( 'ESTASOFT SYNC', 'estasoft-enterprise-erpcrm-sync-engine' ) . '</h1>';
 		if ( ! $this->assets->bundleAvailable() ) {
 			$this->renderMissingBundle();
 			echo '</div>';
 			return;
 		}
 		echo '<noscript><div class="notice notice-error"><p>';
-		esc_html_e( 'ESTASOFT SYNC needs JavaScript. Turn it on in your browser to use this screen. Your orders keep syncing in the background either way.', 'estasoft-erp-crm-sync-engine' );
+		esc_html_e( 'ESTASOFT SYNC needs JavaScript. Turn it on in your browser to use this screen. Your orders keep syncing in the background either way.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		echo '</p></div></noscript>';
-		echo '<p class="estasoft-sync-loading" role="status">' . esc_html__( 'Loading ESTASOFT SYNC…', 'estasoft-erp-crm-sync-engine' ) . '</p>';
+		echo '<p class="estasoft-sync-loading" role="status">' . esc_html__( 'Loading ESTASOFT SYNC…', 'estasoft-enterprise-erpcrm-sync-engine' ) . '</p>';
 		echo '</div>';
 	}
 
@@ -133,15 +133,15 @@ final class Menu {
 	 * The message shown when the compiled app is not there.
 	 */
 	private function renderMissingBundle(): void {
-		echo '<div class="notice notice-error inline"><p><strong>' . esc_html__( 'The ESTASOFT SYNC screen has not been built.', 'estasoft-erp-crm-sync-engine' ) . '</strong> ';
+		echo '<div class="notice notice-error inline"><p><strong>' . esc_html__( 'The ESTASOFT SYNC screen has not been built.', 'estasoft-enterprise-erpcrm-sync-engine' ) . '</strong> ';
 		if ( Capabilities::userCanConfigure() ) {
 			printf(
 				/* translators: %s: the command to run, shown as code. */
-				esc_html__( 'This copy of the plugin was installed from the source code. Run %s in the plugin folder, then reload this page. Syncing is not affected.', 'estasoft-erp-crm-sync-engine' ),
+				esc_html__( 'This copy of the plugin was installed from the source code. Run %s in the plugin folder, then reload this page. Syncing is not affected.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'<code>npm install &amp;&amp; npm run build</code>'
 			);
 		} else {
-			esc_html_e( 'Ask an administrator to finish the installation. Syncing is not affected.', 'estasoft-erp-crm-sync-engine' );
+			esc_html_e( 'Ask an administrator to finish the installation. Syncing is not affected.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		echo '</p></div>';
 	}

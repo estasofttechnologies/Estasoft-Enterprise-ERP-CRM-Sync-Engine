@@ -367,7 +367,7 @@ final class InvoiceService {
 			}
 		}
 		$order  = $this->orders->find( $orderId ) ?? array();
-		$reason = '' !== $facts['reject_reason'] ? $facts['reject_reason'] : __( 'no reason was given', 'estasoft-erp-crm-sync-engine' );
+		$reason = '' !== $facts['reject_reason'] ? $facts['reject_reason'] : __( 'no reason was given', 'estasoft-enterprise-erpcrm-sync-engine' );
 		if ( null === $queueId ) {
 			$queueId = $this->enqueuer->enqueue(
 				EntityType::Invoice,
@@ -389,7 +389,7 @@ final class InvoiceService {
 		}
 		$message = sprintf(
 			/* translators: 1: invoice number, 2: reason given by the tax authority. */
-			__( 'The tax authority rejected invoice %1$s: %2$s.', 'estasoft-erp-crm-sync-engine' ),
+			__( 'The tax authority rejected invoice %1$s: %2$s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			'' !== $facts['number'] ? $facts['number'] : '#' . $orderId,
 			$reason
 		);

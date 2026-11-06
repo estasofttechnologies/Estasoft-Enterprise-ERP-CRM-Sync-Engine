@@ -57,7 +57,7 @@ final class HoldedRefundPayload {
 	public static function parse( array $payload ): self|ConnectorError {
 		$orderRef = HoldedPayloadReader::text( $payload['order_ref'] ?? '' );
 		if ( '' === $orderRef ) {
-			return self::refused( 'order_ref', __( 'The refund does not say which order it belongs to.', 'estasoft-erp-crm-sync-engine' ) );
+			return self::refused( 'order_ref', __( 'The refund does not say which order it belongs to.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$lines = array();
 		foreach ( HoldedPayloadReader::rows( $payload['lines'] ?? null ) as $raw ) {
@@ -77,7 +77,7 @@ final class HoldedRefundPayload {
 		}
 		$amount = abs( (int) HoldedPayloadReader::minor( $payload['amount'] ?? null ) );
 		if ( 0 === $amount && array() === $lines ) {
-			return self::refused( 'amount', __( 'The refund has no amount and no lines.', 'estasoft-erp-crm-sync-engine' ) );
+			return self::refused( 'amount', __( 'The refund has no amount and no lines.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return new self(
 			strtoupper( HoldedPayloadReader::text( $payload['currency'] ?? '' ) ),

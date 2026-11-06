@@ -89,7 +89,7 @@ final class SevdeskContacts {
 				return Refusal::value(
 					SevdeskConnector::LABEL,
 					'collective_contact_id',
-					__( 'The collective customer is not set, or sevDesk has no contact with that id.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The collective customer is not set, or sevDesk has no contact with that id.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					'collective contact missing'
 				);
 			}
@@ -112,7 +112,7 @@ final class SevdeskContacts {
 			return Refusal::value(
 				SevdeskConnector::LABEL,
 				'customer.email',
-				__( 'sevDesk has no contact for this customer and the customer setting is match only.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'sevDesk has no contact for this customer and the customer setting is match only.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'no matching contact'
 			);
 		}
@@ -148,7 +148,7 @@ final class SevdeskContacts {
 		$created = SevdeskJson::first( $api->post( 'Contact', array(), $body )->json() );
 		$id      = null === $created ? '' : (string) ( $created['id'] ?? '' );
 		if ( '' === $id ) {
-			return Refusal::value( SevdeskConnector::LABEL, 'contact', __( 'sevDesk did not return the new contact.', 'estasoft-erp-crm-sync-engine' ), 'no contact id' );
+			return Refusal::value( SevdeskConnector::LABEL, 'contact', __( 'sevDesk did not return the new contact.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'no contact id' );
 		}
 		$warnings = array();
 		try {

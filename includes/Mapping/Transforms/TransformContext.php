@@ -153,7 +153,7 @@ final class TransformContext {
 	public function messageContext(): array {
 		$number = $this->order->get( 'order.number' );
 		return array(
-			'system' => '' === $this->environment->system ? __( 'The system', 'estasoft-erp-crm-sync-engine' ) : $this->environment->system,
+			'system' => '' === $this->environment->system ? __( 'The system', 'estasoft-enterprise-erpcrm-sync-engine' ) : $this->environment->system,
 			'order'  => is_scalar( $number ) ? (string) $number : '',
 		);
 	}

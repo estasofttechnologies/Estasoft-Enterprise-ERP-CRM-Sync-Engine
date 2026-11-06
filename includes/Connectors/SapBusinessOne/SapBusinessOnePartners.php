@@ -84,7 +84,7 @@ final class SapBusinessOnePartners {
 			return $found + array( 'created' => false );
 		}
 		if ( 'match_only' === $this->options->customerPolicy() ) {
-			$problem = Problem::validation( $this->system, 'customer', __( 'SAP has no customer with this email and customer_policy is match_only.', 'estasoft-erp-crm-sync-engine' ) );
+			$problem = Problem::validation( $this->system, 'customer', __( 'SAP has no customer with this email and customer_policy is match_only.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			throw new ApiException( $problem ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 		}
 		$body = $this->body( $partner, $delivery, $email, $warnings );
@@ -99,7 +99,7 @@ final class SapBusinessOnePartners {
 		}
 		$code = (string) ( $created['CardCode'] ?? ( $body['CardCode'] ?? '' ) );
 		if ( '' === $code ) {
-			$problem = Problem::validation( $this->system, 'CardCode', __( 'SAP created the customer but did not say its card code.', 'estasoft-erp-crm-sync-engine' ) );
+			$problem = Problem::validation( $this->system, 'CardCode', __( 'SAP created the customer but did not say its card code.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			throw new ApiException( $problem ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 		}
 		return array(

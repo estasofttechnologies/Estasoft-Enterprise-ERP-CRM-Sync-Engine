@@ -69,61 +69,70 @@ export function MappingPage( { tab }: { tab: MappingTab } ) {
 			0
 	);
 	const labels: Record< MappingTab, string > = {
-		orders: __( 'Orders', 'estasoft-erp-crm-sync-engine' ),
-		customers: __( 'Customers', 'estasoft-erp-crm-sync-engine' ),
-		products: __( 'Products', 'estasoft-erp-crm-sync-engine' ),
-		refunds: __( 'Refunds', 'estasoft-erp-crm-sync-engine' ),
-		stock: __( 'Stock and tracking', 'estasoft-erp-crm-sync-engine' ),
-		tax: __( 'Tax', 'estasoft-erp-crm-sync-engine' ),
+		orders: __( 'Orders', 'estasoft-enterprise-erpcrm-sync-engine' ),
+		customers: __( 'Customers', 'estasoft-enterprise-erpcrm-sync-engine' ),
+		products: __( 'Products', 'estasoft-enterprise-erpcrm-sync-engine' ),
+		refunds: __( 'Refunds', 'estasoft-enterprise-erpcrm-sync-engine' ),
+		stock: __(
+			'Stock and tracking',
+			'estasoft-enterprise-erpcrm-sync-engine'
+		),
+		tax: __( 'Tax', 'estasoft-enterprise-erpcrm-sync-engine' ),
 	};
 	const subtitles: Record< MappingTab, string > = {
 		orders: sprintf(
 			/* translators: %s: system name */ __(
 				'Orders to %s sale orders.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			system
 		),
 		customers: sprintf(
 			/* translators: %s: system name */ __(
 				'Customers to %s contacts.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			system
 		),
 		products: __(
 			'Products and SKU matching.',
-			'estasoft-erp-crm-sync-engine'
+			'estasoft-enterprise-erpcrm-sync-engine'
 		),
 		refunds: sprintf(
 			/* translators: %s: system name */ __(
 				'Refunds to %s credit notes.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			system
 		),
 		stock: sprintf(
 			/* translators: %s: system name */ __(
 				'What comes back from %s.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			system
 		),
 		tax: __(
 			'Tax codes. Each order must arrive with the code your system expects.',
-			'estasoft-erp-crm-sync-engine'
+			'estasoft-enterprise-erpcrm-sync-engine'
 		),
 	};
 
 	return (
 		<>
 			<PageHeader
-				title={ __( 'Mapping', 'estasoft-erp-crm-sync-engine' ) }
+				title={ __(
+					'Mapping',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 				description={ subtitles[ tab ] }
 			/>
 			<div className="estasoft-sync-connpick">
 				<SelectField
-					label={ __( 'Connection', 'estasoft-erp-crm-sync-engine' ) }
+					label={ __(
+						'Connection',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 					value={ String( chosen ) }
 					onChange={ ( value ) =>
 						navigate(
@@ -145,19 +154,22 @@ export function MappingPage( { tab }: { tab: MappingTab } ) {
 										value: '0',
 										label: __(
 											'No connection yet',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										),
 									},
 								]
 					}
 					hint={ __(
 						'Each connection has its own settings.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			</div>
 			<TabNav
-				label={ __( 'Mapping pages', 'estasoft-erp-crm-sync-engine' ) }
+				label={ __(
+					'Mapping pages',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 				items={ TABS.map( ( id ) => ( {
 					label: labels[ id ],
 					to: routeTo( `/mapping/${ id }`, {
@@ -197,7 +209,7 @@ export function MappingPage( { tab }: { tab: MappingTab } ) {
 						{ sprintf(
 							/* translators: %s: system name */ __(
 								'These rules read from %s and write to WooCommerce. The buffer, warehouses and the winner rule are on the Stock page.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							system
 						) }
@@ -208,11 +220,11 @@ export function MappingPage( { tab }: { tab: MappingTab } ) {
 						asSection
 						title={ __(
 							'Stock in',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						description={ __(
 							'Runs on a schedule, and when the system says a quantity changed.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					/>
 					<RuleSetEditor
@@ -221,11 +233,11 @@ export function MappingPage( { tab }: { tab: MappingTab } ) {
 						asSection
 						title={ __(
 							'Delivery in',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						description={ __(
 							'Delivery state, carrier and tracking number.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					/>
 				</div>

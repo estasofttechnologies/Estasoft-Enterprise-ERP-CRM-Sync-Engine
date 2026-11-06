@@ -70,12 +70,12 @@ final class SageOrderPayload {
 			return SageErrors::noEmail( $item->entityId );
 		}
 		if ( '' === ( $partner['name'] ?? '' ) && '' === ( $partner['company_name'] ?? '' ) ) {
-			return SageErrors::refused( 'partner.name', __( 'The customer name is empty.', 'estasoft-erp-crm-sync-engine' ) );
+			return SageErrors::refused( 'partner.name', __( 'The customer name is empty.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 
 		$date = SagePayloadReader::day( $payload['date_order'] ?? '' );
 		if ( '' === $date ) {
-			return SageErrors::refused( 'date_order', __( 'The order has no date. Sage needs the date of the invoice.', 'estasoft-erp-crm-sync-engine' ) );
+			return SageErrors::refused( 'date_order', __( 'The order has no date. Sage needs the date of the invoice.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 
 		$lines = array();
@@ -87,7 +87,7 @@ final class SageOrderPayload {
 			$lines[] = $line;
 		}
 		if ( array() === $lines ) {
-			return SageErrors::refused( 'order_line', __( 'The order has no product lines.', 'estasoft-erp-crm-sync-engine' ) );
+			return SageErrors::refused( 'order_line', __( 'The order has no product lines.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$extras = self::extras( $payload );
 		if ( $extras instanceof ConnectorError ) {
@@ -99,7 +99,7 @@ final class SageOrderPayload {
 		if ( 0 !== $shippingMinor && array_key_exists( 'tax', $block ) ) {
 			$codes = SagePayloadReader::taxCodes( $block['tax'] );
 			if ( count( $codes ) > 1 ) {
-				return SageErrors::refused( 'shipping.tax', __( 'More than one tax code on the shipping. Sage takes one tax rate for the shipping.', 'estasoft-erp-crm-sync-engine' ) );
+				return SageErrors::refused( 'shipping.tax', __( 'More than one tax code on the shipping. Sage takes one tax rate for the shipping.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$shippingTax = array() === $codes ? '' : $codes[0];
 		}
@@ -147,7 +147,7 @@ final class SageOrderPayload {
 				'order_line[].quantity',
 				sprintf(
 					/* translators: %d: line number. */
-					__( 'Line %d has no quantity.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Line %d has no quantity.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$number
 				)
 			);
@@ -158,7 +158,7 @@ final class SageOrderPayload {
 				'order_line[].price_unit',
 				sprintf(
 					/* translators: %d: line number. */
-					__( 'Line %d has no price in minor units (a whole number such as 21900).', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Line %d has no price in minor units (a whole number such as 21900).', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$number
 				)
 			);
@@ -171,7 +171,7 @@ final class SageOrderPayload {
 					'order_line[].tax',
 					sprintf(
 						/* translators: %d: line number. */
-						__( 'Line %d has more than one tax code. Sage takes one tax rate per line.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'Line %d has more than one tax code. Sage takes one tax rate per line.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$number
 					)
 				);
@@ -198,10 +198,10 @@ final class SageOrderPayload {
 		$extras = array();
 		$blocks = array();
 		foreach ( SagePayloadReader::rows( $payload['fee'] ?? null ) as $fee ) {
-			$blocks[] = array( 'fee', $fee, __( 'Fee', 'estasoft-erp-crm-sync-engine' ) );
+			$blocks[] = array( 'fee', $fee, __( 'Fee', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$discount = isset( $payload['discount'] ) && is_array( $payload['discount'] ) ? $payload['discount'] : array();
-		$blocks[] = array( 'discount', $discount, __( 'Discount', 'estasoft-erp-crm-sync-engine' ) );
+		$blocks[] = array( 'discount', $discount, __( 'Discount', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 
 		foreach ( $blocks as $block ) {
 			list( $kind, $raw, $fallback ) = $block;
@@ -213,7 +213,7 @@ final class SageOrderPayload {
 			if ( array_key_exists( 'tax', $raw ) ) {
 				$codes = SagePayloadReader::taxCodes( $raw['tax'] );
 				if ( count( $codes ) > 1 ) {
-					return SageErrors::refused( $kind . '.tax', __( 'More than one tax code on a fee or discount line. Sage takes one tax rate per line.', 'estasoft-erp-crm-sync-engine' ) );
+					return SageErrors::refused( $kind . '.tax', __( 'More than one tax code on a fee or discount line. Sage takes one tax rate per line.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 				}
 				$tax = array() === $codes ? '' : $codes[0];
 			}

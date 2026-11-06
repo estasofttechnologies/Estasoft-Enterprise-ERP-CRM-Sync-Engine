@@ -165,7 +165,7 @@ export function RuleSetEditor( {
 			kind: 'success',
 			text: __(
 				'Draft saved. It is not live until you publish it.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 		} );
 	} );
@@ -176,7 +176,7 @@ export function RuleSetEditor( {
 				rows={ 5 }
 				label={ __(
 					'Loading the mapping',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			/>
 		);
@@ -188,7 +188,7 @@ export function RuleSetEditor( {
 				onRetry={ () => void set.reload() }
 				title={ __(
 					'The mapping could not be loaded.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			/>
 		);
@@ -203,7 +203,10 @@ export function RuleSetEditor( {
 			typeof rule.source === 'object' &&
 			! Array.isArray( rule.source )
 		) {
-			return __( 'Fixed value', 'estasoft-erp-crm-sync-engine' );
+			return __(
+				'Fixed value',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			);
 		}
 		return sourcePaths( rule )
 			.map(
@@ -231,11 +234,20 @@ export function RuleSetEditor( {
 	};
 	const flag = ( rule: MappingRule ) => {
 		if ( draftDiff.added.includes( rule.id ) ) {
-			return <Tag>{ __( 'New', 'estasoft-erp-crm-sync-engine' ) }</Tag>;
+			return (
+				<Tag>
+					{ __( 'New', 'estasoft-enterprise-erpcrm-sync-engine' ) }
+				</Tag>
+			);
 		}
 		if ( draftDiff.changed.includes( rule.id ) ) {
 			return (
-				<Tag>{ __( 'Changed', 'estasoft-erp-crm-sync-engine' ) }</Tag>
+				<Tag>
+					{ __(
+						'Changed',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
+				</Tag>
 			);
 		}
 		return null;
@@ -256,11 +268,14 @@ export function RuleSetEditor( {
 		? sprintf(
 				/* translators: %d: version number */ __(
 					'Version %d is live.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				data.live.version
 			)
-		: __( 'No version is live yet.', 'estasoft-erp-crm-sync-engine' );
+		: __(
+				'No version is live yet.',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			);
 	const draftLabel =
 		changeCount > 0 || data.draft
 			? sprintf(
@@ -268,11 +283,11 @@ export function RuleSetEditor( {
 						'Draft: %d change.',
 						'Draft: %d changes.',
 						changeCount,
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					changeCount
 				)
-			: __( 'No draft.', 'estasoft-erp-crm-sync-engine' );
+			: __( 'No draft.', 'estasoft-enterprise-erpcrm-sync-engine' );
 
 	const heading = asSection ? (
 		<div className="estasoft-sync-section-head">
@@ -292,7 +307,7 @@ export function RuleSetEditor( {
 				busy={ save.busy }
 				onClick={ () => void save.run() }
 			>
-				{ __( 'Save draft', 'estasoft-erp-crm-sync-engine' ) }
+				{ __( 'Save draft', 'estasoft-enterprise-erpcrm-sync-engine' ) }
 			</Btn>
 			<Btn
 				variant="primary"
@@ -302,7 +317,7 @@ export function RuleSetEditor( {
 				{ sprintf(
 					/* translators: %d: version number */ __(
 						'Publish as version %d',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					nextVersion
 				) }
@@ -318,7 +333,7 @@ export function RuleSetEditor( {
 				<Callout tone="warning">
 					{ __(
 						'There is no live mapping version for this type. Orders fail until you publish one.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }{ ' ' }
 					<span className="estasoft-sync-mono">SYNC-CFG-001</span>
 				</Callout>
@@ -327,7 +342,7 @@ export function RuleSetEditor( {
 				<Callout tone="info">
 					{ __(
 						'This is a saved draft. It is not live until you publish it. Live orders still use the live version.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</Callout>
 			) : null }
@@ -340,7 +355,7 @@ export function RuleSetEditor( {
 				<Callout tone="info" role="status">
 					{ __(
 						'You have unsaved edits. Save the draft to keep them.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</Callout>
 			) : null }
@@ -349,7 +364,10 @@ export function RuleSetEditor( {
 				title={
 					asSection
 						? undefined
-						: __( 'Rules', 'estasoft-erp-crm-sync-engine' )
+						: __(
+								'Rules',
+								'estasoft-enterprise-erpcrm-sync-engine'
+							)
 				}
 				flush
 			>
@@ -357,7 +375,7 @@ export function RuleSetEditor( {
 					<p className="estasoft-sync-pad estasoft-sync-muted">
 						{ __(
 							'There are no rules yet.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</p>
 				) : (
@@ -365,7 +383,7 @@ export function RuleSetEditor( {
 						caption={ sprintf(
 							/* translators: %s: mapping title */ __(
 								'Rules: %s',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							title
 						) }
@@ -377,7 +395,7 @@ export function RuleSetEditor( {
 									id: 'source',
 									header: __(
 										'WooCommerce field',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									primary: true,
 									cell: ( rule ) => (
@@ -393,7 +411,7 @@ export function RuleSetEditor( {
 									id: 'rule',
 									header: __(
 										'Rule',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									wide: true,
 									cell: ( rule ) => describeRule( rule ),
@@ -403,13 +421,13 @@ export function RuleSetEditor( {
 									header: sprintf(
 										/* translators: %s: system name */ __(
 											'%s field',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										),
 										system
 									),
 									label: __(
 										'Target field',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									cell: ( rule ) => (
 										<span
@@ -425,13 +443,13 @@ export function RuleSetEditor( {
 									header: sprintf(
 										/* translators: %s: order label such as #10490 */ __(
 											'Sample, order %s',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										),
 										sample.orders[ 0 ]?.label ?? ''
 									).trim(),
 									label: __(
 										'Sample',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									cell: ( rule ) => (
 										<span dir="auto">
@@ -443,7 +461,7 @@ export function RuleSetEditor( {
 									id: 'edit',
 									header: __(
 										'Edit',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									hideHeader: true,
 									align: 'end',
@@ -454,7 +472,7 @@ export function RuleSetEditor( {
 												aria-label={ sprintf(
 													/* translators: %s: field name */ __(
 														'Edit the %s rule',
-														'estasoft-erp-crm-sync-engine'
+														'estasoft-enterprise-erpcrm-sync-engine'
 													),
 													sourceLabel( rule )
 												) }
@@ -467,7 +485,7 @@ export function RuleSetEditor( {
 											>
 												{ __(
 													'Edit',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												) }
 											</Btn>
 										) : null,
@@ -485,7 +503,7 @@ export function RuleSetEditor( {
 								'%d field',
 								'%d fields',
 								rules.length,
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							rules.length
 						) }
@@ -498,7 +516,7 @@ export function RuleSetEditor( {
 						>
 							{ __(
 								'Add a field',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Btn>
 					) : null }
@@ -506,7 +524,10 @@ export function RuleSetEditor( {
 			</Card>
 
 			<Card
-				title={ __( 'Versions', 'estasoft-erp-crm-sync-engine' ) }
+				title={ __(
+					'Versions',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 				description={
 					data.draft || changeCount > 0
 						? sprintf(
@@ -514,13 +535,13 @@ export function RuleSetEditor( {
 									'Draft: %d change',
 									'Draft: %d changes',
 									changeCount,
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								changeCount
 							)
 						: __(
 								'No draft. Change a rule to start one.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							)
 				}
 				actions={
@@ -531,7 +552,7 @@ export function RuleSetEditor( {
 						>
 							{ __(
 								'Discard draft',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Btn>
 					) : undefined
@@ -541,7 +562,7 @@ export function RuleSetEditor( {
 				<ResponsiveTable< Omit< MappingVersion, 'rules' >, number >
 					caption={ __(
 						'Mapping versions',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					rows={ data.versions.filter(
 						( version ) => version.status !== 'draft'
@@ -552,7 +573,7 @@ export function RuleSetEditor( {
 							id: 'version',
 							header: __(
 								'Version',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							primary: true,
 							cell: ( version ) => (
@@ -561,7 +582,7 @@ export function RuleSetEditor( {
 										{ sprintf(
 											/* translators: %d: version number */ __(
 												'Version %d',
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											),
 											version.version
 										) }
@@ -586,14 +607,14 @@ export function RuleSetEditor( {
 							id: 'status',
 							header: __(
 								'Status',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							cell: ( version ) =>
 								version.status === 'live' ? (
 									<StatusBadge tone="success">
 										{ __(
 											'Live',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										) }
 									</StatusBadge>
 								) : (
@@ -609,14 +630,14 @@ export function RuleSetEditor( {
 											aria-label={ sprintf(
 												/* translators: %d: version number */ __(
 													'View version %d',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												),
 												version.version
 											) }
 										>
 											{ __(
 												'View',
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											) }
 										</Btn>
 										{ canConfigure ? (
@@ -632,14 +653,14 @@ export function RuleSetEditor( {
 												aria-label={ sprintf(
 													/* translators: %d: version number */ __(
 														'Roll back to version %d',
-														'estasoft-erp-crm-sync-engine'
+														'estasoft-enterprise-erpcrm-sync-engine'
 													),
 													version.version
 												) }
 											>
 												{ __(
 													'Roll back',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												) }
 											</Btn>
 										) : null }
@@ -654,12 +675,12 @@ export function RuleSetEditor( {
 				<Card
 					title={ __(
 						'Check before you publish',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					description={ sprintf(
 						/* translators: %s: system name */ __(
 							'See exactly what %s would receive for a real order, with your draft rules applied.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						system
 					) }
@@ -675,14 +696,14 @@ export function RuleSetEditor( {
 					>
 						{ __(
 							'Preview with a real order',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</Btn>
 					{ sample.orders.length === 0 && ! sample.loading ? (
 						<p className="estasoft-sync-muted">
 							{ __(
 								'No orders yet to preview. Place a test order in WooCommerce first.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</p>
 					) : null }
@@ -758,13 +779,13 @@ export function RuleSetEditor( {
 					title={ sprintf(
 						/* translators: %d: version number */ __(
 							'Roll back to version %d?',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						dialog.version
 					) }
 					confirmLabel={ __(
 						'Roll back',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					onClose={ () => setDialog( null ) }
 					onConfirm={ async () => {
@@ -779,7 +800,7 @@ export function RuleSetEditor( {
 							text: sprintf(
 								/* translators: %d: version number */ __(
 									'Version %d is the live rules again, as a new version.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								dialog.version
 							),
@@ -790,7 +811,7 @@ export function RuleSetEditor( {
 						{ sprintf(
 							/* translators: 1: version rolled back to, 2: new version number */ __(
 								'Version %1$d becomes the live rules again, as a new version %2$d. Nothing is deleted.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							dialog.version,
 							nextVersion
@@ -800,20 +821,20 @@ export function RuleSetEditor( {
 						<li>
 							{ __(
 								'Items already sent stay as they are.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</li>
 						<li>
 							{ __(
 								'Items waiting in the queue are built with the new version when they are sent.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</li>
 						{ data.draft ? (
 							<li>
 								{ __(
 									'Your unpublished draft is kept. It stays a draft.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</li>
 						) : null }
@@ -824,12 +845,12 @@ export function RuleSetEditor( {
 				<ConfirmDialog
 					title={ __(
 						'Discard the draft?',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					tone="danger"
 					confirmLabel={ __(
 						'Discard draft',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					onClose={ () => setDialog( null ) }
 					onConfirm={ async () => {
@@ -840,7 +861,7 @@ export function RuleSetEditor( {
 							kind: 'success',
 							text: __(
 								'The draft was discarded. The live version is unchanged.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 						} );
 					} }
@@ -848,7 +869,7 @@ export function RuleSetEditor( {
 					<p>
 						{ __(
 							'Your unpublished changes are removed. The live version is not touched.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</p>
 				</ConfirmDialog>
@@ -898,14 +919,14 @@ function VersionViewDialog( {
 			title={ sprintf(
 				/* translators: %d: version number */ __(
 					'Version %d',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				version.version
 			) }
 			onClose={ onClose }
 			footer={
 				<Btn onClick={ onClose }>
-					{ __( 'Close', 'estasoft-erp-crm-sync-engine' ) }
+					{ __( 'Close', 'estasoft-enterprise-erpcrm-sync-engine' ) }
 				</Btn>
 			}
 		>
@@ -922,7 +943,7 @@ function VersionViewDialog( {
 					rows={ 3 }
 					label={ __(
 						'Loading the rules of this version',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			) : null }
@@ -936,7 +957,7 @@ function VersionViewDialog( {
 				<p className="estasoft-sync-muted">
 					{ __(
 						'This version has no rules.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</p>
 			) : null }
@@ -1008,14 +1029,14 @@ function PublishDialog( {
 			title={ sprintf(
 				/* translators: %d: version number */ __(
 					'Publish version %d?',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				version
 			) }
 			confirmLabel={ sprintf(
 				/* translators: %d: version number */ __(
 					'Publish version %d',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				version
 			) }
@@ -1054,7 +1075,7 @@ function PublishDialog( {
 									'The preview found a problem on %1$d order, so nothing was published. %2$s',
 									'The preview found problems on %1$d orders, so nothing was published. %2$s',
 									failures.length,
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								failures.length,
 								failures[ 0 ]
@@ -1071,7 +1092,7 @@ function PublishDialog( {
 					text: sprintf(
 						/* translators: %d: version number */ __(
 							'Version %d is live. Items sent from now use it.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						version
 					),
@@ -1083,7 +1104,7 @@ function PublishDialog( {
 				{ sprintf(
 					/* translators: %d: version number */ __(
 						'These changes will go live. Items already sent are not touched; items sent from now use version %d.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					version
 				) }
@@ -1094,7 +1115,7 @@ function PublishDialog( {
 						{ sprintf(
 							/* translators: %s: field name */ __(
 								'%s: rule changed',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							label( id )
 						) }
@@ -1105,7 +1126,7 @@ function PublishDialog( {
 						{ sprintf(
 							/* translators: 1: field name, 2: system name */ __(
 								'%1$s: added, sent to %2$s',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							label( id ),
 							system
@@ -1117,7 +1138,7 @@ function PublishDialog( {
 						{ sprintf(
 							/* translators: %s: field name */ __(
 								'%s: removed',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							label( id )
 						) }
@@ -1130,7 +1151,7 @@ function PublishDialog( {
 					<li>
 						{ __(
 							'No rule differs from the live version.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</li>
 				) : null }
@@ -1138,23 +1159,23 @@ function PublishDialog( {
 			<TextField
 				label={ __(
 					'Note for your team (optional)',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				value={ note }
 				onChange={ setNote }
 				placeholder={ __(
 					'For example: phone format for the UAE',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			/>
 			<CheckField
 				label={ __(
 					'Preview on the last 10 orders first',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				hint={ __(
 					'Nothing is sent. Takes a few seconds.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				checked={ previewFirst }
 				onChange={ setPreviewFirst }
@@ -1229,7 +1250,7 @@ function PreviewDialog( {
 		<Dialog
 			title={ __(
 				'Preview with a real order',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			) }
 			size="large"
 			onClose={ onClose }
@@ -1239,21 +1260,27 @@ function PreviewDialog( {
 						{ full
 							? __(
 									'Hide the full preview',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								)
 							: __(
 									'Open the full preview',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 					</Btn>
 					<Btn variant="primary" onClick={ onClose }>
-						{ __( 'Close', 'estasoft-erp-crm-sync-engine' ) }
+						{ __(
+							'Close',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						) }
 					</Btn>
 				</>
 			}
 		>
 			<SelectField
-				label={ __( 'Order', 'estasoft-erp-crm-sync-engine' ) }
+				label={ __(
+					'Order',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 				value={ orderId === null ? '' : String( orderId ) }
 				onChange={ ( value ) => setOrderId( Number( value ) ) }
 				options={ orders.map( ( order ) => ( {
@@ -1266,7 +1293,7 @@ function PreviewDialog( {
 					rows={ 2 }
 					label={ __(
 						'Building the preview',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			) : null }
@@ -1282,14 +1309,14 @@ function PreviewDialog( {
 						>
 							{ __(
 								'Save the draft',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Btn>
 					}
 				>
 					{ __(
 						'The edits you have not saved are not in this preview. The preview uses the saved draft. Save the draft to see them here.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</Callout>
 			) : null }
@@ -1307,19 +1334,22 @@ function PreviewDialog( {
 			{ diff ? (
 				<>
 					<p className="estasoft-sync-strong">
-						{ __( 'What changes', 'estasoft-erp-crm-sync-engine' ) }{ ' ' }
+						{ __(
+							'What changes',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						) }{ ' ' }
 						<span className="estasoft-sync-muted">
 							{ liveVersion !== undefined
 								? sprintf(
 										/* translators: %d: live version number */ __(
 											'− version %d (live) + your draft',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										),
 										liveVersion
 									)
 								: __(
 										'− live + your draft',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									) }
 						</span>
 					</p>
@@ -1328,7 +1358,7 @@ function PreviewDialog( {
 						<p className="estasoft-sync-muted">
 							{ __(
 								'The draft produces the same result as the live version for this order.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</p>
 					) : (
@@ -1338,7 +1368,7 @@ function PreviewDialog( {
 							role="region"
 							aria-label={ __(
 								'Lines that differ from the live version',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						>
 							<code>
@@ -1360,7 +1390,7 @@ function PreviewDialog( {
 					<p className="estasoft-sync-muted">
 						{ __(
 							'Nothing is sent. Lines marked + or − differ from the live version.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</p>
 					{ both.data && both.data.after.errors.length > 0

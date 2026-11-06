@@ -133,7 +133,7 @@ final class DvParties {
 		}
 		$contact = $this->findContact( $email );
 		if ( null === $contact && 'match_only' === $options->customerPolicy() ) {
-			return Failures::invalid( $this->system, 'partner.email', __( 'No contact has this email in Dynamics 365, and the connection only uses existing contacts.', 'estasoft-erp-crm-sync-engine' ), 'contact not found' );
+			return Failures::invalid( $this->system, 'partner.email', __( 'No contact has this email in Dynamics 365, and the connection only uses existing contacts.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'contact not found' );
 		}
 		if ( null === $account && '' !== $company && $options->createAccounts() && 'match_only' !== $options->customerPolicy() ) {
 			$account = $this->createAccount( $order->partner, $company );

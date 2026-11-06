@@ -289,7 +289,7 @@ final class ErpnextOrderSender {
 			return $company;
 		}
 		if ( '' === $payload->currency ) {
-			return Problems::refused( $this->system, 'currency', __( 'The order has no currency.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $this->system, 'currency', __( 'The order has no currency.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$priceList = $this->lookups->priceList( $payload->currency );
 		if ( $priceList instanceof ConnectorError ) {
@@ -312,7 +312,7 @@ final class ErpnextOrderSender {
 					$option,
 					sprintf(
 						/* translators: %s: option name. */
-						__( 'The order has a shipping or fee amount, so the connection settings need the item code in "%s".', 'estasoft-erp-crm-sync-engine' ),
+						__( 'The order has a shipping or fee amount, so the connection settings need the item code in "%s".', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$option
 					)
 				);
@@ -396,7 +396,7 @@ final class ErpnextOrderSender {
 
 		$stored = $this->client->insert( 'Sales Order', $doc );
 		if ( '' === (string) ( $stored['name'] ?? '' ) ) {
-			return Problems::refused( $this->system, 'sales_order', __( 'ERPNext did not return the new order.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $this->system, 'sales_order', __( 'ERPNext did not return the new order.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$order    = array_intersect_key( $stored, array_flip( self::ORDER_FIELDS ) ) + array( 'docstatus' => 0 );
 		$warnings = array();
@@ -419,7 +419,7 @@ final class ErpnextOrderSender {
 	private function verifyDraft( string $name, OrderPayload $payload, array &$warnings ): ?ConnectorError {
 		$doc = $this->client->get( 'Sales Order', $name );
 		if ( null === $doc ) {
-			return Problems::refused( $this->system, 'sales_order', __( 'The draft order disappeared from ERPNext. It will be made again on the next try.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $this->system, 'sales_order', __( 'The draft order disappeared from ERPNext. It will be made again on the next try.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return $this->verify( $doc, $payload, $warnings );
 	}
@@ -439,7 +439,7 @@ final class ErpnextOrderSender {
 				'currency',
 				sprintf(
 					/* translators: 1: ERPNext document name, 2: currency the order has in ERPNext, 3: currency of the shop. */
-					__( '%1$s came back in %2$s but the shop order is in %3$s. The draft stays in ERPNext; delete it there and check the price list and customer currency.', 'estasoft-erp-crm-sync-engine' ),
+					__( '%1$s came back in %2$s but the shop order is in %3$s. The draft stays in ERPNext; delete it there and check the price list and customer currency.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$name,
 					(string) ( $doc['currency'] ?? '' ),
 					$payload->currency
@@ -453,7 +453,7 @@ final class ErpnextOrderSender {
 			return null;
 		}
 		if ( $check->isStrict() ) {
-			return $check->error( $diff, __( 'The draft stays in ERPNext and was not submitted. Delete it there after fixing the tax setup; the next try makes a new one.', 'estasoft-erp-crm-sync-engine' ) );
+			return $check->error( $diff, __( 'The draft stays in ERPNext and was not submitted. Delete it there after fixing the tax setup; the next try makes a new one.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$warnings[] = $diff['message'];
 		return null;
@@ -489,7 +489,7 @@ final class ErpnextOrderSender {
 			return Problems::refused(
 				$this->system,
 				'order_line[].tax',
-				__( 'ERPNext applies one tax template to a whole order. This order has lines with different tax codes, or with and without a tax code.', 'estasoft-erp-crm-sync-engine' )
+				__( 'ERPNext applies one tax template to a whole order. This order has lines with different tax codes, or with and without a tax code.', 'estasoft-enterprise-erpcrm-sync-engine' )
 			);
 		}
 		if ( array() === $codes ) {
@@ -577,7 +577,7 @@ final class ErpnextOrderSender {
 		if ( null === $invoice ) {
 			$so = $this->client->get( 'Sales Order', (string) $order['name'] );
 			if ( null === $so ) {
-				return Problems::refused( $this->system, 'sales_order', __( 'The order disappeared from ERPNext before it was invoiced.', 'estasoft-erp-crm-sync-engine' ) );
+				return Problems::refused( $this->system, 'sales_order', __( 'The order disappeared from ERPNext before it was invoiced.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$date  = '' !== $payload->date ? $payload->date : (string) ( $so['transaction_date'] ?? gmdate( 'Y-m-d' ) );
 			$items = array();
@@ -631,7 +631,7 @@ final class ErpnextOrderSender {
 			$stored  = $this->client->insert( 'Sales Invoice', $doc );
 			$invoice = array_intersect_key( $stored, array_flip( array( 'name', 'docstatus', 'status', 'grand_total', 'outstanding_amount', 'currency' ) ) ) + array( 'docstatus' => 0 );
 			if ( '' === (string) ( $invoice['name'] ?? '' ) ) {
-				return Problems::refused( $this->system, 'sales_invoice', __( 'ERPNext did not return the new invoice.', 'estasoft-erp-crm-sync-engine' ) );
+				return Problems::refused( $this->system, 'sales_invoice', __( 'ERPNext did not return the new invoice.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 		}
 		if ( 0 === (int) $invoice['docstatus'] ) {
@@ -656,7 +656,7 @@ final class ErpnextOrderSender {
 		if ( null === $payment ) {
 			$full = $this->client->get( 'Sales Invoice', (string) $invoice['name'] );
 			if ( null === $full ) {
-				return Problems::refused( $this->system, 'sales_invoice', __( 'The invoice disappeared from ERPNext before the payment was recorded.', 'estasoft-erp-crm-sync-engine' ) );
+				return Problems::refused( $this->system, 'sales_invoice', __( 'The invoice disappeared from ERPNext before the payment was recorded.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$outstanding = (float) ( $full['outstanding_amount'] ?? 0 );
 			if ( $outstanding <= 0.0 ) {
@@ -664,11 +664,11 @@ final class ErpnextOrderSender {
 			}
 			$accountName = $this->options->text( 'payment_account' );
 			if ( '' === $accountName ) {
-				return Problems::refused( $this->system, 'payment_account', __( 'To record payments, enter the bank or cash account that receives the money in the connection settings.', 'estasoft-erp-crm-sync-engine' ) );
+				return Problems::refused( $this->system, 'payment_account', __( 'To record payments, enter the bank or cash account that receives the money in the connection settings.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$account = $this->client->get( 'Account', $accountName );
 			if ( null === $account || 1 === (int) ( $account['is_group'] ?? 0 ) || 1 === (int) ( $account['disabled'] ?? 0 ) || (string) ( $account['company'] ?? '' ) !== (string) $full['company'] ) {
-				return Problems::refused( $this->system, 'payment_account', __( 'The payment account must exist, be enabled, not be a group, and belong to the company of the order.', 'estasoft-erp-crm-sync-engine' ) );
+				return Problems::refused( $this->system, 'payment_account', __( 'The payment account must exist, be enabled, not be a group, and belong to the company of the order.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			if ( strtoupper( (string) ( $account['account_currency'] ?? '' ) ) !== strtoupper( (string) $full['currency'] ) ) {
 				return Problems::refused(
@@ -676,7 +676,7 @@ final class ErpnextOrderSender {
 					'payment_account',
 					sprintf(
 						/* translators: 1: account currency, 2: order currency. */
-						__( 'The payment account is in %1$s but the order is in %2$s. Use an account in the order currency; no exchange differences are booked.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'The payment account is in %1$s but the order is in %2$s. Use an account in the order currency; no exchange differences are booked.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						(string) ( $account['account_currency'] ?? '' ),
 						(string) $full['currency']
 					)
@@ -713,7 +713,7 @@ final class ErpnextOrderSender {
 			$stored  = $this->client->insert( 'Payment Entry', $doc );
 			$payment = array_intersect_key( $stored, array_flip( array( 'name', 'docstatus', 'paid_amount' ) ) ) + array( 'docstatus' => 0 );
 			if ( '' === (string) ( $payment['name'] ?? '' ) ) {
-				return Problems::refused( $this->system, 'payment_entry', __( 'ERPNext did not return the new payment.', 'estasoft-erp-crm-sync-engine' ) );
+				return Problems::refused( $this->system, 'payment_entry', __( 'ERPNext did not return the new payment.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 		}
 		if ( 0 === (int) $payment['docstatus'] ) {

@@ -81,7 +81,7 @@ final class WafeqOrderPayload {
 			);
 		}
 		if ( '' === $customer['name'] ) {
-			return self::refused( 'customer.name', __( 'The customer name is empty.', 'estasoft-erp-crm-sync-engine' ) );
+			return self::refused( 'customer.name', __( 'The customer name is empty.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 
 		$lines = array();
@@ -93,7 +93,7 @@ final class WafeqOrderPayload {
 			$lines[] = $line;
 		}
 		if ( array() === $lines ) {
-			return self::refused( 'lines', __( 'The order has no product lines.', 'estasoft-erp-crm-sync-engine' ) );
+			return self::refused( 'lines', __( 'The order has no product lines.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 
 		$extras   = array();
@@ -102,7 +102,7 @@ final class WafeqOrderPayload {
 		if ( null !== $ship && 0 !== $ship ) {
 			$name     = WafeqPayloadReader::text( $shipping['name'] ?? '' );
 			$extras[] = array(
-				'name'        => '' !== $name ? $name : __( 'Shipping', 'estasoft-erp-crm-sync-engine' ),
+				'name'        => '' !== $name ? $name : __( 'Shipping', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'quantity'    => 1.0,
 				'total_minor' => $ship,
 				'tax_code'    => WafeqPayloadReader::taxCode( $shipping['tax_code'] ?? '' ),
@@ -116,7 +116,7 @@ final class WafeqOrderPayload {
 			}
 			$name     = WafeqPayloadReader::text( $fee['name'] ?? '' );
 			$extras[] = array(
-				'name'        => '' !== $name ? $name : __( 'Fee', 'estasoft-erp-crm-sync-engine' ),
+				'name'        => '' !== $name ? $name : __( 'Fee', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'quantity'    => 1.0,
 				'total_minor' => $total,
 				'tax_code'    => WafeqPayloadReader::taxCode( $fee['tax_code'] ?? '' ),
@@ -205,7 +205,7 @@ final class WafeqOrderPayload {
 				'lines[].quantity',
 				sprintf(
 					/* translators: %d: line number. */
-					__( 'Line %d has no quantity.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Line %d has no quantity.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$number
 				)
 			);
@@ -216,7 +216,7 @@ final class WafeqOrderPayload {
 				'lines[].total',
 				sprintf(
 					/* translators: %d: line number. */
-					__( 'Line %d has no amount.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Line %d has no amount.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$number
 				)
 			);

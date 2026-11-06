@@ -67,14 +67,14 @@ final class ZohoDataCentre {
 	 */
 	public static function options(): array {
 		return array(
-			'com'    => __( 'United States (zoho.com)', 'estasoft-erp-crm-sync-engine' ),
-			'eu'     => __( 'Europe (zoho.eu)', 'estasoft-erp-crm-sync-engine' ),
-			'in'     => __( 'India (zoho.in)', 'estasoft-erp-crm-sync-engine' ),
-			'com.au' => __( 'Australia (zoho.com.au)', 'estasoft-erp-crm-sync-engine' ),
-			'jp'     => __( 'Japan (zoho.jp)', 'estasoft-erp-crm-sync-engine' ),
-			'sa'     => __( 'Saudi Arabia (zoho.sa)', 'estasoft-erp-crm-sync-engine' ),
-			'ca'     => __( 'Canada (zohocloud.ca)', 'estasoft-erp-crm-sync-engine' ),
-			'com.cn' => __( 'China (zoho.com.cn)', 'estasoft-erp-crm-sync-engine' ),
+			'com'    => __( 'United States (zoho.com)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'eu'     => __( 'Europe (zoho.eu)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'in'     => __( 'India (zoho.in)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'com.au' => __( 'Australia (zoho.com.au)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'jp'     => __( 'Japan (zoho.jp)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'sa'     => __( 'Saudi Arabia (zoho.sa)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'ca'     => __( 'Canada (zohocloud.ca)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'com.cn' => __( 'China (zoho.com.cn)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		);
 	}
 

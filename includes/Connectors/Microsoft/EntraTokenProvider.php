@@ -60,7 +60,7 @@ final class EntraTokenProvider implements OAuthProvider {
 					array(
 						'system' => $this->system,
 						'field'  => 'tenant_id',
-						'reason' => __( 'The tenant ID must be a GUID or a domain name.', 'estasoft-erp-crm-sync-engine' ),
+						'reason' => __( 'The tenant ID must be a GUID or a domain name.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					),
 					null,
 					null,

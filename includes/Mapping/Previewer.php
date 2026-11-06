@@ -77,10 +77,10 @@ final class Previewer {
 		}
 		$entity = self::entityFor( $type );
 		if ( null === $connection ) {
-			return $this->refused( __( 'The connection does not exist', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->refused( __( 'The connection does not exist', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( null === $entity ) {
-			return $this->refused( __( 'Only orders, customers and refunds can be previewed', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->refused( __( 'Only orders, customers and refunds can be previewed', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 
 		$rules = $draftRules ?? $this->liveRules( $connectionId, $type );
@@ -91,7 +91,7 @@ final class Previewer {
 		try {
 			$order = $this->source->read( $entity, (string) $orderId, $this->fields->metaKeys( $rules ) );
 		} catch ( SourceNotFoundException $e ) {
-			return $this->refused( __( 'The order does not exist in WooCommerce', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->refused( __( 'The order does not exist in WooCommerce', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 
 		$errors   = array();
@@ -105,7 +105,7 @@ final class Previewer {
 				ErrorCode::Val002,
 				array(
 					'system' => $system,
-					'field'  => __( 'Order lines', 'estasoft-erp-crm-sync-engine' ),
+					'field'  => __( 'Order lines', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					'reason' => $empty,
 				)
 			);
@@ -197,14 +197,14 @@ final class Previewer {
 		$email = $order->get( 'billing.email' );
 		if ( is_string( $email ) && '' !== Text::trim( $email ) ) {
 			/* translators: %s: name of the connected system. */
-			$label   = sprintf( __( 'Customer in %s (read-only lookup)', 'estasoft-erp-crm-sync-engine' ), $system );
+			$label   = sprintf( __( 'Customer in %s (read-only lookup)', 'estasoft-enterprise-erpcrm-sync-engine' ), $system );
 			$lines[] = $this->lookupLine( $label, $connector->lookupCustomer( $connection, Text::trim( $email ) ) );
 		}
 
 		$skus = array_map( static fn( $sku ): string => Text::trim( (string) $sku ), array_filter( (array) $order->get( 'lines[].sku' ), 'is_string' ) );
 		foreach ( array_slice( array_values( array_unique( array_filter( $skus, static fn( string $sku ): bool => '' !== $sku ) ) ), 0, self::MAX_SKU_LOOKUPS ) as $sku ) {
 			/* translators: 1: SKU, 2: name of the connected system. */
-			$label   = sprintf( __( 'Product %1$s in %2$s (read-only lookup)', 'estasoft-erp-crm-sync-engine' ), $sku, $system );
+			$label   = sprintf( __( 'Product %1$s in %2$s (read-only lookup)', 'estasoft-enterprise-erpcrm-sync-engine' ), $sku, $system );
 			$lines[] = $this->lookupLine( $label, $connector->lookupProduct( $connection, $sku ) );
 		}
 		return $lines;
@@ -229,7 +229,7 @@ final class Previewer {
 			return array(
 				'label'  => $label,
 				'found'  => false,
-				'detail' => __( 'Not found.', 'estasoft-erp-crm-sync-engine' ),
+				'detail' => __( 'Not found.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			);
 		}
 		return array(

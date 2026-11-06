@@ -110,7 +110,7 @@ final class QoyodContacts {
 				array(
 					'system' => QoyodConnector::LABEL,
 					'field'  => 'contact',
-					'reason' => __( 'Qoyod did not return the id of the new customer.', 'estasoft-erp-crm-sync-engine' ),
+					'reason' => __( 'Qoyod did not return the id of the new customer.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				null,
 				null,

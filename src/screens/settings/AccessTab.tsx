@@ -13,12 +13,12 @@ export function AccessTab() {
 	const { canManage, canConfigure } = useApp();
 	const yes = (
 		<StatusBadge tone="success">
-			{ __( 'Yes', 'estasoft-erp-crm-sync-engine' ) }
+			{ __( 'Yes', 'estasoft-enterprise-erpcrm-sync-engine' ) }
 		</StatusBadge>
 	);
 	const no = (
 		<StatusBadge tone="neutral">
-			{ __( 'No', 'estasoft-erp-crm-sync-engine' ) }
+			{ __( 'No', 'estasoft-enterprise-erpcrm-sync-engine' ) }
 		</StatusBadge>
 	);
 	return (
@@ -26,11 +26,11 @@ export function AccessTab() {
 			<Card
 				title={ __(
 					'Who can do what',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				description={ __(
 					'Two capabilities do the work: estasoft_sync_manage (view and operate) and estasoft_sync_configure (configure).',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				flush
 			>
@@ -38,24 +38,27 @@ export function AccessTab() {
 					<caption className="estasoft-sync-sr-only">
 						{ __(
 							'Roles and what they can do',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</caption>
 					<thead>
 						<tr>
 							<th scope="col">
-								{ __( 'Role', 'estasoft-erp-crm-sync-engine' ) }
+								{ __(
+									'Role',
+									'estasoft-enterprise-erpcrm-sync-engine'
+								) }
 							</th>
 							<th scope="col">
 								{ __(
 									'View and operate',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</th>
 							<th scope="col">
 								{ __(
 									'Configure',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</th>
 						</tr>
@@ -65,7 +68,7 @@ export function AccessTab() {
 							<th scope="row">
 								{ __(
 									'Administrator',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</th>
 							<td>{ yes }</td>
@@ -75,7 +78,7 @@ export function AccessTab() {
 							<th scope="row">
 								{ __(
 									'Shop manager',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</th>
 							<td>{ yes }</td>
@@ -85,7 +88,7 @@ export function AccessTab() {
 							<th scope="row">
 								{ __(
 									'Other roles',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</th>
 							<td>{ no }</td>
@@ -97,7 +100,7 @@ export function AccessTab() {
 			<Card
 				title={ __(
 					'What each one allows',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				flush
 			>
@@ -105,7 +108,7 @@ export function AccessTab() {
 					<caption className="estasoft-sync-sr-only">
 						{ __(
 							'What each capability allows',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</caption>
 					<thead>
@@ -113,13 +116,13 @@ export function AccessTab() {
 							<th scope="col">
 								{ __(
 									'Capability',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</th>
 							<th scope="col">
 								{ __(
 									'Allows',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</th>
 						</tr>
@@ -129,7 +132,7 @@ export function AccessTab() {
 							<th scope="row">
 								{ __(
 									'View and operate',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 								<span className="estasoft-sync-mono estasoft-sync-block">
 									estasoft_sync_manage
@@ -138,7 +141,7 @@ export function AccessTab() {
 							<td>
 								{ __(
 									'See the dashboard, queue, invoices, stock, reconciliation and logs. See connections, mapping and settings, read only. Retry, skip, restore, pause, resume and sync now. Accept or hold a stock conflict. Repair or ignore a reconciliation difference. Run the readiness check. Copy a support report.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</td>
 						</tr>
@@ -146,7 +149,7 @@ export function AccessTab() {
 							<th scope="row">
 								{ __(
 									'Configure',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 								<span className="estasoft-sync-mono estasoft-sync-block">
 									estasoft_sync_configure
@@ -155,7 +158,7 @@ export function AccessTab() {
 							<td>
 								{ __(
 									'Add, edit, test and disconnect connections. Edit mapping, tax and stock rules. Publish and roll back mapping versions. End shadow mode and go live. Change settings. Export, import, clear logs, delete data, run the capacity test.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</td>
 						</tr>
@@ -165,23 +168,23 @@ export function AccessTab() {
 			<Callout tone="info">
 				{ __(
 					'The saved API key is never shown to anyone, including administrators. It can only be replaced. A shop manager can open a connection page but sees its address and user as text, with no buttons to change them.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			</Callout>
 			<Callout tone={ canConfigure ? 'success' : 'info' }>
 				{ canConfigure
 					? __(
 							'Your account can view, operate and configure.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						)
 					: canManage
 						? __(
 								'Your account can view and operate. It cannot configure.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							)
 						: __(
 								'Your account has no access to ESTASOFT SYNC.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 			</Callout>
 		</div>

@@ -259,7 +259,7 @@ final class Sage200OrderSender {
 		if ( ! isset( $stored['id'] ) || ! is_scalar( $stored['id'] ) ) {
 			$found = $this->find( $payload->clientRef );
 			if ( null === $found ) {
-				return Problems::refused( $this->system, 'sop_orders', __( 'Sage 200 did not return the new order.', 'estasoft-erp-crm-sync-engine' ) );
+				return Problems::refused( $this->system, 'sop_orders', __( 'Sage 200 did not return the new order.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$stored = $found;
 		}
@@ -273,7 +273,7 @@ final class Sage200OrderSender {
 	 */
 	private function precheck( OrderPayload $payload ): ?ConnectorError {
 		if ( '' === $payload->currency ) {
-			return Problems::refused( $this->system, 'currency', __( 'The order has no currency.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $this->system, 'currency', __( 'The order has no currency.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( $payload->currency !== $this->baseCurrency() ) {
 			return Problems::refused(
@@ -281,7 +281,7 @@ final class Sage200OrderSender {
 				'currency',
 				sprintf(
 					/* translators: 1: currency of the shop order, 2: base currency of the Sage 200 company. */
-					__( 'The order is in %1$s but this connector sends orders only in the base currency of the Sage 200 company (%2$s). Change the "base_currency" setting if the company uses another one.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The order is in %1$s but this connector sends orders only in the base currency of the Sage 200 company (%2$s). Change the "base_currency" setting if the company uses another one.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$payload->currency,
 					$this->baseCurrency()
 				)
@@ -289,7 +289,7 @@ final class Sage200OrderSender {
 		}
 		foreach ( $payload->lines as $line ) {
 			if ( is_array( $line['tax'] ?? null ) && count( $line['tax'] ) > 1 ) {
-				return Problems::refused( $this->system, 'order_line[].tax', __( 'A line in Sage 200 has one tax code. This order has a line with several tax codes.', 'estasoft-erp-crm-sync-engine' ) );
+				return Problems::refused( $this->system, 'order_line[].tax', __( 'A line in Sage 200 has one tax code. This order has a line with several tax codes.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 		}
 		foreach ( $payload->extras as $row ) {
@@ -300,7 +300,7 @@ final class Sage200OrderSender {
 					$option,
 					sprintf(
 						/* translators: %s: option name. */
-						__( 'The order has a shipping, fee or discount amount, so the connection settings need the product code in "%s".', 'estasoft-erp-crm-sync-engine' ),
+						__( 'The order has a shipping, fee or discount amount, so the connection settings need the product code in "%s".', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$option
 					)
 				);
@@ -358,7 +358,7 @@ final class Sage200OrderSender {
 			return $minor;
 		}
 		if ( null === $tax['rate'] ) {
-			return Problems::refused( $this->system, 'tax_rate', __( 'The rate of a tax code could not be read as a plain percentage, so a price with tax cannot be converted exactly.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $this->system, 'tax_rate', __( 'The rate of a tax code could not be read as a plain percentage, so a price with tax cannot be converted exactly.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return TaxPricing::convert( $minor, $tax['rate'], true, false );
 	}
@@ -379,7 +379,7 @@ final class Sage200OrderSender {
 				'currency',
 				sprintf(
 					/* translators: 1: order number in Sage 200, 2: currency the order has there, 3: currency of the shop. */
-					__( 'Order %1$s is in %2$s in Sage 200 but the shop order is in %3$s. It stays in Sage 200; delete it there and check the currency of the customer.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Order %1$s is in %2$s in Sage 200 but the shop order is in %3$s. It stays in Sage 200; delete it there and check the currency of the customer.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$number,
 					'' !== $seen ? $seen : '?',
 					$payload->currency
@@ -388,7 +388,7 @@ final class Sage200OrderSender {
 			);
 		}
 		if ( ! isset( $order['total_gross_value'] ) ) {
-			$warnings[] = __( 'Sage 200 did not return the order total, so it was not compared with the shop.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'Sage 200 did not return the order total, so it was not compared with the shop.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			return null;
 		}
 		$check = new TotalCheck( $this->options, $this->amounts, $this->system );
@@ -397,7 +397,7 @@ final class Sage200OrderSender {
 			return null;
 		}
 		if ( $check->isStrict() ) {
-			return $check->error( $diff, __( 'The order stays in Sage 200. Delete it there after fixing the tax setup; the next try makes a new one.', 'estasoft-erp-crm-sync-engine' ) );
+			return $check->error( $diff, __( 'The order stays in Sage 200. Delete it there after fixing the tax setup; the next try makes a new one.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$warnings[] = $diff['message'];
 		return null;

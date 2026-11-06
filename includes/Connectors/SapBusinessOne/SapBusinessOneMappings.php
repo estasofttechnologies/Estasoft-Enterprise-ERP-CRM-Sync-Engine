@@ -28,16 +28,16 @@ final class SapBusinessOneMappings {
 	 * @return array<int,FieldDef>
 	 */
 	public function fields( string $mappingType ): array {
-		$fields = new DefaultFields( 'SAP Business One', __( 'Product (item code, found by the SKU match)', 'estasoft-erp-crm-sync-engine' ), true, true );
+		$fields = new DefaultFields( 'SAP Business One', __( 'Product (item code, found by the SKU match)', 'estasoft-enterprise-erpcrm-sync-engine' ), true, true );
 		return match ( $mappingType ) {
 			'orders'    => $fields->orders()->build(),
 			'customers' => $fields->customers()->build(),
 			'products'  => $fields->products()->build(),
 			'refunds'   => $fields->refunds()->build(),
 			'stock'     => FieldCatalogBuilder::make()
-				->group( __( 'Stock in SAP Business One', 'estasoft-erp-crm-sync-engine' ) )
-				->number( 'quantity', __( 'On hand (InStock of the chosen warehouses)', 'estasoft-erp-crm-sync-engine' ) )
-				->number( 'held', __( 'Committed (Committed of the chosen warehouses)', 'estasoft-erp-crm-sync-engine' ) )
+				->group( __( 'Stock in SAP Business One', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+				->number( 'quantity', __( 'On hand (InStock of the chosen warehouses)', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+				->number( 'held', __( 'Committed (Committed of the chosen warehouses)', 'estasoft-enterprise-erpcrm-sync-engine' ) )
 				->build(),
 			default     => array(),
 		};

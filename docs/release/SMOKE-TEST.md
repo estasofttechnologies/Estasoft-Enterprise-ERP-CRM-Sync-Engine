@@ -4,13 +4,13 @@ Written by `bin/smoke-install.sh --report`; do not edit by hand. Run it again af
 
 | | |
 |---|---|
-| Date (UTC) | 2026-11-06 16:48 |
+| Date (UTC) | 2026-11-06 20:06 |
 | Result | passed: 98 checks, 0 failed |
 | Plugin version | 0.1.0 |
-| Zip | `estasoft-erp-crm-sync-engine-0.1.0.zip` |
+| Zip | `estasoft-enterprise-erpcrm-sync-engine-0.1.0.zip` |
 | Files in the zip | 931 |
-| Size | 1.93 MiB zipped, 5.91 MiB unpacked |
-| SHA-256 | `4e3e7dee584c37925392d5fa77f2fcbc667dce453e8193201232ce4bcbe8dafc` |
+| Size | 1.96 MiB zipped, 5.97 MiB unpacked |
+| SHA-256 | `4942bedfb7abec799063089921f3f151eab56e4a4a86e30221806fe6d002c7fb` |
 | WordPress | 6.4.3 (fresh install, WP_DEBUG on, debug.log) |
 | PHP | 8.3.6 |
 | Database | 10.11.14-MariaDB-0ubuntu0.24.04.1 (fresh database, utf8mb4) |
@@ -46,7 +46,7 @@ The plugin under test is the unpacked release zip in `wp-content/plugins/`, neve
 
 ### Plugin active, WooCommerce not
 
-- active plugins set to: estasoft-erp-crm-sync-engine/estasoft-erp-crm-sync-engine.php
+- active plugins set to: estasoft-enterprise-erpcrm-sync-engine/estasoft-enterprise-erpcrm-sync-engine.php
 
 ### No WooCommerce: notice, no fatal error
 

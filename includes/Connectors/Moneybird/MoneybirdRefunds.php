@@ -58,10 +58,10 @@ final class MoneybirdRefunds {
 		}
 		$original = $this->documents->findByReference( $api, $refund->orderRef );
 		if ( null === $original ) {
-			return SendResult::failure( Refusal::value( MoneybirdConnector::LABEL, 'order_ref', __( 'Moneybird has no invoice for the refunded order.', 'estasoft-erp-crm-sync-engine' ), 'no invoice for the refund' ) );
+			return SendResult::failure( Refusal::value( MoneybirdConnector::LABEL, 'order_ref', __( 'Moneybird has no invoice for the refunded order.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'no invoice for the refund' ) );
 		}
 		if ( 'draft' === (string) ( $original['state'] ?? '' ) ) {
-			return SendResult::failure( Refusal::value( MoneybirdConnector::LABEL, 'order_ref', __( 'The invoice of the refunded order is still a draft. Send it in Moneybird first.', 'estasoft-erp-crm-sync-engine' ), 'invoice is a draft' ) );
+			return SendResult::failure( Refusal::value( MoneybirdConnector::LABEL, 'order_ref', __( 'The invoice of the refunded order is still a draft. Send it in Moneybird first.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'invoice is a draft' ) );
 		}
 		$currency = strtoupper( PayloadReader::text( $original['currency'] ?? '' ) );
 		$exponent = $this->amounts->exponent( $currency );
@@ -72,7 +72,7 @@ final class MoneybirdRefunds {
 				Refusal::value(
 					MoneybirdConnector::LABEL,
 					'amount',
-					__( 'Moneybird credit invoices copy whole lines, and this refund covers only part of the order. Create the credit invoice in Moneybird and skip this item.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Moneybird credit invoices copy whole lines, and this refund covers only part of the order. Create the credit invoice in Moneybird and skip this item.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					'partial refund'
 				)
 			);
@@ -83,7 +83,7 @@ final class MoneybirdRefunds {
 		}
 		$id = PayloadReader::text( $credit['id'] ?? '' );
 		if ( '' === $id ) {
-			return SendResult::failure( Refusal::value( MoneybirdConnector::LABEL, 'credit invoice', __( 'Moneybird did not return the new credit invoice.', 'estasoft-erp-crm-sync-engine' ), 'no credit invoice id' ) );
+			return SendResult::failure( Refusal::value( MoneybirdConnector::LABEL, 'credit invoice', __( 'Moneybird did not return the new credit invoice.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'no credit invoice id' ) );
 		}
 		$api->patch( 'sales_invoices/' . rawurlencode( $id ) . '.json', array(), array( 'sales_invoice' => array( 'reference' => $marker ) ) );
 		$result = $this->resume( $api, $credit + array( 'id' => $id ), $options );

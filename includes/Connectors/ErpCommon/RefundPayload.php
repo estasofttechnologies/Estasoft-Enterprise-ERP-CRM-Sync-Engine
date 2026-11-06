@@ -56,7 +56,7 @@ final class RefundPayload {
 	public static function parse( array $payload, Item $item, string $system, Amounts $amounts ): self|ConnectorError {
 		$orderRef = PayloadReader::text( $payload['order_ref'] ?? '' );
 		if ( 1 !== preg_match( '/^WC-\d+$/', $orderRef ) ) {
-			return Problems::refused( $system, 'order_ref', __( 'The refund does not name its order (expected WC- and the order number).', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $system, 'order_ref', __( 'The refund does not name its order (expected WC- and the order number).', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$lines = array();
 		foreach ( PayloadReader::rows( $payload['refund_line'] ?? null ) as $index => $raw ) {
@@ -72,7 +72,7 @@ final class RefundPayload {
 					'refund_line',
 					sprintf(
 						/* translators: %d: line number. */
-						__( 'Refund line %d has no quantity or amount.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'Refund line %d has no quantity or amount.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$index + 1
 					)
 				);

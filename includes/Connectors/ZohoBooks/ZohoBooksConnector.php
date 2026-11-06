@@ -110,28 +110,28 @@ final class ZohoBooksConnector extends AbstractSalesConnector implements OAuthCo
 	 */
 	protected function credentialDefinition(): array {
 		return array(
-			CredentialFields::choice( 'data_centre', __( 'Zoho data centre', 'estasoft-erp-crm-sync-engine' ), ZohoDataCentre::options(), 'com', __( 'The address you use to sign in to Zoho decides this.', 'estasoft-erp-crm-sync-engine' ) ),
+			CredentialFields::choice( 'data_centre', __( 'Zoho data centre', 'estasoft-enterprise-erpcrm-sync-engine' ), ZohoDataCentre::options(), 'com', __( 'The address you use to sign in to Zoho decides this.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			CredentialFields::clientId(),
 			CredentialFields::clientSecret(),
-			new CredentialField( 'organization_id', __( 'Organisation id', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Filled in when you sign in and choose the organisation.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
+			new CredentialField( 'organization_id', __( 'Organisation id', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Filled in when you sign in and choose the organisation.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'advanced' ),
 			new CredentialField(
 				'plan',
-				__( 'Zoho Books plan', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Zoho Books plan', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				false,
 				false,
-				__( 'Sets the daily call allowance. The sync stops at 90 percent of it and waits for the next day.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Sets the daily call allowance. The sync stops at 90 percent of it and waits for the next day.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'free',
 				'select',
 				array(
-					'free'         => __( 'Free (1,000 calls a day)', 'estasoft-erp-crm-sync-engine' ),
-					'standard'     => __( 'Standard (2,000 calls a day)', 'estasoft-erp-crm-sync-engine' ),
-					'professional' => __( 'Professional (5,000 calls a day)', 'estasoft-erp-crm-sync-engine' ),
-					'premium'      => __( 'Premium, Elite or Ultimate (10,000 calls a day)', 'estasoft-erp-crm-sync-engine' ),
+					'free'         => __( 'Free (1,000 calls a day)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'standard'     => __( 'Standard (2,000 calls a day)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'professional' => __( 'Professional (5,000 calls a day)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'premium'      => __( 'Premium, Elite or Ultimate (10,000 calls a day)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				'advanced'
 			),
-			new CredentialField( 'refund_tax_id', __( 'Tax code for refunds', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Optional. The refund amount is treated as including this tax.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
-			new CredentialField( 'payment_account', __( 'Account that receives payments', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Only needed to record payments.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
+			new CredentialField( 'refund_tax_id', __( 'Tax code for refunds', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Optional. The refund amount is treated as including this tax.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'advanced' ),
+			new CredentialField( 'payment_account', __( 'Account that receives payments', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Only needed to record payments.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'advanced' ),
 		);
 	}
 
@@ -285,12 +285,12 @@ final class ZohoBooksConnector extends AbstractSalesConnector implements OAuthCo
 			}
 		}
 		if ( null === $org && '' !== $wanted ) {
-			throw new ApiException( $this->invalid( 'organization_id', __( 'Zoho Books has no organisation with this id for the signed-in user.', 'estasoft-erp-crm-sync-engine' ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
+			throw new ApiException( $this->invalid( 'organization_id', __( 'Zoho Books has no organisation with this id for the signed-in user.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 		}
 		$org ??= $orgs[0] ?? array();
 		$books = $this->books( $connection );
 		if ( '' === $wanted ) {
-			return new TestResult( false, 'Zoho Books API v3', (string) ( $org['name'] ?? 'Zoho Books' ), array(), array(), $this->invalid( 'organization_id', __( 'Choose the Zoho Books organisation in the connection settings.', 'estasoft-erp-crm-sync-engine' ) ), array() );
+			return new TestResult( false, 'Zoho Books API v3', (string) ( $org['name'] ?? 'Zoho Books' ), array(), array(), $this->invalid( 'organization_id', __( 'Choose the Zoho Books organisation in the connection settings.', 'estasoft-enterprise-erpcrm-sync-engine' ) ), array() );
 		}
 		$permissions = array();
 		foreach ( array( 'contacts', 'invoices', 'creditnotes' ) as $module ) {
@@ -750,7 +750,7 @@ final class ZohoBooksConnector extends AbstractSalesConnector implements OAuthCo
 				return (string) ( $row['currency_id'] ?? '' );
 			}
 		}
-		throw new ApiException( $this->invalid( 'currency', sprintf( /* translators: 1: currency code */ __( 'The currency %s is not set up in Zoho Books.', 'estasoft-erp-crm-sync-engine' ), $currency ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
+		throw new ApiException( $this->invalid( 'currency', sprintf( /* translators: 1: currency code */ __( 'The currency %s is not set up in Zoho Books.', 'estasoft-enterprise-erpcrm-sync-engine' ), $currency ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 	}
 
 	/**
@@ -937,10 +937,10 @@ final class ZohoBooksConnector extends AbstractSalesConnector implements OAuthCo
 			$lines[] = $this->lineBody( $order->currency, $line, $items[ $index ] ?? null );
 		}
 		if ( $order->shippingMinor > 0 ) {
-			$lines[] = $this->extraLine( __( 'Shipping', 'estasoft-erp-crm-sync-engine' ), $order->shippingMinor, $order->currency, $order->shippingTaxCode );
+			$lines[] = $this->extraLine( __( 'Shipping', 'estasoft-enterprise-erpcrm-sync-engine' ), $order->shippingMinor, $order->currency, $order->shippingTaxCode );
 		}
 		foreach ( $order->fees as $fee ) {
-			$lines[] = $this->extraLine( '' !== $fee['name'] ? $fee['name'] : __( 'Fee', 'estasoft-erp-crm-sync-engine' ), $fee['total'], $order->currency, $fee['tax_code'] );
+			$lines[] = $this->extraLine( '' !== $fee['name'] ? $fee['name'] : __( 'Fee', 'estasoft-enterprise-erpcrm-sync-engine' ), $fee['total'], $order->currency, $fee['tax_code'] );
 		}
 		$body = array(
 			'customer_id'      => $contactId,
@@ -1076,7 +1076,7 @@ final class ZohoBooksConnector extends AbstractSalesConnector implements OAuthCo
 		$row = $this->findInvoice( $books, $refund->orderRef );
 		if ( null === $row ) {
 			/* translators: 1: order reference */
-			return $this->invalid( 'order', sprintf( __( 'The order %s is not in Zoho Books yet.', 'estasoft-erp-crm-sync-engine' ), $refund->orderRef ) );
+			return $this->invalid( 'order', sprintf( __( 'The order %s is not in Zoho Books yet.', 'estasoft-enterprise-erpcrm-sync-engine' ), $refund->orderRef ) );
 		}
 		$invoice  = (array) ( $books->call( 'GET', 'invoices/' . rawurlencode( (string) $row['invoice_id'] ) )['invoice'] ?? $row );
 		$currency = '' !== $refund->currency ? $refund->currency : strtoupper( (string) ( $invoice['currency_code'] ?? '' ) );
@@ -1096,7 +1096,7 @@ final class ZohoBooksConnector extends AbstractSalesConnector implements OAuthCo
 			'is_inclusive_tax' => true,
 			'line_items'       => array( $line ),
 			/* translators: 1: order reference, 2: invoice number */
-			'notes'            => sprintf( __( 'Refund of order %1$s (invoice %2$s)', 'estasoft-erp-crm-sync-engine' ), $refund->orderRef, (string) ( $invoice['invoice_number'] ?? '' ) ),
+			'notes'            => sprintf( __( 'Refund of order %1$s (invoice %2$s)', 'estasoft-enterprise-erpcrm-sync-engine' ), $refund->orderRef, (string) ( $invoice['invoice_number'] ?? '' ) ),
 		);
 		if ( isset( $invoice['currency_id'] ) ) {
 			$body['currency_id'] = (string) $invoice['currency_id'];

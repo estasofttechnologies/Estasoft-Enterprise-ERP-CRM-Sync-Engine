@@ -43,12 +43,15 @@ export function DisplayValue( { field }: { field: ConnectorField } ) {
 					text={ value }
 					label={ sprintf(
 						/* translators: %s: name of the value, such as "Redirect address" */
-						__( 'Copy: %s', 'estasoft-erp-crm-sync-engine' ),
+						__(
+							'Copy: %s',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						field.label
 					) }
 					copiedLabel={ __(
 						'Copied',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			</div>
@@ -80,7 +83,7 @@ function Input( {
 		( field.secret
 			? __(
 					'Saved encrypted. It is never shown again.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				)
 			: undefined );
 	if ( kind === 'select' ) {
@@ -90,7 +93,10 @@ function Input( {
 		if ( ! options.some( ( option ) => option.value === value ) ) {
 			options.unshift( {
 				value: '',
-				label: __( 'Choose…', 'estasoft-erp-crm-sync-engine' ),
+				label: __(
+					'Choose…',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				),
 			} );
 		}
 		return (
@@ -121,7 +127,7 @@ function Input( {
 								/* translators: 1: name of the value, 2: system name */
 								__(
 									'Paste the %1$s from %2$s',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								field.label,
 								system
@@ -156,7 +162,7 @@ function Input( {
 							/* translators: 1: name of the value, 2: system name */
 							__(
 								'Paste the %1$s from %2$s',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							field.label,
 							system
@@ -231,7 +237,7 @@ export function CredentialForm( {
 					<summary>
 						{ __(
 							'More settings',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</summary>
 					<div className="estasoft-sync-stack">

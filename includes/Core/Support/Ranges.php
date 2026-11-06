@@ -89,6 +89,6 @@ final class Ranges {
 	 */
 	public static function message( array $range ): string {
 		/* translators: 1: smallest allowed number, 2: largest allowed number. */
-		return sprintf( __( 'Enter a number from %1$d to %2$d.', 'estasoft-erp-crm-sync-engine' ), $range[0], $range[1] );
+		return sprintf( __( 'Enter a number from %1$d to %2$d.', 'estasoft-enterprise-erpcrm-sync-engine' ), $range[0], $range[1] );
 	}
 }

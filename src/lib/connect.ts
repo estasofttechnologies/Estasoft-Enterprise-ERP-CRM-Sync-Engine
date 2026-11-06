@@ -295,7 +295,7 @@ export function validateValues(
 		if ( field.required && value === '' ) {
 			errors[ field.name ] = sprintf(
 				/* translators: %s: name of a field such as "Client ID" */
-				__( '%s is needed.', 'estasoft-erp-crm-sync-engine' ),
+				__( '%s is needed.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				field.label
 			);
 			return;
@@ -311,7 +311,7 @@ export function validateValues(
 			if ( ! valid ) {
 				errors[ field.name ] = __(
 					'Enter a web address that starts with https://.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				);
 			}
 		}
@@ -328,15 +328,15 @@ export function validateValues(
 export function secretWord( fields: ConnectorField[] ): string {
 	const secrets = fields.filter( ( field ) => field.secret );
 	if ( secrets.some( ( field ) => /password/i.test( field.name ) ) ) {
-		return __( 'password', 'estasoft-erp-crm-sync-engine' );
+		return __( 'password', 'estasoft-enterprise-erpcrm-sync-engine' );
 	}
 	if (
 		secrets.some( ( field ) => /secret|private/i.test( field.name ) ) &&
 		! secrets.some( ( field ) => /(^|_)(api_)?key$/i.test( field.name ) )
 	) {
-		return __( 'secret', 'estasoft-erp-crm-sync-engine' );
+		return __( 'secret', 'estasoft-enterprise-erpcrm-sync-engine' );
 	}
-	return __( 'key', 'estasoft-erp-crm-sync-engine' );
+	return __( 'key', 'estasoft-enterprise-erpcrm-sync-engine' );
 }
 
 /**
@@ -352,7 +352,7 @@ export function stepsAsText( system: string, steps: string[] ): string {
 			/* translators: %s: system name */
 			__(
 				'Steps to connect %s to a WooCommerce store:',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			system
 		),
@@ -397,54 +397,81 @@ const CODE_CHECK: Record< string, CheckId > = {
 function checkLabel( id: CheckId, state: CheckState, system: string ): string {
 	const labels: Record< CheckId, [ string, string, string ] > = {
 		reach: [
-			__( 'Reached the server', 'estasoft-erp-crm-sync-engine' ),
-			__( 'Could not reach the server', 'estasoft-erp-crm-sync-engine' ),
-			__( 'Server: not tried', 'estasoft-erp-crm-sync-engine' ),
+			__(
+				'Reached the server',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
+			__(
+				'Could not reach the server',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
+			__( 'Server: not tried', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		],
 		certificate: [
-			__( 'Certificate trusted', 'estasoft-erp-crm-sync-engine' ),
-			__( 'Certificate not trusted', 'estasoft-erp-crm-sync-engine' ),
-			__( 'Certificate: not tried', 'estasoft-erp-crm-sync-engine' ),
+			__(
+				'Certificate trusted',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
+			__(
+				'Certificate not trusted',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
+			__(
+				'Certificate: not tried',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 		],
 		sign_in: [
-			__( 'Signed in', 'estasoft-erp-crm-sync-engine' ),
-			__( 'Sign-in refused', 'estasoft-erp-crm-sync-engine' ),
-			__( 'Signed in: not tried', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Signed in', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			__( 'Sign-in refused', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			__(
+				'Signed in: not tried',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 		],
 		plan: [
 			__(
 				'Plan allows outside programs',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			__(
 				'Plan does not allow outside programs',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
-			__( 'Plan: not tried', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Plan: not tried', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		],
 		app: [
 			sprintf(
 				/* translators: %s: system name */
-				__( '%s knows this app', 'estasoft-erp-crm-sync-engine' ),
+				__(
+					'%s knows this app',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				),
 				system
 			),
 			sprintf(
 				/* translators: %s: system name */
 				__(
 					'%s does not know this app yet',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				system
 			),
-			__( 'App: not tried', 'estasoft-erp-crm-sync-engine' ),
+			__( 'App: not tried', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		],
 		permissions: [
 			__(
 				'Can read items and create orders',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
-			__( 'Some access is missing', 'estasoft-erp-crm-sync-engine' ),
-			__( 'Permissions: not tried', 'estasoft-erp-crm-sync-engine' ),
+			__(
+				'Some access is missing',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
+			__(
+				'Permissions: not tried',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 		],
 	};
 	const row = labels[ id ];

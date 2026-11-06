@@ -198,7 +198,7 @@ final class WafeqLines {
 				'field'  => 'tax_rate',
 				'reason' => sprintf(
 					/* translators: %s: tax name. */
-					__( 'The rate of the tax "%s" is not known, so tax-inclusive prices cannot be converted.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The rate of the tax "%s" is not known, so tax-inclusive prices cannot be converted.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$name
 				),
 			),

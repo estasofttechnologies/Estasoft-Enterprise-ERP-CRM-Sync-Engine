@@ -67,7 +67,7 @@ final class LexwareLines {
 	public function build( ApiClient $api, OrderPayload $order, Options $options ): array|ConnectorError {
 		$rows = $this->rows( $order );
 		if ( count( $rows ) > self::MAX_LINES ) {
-			return Refusal::value( LexwareOfficeConnector::LABEL, 'lines', __( 'Lexware Office takes at most 300 lines in one invoice.', 'estasoft-erp-crm-sync-engine' ), 'too many lines' );
+			return Refusal::value( LexwareOfficeConnector::LABEL, 'lines', __( 'Lexware Office takes at most 300 lines in one invoice.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'too many lines' );
 		}
 		$tax = $this->treatment( $rows, $order->pricesIncludeTax );
 		if ( $tax instanceof ConnectorError ) {
@@ -177,7 +177,7 @@ final class LexwareLines {
 				return Refusal::value(
 					LexwareOfficeConnector::LABEL,
 					'taxConditions.taxType',
-					__( 'Lexware Office takes one tax treatment per invoice, but the tax mapping gives the lines different ones. Use the same tax code for every line.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Lexware Office takes one tax treatment per invoice, but the tax mapping gives the lines different ones. Use the same tax code for every line.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					'mixed tax treatment'
 				);
 			}

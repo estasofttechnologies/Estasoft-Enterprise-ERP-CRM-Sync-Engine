@@ -88,7 +88,7 @@ final class PauseController {
 			return false;
 		}
 		$this->connections->setStatus( $connectionId, ConnectionStatus::Active );
-		$this->logger->info( __( 'Syncing resumed.', 'estasoft-erp-crm-sync-engine' ), array( 'connection_id' => $connectionId ) );
+		$this->logger->info( __( 'Syncing resumed.', 'estasoft-enterprise-erpcrm-sync-engine' ), array( 'connection_id' => $connectionId ) );
 		do_action( 'estasoft_sync_connection_resumed', $connectionId, 'person' );
 		return true;
 	}
@@ -134,7 +134,7 @@ final class PauseController {
 		foreach ( $this->connections->pausesDue() as $due ) {
 			if ( ConnectionStatus::Paused->value === $due['status'] ) {
 				$this->connections->setStatus( $due['id'], ConnectionStatus::Active );
-				$this->logger->info( __( 'Syncing resumed after the pause ended.', 'estasoft-erp-crm-sync-engine' ), array( 'connection_id' => $due['id'] ) );
+				$this->logger->info( __( 'Syncing resumed after the pause ended.', 'estasoft-enterprise-erpcrm-sync-engine' ), array( 'connection_id' => $due['id'] ) );
 				do_action( 'estasoft_sync_connection_resumed', $due['id'], 'timer' );
 				++$count;
 			}

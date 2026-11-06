@@ -255,7 +255,7 @@ final class WafeqDocuments {
 			array(
 				'system' => WafeqConnector::LABEL,
 				'field'  => $what,
-				'reason' => __( 'Wafeq did not return the id of the new record.', 'estasoft-erp-crm-sync-engine' ),
+				'reason' => __( 'Wafeq did not return the id of the new record.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			),
 			null,
 			null,

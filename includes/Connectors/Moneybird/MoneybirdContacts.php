@@ -92,7 +92,7 @@ final class MoneybirdContacts {
 					return Refusal::value(
 						MoneybirdConnector::LABEL,
 						'customer.email',
-						__( 'More than one contact has this email address. Merge them in Moneybird or set the duplicate setting to oldest.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'More than one contact has this email address. Merge them in Moneybird or set the duplicate setting to oldest.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						'duplicate customer'
 					);
 				}
@@ -105,7 +105,7 @@ final class MoneybirdContacts {
 				return Refusal::value(
 					MoneybirdConnector::LABEL,
 					'customer.email',
-					__( 'Moneybird has no contact with this email address and the customer setting is match only.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Moneybird has no contact with this email address and the customer setting is match only.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					'no matching contact'
 				);
 			}
@@ -113,7 +113,7 @@ final class MoneybirdContacts {
 		$created = $api->post( 'contacts.json', array(), array( 'contact' => $this->body( $customer ) ) )->json();
 		$id      = PayloadReader::text( $created['id'] ?? '' );
 		if ( '' === $id ) {
-			return Refusal::value( MoneybirdConnector::LABEL, 'contact', __( 'Moneybird did not return the new contact.', 'estasoft-erp-crm-sync-engine' ), 'no contact id' );
+			return Refusal::value( MoneybirdConnector::LABEL, 'contact', __( 'Moneybird did not return the new contact.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'no contact id' );
 		}
 		return array(
 			'id'      => $id,

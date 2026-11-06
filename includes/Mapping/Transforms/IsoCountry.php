@@ -49,7 +49,7 @@ final class IsoCountry extends BaseTransform {
 		}
 		$alpha2 = $this->countries->alpha2( $text );
 		if ( null === $alpha2 ) {
-			$context->warn( __( 'A country was not recognised and was left empty.', 'estasoft-erp-crm-sync-engine' ) );
+			$context->warn( __( 'A country was not recognised and was left empty.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			return '';
 		}
 		return 'alpha3' === $this->text( $args, 'output', 'alpha2' ) ? (string) $this->countries->alpha3( $alpha2 ) : $alpha2;

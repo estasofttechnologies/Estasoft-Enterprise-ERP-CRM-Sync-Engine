@@ -45,8 +45,8 @@ or authority has to do it. **Done** = already true on the day this file was last
 | C7 | **Licences.** The licences of the packages that are in the production dependency tree of `build/` are listed in [GUIDELINES-AUDIT.md](GUIDELINES-AUDIT.md) (guideline 1): all GPL-compatible, and none is inside the bundle. Confirm that Estasoft holds the rights to the icon and banner. | Owner | Licences **Done**; rights open |
 | C8 | **Source and bundle.** `build/index.asset.php` lists WordPress script handles for React and the `@wordpress` packages; the bundle contains no copy of React or jQuery and none of the mock layer (CI checks the mock, the smoke test checks the handles). | Tooling | **Done** |
 | C9 | **Trademarks.** No vendor logo in `src/`, `assets/` or `build/` (the zip holds no image). Brand terms for each of the 34 systems located before any logo is added (list in [GUIDELINES-AUDIT.md](GUIDELINES-AUDIT.md)). | Owner | Open |
-| C10 | **Slug check.** Open <https://wordpress.org/plugins/estasoft-erp-crm-sync-engine/>; "not found" means the slug is free. Search the directory for plugins with similar names. | Owner | Open |
-| C11 | Create the translation template once: `bin/make-pot.sh` writes `languages/estasoft-erp-crm-sync-engine.pot` (needs WP-CLI, which is not installed on the build machine, so no `.pot` exists yet). Commit it. | Owner / lead | Open |
+| C10 | **Slug.** WordPress.org assigned `estasoft-enterprise-erpcrm-sync-engine` on upload (6 Nov 2026). The text domain, the folder in the zip and the main file match it; the first zip used a different text domain and Plugin Check on wordpress.org flagged it. | Owner | **Done** |
+| C11 | Create the translation template once: `bin/make-pot.sh` writes `languages/estasoft-enterprise-erpcrm-sync-engine.pot` (needs WP-CLI, which is not installed on the build machine, so no `.pot` exists yet). Commit it. | Owner / lead | Open |
 | C12 | **Legal.** Decide Pennylane (its connector is not offered until its API terms and production sign-in are cleared), and read the developer terms of the other vendors ([OWNER-ACTIONS.md](OWNER-ACTIONS.md), item 15). | Owner | Open |
 
 ## D. Assets
@@ -70,7 +70,7 @@ or authority has to do it. **Done** = already true on the day this file was last
 
 | # | Step | Who | Status |
 | --- | --- | --- | --- |
-| F1 | The tag build uploads `estasoft-erp-crm-sync-engine-<version>.zip` to the GitHub release (the `github-release` job). Download that exact file. | Tooling | On tag |
+| F1 | The tag build uploads `estasoft-enterprise-erpcrm-sync-engine-<version>.zip` to the GitHub release (the `github-release` job). Download that exact file. | Tooling | On tag |
 | F2 | Submit it at <https://wordpress.org/plugins/developers/add/> while signed in to the WordPress.org account `estasofttechnologies`. Paste the text from [SUBMISSION-NOTES.md](SUBMISSION-NOTES.md) where the form or the review email asks for notes. | Owner | Open |
 | F3 | Answer the Plugin Review team's emails (they come from the account's address) and fix what they list. Re-submit by uploading a new zip as they instruct; bump the version if they ask. | Owner | After submission |
 | F4 | After approval the SVN repository exists. Re-run the release workflow for the approved tag (or tag the next version). When the `deploy-wordpress-org` job waits, review it and **approve**. It puts the unpacked verified zip in `trunk`, copies it to `tags/<version>` and uploads `.wordpress-org/*` to `assets`. | Owner | After approval |

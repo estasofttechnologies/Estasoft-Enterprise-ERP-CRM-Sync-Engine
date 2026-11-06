@@ -162,7 +162,7 @@ final class SuiteCrmRecords {
 		}
 		if ( '' === $id ) {
 			/* translators: %s: currency code. */
-			SuiteCrmFailure::refuse( 'currency', sprintf( __( 'Currency %s is not defined in SuiteCRM (Admin, Currencies), and it is not the default currency set in the connection options.', 'estasoft-erp-crm-sync-engine' ), $iso ) );
+			SuiteCrmFailure::refuse( 'currency', sprintf( __( 'Currency %s is not defined in SuiteCRM (Admin, Currencies), and it is not the default currency set in the connection options.', 'estasoft-enterprise-erpcrm-sync-engine' ), $iso ) );
 		}
 		$this->currencies[ $iso ] = $id;
 		return $id;
@@ -216,7 +216,7 @@ final class SuiteCrmRecords {
 	public function referenceField(): string {
 		$field = trim( $this->options->text( 'reference_field' ) );
 		if ( '' !== $field && 1 !== preg_match( '/^[A-Za-z_][A-Za-z0-9_]{0,63}$/', $field ) ) {
-			SuiteCrmFailure::refuse( 'reference_field', __( 'The option reference_field must be the name of a text field of Opportunities, such as wc_reference_c.', 'estasoft-erp-crm-sync-engine' ) );
+			SuiteCrmFailure::refuse( 'reference_field', __( 'The option reference_field must be the name of a text field of Opportunities, such as wc_reference_c.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return $field;
 	}

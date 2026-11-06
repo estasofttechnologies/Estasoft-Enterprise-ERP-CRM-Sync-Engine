@@ -22,6 +22,6 @@ final class RuleValidationException extends \RuntimeException {
 	 * @param array<int,RuleError> $errors Problems found.
 	 */
 	public function __construct( public readonly array $errors ) {
-		parent::__construct( __( 'The mapping has problems and cannot be published.', 'estasoft-erp-crm-sync-engine' ) );
+		parent::__construct( __( 'The mapping has problems and cannot be published.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 }

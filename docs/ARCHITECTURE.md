@@ -15,7 +15,7 @@ Estasoft Enterprise ERP/CRM Sync Engine (ESTASOFT SYNC). WordPress plugin, PHP 8
 ## Layout
 
 ```
-estasoft-erp-crm-sync-engine.php   plugin header, early requirement guard, boot on plugins_loaded
+estasoft-enterprise-erpcrm-sync-engine.php   plugin header, early requirement guard, boot on plugins_loaded
 uninstall.php                      calls Core\Installer::uninstall()
 includes/                          PHP, namespace Estasoft\SyncEngine (PSR-4, own autoloader, no vendor dir)
   Plugin.php Container.php ModuleInterface.php Lifecycle.php Autoloader.php requirements.php
@@ -124,7 +124,7 @@ States `queued, syncing, synced, retrying, failed, skipped`; mode `live` or `sha
 
 - `declare(strict_types=1)`; PHP 8.1 syntax (enums, readonly properties, match, constructor promotion). No syntax newer than 8.1.
 - WordPress Coding Standards (`phpcs.xml.dist`); PSR-4 file names; camelCase methods; escape late, sanitise early, prepare every query with `$wpdb->prepare`, nonce and capability on every route.
-- Every user-facing string uses `__()` or `_n()` with the text domain `estasoft-erp-crm-sync-engine`, placeholders instead of concatenation.
+- Every user-facing string uses `__()` or `_n()` with the text domain `estasoft-enterprise-erpcrm-sync-engine`, placeholders instead of concatenation.
 - UTC in storage, minor units for money, utf8mb4 everywhere, `dir="auto"` on displayed names.
 - Classes are small and single purpose; no static state except enums; dependencies are passed in.
 - Tests: unit tests need no WordPress (`phpunit`); integration tests use the real WordPress and database (`php bin/install-test-wp.php` then `phpunit -c phpunit-integration.xml.dist`). Every acceptance scenario in spec section 14.1 gets a test where it can be tested without a live ERP.

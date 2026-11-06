@@ -200,7 +200,7 @@ final class AcumaticaRefundSender {
 		}
 		$done = $this->client->action( 'SalesInvoice', 'ReleaseSalesInvoice', AcumaticaValue::fields( $key ) );
 		if ( ! $done ) {
-			$warnings[] = __( 'Acumatica is still releasing the credit memo. Its status is read on the next check.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'Acumatica is still releasing the credit memo. Its status is read on the next check.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			return $memo;
 		}
 		$row = $this->client->get( 'SalesInvoice/' . rawurlencode( self::TYPE ) . '/' . rawurlencode( $memo['nbr'] ), array( '$select' => self::SELECT ) );
@@ -229,7 +229,7 @@ final class AcumaticaRefundSender {
 				'order_ref',
 				sprintf(
 					/* translators: %s: order reference. */
-					__( 'The order %s is not in Acumatica, so it cannot be refunded there. Send the order first.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The order %s is not in Acumatica, so it cannot be refunded there. Send the order first.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$payload->orderRef
 				),
 				'order not found'
@@ -240,13 +240,13 @@ final class AcumaticaRefundSender {
 		$skus         = array_map( static fn( array $line ): string => (string) $line['sku'], $payload->lines );
 		if ( $payload->shippingMinor > 0 ) {
 			if ( '' === $shippingItem ) {
-				return Problems::refused( $this->system, 'shipping_item', __( 'The refund includes shipping, so the connection settings need the shipping inventory ID.', 'estasoft-erp-crm-sync-engine' ) );
+				return Problems::refused( $this->system, 'shipping_item', __( 'The refund includes shipping, so the connection settings need the shipping inventory ID.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$skus[] = $shippingItem;
 		}
 		if ( $payload->isAmountOnly() ) {
 			if ( '' === $refundItem || null === $payload->amountMinor || $payload->amountMinor <= 0 ) {
-				return Problems::refused( $this->system, 'refund_line', __( 'This refund has no product lines. Enter an inventory ID for refunds without lines in the connection settings ("refund_item"), or refund by line.', 'estasoft-erp-crm-sync-engine' ) );
+				return Problems::refused( $this->system, 'refund_line', __( 'This refund has no product lines. Enter an inventory ID for refunds without lines in the connection settings ("refund_item"), or refund by line.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$skus[] = $refundItem;
 		}
@@ -297,7 +297,7 @@ final class AcumaticaRefundSender {
 		$stored          = $this->client->put( 'SalesInvoice', $body, array( '$expand' => 'Details' ) );
 		$memo            = $this->flat( $stored );
 		if ( '' === $memo['nbr'] ) {
-			return Problems::refused( $this->system, 'sales_invoice', __( 'Acumatica did not return the new credit memo.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $this->system, 'sales_invoice', __( 'Acumatica did not return the new credit memo.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( '' === $memo['status'] ) {
 			$memo['status'] = 'Hold';
@@ -308,7 +308,7 @@ final class AcumaticaRefundSender {
 		$check = new TotalCheck( $this->options, $this->amounts, $this->system );
 		$diff  = $check->difference( $payload->amountMinor, $memo['total'], $currency, $memo['nbr'] );
 		if ( null !== $diff && $check->isStrict() ) {
-			return $check->error( $diff, __( 'The credit memo stays on hold in Acumatica. Delete it there after fixing the tax setup; the next try makes a new one.', 'estasoft-erp-crm-sync-engine' ) );
+			return $check->error( $diff, __( 'The credit memo stays on hold in Acumatica. Delete it there after fixing the tax setup; the next try makes a new one.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return $memo;
 	}

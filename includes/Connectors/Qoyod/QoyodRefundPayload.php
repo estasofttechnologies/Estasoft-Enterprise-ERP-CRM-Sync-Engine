@@ -55,7 +55,7 @@ final class QoyodRefundPayload {
 	public static function parse( array $payload ): self|ConnectorError {
 		$orderRef = QoyodPayloadReader::text( $payload['order_ref'] ?? '' );
 		if ( '' === $orderRef ) {
-			return self::refused( 'order_ref', __( 'The refund does not say which order it belongs to.', 'estasoft-erp-crm-sync-engine' ) );
+			return self::refused( 'order_ref', __( 'The refund does not say which order it belongs to.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$lines = array();
 		foreach ( QoyodPayloadReader::rows( $payload['lines'] ?? null ) as $raw ) {
@@ -76,7 +76,7 @@ final class QoyodRefundPayload {
 		}
 		$amount = abs( (int) QoyodPayloadReader::minor( $payload['amount'] ?? null ) );
 		if ( 0 === $amount && array() === $lines ) {
-			return self::refused( 'amount', __( 'The refund has no amount and no lines.', 'estasoft-erp-crm-sync-engine' ) );
+			return self::refused( 'amount', __( 'The refund has no amount and no lines.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return new self(
 			strtoupper( QoyodPayloadReader::text( $payload['currency'] ?? '' ) ),

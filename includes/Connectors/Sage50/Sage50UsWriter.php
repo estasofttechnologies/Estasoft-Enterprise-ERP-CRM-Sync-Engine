@@ -76,24 +76,24 @@ final class Sage50UsWriter {
 	public function render( ExportDocument $document, Sage50Settings $settings ): array {
 		$customer = '' !== $document->partyAccount ? $document->partyAccount : $settings->customerId();
 		if ( strlen( $customer ) > 20 ) {
-			throw Refusal::because( __( 'the customer ID is longer than 20 characters', 'estasoft-erp-crm-sync-engine' ) );
+			throw Refusal::because( __( 'the customer ID is longer than 20 characters', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$number = SafeText::safe( $document->voucherNumber() );
 		if ( strlen( $number ) > 20 ) {
-			throw Refusal::because( __( 'the order number is longer than 20 characters', 'estasoft-erp-crm-sync-engine' ) );
+			throw Refusal::because( __( 'the order number is longer than 20 characters', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 
 		$dist  = array();
 		$tax   = array();
 		$index = 0;
 		foreach ( $document->lines as $i => $line ) {
-			$what   = sprintf( /* translators: %d: line number */ __( 'line %d', 'estasoft-erp-crm-sync-engine' ), $i + 1 );
+			$what   = sprintf( /* translators: %d: line number */ __( 'line %d', 'estasoft-enterprise-erpcrm-sync-engine' ), $i + 1 );
 			$agent  = $this->agency( $line->taxCode, $line->tax, $what, $settings );
 			$dist[] = array(
 				'no'       => ++$index,
 				'quantity' => $line->quantity,
 				'item'     => $settings->useItems() ? $line->sku : '',
-				'text'     => '' !== $line->name ? $line->name : ( '' !== $line->sku ? $line->sku : __( 'Product', 'estasoft-erp-crm-sync-engine' ) ),
+				'text'     => '' !== $line->name ? $line->name : ( '' !== $line->sku ? $line->sku : __( 'Product', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 				'gl'       => $settings->salesAccount(),
 				'net'      => $line->net,
 				'type'     => $settings->itemTaxType(),
@@ -102,7 +102,7 @@ final class Sage50UsWriter {
 			$this->addTax( $tax, $agent, $line->tax );
 		}
 		foreach ( $document->fees as $charge ) {
-			$agent  = $this->agency( '' !== $charge->taxCode ? $charge->taxCode : $settings->feeTaxCode(), $charge->tax, __( 'fee', 'estasoft-erp-crm-sync-engine' ), $settings );
+			$agent  = $this->agency( '' !== $charge->taxCode ? $charge->taxCode : $settings->feeTaxCode(), $charge->tax, __( 'fee', 'estasoft-enterprise-erpcrm-sync-engine' ), $settings );
 			$dist[] = array(
 				'no'       => ++$index,
 				'quantity' => '1',
@@ -120,7 +120,7 @@ final class Sage50UsWriter {
 				throw Refusal::because(
 					sprintf(
 						/* translators: %s: amount */
-						__( 'refund amount %s has no adjustment account', 'estasoft-erp-crm-sync-engine' ),
+						__( 'refund amount %s has no adjustment account', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						Amount::decimal( $document->adjustment, $document->currency )
 					)
 				);
@@ -129,7 +129,7 @@ final class Sage50UsWriter {
 				'no'       => ++$index,
 				'quantity' => '1',
 				'item'     => '',
-				'text'     => __( 'Refund adjustment', 'estasoft-erp-crm-sync-engine' ),
+				'text'     => __( 'Refund adjustment', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'gl'       => $settings->adjustmentAccount(),
 				'net'      => $document->adjustment,
 				'type'     => $settings->itemTaxType(),
@@ -138,7 +138,7 @@ final class Sage50UsWriter {
 		}
 		$freight = array();
 		foreach ( $document->shipping as $charge ) {
-			$agent     = $this->agency( $charge->taxCode, $charge->tax, __( 'shipping', 'estasoft-erp-crm-sync-engine' ), $settings );
+			$agent     = $this->agency( $charge->taxCode, $charge->tax, __( 'shipping', 'estasoft-enterprise-erpcrm-sync-engine' ), $settings );
 			$freight[] = array(
 				'no'       => 0,
 				'quantity' => '',
@@ -160,14 +160,14 @@ final class Sage50UsWriter {
 			}
 			$account = '' !== $entry['gl'] ? $entry['gl'] : $settings->taxGlAccount();
 			if ( '' === $account ) {
-				throw Refusal::because( sprintf( /* translators: %s: sales tax agency */ __( 'sales tax agency %s has no G/L account for its tax', 'estasoft-erp-crm-sync-engine' ), (string) $agency ) );
+				throw Refusal::because( sprintf( /* translators: %s: sales tax agency */ __( 'sales tax agency %s has no G/L account for its tax', 'estasoft-enterprise-erpcrm-sync-engine' ), (string) $agency ) );
 			}
 			$dist[] = array(
 				'no'       => 0,
 				'quantity' => '',
 				'item'     => '',
 				/* translators: %s: sales tax agency */
-				'text'     => sprintf( __( 'Sales tax %s', 'estasoft-erp-crm-sync-engine' ), (string) $agency ),
+				'text'     => sprintf( __( 'Sales tax %s', 'estasoft-enterprise-erpcrm-sync-engine' ), (string) $agency ),
 				'gl'       => $account,
 				'net'      => $entry['amount'],
 				'type'     => 0,
@@ -176,7 +176,7 @@ final class Sage50UsWriter {
 		}
 
 		if ( count( $dist ) > self::MAX_DISTRIBUTIONS ) {
-			throw Refusal::because( sprintf( /* translators: %d: number of rows */ __( 'the order has %d lines, more than the 147 Sage 50 takes in one invoice', 'estasoft-erp-crm-sync-engine' ), count( $dist ) ) );
+			throw Refusal::because( sprintf( /* translators: %d: number of rows */ __( 'the order has %d lines, more than the 147 Sage 50 takes in one invoice', 'estasoft-enterprise-erpcrm-sync-engine' ), count( $dist ) ) );
 		}
 		$gross = $document->gross();
 		$sum   = 0;
@@ -184,14 +184,14 @@ final class Sage50UsWriter {
 			$sum += $row['net'];
 		}
 		if ( 0 === $gross && 0 === $sum ) {
-			throw Refusal::because( __( 'the total is zero, so there is nothing to post', 'estasoft-erp-crm-sync-engine' ) );
+			throw Refusal::because( __( 'the total is zero, so there is nothing to post', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$diff = $gross - $sum;
 		if ( abs( $diff ) > 1 ) {
 			throw Refusal::because(
 				sprintf(
 					/* translators: 1: sum of the lines, 2: total of the order */
-					__( 'the lines add up to %1$s but the order total is %2$s', 'estasoft-erp-crm-sync-engine' ),
+					__( 'the lines add up to %1$s but the order total is %2$s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					Amount::decimal( $sum, $document->currency ),
 					Amount::decimal( $gross, $document->currency )
 				)
@@ -316,7 +316,7 @@ final class Sage50UsWriter {
 	private function agency( string $code, int $tax, string $what, Sage50Settings $settings ): array {
 		if ( '' === $code ) {
 			if ( 0 !== $tax ) {
-				throw Refusal::because( sprintf( /* translators: %s: line, for example "line 2" or "shipping" */ __( '%s has tax but no tax code', 'estasoft-erp-crm-sync-engine' ), $what ) );
+				throw Refusal::because( sprintf( /* translators: %s: line, for example "line 2" or "shipping" */ __( '%s has tax but no tax code', 'estasoft-enterprise-erpcrm-sync-engine' ), $what ) );
 			}
 			$code = $settings->untaxedCode();
 		}
@@ -324,7 +324,7 @@ final class Sage50UsWriter {
 		$agency = trim( $parts[0] );
 		$gl     = trim( $parts[1] ?? '' );
 		if ( strlen( $agency ) > 20 || ( '' === $agency && 0 !== $tax ) || ( '' !== $gl && 1 !== preg_match( '/^[A-Za-z0-9._-]{1,15}$/', $gl ) ) ) {
-			throw Refusal::because( sprintf( /* translators: %s: tax code */ __( 'tax code "%s" is not a sales tax agency ID, optionally with a G/L account', 'estasoft-erp-crm-sync-engine' ), $code ) );
+			throw Refusal::because( sprintf( /* translators: %s: tax code */ __( 'tax code "%s" is not a sales tax agency ID, optionally with a G/L account', 'estasoft-enterprise-erpcrm-sync-engine' ), $code ) );
 		}
 		return array(
 			'agency' => $agency,

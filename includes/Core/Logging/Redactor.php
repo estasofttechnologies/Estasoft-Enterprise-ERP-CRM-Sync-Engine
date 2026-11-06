@@ -449,7 +449,7 @@ final class Redactor {
 	 */
 	private static function tooLarge( int $capBytes, int $maxBytes ): string {
 		/* translators: %s: size limit, for example 256 KB. */
-		$note = sprintf( __( '[The payload is larger than %s and was not kept.]', 'estasoft-erp-crm-sync-engine' ), (string) max( 1, (int) round( $capBytes / 1024 ) ) . ' KB' );
+		$note = sprintf( __( '[The payload is larger than %s and was not kept.]', 'estasoft-enterprise-erpcrm-sync-engine' ), (string) max( 1, (int) round( $capBytes / 1024 ) ) . ' KB' );
 		return self::cut( $note, $maxBytes );
 	}
 

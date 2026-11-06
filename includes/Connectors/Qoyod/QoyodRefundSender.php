@@ -87,11 +87,11 @@ final class QoyodRefundSender {
 		}
 		$invoices = $this->docs->findInvoices( $api, $parsed->orderRef );
 		if ( array() === $invoices ) {
-			return SendResult::failure( $this->refused( 'order', __( 'The order of this refund is not in Qoyod.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( $this->refused( 'order', __( 'The order of this refund is not in Qoyod.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$invoice = $this->docs->invoice( $api, $invoices[0]->id() );
 		if ( ! $invoice->isPosted() ) {
-			return SendResult::failure( $this->refused( 'order', __( 'The invoice of this order is still a draft in Qoyod. Approve it first.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( $this->refused( 'order', __( 'The invoice of this order is still a draft in Qoyod. Approve it first.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$currency  = $options->currency();
 		$reference = $this->ids->reference( $item );
@@ -117,7 +117,7 @@ final class QoyodRefundSender {
 			$this->docs->patchCreditNote( $api, $record->id(), array( 'status' => 'Approved' ) );
 			$record = $this->docs->creditNote( $api, $record->id() );
 			if ( ! $record->isPosted() ) {
-				return SendResult::failure( $this->refused( 'status', __( 'Qoyod did not approve the credit note.', 'estasoft-erp-crm-sync-engine' ) ) );
+				return SendResult::failure( $this->refused( 'status', __( 'Qoyod did not approve the credit note.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 			}
 		}
 
@@ -209,7 +209,7 @@ final class QoyodRefundSender {
 			}
 			$rows[] = array(
 				'item'        => $id,
-				'name'        => '' !== (string) $line['name'] ? (string) $line['name'] : __( 'Refund', 'estasoft-erp-crm-sync-engine' ),
+				'name'        => '' !== (string) $line['name'] ? (string) $line['name'] : __( 'Refund', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'quantity'    => (float) $line['quantity'] > 0.0 ? (float) $line['quantity'] : 1.0,
 				'total_minor' => (int) $line['amount_minor'],
 				'tax_code'    => '',
@@ -218,17 +218,17 @@ final class QoyodRefundSender {
 		}
 		$plain = array();
 		if ( $parsed->shippingMinor > 0 ) {
-			$plain[] = array( __( 'Shipping', 'estasoft-erp-crm-sync-engine' ), $parsed->shippingMinor, $options->shippingSku(), 'shipping_product_sku' );
+			$plain[] = array( __( 'Shipping', 'estasoft-enterprise-erpcrm-sync-engine' ), $parsed->shippingMinor, $options->shippingSku(), 'shipping_product_sku' );
 		}
 		if ( $parsed->otherMinor > 0 ) {
-			$plain[] = array( __( 'Other refund', 'estasoft-erp-crm-sync-engine' ), $parsed->otherMinor, $options->feeSku(), 'fee_product_sku' );
+			$plain[] = array( __( 'Other refund', 'estasoft-enterprise-erpcrm-sync-engine' ), $parsed->otherMinor, $options->feeSku(), 'fee_product_sku' );
 		}
 		if ( array() === $rows && array() === $plain ) {
-			$plain[] = array( __( 'Refund', 'estasoft-erp-crm-sync-engine' ), $parsed->expectedTotal(), $options->feeSku(), 'fee_product_sku' );
+			$plain[] = array( __( 'Refund', 'estasoft-enterprise-erpcrm-sync-engine' ), $parsed->expectedTotal(), $options->feeSku(), 'fee_product_sku' );
 		}
 		foreach ( $plain as $entry ) {
 			if ( '' === $entry[2] ) {
-				return $this->refused( $entry[3], __( 'Qoyod has no lines without a product. Name a service product for shipping and fees in the connection settings.', 'estasoft-erp-crm-sync-engine' ) );
+				return $this->refused( $entry[3], __( 'Qoyod has no lines without a product. Name a service product for shipping and fees in the connection settings.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$product = $this->catalog->productBySku( $api, $entry[2] );
 			if ( null === $product ) {
@@ -272,7 +272,7 @@ final class QoyodRefundSender {
 		$fresh     = $this->docs->invoice( $api, $invoice->id() );
 		$allocated = $fresh->allocatedCreditNotes();
 		if ( null === $allocated ) {
-			$warnings[] = __( 'The credit note was not allocated because Qoyod did not show what the invoice already has.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'The credit note was not allocated because Qoyod did not show what the invoice already has.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			return;
 		}
 		if ( in_array( $note->id(), $allocated, true ) ) {
@@ -282,7 +282,7 @@ final class QoyodRefundSender {
 		$total    = $note->totalMinor( $exponent ) ?? $parsed->expectedTotal();
 		$due      = $fresh->dueMinor( $exponent );
 		if ( $fresh->isPaid() || null === $due || $due < $total || $total <= 0 ) {
-			$warnings[] = __( 'The credit note was not allocated because the invoice is paid or owes less than the credit note. It is approved and can be allocated in Qoyod.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'The credit note was not allocated because the invoice is paid or owes less than the credit note. It is approved and can be allocated in Qoyod.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			return;
 		}
 		$date = '' !== $parsed->date ? $parsed->date : $this->clock->now()->format( 'Y-m-d' );
@@ -292,7 +292,7 @@ final class QoyodRefundSender {
 			if ( ErrorCode::Val002 !== $exception->error()->code ) {
 				throw $exception;
 			}
-			$warnings[] = __( 'Qoyod did not accept the allocation of the credit note to the invoice. It is approved and can be allocated in Qoyod.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'Qoyod did not accept the allocation of the credit note to the invoice. It is approved and can be allocated in Qoyod.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 	}
 
@@ -308,13 +308,13 @@ final class QoyodRefundSender {
 		$what = '' !== $parsed->reason
 			? sprintf(
 				/* translators: 1: order reference, 2: refund reason. */
-				__( 'Refund of %1$s: %2$s', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Refund of %1$s: %2$s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$parsed->orderRef,
 				$parsed->reason
 			)
 			: sprintf(
 				/* translators: %s: order reference. */
-				__( 'Refund of %s', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Refund of %s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$parsed->orderRef
 			);
 		return $text . "\n" . QoyodPayloadReader::shorten( $what, 500 );

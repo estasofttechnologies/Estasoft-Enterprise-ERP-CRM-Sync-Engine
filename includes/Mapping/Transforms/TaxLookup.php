@@ -57,7 +57,7 @@ final class TaxLookup extends BaseTransform {
 		}
 		$resolver = $context->environment->taxes;
 		if ( null === $resolver ) {
-			$context->warn( __( 'No tax mapping is available, so no tax code was added.', 'estasoft-erp-crm-sync-engine' ) );
+			$context->warn( __( 'No tax mapping is available, so no tax code was added.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			return null;
 		}
 		$country = $this->country( $args, $context );

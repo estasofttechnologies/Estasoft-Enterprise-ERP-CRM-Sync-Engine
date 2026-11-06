@@ -72,16 +72,16 @@ final class OnboardingService {
 			} elseif ( is_string( $connector ) && 1 === preg_match( '/^[a-z0-9][a-z0-9_\-]{0,39}$/', $connector ) ) {
 				$changes['connector'] = $connector;
 			} else {
-				$errors['connector'] = __( 'Choose a system from the list.', 'estasoft-erp-crm-sync-engine' );
+				$errors['connector'] = __( 'Choose a system from the list.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			}
 		}
 		if ( array_key_exists( 'answers', $state ) ) {
 			if ( ! is_array( $state['answers'] ) ) {
-				$errors['answers'] = __( 'The answers are not valid.', 'estasoft-erp-crm-sync-engine' );
+				$errors['answers'] = __( 'The answers are not valid.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			} else {
 				$clean = $this->clean( $state['answers'], 0 );
 				if ( strlen( Json::encode( $clean ) ) > self::MAX_ANSWERS_BYTES ) {
-					$errors['answers'] = __( 'The answers are too long.', 'estasoft-erp-crm-sync-engine' );
+					$errors['answers'] = __( 'The answers are too long.', 'estasoft-enterprise-erpcrm-sync-engine' );
 				} else {
 					$current            = $this->state->get()['answers'];
 					$changes['answers'] = array_replace( $current, array_diff_key( $clean, array_flip( OnboardingView::RESERVED ) ) );

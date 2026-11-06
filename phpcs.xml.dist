@@ -2,7 +2,7 @@
 <ruleset name="Estasoft Sync Engine" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/squizlabs/PHP_CodeSniffer/master/phpcs.xsd">
   <description>WordPress Coding Standards for the Estasoft Sync Engine.</description>
 
-  <file>estasoft-erp-crm-sync-engine.php</file>
+  <file>estasoft-enterprise-erpcrm-sync-engine.php</file>
   <file>uninstall.php</file>
   <file>includes</file>
   <exclude-pattern>*/node_modules/*</exclude-pattern>
@@ -40,7 +40,7 @@
   <rule ref="WordPress.WP.I18n">
     <properties>
       <property name="text_domain" type="array">
-        <element value="estasoft-erp-crm-sync-engine"/>
+        <element value="estasoft-enterprise-erpcrm-sync-engine"/>
       </property>
     </properties>
   </rule>

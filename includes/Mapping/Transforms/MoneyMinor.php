@@ -45,7 +45,7 @@ final class MoneyMinor extends BaseTransform {
 			? MinorUnits::parse( $value, 0 )
 			: MinorUnits::parse( $value, MinorUnits::exponent( $this->currency( $args, $context ) ) );
 		if ( null === $minor ) {
-			$context->warn( __( 'An amount could not be read as a number and was left empty.', 'estasoft-erp-crm-sync-engine' ) );
+			$context->warn( __( 'An amount could not be read as a number and was left empty.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			return '';
 		}
 		return $minor;

@@ -90,7 +90,7 @@ final class QuickBooksErrors {
 				ErrorCode::Auth004,
 				array(
 					'system' => self::SYSTEM,
-					'action' => __( 'do this in QuickBooks (the signed-in user needs access to sales forms)', 'estasoft-erp-crm-sync-engine' ),
+					'action' => __( 'do this in QuickBooks (the signed-in user needs access to sales forms)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				$status,
 				null,

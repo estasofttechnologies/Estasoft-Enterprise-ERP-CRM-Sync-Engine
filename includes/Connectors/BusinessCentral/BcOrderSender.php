@@ -135,7 +135,7 @@ final class BcOrderSender {
 		}
 		$id = OData::guid( $header['id'] ?? null );
 		if ( null === $id ) {
-			return SendResult::failure( Failures::invalid( $this->system, 'document', __( 'Business Central did not return the id of the document.', 'estasoft-erp-crm-sync-engine' ), 'no document id' ) );
+			return SendResult::failure( Failures::invalid( $this->system, 'document', __( 'Business Central did not return the id of the document.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'no document id' ) );
 		}
 		$came = strtoupper( trim( (string) ( $header['currencyCode'] ?? '' ) ) );
 		if ( '' !== $came && $came !== $order->currency ) {

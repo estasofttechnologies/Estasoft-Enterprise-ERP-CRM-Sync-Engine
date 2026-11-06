@@ -44,20 +44,20 @@ function LevelBadge( { level }: { level: LogLevel } ) {
 	if ( level === 'error' ) {
 		return (
 			<StatusBadge tone="danger">
-				{ __( 'Error', 'estasoft-erp-crm-sync-engine' ) }
+				{ __( 'Error', 'estasoft-enterprise-erpcrm-sync-engine' ) }
 			</StatusBadge>
 		);
 	}
 	if ( level === 'warning' ) {
 		return (
 			<StatusBadge tone="warning">
-				{ __( 'Warning', 'estasoft-erp-crm-sync-engine' ) }
+				{ __( 'Warning', 'estasoft-enterprise-erpcrm-sync-engine' ) }
 			</StatusBadge>
 		);
 	}
 	return (
 		<StatusBadge tone="info" icon="info">
-			{ __( 'Info', 'estasoft-erp-crm-sync-engine' ) }
+			{ __( 'Info', 'estasoft-enterprise-erpcrm-sync-engine' ) }
 		</StatusBadge>
 	);
 }
@@ -65,7 +65,7 @@ function LevelBadge( { level }: { level: LogLevel } ) {
 function answer( entry: LogEntry ): string {
 	if ( entry.http_status === null ) {
 		return entry.level === 'error'
-			? __( 'Not sent', 'estasoft-erp-crm-sync-engine' )
+			? __( 'Not sent', 'estasoft-enterprise-erpcrm-sync-engine' )
 			: '—';
 	}
 	return String( entry.http_status );
@@ -159,19 +159,19 @@ export function Logs() {
 	return (
 		<>
 			<PageHeader
-				title={ __( 'Logs', 'estasoft-erp-crm-sync-engine' ) }
+				title={ __( 'Logs', 'estasoft-enterprise-erpcrm-sync-engine' ) }
 				description={
 					retentionDays !== null
 						? sprintf(
 								/* translators: %d: days logs are kept */ __(
 									'Kept for %d days. Names, emails and addresses are removed where the plugin finds them. Check before you share a log.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								retentionDays
 							)
 						: __(
 								'Names, emails and addresses are removed where the plugin finds them. Check before you share a log.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							)
 				}
 				actions={
@@ -180,7 +180,7 @@ export function Logs() {
 							<Btn onClick={ () => setReport( true ) }>
 								{ __(
 									'Copy a support report',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</Btn>
 							<Btn
@@ -189,7 +189,7 @@ export function Logs() {
 							>
 								{ __(
 									'Download as CSV',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</Btn>
 						</>
@@ -199,7 +199,7 @@ export function Logs() {
 			<SegmentedFilter< LevelFilter >
 				label={ __(
 					'Filter by level',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				value={ level }
 				onChange={ ( value ) =>
@@ -211,41 +211,59 @@ export function Logs() {
 				options={ [
 					{
 						value: 'all',
-						label: __( 'All', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'All',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						count: level === 'all' ? list.data?.total : undefined,
 					},
 					{
 						value: 'error',
-						label: __( 'Errors', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'Errors',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						count: level === 'error' ? list.data?.total : undefined,
 					},
 					{
 						value: 'warning',
-						label: __( 'Warnings', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'Warnings',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						count:
 							level === 'warning' ? list.data?.total : undefined,
 					},
 					{
 						value: 'info',
-						label: __( 'Info', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'Info',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						count: level === 'info' ? list.data?.total : undefined,
 					},
 				] }
 			/>
 			<div className="estasoft-sync-filters" role="search">
 				<TextField
-					label={ __( 'Find', 'estasoft-erp-crm-sync-engine' ) }
+					label={ __(
+						'Find',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 					type="search"
 					value={ search }
 					onChange={ setSearch }
 					placeholder={ __(
 						'Order, SKU or words in the message',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					spellCheck={ false }
 				/>
 				<SelectField
-					label={ __( 'Connection', 'estasoft-erp-crm-sync-engine' ) }
+					label={ __(
+						'Connection',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 					value={ connection }
 					onChange={ ( value ) =>
 						go( {
@@ -256,7 +274,10 @@ export function Logs() {
 					options={ [
 						{
 							value: '',
-							label: __( 'All', 'estasoft-erp-crm-sync-engine' ),
+							label: __(
+								'All',
+								'estasoft-enterprise-erpcrm-sync-engine'
+							),
 						},
 						...( connections.data ?? [] ).map( ( entry ) => ( {
 							value: String( entry.id ),
@@ -265,7 +286,10 @@ export function Logs() {
 					] }
 				/>
 				<SelectField
-					label={ __( 'Range', 'estasoft-erp-crm-sync-engine' ) }
+					label={ __(
+						'Range',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 					value={ range }
 					onChange={ ( value ) =>
 						go( {
@@ -278,35 +302,35 @@ export function Logs() {
 							value: '1h',
 							label: __(
 								'Last hour',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 						},
 						{
 							value: '24h',
 							label: __(
 								'Last 24 hours',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 						},
 						{
 							value: '7d',
 							label: __(
 								'Last 7 days',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 						},
 						{
 							value: '30d',
 							label: __(
 								'Last 30 days',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 						},
 						{
 							value: 'all',
 							label: __(
 								'Everything kept',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 						},
 					] }
@@ -317,7 +341,7 @@ export function Logs() {
 					rows={ 6 }
 					label={ __(
 						'Loading the log',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			) : null }
@@ -332,7 +356,7 @@ export function Logs() {
 					as="h2"
 					title={ __(
 						'No log entries',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					action={
 						<Btn
@@ -344,14 +368,14 @@ export function Logs() {
 						>
 							{ __(
 								'Clear filters',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Btn>
 					}
 				>
 					{ __(
 						'Nothing has been logged in this range, or the filters hide it.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</EmptyState>
 			) : null }
@@ -360,7 +384,7 @@ export function Logs() {
 					<ResponsiveTable< LogEntry, number >
 						caption={ __(
 							'Log entries',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						rows={ items }
 						rowKey={ ( entry ) => entry.id }
@@ -369,7 +393,7 @@ export function Logs() {
 								id: 'time',
 								header: __(
 									'Time',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								primary: true,
 								cell: ( entry ) => (
@@ -388,7 +412,7 @@ export function Logs() {
 								id: 'level',
 								header: __(
 									'Level',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								cell: ( entry ) => (
 									<LevelBadge level={ entry.level } />
@@ -398,7 +422,7 @@ export function Logs() {
 								id: 'what',
 								header: __(
 									'What happened',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								wide: true,
 								cell: ( entry ) => (
@@ -419,7 +443,7 @@ export function Logs() {
 								id: 'item',
 								header: __(
 									'Item',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								cell: ( entry ) => entry.entity_ref ?? '—',
 							},
@@ -427,7 +451,7 @@ export function Logs() {
 								id: 'took',
 								header: __(
 									'Took',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								cell: ( entry ) =>
 									formatDuration( entry.duration_ms ),
@@ -436,7 +460,7 @@ export function Logs() {
 								id: 'answer',
 								header: __(
 									'Answer',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								cell: ( entry ) => answer( entry ),
 							},
@@ -476,21 +500,27 @@ export function LogDetail( { id }: { id: number } ) {
 	const system = useSystemName();
 	const entry = detail.data;
 	const crumbs = [
-		{ label: __( 'Logs', 'estasoft-erp-crm-sync-engine' ), to: '/logs' },
-		{ label: __( 'Log entry', 'estasoft-erp-crm-sync-engine' ) },
+		{
+			label: __( 'Logs', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			to: '/logs',
+		},
+		{ label: __( 'Log entry', 'estasoft-enterprise-erpcrm-sync-engine' ) },
 	];
 	if ( detail.loading ) {
 		return (
 			<>
 				<PageHeader
-					title={ __( 'Log entry', 'estasoft-erp-crm-sync-engine' ) }
+					title={ __(
+						'Log entry',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 					breadcrumb={ crumbs }
 				/>
 				<LoadingState
 					rows={ 4 }
 					label={ __(
 						'Loading the log entry',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			</>
@@ -500,7 +530,10 @@ export function LogDetail( { id }: { id: number } ) {
 		return (
 			<>
 				<PageHeader
-					title={ __( 'Log entry', 'estasoft-erp-crm-sync-engine' ) }
+					title={ __(
+						'Log entry',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 					breadcrumb={ crumbs }
 				/>
 				<ErrorState
@@ -530,7 +563,7 @@ export function LogDetail( { id }: { id: number } ) {
 						text={ text }
 						label={ __(
 							'Copy this entry',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						small={ false }
 					/>
@@ -540,13 +573,19 @@ export function LogDetail( { id }: { id: number } ) {
 				<KeyValueList
 					items={ [
 						{
-							label: __( 'Time', 'estasoft-erp-crm-sync-engine' ),
+							label: __(
+								'Time',
+								'estasoft-enterprise-erpcrm-sync-engine'
+							),
 							value: (
 								<DateTime value={ entry.ts } kind="seconds" />
 							),
 						},
 						{
-							label: __( 'Code', 'estasoft-erp-crm-sync-engine' ),
+							label: __(
+								'Code',
+								'estasoft-enterprise-erpcrm-sync-engine'
+							),
 							value: entry.code ? (
 								<span className="estasoft-sync-mono">
 									{ entry.code }
@@ -558,12 +597,15 @@ export function LogDetail( { id }: { id: number } ) {
 						{
 							label: __(
 								'Connection',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							value: system,
 						},
 						{
-							label: __( 'Item', 'estasoft-erp-crm-sync-engine' ),
+							label: __(
+								'Item',
+								'estasoft-enterprise-erpcrm-sync-engine'
+							),
 							value: entry.queue_id ? (
 								<Link
 									to={ `/queue/${ entry.queue_id }` }
@@ -577,13 +619,16 @@ export function LogDetail( { id }: { id: number } ) {
 							),
 						},
 						{
-							label: __( 'Took', 'estasoft-erp-crm-sync-engine' ),
+							label: __(
+								'Took',
+								'estasoft-enterprise-erpcrm-sync-engine'
+							),
 							value: formatDuration( entry.duration_ms ),
 						},
 						{
 							label: __(
 								'Answer',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							value: answer( entry ),
 						},
@@ -593,14 +638,14 @@ export function LogDetail( { id }: { id: number } ) {
 			<Card
 				title={ __(
 					'What was sent (redacted)',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			>
 				{ entry.request_excerpt ? (
 					<CodeBlock
 						label={ __(
 							'Request excerpt',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					>
 						{ entry.request_excerpt }
@@ -609,7 +654,7 @@ export function LogDetail( { id }: { id: number } ) {
 					<p className="estasoft-sync-muted">
 						{ __(
 							'Nothing was kept.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</p>
 				) }
@@ -617,14 +662,14 @@ export function LogDetail( { id }: { id: number } ) {
 			<Card
 				title={ __(
 					'What came back (redacted)',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			>
 				{ entry.response_excerpt ? (
 					<CodeBlock
 						label={ __(
 							'Answer excerpt',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					>
 						{ entry.response_excerpt }
@@ -633,7 +678,7 @@ export function LogDetail( { id }: { id: number } ) {
 					<p className="estasoft-sync-muted">
 						{ __(
 							'Nothing was kept.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</p>
 				) }
@@ -641,7 +686,7 @@ export function LogDetail( { id }: { id: number } ) {
 			<Callout tone="info">
 				{ __(
 					'Names, emails, phones and addresses are removed. Secrets are never logged. Excerpts are cut at the size set under Settings.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			</Callout>
 			{ entry.queue_id ? (
@@ -654,7 +699,7 @@ export function LogDetail( { id }: { id: number } ) {
 					>
 						{ __(
 							'Open the queue item',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</Btn>
 				</p>

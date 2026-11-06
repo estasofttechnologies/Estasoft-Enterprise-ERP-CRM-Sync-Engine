@@ -50,7 +50,7 @@ export function summariseSource(
 		: '';
 	const rows = [
 		{
-			label: __( 'Customer', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'Customer', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			value: [
 				asText( getPath( source, 'billing.first_name' ) ),
 				asText( getPath( source, 'billing.last_name' ) ),
@@ -59,28 +59,31 @@ export function summariseSource(
 				.join( ' ' ),
 		},
 		{
-			label: __( 'Phone', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'Phone', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			value: asText( getPath( source, 'billing.phone' ) ),
 		},
 		{
-			label: __( 'State', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'State', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			value: asText( getPath( source, 'billing.state' ) ),
 		},
-		{ label: __( 'Items', 'estasoft-erp-crm-sync-engine' ), value: items },
 		{
-			label: __( 'Shipping', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'Items', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			value: items,
+		},
+		{
+			label: __( 'Shipping', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			value: money( 'order.shipping_total' ),
 		},
 		{
-			label: __( 'Tax', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'Tax', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			value: money( 'order.tax_total' ),
 		},
 		{
-			label: __( 'Payment', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'Payment', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			value: asText( getPath( source, 'order.payment.method_title' ) ),
 		},
 		{
-			label: __( 'Total', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'Total', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			value: money( 'order.total' ),
 		},
 	];
@@ -147,13 +150,13 @@ export function PreviewPanel( {
 			<Card
 				title={ __(
 					'The WooCommerce order',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			>
 				<SelectField
 					label={ __(
 						'Try it on a real order',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					value={ orderId === null ? '' : String( orderId ) }
 					onChange={ ( value ) => onOrderChange( Number( value ) ) }
@@ -167,7 +170,7 @@ export function PreviewPanel( {
 						rows={ 3 }
 						label={ __(
 							'Building the preview',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					/>
 				) : null }
@@ -196,7 +199,7 @@ export function PreviewPanel( {
 					onRetry={ () => void preview.reload() }
 					title={ __(
 						'The preview could not be built.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			) : null }
@@ -205,13 +208,13 @@ export function PreviewPanel( {
 					title={ sprintf(
 						/* translators: %s: system name */ __(
 							'What %s will receive',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						system
 					) }
 					description={ __(
 						'Preview only. Nothing is sent.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				>
 					<JsonView
@@ -219,13 +222,13 @@ export function PreviewPanel( {
 						marked={ data.changed_paths }
 						label={ __(
 							'The request that would be sent',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					/>
 					<p className="estasoft-sync-muted">
 						{ __(
 							'Marked lines were changed by a rule. The raw request is in the log once an order is sent.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</p>
 					{ data.rule_notes.length > 0 ? (
@@ -252,11 +255,11 @@ export function PreviewPanel( {
 										{ lookup.found
 											? __(
 													'Found',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												)
 											: __(
 													'Not found',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												) }
 									</StatusBadge>{ ' ' }
 									{ lookup.label }: { lookup.detail }
@@ -292,7 +295,7 @@ export function PreviewPanel( {
 							{ sprintf(
 								/* translators: %s: SKU */ __(
 									'Map %s',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								causeValue( skuText )
 							) }

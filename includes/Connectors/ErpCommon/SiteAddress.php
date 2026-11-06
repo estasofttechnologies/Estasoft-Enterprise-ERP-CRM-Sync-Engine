@@ -83,7 +83,7 @@ final class SiteAddress {
 				Problems::refused(
 					$system,
 					'address',
-					__( 'The address must be a web address such as https://example.com, without a user name or password.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The address must be a web address such as https://example.com, without a user name or password.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					'bad address'
 				)
 			);

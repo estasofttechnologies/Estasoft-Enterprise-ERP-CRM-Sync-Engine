@@ -140,7 +140,7 @@ final class DaftraLines {
 					'field'  => 'tax1',
 					'reason' => sprintf(
 						/* translators: %s: tax name. */
-						__( 'The rate of the tax "%s" is not known, so prices cannot be converted to the way Daftra treats it.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'The rate of the tax "%s" is not known, so prices cannot be converted to the way Daftra treats it.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$tax['name']
 					),
 				),

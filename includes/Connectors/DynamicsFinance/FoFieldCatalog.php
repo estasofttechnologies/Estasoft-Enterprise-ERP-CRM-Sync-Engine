@@ -30,8 +30,8 @@ final class FoFieldCatalog {
 	public function fields( string $mappingType ): array {
 		return match ( $mappingType ) {
 			'orders'    => $this->orders(),
-			'customers' => FieldGroups::customer( FieldCatalogBuilder::make(), __( 'Customer', 'estasoft-erp-crm-sync-engine' ), 'partner.', true )->build(),
-			'products'  => FieldGroups::products( FieldCatalogBuilder::make(), __( 'Item number (ItemNumber)', 'estasoft-erp-crm-sync-engine' ) )->build(),
+			'customers' => FieldGroups::customer( FieldCatalogBuilder::make(), __( 'Customer', 'estasoft-enterprise-erpcrm-sync-engine' ), 'partner.', true )->build(),
+			'products'  => FieldGroups::products( FieldCatalogBuilder::make(), __( 'Item number (ItemNumber)', 'estasoft-enterprise-erpcrm-sync-engine' ) )->build(),
 			default     => array(),
 		};
 	}
@@ -42,14 +42,14 @@ final class FoFieldCatalog {
 	 * @return array<int,FieldDef>
 	 */
 	private function orders(): array {
-		$b = FieldGroups::orderHeader( FieldCatalogBuilder::make(), __( 'Sales order', 'estasoft-erp-crm-sync-engine' ) );
-		$b->boolean( 'prices_include_tax', __( 'The mapped prices include tax', 'estasoft-erp-crm-sync-engine' ) )
-			->text( 'warehouse', __( 'Shipping warehouse (WarehouseId)', 'estasoft-erp-crm-sync-engine' ) )
-			->text( 'site', __( 'Shipping site (SiteId)', 'estasoft-erp-crm-sync-engine' ) );
-		FieldGroups::customer( $b, __( 'Customer', 'estasoft-erp-crm-sync-engine' ), 'partner.', true );
-		FieldGroups::delivery( $b, __( 'Delivery address', 'estasoft-erp-crm-sync-engine' ) );
-		FieldGroups::lines( $b, __( 'Order lines', 'estasoft-erp-crm-sync-engine' ), true );
-		FieldGroups::extras( $b, __( 'Shipping, fees and discount', 'estasoft-erp-crm-sync-engine' ), true, false );
+		$b = FieldGroups::orderHeader( FieldCatalogBuilder::make(), __( 'Sales order', 'estasoft-enterprise-erpcrm-sync-engine' ) );
+		$b->boolean( 'prices_include_tax', __( 'The mapped prices include tax', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->text( 'warehouse', __( 'Shipping warehouse (WarehouseId)', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+			->text( 'site', __( 'Shipping site (SiteId)', 'estasoft-enterprise-erpcrm-sync-engine' ) );
+		FieldGroups::customer( $b, __( 'Customer', 'estasoft-enterprise-erpcrm-sync-engine' ), 'partner.', true );
+		FieldGroups::delivery( $b, __( 'Delivery address', 'estasoft-enterprise-erpcrm-sync-engine' ) );
+		FieldGroups::lines( $b, __( 'Order lines', 'estasoft-enterprise-erpcrm-sync-engine' ), true );
+		FieldGroups::extras( $b, __( 'Shipping, fees and discount', 'estasoft-enterprise-erpcrm-sync-engine' ), true, false );
 		return $b->build();
 	}
 }

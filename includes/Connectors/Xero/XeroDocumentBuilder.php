@@ -57,7 +57,7 @@ final class XeroDocumentBuilder {
 			$lines[] = $built;
 		}
 		if ( $cut ) {
-			$warnings[] = __( 'A long description was shortened to fit Xero.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'A long description was shortened to fit Xero.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		$invoice = array(
 			'Type'            => 'ACCREC',
@@ -93,7 +93,7 @@ final class XeroDocumentBuilder {
 		foreach ( $payload->lines as $index => $line ) {
 			$sku  = (string) $line['sku'];
 			$item = '' !== $sku ? ( $items[ strtolower( $sku ) ] ?? null ) : null;
-			$text = '' !== (string) $line['name'] ? (string) $line['name'] : ( null !== $item ? XeroPayloadReader::text( $item['Name'] ?? $sku ) : ( '' !== $sku ? $sku : __( 'Refund', 'estasoft-erp-crm-sync-engine' ) ) );
+			$text = '' !== (string) $line['name'] ? (string) $line['name'] : ( null !== $item ? XeroPayloadReader::text( $item['Name'] ?? $sku ) : ( '' !== $sku ? $sku : __( 'Refund', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 			if ( 0 === $index && '' !== $payload->reason ) {
 				$text = $payload->reason . ': ' . $text;
 			}
@@ -134,7 +134,7 @@ final class XeroDocumentBuilder {
 			$note['Date'] = $payload->date;
 		}
 		if ( $cut ) {
-			$warnings[] = __( 'A long description was shortened to fit Xero.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'A long description was shortened to fit Xero.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		return $note;
 	}
@@ -161,7 +161,7 @@ final class XeroDocumentBuilder {
 					'order_line[].product',
 					sprintf(
 						/* translators: %s: item code. */
-						__( 'The item %s is not marked as sold in Xero.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'The item %s is not marked as sold in Xero.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$sku
 					)
 				);
@@ -235,7 +235,7 @@ final class XeroDocumentBuilder {
 			$option,
 			sprintf(
 				/* translators: %s: the name of a connection option. */
-				__( 'Set the account code in the connection option "%s": Xero needs an account for lines that are not a Xero item.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Set the account code in the connection option "%s": Xero needs an account for lines that are not a Xero item.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$option
 			)
 		);

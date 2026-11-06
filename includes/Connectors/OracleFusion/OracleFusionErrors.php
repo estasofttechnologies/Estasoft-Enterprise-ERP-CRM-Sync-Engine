@@ -64,7 +64,7 @@ final class OracleFusionErrors {
 		return new ConnectorError(
 			ErrorCode::Val002,
 			$base + array(
-				'field'  => '' === $found['field'] ? __( 'the request', 'estasoft-erp-crm-sync-engine' ) : $found['field'],
+				'field'  => '' === $found['field'] ? __( 'the request', 'estasoft-enterprise-erpcrm-sync-engine' ) : $found['field'],
 				'reason' => $found['reason'],
 			),
 			$status,

@@ -259,25 +259,25 @@ final class Sage50Settings implements ExportSettings {
 	public function problems(): array {
 		$problems = array();
 		if ( 1 !== preg_match( '/^[A-Z]{3}$/', $this->currency() ) ) {
-			$problems[] = __( 'Enter the currency of your books as a three-letter code, for example GBP.', 'estasoft-erp-crm-sync-engine' );
+			$problems[] = __( 'Enter the currency of your books as a three-letter code, for example GBP.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		if ( $this->isUk() ) {
 			if ( 1 !== preg_match( '/^[A-Za-z0-9]{1,8}$/', $this->customerAccount() ) ) {
-				$problems[] = __( 'Enter the account reference of the customer that web orders post to (up to 8 letters or digits, for example WEB).', 'estasoft-erp-crm-sync-engine' );
+				$problems[] = __( 'Enter the account reference of the customer that web orders post to (up to 8 letters or digits, for example WEB).', 'estasoft-enterprise-erpcrm-sync-engine' );
 			}
 			if ( 1 !== preg_match( '/^\d{1,8}$/', $this->salesNominal() ) ) {
-				$problems[] = __( 'Enter the nominal code for sales (up to 8 digits, for example 4000).', 'estasoft-erp-crm-sync-engine' );
+				$problems[] = __( 'Enter the nominal code for sales (up to 8 digits, for example 4000).', 'estasoft-enterprise-erpcrm-sync-engine' );
 			}
 			return $problems;
 		}
 		if ( '' === $this->arAccount() ) {
-			$problems[] = __( 'Enter the Accounts Receivable account.', 'estasoft-erp-crm-sync-engine' );
+			$problems[] = __( 'Enter the Accounts Receivable account.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		if ( '' === $this->salesAccount() ) {
-			$problems[] = __( 'Enter the G/L account for sales.', 'estasoft-erp-crm-sync-engine' );
+			$problems[] = __( 'Enter the G/L account for sales.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		if ( '' === $this->customerId() || strlen( $this->customerId() ) > 20 ) {
-			$problems[] = __( 'Enter the customer ID that web orders use (up to 20 characters).', 'estasoft-erp-crm-sync-engine' );
+			$problems[] = __( 'Enter the customer ID that web orders use (up to 20 characters).', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		return $problems;
 	}

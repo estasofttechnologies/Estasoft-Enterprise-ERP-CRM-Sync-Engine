@@ -153,7 +153,7 @@ final class CircuitBreaker {
 			return true;
 		}
 		$this->connections->scheduleProbe( $connectionId, $this->nextProbeAt( $connection ) );
-		$this->logger->warning( __( 'The system still does not answer. The next check is scheduled.', 'estasoft-erp-crm-sync-engine' ), array( 'connection_id' => $connectionId ) );
+		$this->logger->warning( __( 'The system still does not answer. The next check is scheduled.', 'estasoft-enterprise-erpcrm-sync-engine' ), array( 'connection_id' => $connectionId ) );
 		return false;
 	}
 
@@ -164,7 +164,7 @@ final class CircuitBreaker {
 	 * @param string $how          probe or success.
 	 */
 	private function announceResume( int $connectionId, string $how ): void {
-		$this->logger->info( __( 'The system answers again. Syncing resumed.', 'estasoft-erp-crm-sync-engine' ), array( 'connection_id' => $connectionId ) );
+		$this->logger->info( __( 'The system answers again. Syncing resumed.', 'estasoft-enterprise-erpcrm-sync-engine' ), array( 'connection_id' => $connectionId ) );
 		/** This action is documented in PauseController. */
 		do_action( 'estasoft_sync_connection_resumed', $connectionId, $how );
 	}

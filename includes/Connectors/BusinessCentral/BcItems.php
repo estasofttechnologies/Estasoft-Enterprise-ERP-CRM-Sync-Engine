@@ -120,7 +120,7 @@ final class BcItems {
 		foreach ( array_unique( $skus ) as $sku ) {
 			$row = $this->find( $sku );
 			if ( null !== $row && true === ( $row['blocked'] ?? false ) ) {
-				return Failures::invalid( $this->system, 'order_line[].product', sprintf( /* translators: %s: SKU. */ __( 'Item %s is blocked in Business Central.', 'estasoft-erp-crm-sync-engine' ), $sku ), 'item blocked' );
+				return Failures::invalid( $this->system, 'order_line[].product', sprintf( /* translators: %s: SKU. */ __( 'Item %s is blocked in Business Central.', 'estasoft-enterprise-erpcrm-sync-engine' ), $sku ), 'item blocked' );
 			}
 			$items[ $sku ] = $row;
 		}

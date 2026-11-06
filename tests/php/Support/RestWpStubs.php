@@ -474,6 +474,6 @@ if ( ! function_exists( 'get_current_screen' ) ) {
 }
 if ( ! function_exists( 'plugin_basename' ) ) {
 	function plugin_basename( $file ) { // phpcs:ignore
-		return 'estasoft-erp-crm-sync-engine/' . basename( (string) $file );
+		return 'estasoft-enterprise-erpcrm-sync-engine/' . basename( (string) $file );
 	}
 }

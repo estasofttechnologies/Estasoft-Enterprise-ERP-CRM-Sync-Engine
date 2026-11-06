@@ -68,7 +68,7 @@ final class PennylaneLines {
 			if ( $order->pricesIncludeTax ) {
 				$bp = $row['rate_bp'] ?? $this->rateOfCode( $code );
 				if ( null === $bp ) {
-					return Refusal::value( PennylaneConnector::LABEL, 'lines[].tax_rate', __( 'The tax rate of a line is needed to take the tax out of a price that includes it. Map the tax rate of the order lines.', 'estasoft-erp-crm-sync-engine' ), 'tax rate missing' );
+					return Refusal::value( PennylaneConnector::LABEL, 'lines[].tax_rate', __( 'The tax rate of a line is needed to take the tax out of a price that includes it. Map the tax rate of the order lines.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'tax rate missing' );
 				}
 				$net = $this->amounts->netFromGross( $net, (int) $bp );
 			}

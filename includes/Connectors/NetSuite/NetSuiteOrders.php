@@ -90,7 +90,7 @@ final class NetSuiteOrders {
 				'currency',
 				sprintf(
 						/* translators: %s: ISO currency code. */
-					__( 'NetSuite has no active currency %s.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'NetSuite has no active currency %s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$data->currency
 				)
 			);
@@ -102,7 +102,7 @@ final class NetSuiteOrders {
 		$this->gateway->write( 'PUT', 'record/v1/salesOrder/eid:' . rawurlencode( $data->reference ), $body );
 		$record = $this->find( $data->reference );
 		if ( null === $record ) {
-			$problem = Problem::validation( $this->system, 'salesOrder', __( 'NetSuite accepted the order but it cannot be read back.', 'estasoft-erp-crm-sync-engine' ) );
+			$problem = Problem::validation( $this->system, 'salesOrder', __( 'NetSuite accepted the order but it cannot be read back.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			throw new ApiException( $problem ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 		}
 		return $record;
@@ -129,7 +129,7 @@ final class NetSuiteOrders {
 				'currency',
 				sprintf(
 					/* translators: %s: ISO currency code. */
-					__( 'NetSuite holds the order in another currency than the shop (%s).', 'estasoft-erp-crm-sync-engine' ),
+					__( 'NetSuite holds the order in another currency than the shop (%s).', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$currency
 				)
 			);
@@ -183,7 +183,7 @@ final class NetSuiteOrders {
 			$row = $this->invoiceOf( $orderId );
 		}
 		if ( null === $row || ! isset( $row['id'] ) ) {
-			$problem = Problem::validation( $this->system, 'invoice', __( 'NetSuite did not make the invoice. The sales order may need approval or fulfilment first.', 'estasoft-erp-crm-sync-engine' ) );
+			$problem = Problem::validation( $this->system, 'invoice', __( 'NetSuite did not make the invoice. The sales order may need approval or fulfilment first.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			throw new ApiException( $problem ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 		}
 		$record = $this->gateway->record( 'invoice', (string) $row['id'], array( 'id', 'tranId', 'total', 'currency' ) );
@@ -329,8 +329,8 @@ final class NetSuiteOrders {
 				'fee' === $charge->kind ? 'fee_item' : 'discount_item',
 				sprintf(
 						/* translators: %s: fee or discount. */
-					__( 'The order has a %s but the connection has no item for it. Enter the item id in the connection options.', 'estasoft-erp-crm-sync-engine' ),
-					'fee' === $charge->kind ? __( 'fee', 'estasoft-erp-crm-sync-engine' ) : __( 'discount', 'estasoft-erp-crm-sync-engine' )
+					__( 'The order has a %s but the connection has no item for it. Enter the item id in the connection options.', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'fee' === $charge->kind ? __( 'fee', 'estasoft-enterprise-erpcrm-sync-engine' ) : __( 'discount', 'estasoft-enterprise-erpcrm-sync-engine' )
 				)
 			);
 			throw new ApiException( $problem ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.

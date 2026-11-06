@@ -53,8 +53,8 @@ final class HubSpotErrorMapper {
 			}
 			$action = array() !== $scopes
 				/* translators: 1: scope names */
-				? sprintf( __( 'use the scope %s', 'estasoft-erp-crm-sync-engine' ), implode( ', ', array_slice( array_unique( $scopes ), 0, 3 ) ) )
-				: __( 'do this', 'estasoft-erp-crm-sync-engine' );
+				? sprintf( __( 'use the scope %s', 'estasoft-enterprise-erpcrm-sync-engine' ), implode( ', ', array_slice( array_unique( $scopes ), 0, 3 ) ) )
+				: __( 'do this', 'estasoft-enterprise-erpcrm-sync-engine' );
 			return new ConnectorError( ErrorCode::Auth004, array( 'action' => $action ), 403, null, null, 'forbidden' );
 		}
 		if ( 423 === $status ) {
@@ -68,7 +68,7 @@ final class HubSpotErrorMapper {
 			$text  = (string) ( $first['message'] ?? $body['message'] ?? '' );
 			if ( '' === $text ) {
 				/* translators: 1: HTTP status */
-				$text = sprintf( __( 'The system answered with status %d.', 'estasoft-erp-crm-sync-engine' ), $status );
+				$text = sprintf( __( 'The system answered with status %d.', 'estasoft-enterprise-erpcrm-sync-engine' ), $status );
 			}
 			return new ConnectorError(
 				ErrorCode::Val002,

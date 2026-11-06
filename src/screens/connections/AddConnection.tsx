@@ -33,25 +33,25 @@ export function AddConnection() {
 					connecting
 						? __(
 								'Connect a system',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							)
 						: __(
 								'Choose a system',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							)
 				}
 				breadcrumb={ [
 					{
 						label: __(
 							'Connections',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						to: '/connections',
 					},
 					{
 						label: __(
 							'Add a connection',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 					},
 				] }
@@ -88,8 +88,14 @@ export function AddConnection() {
 						}
 					>
 						{ connecting
-							? __( 'Back', 'estasoft-erp-crm-sync-engine' )
-							: __( 'Cancel', 'estasoft-erp-crm-sync-engine' ) }
+							? __(
+									'Back',
+									'estasoft-enterprise-erpcrm-sync-engine'
+								)
+							: __(
+									'Cancel',
+									'estasoft-enterprise-erpcrm-sync-engine'
+								) }
 					</Btn>
 					{ connecting ? (
 						<Btn
@@ -102,7 +108,7 @@ export function AddConnection() {
 						>
 							{ __(
 								'Open the connection',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Btn>
 					) : (
@@ -115,7 +121,10 @@ export function AddConnection() {
 							}
 							onClick={ () => setConnecting( true ) }
 						>
-							{ __( 'Continue', 'estasoft-erp-crm-sync-engine' ) }
+							{ __(
+								'Continue',
+								'estasoft-enterprise-erpcrm-sync-engine'
+							) }
 						</Btn>
 					) }
 				</div>

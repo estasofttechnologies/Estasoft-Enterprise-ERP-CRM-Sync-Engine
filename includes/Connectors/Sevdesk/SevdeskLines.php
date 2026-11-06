@@ -68,7 +68,7 @@ final class SevdeskLines {
 		$parts     = array();
 		foreach ( $rows as $index => $row ) {
 			if ( null === $row['rate_bp'] && in_array( $code, array( '1', 'default' ), true ) ) {
-				return Refusal::value( SevdeskConnector::LABEL, 'lines[].tax_rate', __( 'The tax rate of a line is missing. Map the tax rate of the order lines.', 'estasoft-erp-crm-sync-engine' ), 'tax rate missing' );
+				return Refusal::value( SevdeskConnector::LABEL, 'lines[].tax_rate', __( 'The tax rate of a line is missing. Map the tax rate of the order lines.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'tax rate missing' );
 			}
 			$bp   = (int) ( $row['rate_bp'] ?? 0 );
 			$part = null;
@@ -211,7 +211,7 @@ final class SevdeskLines {
 				'taxRule',
 				sprintf(
 					/* translators: %s: tax codes, separated by commas. */
-					__( 'sevDesk takes one tax rule per invoice, but the tax mapping gives the lines different ones (%s). Use the same tax code for every line.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'sevDesk takes one tax rule per invoice, but the tax mapping gives the lines different ones (%s). Use the same tax code for every line.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					implode( ', ', array_keys( $codes ) )
 				),
 				'mixed tax rules'

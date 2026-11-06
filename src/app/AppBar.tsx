@@ -32,7 +32,7 @@ export function connectionPill( status: Status | undefined ): Pill | null {
 		return {
 			tone: 'info',
 			icon: 'eye',
-			text: __( 'Shadow mode', 'estasoft-erp-crm-sync-engine' ),
+			text: __( 'Shadow mode', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		};
 	}
 	if (
@@ -43,7 +43,10 @@ export function connectionPill( status: Status | undefined ): Pill | null {
 		return {
 			tone: 'neutral',
 			icon: 'minus',
-			text: __( 'Not connected', 'estasoft-erp-crm-sync-engine' ),
+			text: __(
+				'Not connected',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 		};
 	}
 	const name = systemName( connection );
@@ -54,7 +57,10 @@ export function connectionPill( status: Status | undefined ): Pill | null {
 				icon: 'synced',
 				text: sprintf(
 					/* translators: %s: system name such as Odoo */
-					__( '%s connected', 'estasoft-erp-crm-sync-engine' ),
+					__(
+						'%s connected',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					),
 					name
 				),
 			};
@@ -64,7 +70,10 @@ export function connectionPill( status: Status | undefined ): Pill | null {
 				icon: 'failed',
 				text: sprintf(
 					/* translators: %s: system name such as Odoo */
-					__( '%s unreachable', 'estasoft-erp-crm-sync-engine' ),
+					__(
+						'%s unreachable',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					),
 					name
 				),
 			};
@@ -75,7 +84,10 @@ export function connectionPill( status: Status | undefined ): Pill | null {
 					icon: 'failed',
 					text: sprintf(
 						/* translators: %s: system name such as Odoo */
-						__( '%s unreachable', 'estasoft-erp-crm-sync-engine' ),
+						__(
+							'%s unreachable',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						name
 					),
 				};
@@ -85,7 +97,7 @@ export function connectionPill( status: Status | undefined ): Pill | null {
 				icon: 'paused',
 				text: sprintf(
 					/* translators: %s: system name such as Odoo */
-					__( '%s paused', 'estasoft-erp-crm-sync-engine' ),
+					__( '%s paused', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					name
 				),
 			};
@@ -95,7 +107,10 @@ export function connectionPill( status: Status | undefined ): Pill | null {
 				icon: 'warning',
 				text: sprintf(
 					/* translators: %s: system name such as Odoo */
-					__( '%s needs reconnect', 'estasoft-erp-crm-sync-engine' ),
+					__(
+						'%s needs reconnect',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					),
 					name
 				),
 			};
@@ -103,7 +118,10 @@ export function connectionPill( status: Status | undefined ): Pill | null {
 			return {
 				tone: 'neutral',
 				icon: 'minus',
-				text: __( 'Not connected', 'estasoft-erp-crm-sync-engine' ),
+				text: __(
+					'Not connected',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				),
 			};
 	}
 }
@@ -136,7 +154,10 @@ export function AppBar( { current, status, setup }: AppBarProps ) {
 				<span>ESTASOFT SYNC</span>
 				{ setup ? (
 					<span className="estasoft-sync-muted estasoft-sync-appbar__guide">
-						{ __( 'Setup guide', 'estasoft-erp-crm-sync-engine' ) }
+						{ __(
+							'Setup guide',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						) }
 					</span>
 				) : null }
 			</div>
@@ -146,7 +167,7 @@ export function AppBar( { current, status, setup }: AppBarProps ) {
 						className="estasoft-sync-tabs"
 						aria-label={ __(
 							'ESTASOFT SYNC sections',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					>
 						{ sections.map( ( section ) => (

@@ -135,7 +135,7 @@ final class ConnectionService {
 	public function get( int $id ): array {
 		$public = $this->connections->findPublic( $id );
 		if ( null === $public ) {
-			throw new JobException( esc_html__( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ), 404 );
+			throw new JobException( esc_html__( 'That connection does not exist.', 'estasoft-enterprise-erpcrm-sync-engine' ), 404 );
 		}
 		return ConnectionPresenter::full( $public, ( $this->registry )()->get( (string) $public['connector'] ) );
 	}
@@ -201,7 +201,7 @@ final class ConnectionService {
 		$this->logger->info(
 			sprintf(
 				/* translators: %s: name of the connected system. */
-				$awaitingSignIn ? __( 'Saved the app details for %s. Sign in to finish connecting.', 'estasoft-erp-crm-sync-engine' ) : __( 'Connected to %s.', 'estasoft-erp-crm-sync-engine' ),
+				$awaitingSignIn ? __( 'Saved the app details for %s. Sign in to finish connecting.', 'estasoft-enterprise-erpcrm-sync-engine' ) : __( 'Connected to %s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$connector->label()
 			),
 			array( 'connection_id' => $id )
@@ -231,7 +231,7 @@ final class ConnectionService {
 	public function update( int $id, array $input ): array {
 		$public = $this->connections->findPublic( $id );
 		if ( null === $public ) {
-			throw new JobException( esc_html__( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ), 404 );
+			throw new JobException( esc_html__( 'That connection does not exist.', 'estasoft-enterprise-erpcrm-sync-engine' ), 404 );
 		}
 		$connector = $this->connector( (string) $public['connector'] );
 		$changes   = array();
@@ -289,7 +289,7 @@ final class ConnectionService {
 			$this->logger->info(
 				sprintf(
 					/* translators: %s: name of the connected system. */
-					__( 'New credentials for %s passed the test. Syncing resumed.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'New credentials for %s passed the test. Syncing resumed.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$connector->label()
 				),
 				array( 'connection_id' => $id )
@@ -316,7 +316,7 @@ final class ConnectionService {
 			$base   = $this->connections->findWithoutSecrets( $existingId );
 			$public = $this->connections->findPublic( $existingId );
 			if ( null === $base || null === $public ) {
-				throw new JobException( esc_html__( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ), 404 );
+				throw new JobException( esc_html__( 'That connection does not exist.', 'estasoft-enterprise-erpcrm-sync-engine' ), 404 );
 			}
 		}
 		$connector = $this->connector( null === $base ? (string) ( $input['connector'] ?? '' ) : $base->connector );
@@ -382,7 +382,7 @@ final class ConnectionService {
 				if ( $had || $field->required ) {
 					$errors[ $field->name ] = sprintf(
 						/* translators: 1: name of the secret field (for example API key), 2: name of the field that changed (for example Address). */
-						__( 'Enter the %1$s again because the %2$s changed.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'Enter the %1$s again because the %2$s changed.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$this->plain( $field->label ),
 						$this->plain( $moved )
 					);
@@ -400,7 +400,7 @@ final class ConnectionService {
 					throw $refusal;
 				}
 				if ( null === $saved ) {
-					throw new JobException( esc_html__( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ), 404 );
+					throw new JobException( esc_html__( 'That connection does not exist.', 'estasoft-enterprise-erpcrm-sync-engine' ), 404 );
 				}
 			}
 			if ( '' !== $saved->secret( $field->name ) ) {
@@ -435,7 +435,7 @@ final class ConnectionService {
 	public function selectOrganisation( int $id, string $organisationId ): array {
 		$connection = $this->connections->find( $id );
 		if ( null === $connection ) {
-			throw new JobException( esc_html__( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ), 404 );
+			throw new JobException( esc_html__( 'That connection does not exist.', 'estasoft-enterprise-erpcrm-sync-engine' ), 404 );
 		}
 		$connector = ( $this->registry )()->get( $connection->connector );
 		if ( ! $connector instanceof GuardedSignInConnector ) {
@@ -454,7 +454,7 @@ final class ConnectionService {
 			}
 		}
 		if ( null === $chosen ) {
-			throw new JobException( esc_html__( 'That organisation is not available to the account you signed in with.', 'estasoft-erp-crm-sync-engine' ), 422 );
+			throw new JobException( esc_html__( 'That organisation is not available to the account you signed in with.', 'estasoft-enterprise-erpcrm-sync-engine' ), 422 );
 		}
 		$keys = $connector->selectOrganisation( $connection, $organisationId );
 		if ( $keys instanceof ConnectorError ) {
@@ -517,7 +517,7 @@ final class ConnectionService {
 		$this->logger->info(
 			sprintf(
 				/* translators: %s: name of the connected system. */
-				__( 'Connected to %s.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Connected to %s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$connector->label()
 			),
 			array( 'connection_id' => $id )
@@ -534,13 +534,13 @@ final class ConnectionService {
 	public function disconnect( int $id ): void {
 		$public = $this->connections->findPublic( $id );
 		if ( null === $public ) {
-			throw new JobException( esc_html__( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ), 404 );
+			throw new JobException( esc_html__( 'That connection does not exist.', 'estasoft-enterprise-erpcrm-sync-engine' ), 404 );
 		}
 		$this->connections->delete( $id );
 		$this->logger->info(
 			sprintf(
 				/* translators: %s: name of the connected system. */
-				__( 'Disconnected from %s. The saved sign-in details were erased. Nothing was deleted in the system or in WooCommerce.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Disconnected from %s. The saved sign-in details were erased. Nothing was deleted in the system or in WooCommerce.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				(string) $public['label']
 			),
 			array( 'connection_id' => $id )
@@ -701,7 +701,7 @@ final class ConnectionService {
 	private function connector( string $id ): ConnectorInterface {
 		$connector = ( $this->registry )()->get( $id );
 		if ( null === $connector ) {
-			throw new ValidationException( array( 'connector' => esc_html__( 'Choose a system that is installed.', 'estasoft-erp-crm-sync-engine' ) ) );
+			throw new ValidationException( array( 'connector' => esc_html__( 'Choose a system that is installed.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		return $connector;
 	}
@@ -720,7 +720,7 @@ final class ConnectionService {
 					esc_html(
 						sprintf(
 							/* translators: %s: name of the connected system. */
-							__( 'You are already connected to %s. Change that connection, or disconnect it first.', 'estasoft-erp-crm-sync-engine' ),
+							__( 'You are already connected to %s. Change that connection, or disconnect it first.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 							$connector->label()
 						)
 					),
@@ -794,7 +794,7 @@ final class ConnectionService {
 			}
 			$value = $field->secret ? ( $secrets[ $field->name ] ?? '' ) : (string) ( $config[ $field->name ] ?? '' );
 			if ( '' === trim( (string) $value ) ) {
-				$errors[ $field->name ] = __( 'This field is required.', 'estasoft-erp-crm-sync-engine' );
+				$errors[ $field->name ] = __( 'This field is required.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			}
 		}
 		if ( array() !== $errors ) {
@@ -839,7 +839,7 @@ final class ConnectionService {
 						'field'  => 'connection',
 						'reason' => sprintf(
 							/* translators: %s: PHP error class name. */
-							__( 'The test stopped unexpectedly (%s).', 'estasoft-erp-crm-sync-engine' ),
+							__( 'The test stopped unexpectedly (%s).', 'estasoft-enterprise-erpcrm-sync-engine' ),
 							( new \ReflectionClass( $e ) )->getShortName()
 						),
 					)
@@ -931,7 +931,7 @@ final class ConnectionService {
 			ErrorCode::Val002,
 			array(
 				'field'  => 'connection',
-				'reason' => __( 'The test failed.', 'estasoft-erp-crm-sync-engine' ),
+				'reason' => __( 'The test failed.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			)
 		);
 		$mapped = array(
@@ -964,7 +964,7 @@ final class ConnectionService {
 		$error = is_array( $result['error'] ?? null ) ? $result['error'] : array();
 		$code  = ErrorCode::tryFrom( (string) ( $error['code'] ?? '' ) );
 		unset( $result['detected'] );
-		return new JobException( esc_html( (string) ( $error['message'] ?? __( 'The test failed.', 'estasoft-erp-crm-sync-engine' ) ) ), (int) ( $error['data']['status'] ?? 422 ), $code, array( 'test' => $result ) );
+		return new JobException( esc_html( (string) ( $error['message'] ?? __( 'The test failed.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) ), (int) ( $error['data']['status'] ?? 422 ), $code, array( 'test' => $result ) );
 	}
 
 	/**
@@ -1075,7 +1075,7 @@ final class ConnectionService {
 				$this->logger->warning(
 					sprintf(
 						/* translators: %s: mapping type. */
-						__( 'The default %s mapping could not be created. Open Mapping to set it up.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'The default %s mapping could not be created. Open Mapping to set it up.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$type
 					),
 					array( 'connection_id' => $id )

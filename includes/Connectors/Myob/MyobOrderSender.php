@@ -85,7 +85,7 @@ final class MyobOrderSender {
 					'currency',
 					sprintf(
 						/* translators: 1: order currency, 2: currency of the company file. */
-						__( 'The order is in %1$s but the company file works in %2$s. Foreign-currency invoices are not sent.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'The order is in %1$s but the company file works in %2$s. Foreign-currency invoices are not sent.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$parsed->currency,
 						$currency
 					)
@@ -253,7 +253,7 @@ final class MyobOrderSender {
 						'payment_account',
 						sprintf(
 							/* translators: %s: an account number such as 1-1110. */
-							__( 'MYOB has no account "%s" for the payment. Check the connection option payment_account.', 'estasoft-erp-crm-sync-engine' ),
+							__( 'MYOB has no account "%s" for the payment. Check the connection option payment_account.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 							$account
 						)
 					)
@@ -274,10 +274,10 @@ final class MyobOrderSender {
 		return MyobErrors::refused(
 			'BalanceDueAmount',
 			null === $after || null === $left
-				? __( 'MYOB accepted the payment but the invoice cannot be read back to see its balance. Open the invoice in MYOB and check the payment.', 'estasoft-erp-crm-sync-engine' )
+				? __( 'MYOB accepted the payment but the invoice cannot be read back to see its balance. Open the invoice in MYOB and check the payment.', 'estasoft-enterprise-erpcrm-sync-engine' )
 				: sprintf(
 					/* translators: 1: invoice number, 2: balance MYOB still shows. */
-					__( 'MYOB accepted the payment but invoice %1$s still shows a balance of %2$s. Open the invoice in MYOB and check the payment; the next try pays only what is still due.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'MYOB accepted the payment but invoice %1$s still shows a balance of %2$s. Open the invoice in MYOB and check the payment; the next try pays only what is still due.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					MyobPayloadReader::text( $after['Number'] ?? '' ),
 					$this->amounts->show( $left, $currency )
 				)

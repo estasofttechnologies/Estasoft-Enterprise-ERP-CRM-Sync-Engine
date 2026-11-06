@@ -130,7 +130,7 @@ final class FoOrderSender {
 		}
 		$number = (string) ( $header['SalesOrderNumber'] ?? '' );
 		if ( '' === $number ) {
-			return SendResult::failure( Failures::invalid( $this->system, 'SalesOrderNumber', __( 'Finance and Operations did not return the number of the sales order.', 'estasoft-erp-crm-sync-engine' ), 'no order number' ) );
+			return SendResult::failure( Failures::invalid( $this->system, 'SalesOrderNumber', __( 'Finance and Operations did not return the number of the sales order.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'no order number' ) );
 		}
 		$came = strtoupper( trim( (string) ( $header['CurrencyCode'] ?? '' ) ) );
 		if ( '' !== $came && $came !== $order->currency ) {
@@ -193,7 +193,7 @@ final class FoOrderSender {
 						'total',
 						sprintf(
 							/* translators: %s: the shop total with its currency. */
-							__( 'Finance and Operations gave no total for this order, so it could not be compared with the shop total of %s and the order was not marked as finished. Check the order there. If this system never fills in the order total for orders made this way, set the option total_mismatch to warn.', 'estasoft-erp-crm-sync-engine' ),
+							__( 'Finance and Operations gave no total for this order, so it could not be compared with the shop total of %s and the order was not marked as finished. Check the order there. If this system never fills in the order total for orders made this way, set the option total_mismatch to warn.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 							$shop
 						),
 						'total unreadable'
@@ -205,7 +205,7 @@ final class FoOrderSender {
 				'error'   => null,
 				'warning' => sprintf(
 					/* translators: %s: the shop total with its currency. */
-					__( 'Finance and Operations gave no total, so the order could not be compared with the shop total of %s.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Finance and Operations gave no total, so the order could not be compared with the shop total of %s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$shop
 				),
 			);
@@ -216,7 +216,7 @@ final class FoOrderSender {
 			$order->currency,
 			$fail,
 			$this->system,
-			__( 'Check the sales tax groups of the customer and of the items, then delete the order in Finance and Operations and try again.', 'estasoft-erp-crm-sync-engine' )
+			__( 'Check the sales tax groups of the customer and of the items, then delete the order in Finance and Operations and try again.', 'estasoft-enterprise-erpcrm-sync-engine' )
 		);
 	}
 
@@ -224,14 +224,14 @@ final class FoOrderSender {
 	 * The refusal for an order whose lines were changed after the connector made them.
 	 */
 	private function changed(): ConnectorError {
-		return Failures::invalid( $this->system, 'sales order', __( 'The sales order in Finance and Operations was changed after it was created: its lines are not the ones the shop sent. Delete the order there and try again.', 'estasoft-erp-crm-sync-engine' ), 'lines differ' );
+		return Failures::invalid( $this->system, 'sales order', __( 'The sales order in Finance and Operations was changed after it was created: its lines are not the ones the shop sent. Delete the order there and try again.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'lines differ' );
 	}
 
 	/**
 	 * The refusal for lines that F&O stored differently from what was sent (its own price or quantity rules).
 	 */
 	private function stored(): ConnectorError {
-		return Failures::invalid( $this->system, 'sales order', __( 'Finance and Operations stored the lines differently from what the shop sent (a price or quantity of its own may have replaced it). Check the lines and the price agreements there, delete the order and try again.', 'estasoft-erp-crm-sync-engine' ), 'lines stored differently' );
+		return Failures::invalid( $this->system, 'sales order', __( 'Finance and Operations stored the lines differently from what the shop sent (a price or quantity of its own may have replaced it). Check the lines and the price agreements there, delete the order and try again.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'lines stored differently' );
 	}
 
 	/**
@@ -250,7 +250,7 @@ final class FoOrderSender {
 		return Failures::invalid(
 			$this->system,
 			'order_numbering',
-			__( 'Finance and Operations would not create the sales order without a sales order number: the number sequence of this legal entity is probably manual. Set the option order_numbering to shop_reference, or make the sequence automatic, then try again.', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Finance and Operations would not create the sales order without a sales order number: the number sequence of this legal entity is probably manual. Set the option order_numbering to shop_reference, or make the sequence automatic, then try again.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			'order number required'
 		);
 	}
@@ -334,10 +334,10 @@ final class FoOrderSender {
 		}
 		$extras = array();
 		if ( null !== $order->shipping ) {
-			$extras[] = array( 'shipping', $order->shipping, __( 'Shipping', 'estasoft-erp-crm-sync-engine' ) );
+			$extras[] = array( 'shipping', $order->shipping, __( 'Shipping', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		foreach ( $order->fees as $fee ) {
-			$extras[] = array( 'fee', $fee, __( 'Fee', 'estasoft-erp-crm-sync-engine' ) );
+			$extras[] = array( 'fee', $fee, __( 'Fee', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		foreach ( $extras as $extra ) {
 			$item = $this->options->lineItem( $extra[0] );
@@ -347,7 +347,7 @@ final class FoOrderSender {
 					$extra[0] . '_item',
 					sprintf(
 						/* translators: %s: name of the connection option. */
-						__( 'Finance and Operations needs an item for this amount. Set the option %s.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'Finance and Operations needs an item for this amount. Set the option %s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$extra[0] . '_item'
 					),
 					$extra[0] . ' item missing'

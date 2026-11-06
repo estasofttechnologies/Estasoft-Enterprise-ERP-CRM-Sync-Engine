@@ -40,7 +40,7 @@ final class Sage200ErrorMapper {
 				array(
 					'system' => $system,
 					'field'  => 'site_id',
-					'reason' => __( 'Sage 200 did not accept the site and company chosen. Sign in again and choose them.', 'estasoft-erp-crm-sync-engine' ),
+					'reason' => __( 'Sage 200 did not accept the site and company chosen. Sign in again and choose them.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				$status,
 				null,
@@ -53,10 +53,10 @@ final class Sage200ErrorMapper {
 		}
 		$text = $this->message( $response->jsonValue() );
 		if ( '' === $text ) {
-			$text = __( 'Sage 200 refused the data.', 'estasoft-erp-crm-sync-engine' );
+			$text = __( 'Sage 200 refused the data.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		if ( 1 === preg_match( '/Unit Selling Price|override prices/i', $text ) ) {
-			$text .= ' ' . __( 'The Sage 200 user needs the permission to override prices and discounts on order lines.', 'estasoft-erp-crm-sync-engine' );
+			$text .= ' ' . __( 'The Sage 200 user needs the permission to override prices and discounts on order lines.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		return new ConnectorError(
 			ErrorCode::Val002,

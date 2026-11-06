@@ -74,23 +74,23 @@ final class ActionNotices {
 		$count = max( 1, $count );
 		switch ( $key ) {
 			case 'queued':
-				return _n( 'The order was added to the queue.', 'The orders were added to the queue.', $count, 'estasoft-erp-crm-sync-engine' );
+				return _n( 'The order was added to the queue.', 'The orders were added to the queue.', $count, 'estasoft-enterprise-erpcrm-sync-engine' );
 			case 'retried':
 				/* translators: %d: number of orders. */
-				return sprintf( _n( '%d order was put back in the queue.', '%d orders were put back in the queue.', $count, 'estasoft-erp-crm-sync-engine' ), $count );
+				return sprintf( _n( '%d order was put back in the queue.', '%d orders were put back in the queue.', $count, 'estasoft-enterprise-erpcrm-sync-engine' ), $count );
 			case 'skipped':
 				/* translators: %d: number of orders. */
-				return sprintf( _n( '%d order will not be synced. You can restore it from the queue.', '%d orders will not be synced. You can restore them from the queue.', $count, 'estasoft-erp-crm-sync-engine' ), $count );
+				return sprintf( _n( '%d order will not be synced. You can restore it from the queue.', '%d orders will not be synced. You can restore them from the queue.', $count, 'estasoft-enterprise-erpcrm-sync-engine' ), $count );
 			case 'restored':
-				return _n( 'The order was restored.', 'The orders were restored.', $count, 'estasoft-erp-crm-sync-engine' );
+				return _n( 'The order was restored.', 'The orders were restored.', $count, 'estasoft-enterprise-erpcrm-sync-engine' );
 			case 'nothing':
-				return __( 'There was nothing to do for that order.', 'estasoft-erp-crm-sync-engine' );
+				return __( 'There was nothing to do for that order.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			case 'unsaved':
-				return __( 'That order has not been saved yet, so it was not added to the queue.', 'estasoft-erp-crm-sync-engine' );
+				return __( 'That order has not been saved yet, so it was not added to the queue.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			case 'excluded':
-				return __( 'Every product on that order is marked Exclude from syncing, so it was not added to the queue.', 'estasoft-erp-crm-sync-engine' );
+				return __( 'Every product on that order is marked Exclude from syncing, so it was not added to the queue.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			case 'failed':
-				return __( 'That could not be done. Open the log to see why.', 'estasoft-erp-crm-sync-engine' );
+				return __( 'That could not be done. Open the log to see why.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			default:
 				return '';
 		}

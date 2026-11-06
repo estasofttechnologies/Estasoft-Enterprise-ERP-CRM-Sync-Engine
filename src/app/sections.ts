@@ -27,47 +27,53 @@ export function getSections(): Section[] {
 	return [
 		{
 			id: 'dashboard',
-			label: __( 'Dashboard', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'Dashboard', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			to: '/',
 		},
 		{
 			id: 'queue',
-			label: __( 'Queue', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'Queue', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			to: '/queue',
 		},
 		{
 			id: 'invoices',
-			label: __( 'Invoices', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'Invoices', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			to: '/invoices',
 		},
 		{
 			id: 'connections',
-			label: __( 'Connections', 'estasoft-erp-crm-sync-engine' ),
+			label: __(
+				'Connections',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			to: '/connections',
 		},
 		{
 			id: 'mapping',
-			label: __( 'Mapping', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'Mapping', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			to: '/mapping',
 		},
 		{
 			id: 'stock',
-			label: __( 'Stock', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'Stock', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			to: '/stock',
 		},
 		{
 			id: 'reconciliation',
-			label: __( 'Reconciliation', 'estasoft-erp-crm-sync-engine' ),
+			label: __(
+				'Reconciliation',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			to: '/reconciliation',
 		},
 		{
 			id: 'logs',
-			label: __( 'Logs', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'Logs', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			to: '/logs',
 		},
 		{
 			id: 'settings',
-			label: __( 'Settings', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'Settings', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			to: '/settings',
 		},
 	];

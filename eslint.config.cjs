@@ -20,7 +20,7 @@ module.exports = [
 	...base,
 	{
 		rules: {
-			'@wordpress/i18n-text-domain': [ 'error', { allowedTextDomain: 'estasoft-erp-crm-sync-engine' } ],
+			'@wordpress/i18n-text-domain': [ 'error', { allowedTextDomain: 'estasoft-enterprise-erpcrm-sync-engine' } ],
 			// Screens choose between several states (loading, error, empty, data). A chain of
 			// conditions reads better there than a pile of helper components.
 			'no-nested-ternary': 'off',

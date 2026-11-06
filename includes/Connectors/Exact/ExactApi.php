@@ -80,7 +80,7 @@ final class ExactApi {
 			}
 			$response = $this->client->get( $next );
 		}
-		ExactFailure::refuse( 'window', __( 'The list in Exact Online is longer than the plugin reads in one go.', 'estasoft-erp-crm-sync-engine' ) );
+		ExactFailure::refuse( 'window', __( 'The list in Exact Online is longer than the plugin reads in one go.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**
@@ -190,7 +190,7 @@ final class ExactApi {
 	public static function guid( string $guid ): string {
 		$guid = trim( $guid );
 		if ( ! self::isGuid( $guid ) ) {
-			ExactFailure::refuse( 'id', __( 'Exact Online returned an id that is not a GUID.', 'estasoft-erp-crm-sync-engine' ) );
+			ExactFailure::refuse( 'id', __( 'Exact Online returned an id that is not a GUID.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return $guid;
 	}

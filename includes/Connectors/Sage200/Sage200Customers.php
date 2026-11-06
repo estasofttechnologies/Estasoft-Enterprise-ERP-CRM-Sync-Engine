@@ -87,7 +87,7 @@ final class Sage200Customers {
 				return Problems::refused(
 					$this->system,
 					'partner.email',
-					__( 'No customer has this email address and the customer setting is "match only". Create the customer or change the setting.', 'estasoft-erp-crm-sync-engine' )
+					__( 'No customer has this email address and the customer setting is "match only". Create the customer or change the setting.', 'estasoft-enterprise-erpcrm-sync-engine' )
 				);
 			}
 			$created = $this->create( $partner, $seed );
@@ -148,7 +148,7 @@ final class Sage200Customers {
 			$customer = isset( $stored['id'] ) ? $stored : $this->client->first( 'customers', 'reference eq ' . Sage200Client::literal( $reference ) );
 		}
 		if ( null === $customer || ! isset( $customer['id'] ) || ! is_scalar( $customer['id'] ) ) {
-			return Problems::refused( $this->system, 'customer', __( 'Sage 200 did not return the new customer.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $this->system, 'customer', __( 'Sage 200 did not return the new customer.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$this->client->create(
 			'customer_contacts',
@@ -204,7 +204,7 @@ final class Sage200Customers {
 		}
 		$body   = array(
 			'customer_id'     => Sage200Client::id( $customerId ),
-			'name'            => Text::fit( $delivery['name'] ?? ( $partner['name'] ?? __( 'Delivery', 'estasoft-erp-crm-sync-engine' ) ), 60 ),
+			'name'            => Text::fit( $delivery['name'] ?? ( $partner['name'] ?? __( 'Delivery', 'estasoft-enterprise-erpcrm-sync-engine' ) ), 60 ),
 			'address_1'       => $line,
 			'city'            => $delivery['city'] ?? '',
 			'county'          => $delivery['state'] ?? '',

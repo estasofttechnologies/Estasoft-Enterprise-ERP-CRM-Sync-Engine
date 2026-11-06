@@ -103,7 +103,7 @@ final class QoyodOrderSender {
 					'currency',
 					sprintf(
 						/* translators: 1: currency of the order, 2: currency of the Qoyod account. */
-						__( 'The order is in %1$s but the Qoyod account works in %2$s. Qoyod invoices are made in the account currency.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'The order is in %1$s but the Qoyod account works in %2$s. Qoyod invoices are made in the account currency.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$parsed->currency,
 						$options->currency()
 					)
@@ -130,7 +130,7 @@ final class QoyodOrderSender {
 				$existed = true;
 				$record  = array() !== $again ? $this->docs->invoice( $api, $again[0]->id() ) : null;
 				if ( null === $record ) {
-					return SendResult::failure( $this->refused( 'reference', __( 'Qoyod says the reference is taken, but no invoice has it.', 'estasoft-erp-crm-sync-engine' ) ) );
+					return SendResult::failure( $this->refused( 'reference', __( 'Qoyod says the reference is taken, but no invoice has it.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 				}
 			} else {
 				$record    = $made['record'];
@@ -241,7 +241,7 @@ final class QoyodOrderSender {
 			if ( '' === $sku ) {
 				return $this->refused(
 					$isShipping ? 'shipping_product_sku' : 'fee_product_sku',
-					__( 'Qoyod has no lines without a product. Name a service product for shipping and fees in the connection settings.', 'estasoft-erp-crm-sync-engine' )
+					__( 'Qoyod has no lines without a product. Name a service product for shipping and fees in the connection settings.', 'estasoft-enterprise-erpcrm-sync-engine' )
 				);
 			}
 			$product = $this->catalog->productBySku( $api, $sku );
@@ -282,7 +282,7 @@ final class QoyodOrderSender {
 				'line_items',
 				sprintf(
 					/* translators: 1: number of lines Qoyod kept, 2: number of lines sent. */
-					__( 'Qoyod kept %1$d lines of the %2$d that were sent.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Qoyod kept %1$d lines of the %2$d that were sent.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$record->lineCount(),
 					$lineCount
 				)
@@ -300,10 +300,10 @@ final class QoyodOrderSender {
 		$this->docs->patchInvoice( $api, $record->id(), $changes );
 		$after = $this->docs->invoice( $api, $record->id() );
 		if ( $approve && ! $after->isPosted() ) {
-			return $this->refused( 'status', __( 'Qoyod did not approve the invoice.', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->refused( 'status', __( 'Qoyod did not approve the invoice.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( '' !== $parsed->date && '' !== $after->date() && $after->date() !== $parsed->date ) {
-			$warnings[] = __( 'Qoyod changed the date of the invoice.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'Qoyod changed the date of the invoice.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		return $after;
 	}
@@ -332,12 +332,12 @@ final class QoyodOrderSender {
 			return null;
 		}
 		if ( '' === $options->paymentAccountId() ) {
-			return $this->refused( 'payment_account_id', __( 'Choose the payment account in the connection settings.', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->refused( 'payment_account_id', __( 'Choose the payment account in the connection settings.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$exponent = $this->amounts->exponent( $currency );
 		$total    = $record->totalMinor( $exponent ) ?? $parsed->totalMinor;
 		if ( null === $total || $total <= 0 ) {
-			$warnings[] = __( 'The payment was not recorded because the invoice total is not known.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'The payment was not recorded because the invoice total is not known.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			return null;
 		}
 		$this->docs->createPayment(

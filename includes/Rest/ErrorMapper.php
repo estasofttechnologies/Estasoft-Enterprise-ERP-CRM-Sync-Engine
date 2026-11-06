@@ -58,7 +58,7 @@ final class ErrorMapper {
 			return $error;
 		}
 		if ( $error instanceof ValidationException ) {
-			return ApiException::invalid( esc_html__( 'Some fields need attention.', 'estasoft-erp-crm-sync-engine' ), array_map( $this->escaped( ... ), $error->errors() ) );
+			return ApiException::invalid( esc_html__( 'Some fields need attention.', 'estasoft-enterprise-erpcrm-sync-engine' ), array_map( $this->escaped( ... ), $error->errors() ) );
 		}
 		if ( $error instanceof RuleValidationException ) {
 			return $this->ruleProblems( $error );

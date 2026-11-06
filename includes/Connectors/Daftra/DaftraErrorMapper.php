@@ -40,7 +40,7 @@ final class DaftraErrorMapper {
 				ErrorCode::Auth004,
 				array(
 					'system' => DaftraConnector::LABEL,
-					'action' => __( 'do this (check the roles of the API key)', 'estasoft-erp-crm-sync-engine' ),
+					'action' => __( 'do this (check the roles of the API key)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				403,
 				null,
@@ -53,8 +53,8 @@ final class DaftraErrorMapper {
 				ErrorCode::Val002,
 				array(
 					'system' => DaftraConnector::LABEL,
-					'field'  => __( 'a related record', 'estasoft-erp-crm-sync-engine' ),
-					'reason' => __( 'Daftra does not have this record.', 'estasoft-erp-crm-sync-engine' ),
+					'field'  => __( 'a related record', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'reason' => __( 'Daftra does not have this record.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				404,
 				null,
@@ -68,8 +68,8 @@ final class DaftraErrorMapper {
 				ErrorCode::Val002,
 				array(
 					'system' => DaftraConnector::LABEL,
-					'field'  => '' !== $found['field'] ? $found['field'] : __( 'the request', 'estasoft-erp-crm-sync-engine' ),
-					'reason' => '' !== $found['reason'] ? $found['reason'] : __( 'Daftra could not validate the request.', 'estasoft-erp-crm-sync-engine' ),
+					'field'  => '' !== $found['field'] ? $found['field'] : __( 'the request', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'reason' => '' !== $found['reason'] ? $found['reason'] : __( 'Daftra could not validate the request.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				$status,
 				null,

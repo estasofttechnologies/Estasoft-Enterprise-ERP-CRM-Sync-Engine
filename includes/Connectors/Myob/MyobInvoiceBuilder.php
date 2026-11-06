@@ -96,7 +96,7 @@ final class MyobInvoiceBuilder {
 			$invoice['ShipToAddress'] = MyobPayloadReader::limit( $address, 255, $cut );
 		}
 		if ( $cut ) {
-			$warnings[] = __( 'A long value was shortened to fit MYOB.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'A long value was shortened to fit MYOB.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		return $invoice;
 	}
@@ -166,7 +166,7 @@ final class MyobInvoiceBuilder {
 			$credit['Comment'] = MyobPayloadReader::limit( $payload->reason, 2000, $cut );
 		}
 		if ( $cut ) {
-			$warnings[] = __( 'A long description was shortened to fit MYOB.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'A long description was shortened to fit MYOB.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		return $credit;
 	}
@@ -262,7 +262,7 @@ final class MyobInvoiceBuilder {
 			'Item',
 			sprintf(
 				/* translators: %s: a MYOB item number. */
-				__( 'The item "%s" is not marked "I sell this item" in MYOB, so it cannot go on an invoice.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'The item "%s" is not marked "I sell this item" in MYOB, so it cannot go on an invoice.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$number
 			)
 		);
@@ -280,7 +280,7 @@ final class MyobInvoiceBuilder {
 			$option,
 			sprintf(
 				/* translators: %s: the name of one or two connection options. */
-				__( 'Set the number of an item that is sold in the connection option %s: MYOB needs an item on every line.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Set the number of an item that is sold in the connection option %s: MYOB needs an item on every line.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$names
 			)
 		);

@@ -208,7 +208,7 @@ final class OAuthController extends BaseController {
 		}
 		return new \WP_Error(
 			'rest_forbidden',
-			__( 'You do not have permission to do this.', 'estasoft-erp-crm-sync-engine' ),
+			__( 'You do not have permission to do this.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			array(
 				'status' => rest_authorization_required_code(),
 				'class'  => ErrorClass::NeedsPerson->value,
@@ -299,13 +299,13 @@ final class OAuthController extends BaseController {
 	private function signInConnector( int $id ): array {
 		$connection = $this->connectionRepository()->find( $id );
 		if ( null === $connection ) {
-			throw ApiException::notFound( esc_html__( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ) );
+			throw ApiException::notFound( esc_html__( 'That connection does not exist.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$connector = $this->connectorRegistry()->get( $connection->connector );
 		if ( ! $connector instanceof SignInConnector || ( $connector instanceof GuardedSignInConnector && ! $connector->requiresSignIn( $connection ) ) ) {
 			$refusal = new ApiException(
 				ApiException::NO_SIGN_IN,
-				esc_html__( 'This connector does not use sign-in. It connects with a key. Open the connection and enter the key instead.', 'estasoft-erp-crm-sync-engine' ),
+				esc_html__( 'This connector does not use sign-in. It connects with a key. Open the connection and enter the key instead.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				400,
 				ErrorClass::NeedsPerson->value
 			);

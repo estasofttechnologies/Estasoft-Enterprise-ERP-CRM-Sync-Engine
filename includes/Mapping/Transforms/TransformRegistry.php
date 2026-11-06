@@ -91,7 +91,7 @@ final class TransformRegistry {
 	public function get( string $name ): Transform {
 		if ( ! isset( $this->transforms[ $name ] ) ) {
 			/* translators: %s: transform name. */
-			throw new TransformArgumentException( esc_html( sprintf( __( 'There is no transform called ‘%s’.', 'estasoft-erp-crm-sync-engine' ), $name ) ) );
+			throw new TransformArgumentException( esc_html( sprintf( __( 'There is no transform called ‘%s’.', 'estasoft-enterprise-erpcrm-sync-engine' ), $name ) ) );
 		}
 		return $this->transforms[ $name ];
 	}

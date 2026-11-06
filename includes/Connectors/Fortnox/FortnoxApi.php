@@ -71,7 +71,7 @@ final class FortnoxApi {
 				return $rows;
 			}
 		}
-		FortnoxFailure::refuse( 'window', __( 'The list in Fortnox is longer than the plugin reads in one go.', 'estasoft-erp-crm-sync-engine' ) );
+		FortnoxFailure::refuse( 'window', __( 'The list in Fortnox is longer than the plugin reads in one go.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**

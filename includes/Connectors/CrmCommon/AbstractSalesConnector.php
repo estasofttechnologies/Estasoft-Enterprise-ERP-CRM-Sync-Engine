@@ -90,7 +90,7 @@ abstract class AbstractSalesConnector extends AbstractApiConnector {
 				EntityType::Order    => $this->sendOrder( $connection, $item, $payload ),
 				EntityType::Refund   => $this->sendRefund( $connection, $item, $payload ),
 				EntityType::Customer => $this->sendCustomer( $connection, $item, $payload ),
-				default              => SendResult::failure( $this->invalid( 'entity', __( 'This connector does not send that kind of item.', 'estasoft-erp-crm-sync-engine' ) ) ),
+				default              => SendResult::failure( $this->invalid( 'entity', __( 'This connector does not send that kind of item.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) ),
 			};
 		} catch ( \Throwable $throwable ) {
 			return SendResult::failure( ErrorBridge::toError( $throwable, $this->label() ) );
@@ -144,10 +144,10 @@ abstract class AbstractSalesConnector extends AbstractApiConnector {
 		$reason = '';
 		if ( '' !== $actualCurrency && strtoupper( $actualCurrency ) !== $order->currency ) {
 			/* translators: 1: currency of the order, 2: currency in the system */
-			$reason = sprintf( __( 'The order is in %1$s but the system recorded it in %2$s.', 'estasoft-erp-crm-sync-engine' ), $order->currency, strtoupper( $actualCurrency ) );
+			$reason = sprintf( __( 'The order is in %1$s but the system recorded it in %2$s.', 'estasoft-enterprise-erpcrm-sync-engine' ), $order->currency, strtoupper( $actualCurrency ) );
 		} elseif ( null !== $actualMinor && ! Amounts::agree( $order->totalMinor, $actualMinor ) ) {
 			/* translators: 1: order total, 2: total in the system, 3: currency */
-			$reason = sprintf( __( 'The order total is %1$s but the system recorded %2$s %3$s.', 'estasoft-erp-crm-sync-engine' ), Amounts::decimal( $order->totalMinor, $order->currency ), Amounts::decimal( $actualMinor, $order->currency ), $order->currency );
+			$reason = sprintf( __( 'The order total is %1$s but the system recorded %2$s %3$s.', 'estasoft-enterprise-erpcrm-sync-engine' ), Amounts::decimal( $order->totalMinor, $order->currency ), Amounts::decimal( $actualMinor, $order->currency ), $order->currency );
 		}
 		if ( '' === $reason ) {
 			return null;

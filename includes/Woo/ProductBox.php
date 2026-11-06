@@ -105,7 +105,7 @@ final class ProductBox {
 	 */
 	public function addBox(): void {
 		if ( current_user_can( $this->capability ) ) {
-			add_meta_box( 'estasoft-sync-product-box', __( 'ESTASOFT SYNC', 'estasoft-erp-crm-sync-engine' ), array( $this, 'render' ), 'product', 'side', 'default' );
+			add_meta_box( 'estasoft-sync-product-box', __( 'ESTASOFT SYNC', 'estasoft-enterprise-erpcrm-sync-engine' ), array( $this, 'render' ), 'product', 'side', 'default' );
 		}
 	}
 
@@ -144,7 +144,7 @@ final class ProductBox {
 			$body,
 			$this->nonceField(),
 			$this->excludeCheckbox( $product ),
-			esc_html__( 'An excluded product is never sent. Orders that contain it are sent without that line.', 'estasoft-erp-crm-sync-engine' )
+			esc_html__( 'An excluded product is never sent. Orders that contain it are sent without that line.', 'estasoft-enterprise-erpcrm-sync-engine' )
 		);
 	}
 
@@ -191,7 +191,7 @@ final class ProductBox {
 			'<a href="%1$s"%2$s>%3$s%4$s</a>',
 			esc_url( add_query_arg( self::FILTER, 'not_matched', admin_url( 'edit.php?post_type=product' ) ) ),
 			$active ? ' class="current" aria-current="page"' : '',
-			esc_html__( 'Not matched', 'estasoft-erp-crm-sync-engine' ),
+			esc_html__( 'Not matched', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			$count
 		);
 		return $views;
@@ -264,22 +264,22 @@ final class ProductBox {
 		$rows = array();
 		if ( '' !== $known['external_ref'] ) {
 			/* translators: %s: name of the connected system. */
-			$rows[ sprintf( __( '%s reference', 'estasoft-erp-crm-sync-engine' ), $system ) ] = $known['external_ref'];
+			$rows[ sprintf( __( '%s reference', 'estasoft-enterprise-erpcrm-sync-engine' ), $system ) ] = $known['external_ref'];
 		}
 		if ( null !== $known['last_stock'] ) {
 			/* translators: %s: name of the connected system. */
-			$rows[ sprintf( __( '%s stock', 'estasoft-erp-crm-sync-engine' ), $system ) ] = (string) $known['last_stock'];
+			$rows[ sprintf( __( '%s stock', 'estasoft-enterprise-erpcrm-sync-engine' ), $system ) ] = (string) $known['last_stock'];
 			$shown  = $product->get_stock_quantity();
 			$buffer = null === $this->buffer ? 0 : (int) ( $this->buffer )();
 			if ( null !== $shown ) {
-				$rows[ __( 'Shown in shop', 'estasoft-erp-crm-sync-engine' ) ] = $buffer > 0
+				$rows[ __( 'Shown in shop', 'estasoft-enterprise-erpcrm-sync-engine' ) ] = $buffer > 0
 					/* translators: 1: units shown in the shop, 2: safety buffer in units. */
-					? sprintf( __( '%1$d (buffer %2$d)', 'estasoft-erp-crm-sync-engine' ), (int) $shown, $buffer )
+					? sprintf( __( '%1$d (buffer %2$d)', 'estasoft-enterprise-erpcrm-sync-engine' ), (int) $shown, $buffer )
 					: (string) (int) $shown;
 			}
 		}
 		if ( '' !== $known['last_stock_at'] ) {
-			$rows[ __( 'Last stock update', 'estasoft-erp-crm-sync-engine' ) ] = $this->times->format( $known['last_stock_at'] );
+			$rows[ __( 'Last stock update', 'estasoft-enterprise-erpcrm-sync-engine' ) ] = $this->times->format( $known['last_stock_at'] );
 		}
 		$html = '';
 		foreach ( $rows as $label => $value ) {
@@ -288,7 +288,7 @@ final class ProductBox {
 		$note = null === $known['last_stock']
 			? ''
 			/* translators: %s: name of the connected system. */
-			: '<p class="estasoft-sync-box__note">' . esc_html( sprintf( __( 'Stock comes from %s. Changing the quantity here is replaced at the next stock run.', 'estasoft-erp-crm-sync-engine' ), $system ) ) . '</p>';
+			: '<p class="estasoft-sync-box__note">' . esc_html( sprintf( __( 'Stock comes from %s. Changing the quantity here is replaced at the next stock run.', 'estasoft-enterprise-erpcrm-sync-engine' ), $system ) ) . '</p>';
 		return ( '' === $html ? '' : '<dl class="estasoft-sync-box__facts">' . $html . '</dl>' ) . $note;
 	}
 
@@ -300,17 +300,17 @@ final class ProductBox {
 	 */
 	private function unmatched( \WC_Product $product, string $system ): string {
 		/* translators: 1: SKU, 2: name of the connected system. */
-		$text = sprintf( __( 'SKU %1$s was not found in %2$s. Orders that contain this product will fail with "product not found".', 'estasoft-erp-crm-sync-engine' ), (string) $product->get_sku( 'edit' ), $system );
+		$text = sprintf( __( 'SKU %1$s was not found in %2$s. Orders that contain this product will fail with "product not found".', 'estasoft-enterprise-erpcrm-sync-engine' ), (string) $product->get_sku( 'edit' ), $system );
 		return '<p class="estasoft-sync-box__note">' . esc_html( $text ) . '</p><p class="estasoft-sync-box__actions"><a class="button" href="' . esc_url( admin_url( 'admin.php?page=' . self::APP_PAGE . '#/mapping/products' ) ) . '">'
 			/* translators: %s: name of the connected system. */
-			. esc_html( sprintf( __( 'Map to a %s product', 'estasoft-erp-crm-sync-engine' ), $system ) ) . '</a></p>';
+			. esc_html( sprintf( __( 'Map to a %s product', 'estasoft-enterprise-erpcrm-sync-engine' ), $system ) ) . '</a></p>';
 	}
 
 	/**
 	 * No SKU.
 	 */
 	private function noSku(): string {
-		return '<p class="estasoft-sync-box__note">' . esc_html__( 'This product has no SKU, so it cannot be matched. Orders that contain it will fail.', 'estasoft-erp-crm-sync-engine' ) . '</p><p class="estasoft-sync-box__actions"><a class="button" href="#_sku">' . esc_html__( 'Go to the SKU field', 'estasoft-erp-crm-sync-engine' ) . '</a></p>';
+		return '<p class="estasoft-sync-box__note">' . esc_html__( 'This product has no SKU, so it cannot be matched. Orders that contain it will fail.', 'estasoft-enterprise-erpcrm-sync-engine' ) . '</p><p class="estasoft-sync-box__actions"><a class="button" href="#_sku">' . esc_html__( 'Go to the SKU field', 'estasoft-enterprise-erpcrm-sync-engine' ) . '</a></p>';
 	}
 
 	/**
@@ -320,8 +320,8 @@ final class ProductBox {
 	 */
 	private function unchecked( \WC_Product $product ): string {
 		$text = $product->is_type( 'variable' )
-			? __( 'Each variation is matched by its own SKU.', 'estasoft-erp-crm-sync-engine' )
-			: __( 'The SKU is looked up the first time an order contains this product.', 'estasoft-erp-crm-sync-engine' );
+			? __( 'Each variation is matched by its own SKU.', 'estasoft-enterprise-erpcrm-sync-engine' )
+			: __( 'The SKU is looked up the first time an order contains this product.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		return '<p class="estasoft-sync-box__note">' . esc_html( $text ) . '</p>';
 	}
 
@@ -342,7 +342,7 @@ final class ProductBox {
 			'<input type="checkbox" name="%1$s" id="%1$s" value="1"%2$s /> <label for="%1$s">%3$s</label>',
 			esc_attr( self::FIELD ),
 			$this->meta->isExcluded( $product ) ? ' checked="checked"' : '',
-			esc_html__( 'Exclude this product from syncing', 'estasoft-erp-crm-sync-engine' )
+			esc_html__( 'Exclude this product from syncing', 'estasoft-enterprise-erpcrm-sync-engine' )
 		);
 	}
 }

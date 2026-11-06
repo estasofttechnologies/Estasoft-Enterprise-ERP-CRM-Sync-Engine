@@ -37,7 +37,7 @@ final class MoneybirdErrorMapper {
 				ErrorCode::Auth004,
 				array(
 					'system' => MoneybirdConnector::LABEL,
-					'action' => __( 'be used from this server (Moneybird refuses this address, or the token lacks a scope)', 'estasoft-erp-crm-sync-engine' ),
+					'action' => __( 'be used from this server (Moneybird refuses this address, or the token lacks a scope)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				403,
 				null,
@@ -50,7 +50,7 @@ final class MoneybirdErrorMapper {
 				ErrorCode::Val002,
 				array(
 					'system' => MoneybirdConnector::LABEL,
-					'field'  => __( 'the document', 'estasoft-erp-crm-sync-engine' ),
+					'field'  => __( 'the document', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					'reason' => $this->reason( $response ),
 				),
 				$status,
@@ -80,6 +80,6 @@ final class MoneybirdErrorMapper {
 			}
 			return mb_substr( implode( '; ', $fields ), 0, 160 );
 		}
-		return __( 'Moneybird did not accept the request.', 'estasoft-erp-crm-sync-engine' );
+		return __( 'Moneybird did not accept the request.', 'estasoft-enterprise-erpcrm-sync-engine' );
 	}
 }

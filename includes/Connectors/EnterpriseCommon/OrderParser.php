@@ -44,12 +44,12 @@ final class OrderParser {
 				return Problem::missingEmail( $this->system, $item->entityId );
 			}
 			if ( '' === ( $partner['name'] ?? '' ) && '' === ( $partner['company_name'] ?? '' ) ) {
-				return Problem::validation( $this->system, 'partner.name', __( 'The customer name is empty.', 'estasoft-erp-crm-sync-engine' ) );
+				return Problem::validation( $this->system, 'partner.name', __( 'The customer name is empty.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 		}
 		$currency = strtoupper( PayloadReader::text( $payload['currency'] ?? '' ) );
 		if ( 1 !== preg_match( '/^[A-Z]{3}$/', $currency ) ) {
-			return Problem::validation( $this->system, 'currency', __( 'The order has no currency code such as USD.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problem::validation( $this->system, 'currency', __( 'The order has no currency code such as USD.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$lines = array();
 		foreach ( PayloadReader::rows( $payload['order_line'] ?? null ) as $index => $raw ) {
@@ -60,7 +60,7 @@ final class OrderParser {
 			$lines[] = $line;
 		}
 		if ( array() === $lines ) {
-			return Problem::validation( $this->system, 'order_line', __( 'The order has no product lines.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problem::validation( $this->system, 'order_line', __( 'The order has no product lines.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$total = PayloadReader::minor( $payload['total'] ?? null );
 		if ( null !== $total ) {
@@ -101,7 +101,7 @@ final class OrderParser {
 				'order_line[].quantity',
 				sprintf(
 					/* translators: %d: line number. */
-					__( 'Line %d has no quantity.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Line %d has no quantity.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$number
 				)
 			);
@@ -113,7 +113,7 @@ final class OrderParser {
 				'order_line[].price_unit',
 				sprintf(
 					/* translators: %d: line number. */
-					__( 'Line %d has no price in minor units (a whole number such as 21900).', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Line %d has no price in minor units (a whole number such as 21900).', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$number
 				)
 			);
@@ -136,18 +136,18 @@ final class OrderParser {
 	private function charges( array $payload ): array {
 		$charges  = array();
 		$shipping = isset( $payload['shipping'] ) && is_array( $payload['shipping'] ) ? $payload['shipping'] : array();
-		$charge   = $this->charge( 'shipping', $shipping, __( 'Shipping', 'estasoft-erp-crm-sync-engine' ) );
+		$charge   = $this->charge( 'shipping', $shipping, __( 'Shipping', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		if ( null !== $charge ) {
 			$charges[] = $charge;
 		}
 		foreach ( PayloadReader::rows( $payload['fee'] ?? null ) as $fee ) {
-			$charge = $this->charge( 'fee', $fee, __( 'Fee', 'estasoft-erp-crm-sync-engine' ) );
+			$charge = $this->charge( 'fee', $fee, __( 'Fee', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			if ( null !== $charge ) {
 				$charges[] = $charge;
 			}
 		}
 		$discount = isset( $payload['discount'] ) && is_array( $payload['discount'] ) ? $payload['discount'] : array();
-		$charge   = $this->charge( 'discount', $discount, __( 'Discount', 'estasoft-erp-crm-sync-engine' ) );
+		$charge   = $this->charge( 'discount', $discount, __( 'Discount', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		if ( null !== $charge ) {
 			$charges[] = new Charge( 'discount', $charge->name, -abs( $charge->amountMinor ), $charge->taxCodes );
 		}

@@ -33,17 +33,23 @@ function typeLabel( type: DiffType ): string {
 		case 'missing_in_system':
 			return __(
 				'Missing in the system',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 		case 'total_differs':
-			return __( 'Total differs', 'estasoft-erp-crm-sync-engine' );
+			return __(
+				'Total differs',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			);
 		case 'refund_missing':
 			return __(
 				'Refund not in the system',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 		case 'status_differs':
-			return __( 'Status differs', 'estasoft-erp-crm-sync-engine' );
+			return __(
+				'Status differs',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			);
 	}
 }
 
@@ -131,7 +137,10 @@ export function Reconciliation() {
 		setDirty( false );
 		notify( {
 			kind: 'success',
-			text: __( 'Schedule saved.', 'estasoft-erp-crm-sync-engine' ),
+			text: __(
+				'Schedule saved.',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 		} );
 	} );
 
@@ -141,14 +150,14 @@ export function Reconciliation() {
 				<PageHeader
 					title={ __(
 						'Reconciliation',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 				<LoadingState
 					rows={ 4 }
 					label={ __(
 						'Loading the last check',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			</>
@@ -160,7 +169,7 @@ export function Reconciliation() {
 				<PageHeader
 					title={ __(
 						'Reconciliation',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 				<ErrorState
@@ -179,20 +188,20 @@ export function Reconciliation() {
 				<PageHeader
 					title={ __(
 						'Reconciliation',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 				<EmptyState
 					as="h2"
 					title={ __(
 						'Not offered for this system',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				>
 					{ sprintf(
 						/* translators: %s: system name */ __(
 							'%s cannot list its orders for comparison, so the nightly check is not available.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						system
 					) }
@@ -216,10 +225,13 @@ export function Reconciliation() {
 	return (
 		<>
 			<PageHeader
-				title={ __( 'Reconciliation', 'estasoft-erp-crm-sync-engine' ) }
+				title={ __(
+					'Reconciliation',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 				description={ __(
 					'A nightly check that WooCommerce and your system agree. It finds problems that a retry queue cannot see.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				actions={
 					canManage ? (
@@ -230,7 +242,7 @@ export function Reconciliation() {
 						>
 							{ __(
 								'Run the check now',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Btn>
 					) : null
@@ -241,13 +253,13 @@ export function Reconciliation() {
 					<p className="estasoft-sync-strong">
 						{ __(
 							'A check is running.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</p>
 					<ProgressBar
 						label={ __(
 							'Progress of the check',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						value={ progress }
 					/>
@@ -258,7 +270,7 @@ export function Reconciliation() {
 								'%d order compared so far. The check only reads, and runs in the background.',
 								'%d orders compared so far. The check only reads, and runs in the background.',
 								running.compared,
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							running.compared
 						) }
@@ -271,7 +283,7 @@ export function Reconciliation() {
 						{
 							label: __(
 								'Last check',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							value: (
 								<DateTime
@@ -282,7 +294,7 @@ export function Reconciliation() {
 							hint: sprintf(
 								/* translators: %s: clock time */ __(
 									'nightly at %s',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								data.schedule_time
 							),
@@ -290,14 +302,14 @@ export function Reconciliation() {
 						{
 							label: __(
 								'Compared',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							value: run.compared,
 							hint: sprintf(
 								/* translators: %s: length of the window such as "7 days" */
 								__(
 									'orders from the last %s',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								daysPhrase( run.window_days )
 							),
@@ -305,24 +317,24 @@ export function Reconciliation() {
 						{
 							label: __(
 								'Match',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							value: run.matched,
 							hint: __(
 								'no action needed',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 						},
 						{
 							label: __(
 								'Differences',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							value: run.differences,
 							hint: sprintf(
 								/* translators: 1: repaired, 2: open */ __(
 									'%1$d repaired, %2$d open',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								run.repaired,
 								open
@@ -334,14 +346,14 @@ export function Reconciliation() {
 				<Callout tone="info">
 					{ __(
 						'No check has run yet. The first one runs tonight, or press Run the check now.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</Callout>
 			) }
 			<Card
 				title={ __(
 					'Differences from the last check',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				flush
 			>
@@ -349,7 +361,7 @@ export function Reconciliation() {
 					<EmptyState
 						title={ __(
 							'No differences',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						action={
 							canManage ? (
@@ -361,7 +373,7 @@ export function Reconciliation() {
 								>
 									{ __(
 										'Run the check now',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									) }
 								</Btn>
 							) : undefined
@@ -370,7 +382,7 @@ export function Reconciliation() {
 						{ sprintf(
 							/* translators: %s: system name */ __(
 								'The last nightly check found no differences between WooCommerce and %s.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							system
 						) }
@@ -379,7 +391,7 @@ export function Reconciliation() {
 					<ResponsiveTable< ReconDiff, number >
 						caption={ __(
 							'Differences',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						rows={ data.diffs }
 						rowKey={ ( diff ) => diff.id }
@@ -388,7 +400,7 @@ export function Reconciliation() {
 								id: 'order',
 								header: __(
 									'Order',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								primary: true,
 								cell: ( diff ) => (
@@ -406,7 +418,7 @@ export function Reconciliation() {
 								id: 'differs',
 								header: __(
 									'What differs',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								wide: true,
 								cell: ( diff ) => (
@@ -414,7 +426,7 @@ export function Reconciliation() {
 										{ sprintf(
 											/* translators: 1: WooCommerce value, 2: system name, 3: value there */ __(
 												'WooCommerce: %1$s. %2$s: %3$s.',
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											),
 											diff.wc_value,
 											system,
@@ -427,14 +439,14 @@ export function Reconciliation() {
 								id: 'state',
 								header: __(
 									'State',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								cell: ( diff ) =>
 									diff.status === 'open' ? (
 										<StatusBadge tone="warning">
 											{ __(
 												'Open',
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											) }
 										</StatusBadge>
 									) : diff.status === 'repaired' ? (
@@ -443,7 +455,7 @@ export function Reconciliation() {
 												<>
 													{ __(
 														'Repaired at',
-														'estasoft-erp-crm-sync-engine'
+														'estasoft-enterprise-erpcrm-sync-engine'
 													) }{ ' ' }
 													<DateTime
 														value={ diff.acted_at }
@@ -452,7 +464,7 @@ export function Reconciliation() {
 											) : (
 												__(
 													'Repaired',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												)
 											) }
 										</StatusBadge>
@@ -460,7 +472,7 @@ export function Reconciliation() {
 										<StatusBadge tone="neutral">
 											{ __(
 												'Ignored',
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											) }
 										</StatusBadge>
 									),
@@ -469,7 +481,7 @@ export function Reconciliation() {
 								id: 'actions',
 								header: __(
 									'Actions',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								hideHeader: true,
 								align: 'end',
@@ -481,7 +493,7 @@ export function Reconciliation() {
 												aria-label={ sprintf(
 													/* translators: %s: order label */ __(
 														'Repair %s',
-														'estasoft-erp-crm-sync-engine'
+														'estasoft-enterprise-erpcrm-sync-engine'
 													),
 													diff.order_label
 												) }
@@ -494,7 +506,7 @@ export function Reconciliation() {
 											>
 												{ __(
 													'Repair',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												) }
 											</Btn>
 											<Btn
@@ -502,7 +514,7 @@ export function Reconciliation() {
 												aria-label={ sprintf(
 													/* translators: %s: order label */ __(
 														'Ignore %s',
-														'estasoft-erp-crm-sync-engine'
+														'estasoft-enterprise-erpcrm-sync-engine'
 													),
 													diff.order_label
 												) }
@@ -515,7 +527,7 @@ export function Reconciliation() {
 											>
 												{ __(
 													'Ignore',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												) }
 											</Btn>
 										</span>
@@ -533,7 +545,7 @@ export function Reconciliation() {
 			<Card
 				title={ __(
 					'Schedule and tolerance',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			>
 				<fieldset
@@ -543,13 +555,13 @@ export function Reconciliation() {
 					<legend className="estasoft-sync-sr-only">
 						{ __(
 							'Schedule and tolerance',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</legend>
 					<SelectField
 						label={ __(
 							'Runs every night at',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						value={ time }
 						onChange={ setTime }
@@ -573,13 +585,13 @@ export function Reconciliation() {
 							.map( ( value ) => ( { value, label: value } ) ) }
 						hint={ __(
 							'Store time.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					/>
 					<SelectField
 						label={ __(
 							'Compare orders from',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						value={ days }
 						onChange={ setDays }
@@ -588,21 +600,21 @@ export function Reconciliation() {
 								value: '1',
 								label: __(
 									'The last 24 hours',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 							},
 							{
 								value: '7',
 								label: __(
 									'The last 7 days',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 							},
 							{
 								value: '30',
 								label: __(
 									'The last 30 days',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 							},
 						] }
@@ -611,14 +623,14 @@ export function Reconciliation() {
 						<span className="estasoft-sync-strong">
 							{ __(
 								'Tolerance',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</span>
 						<span className="estasoft-sync-muted estasoft-sync-block">
 							{ sprintf(
 								/* translators: %s: one minor unit of the store currency, for example AED 0.01 */ __(
 									'Totals closer than this count as equal: %s. One minor unit of each currency. Not editable in this version.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								formatMoney(
 									{
@@ -633,12 +645,12 @@ export function Reconciliation() {
 					<CheckField
 						label={ __(
 							'Send missing orders automatically',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						hint={ sprintf(
 							/* translators: %s: system name */ __(
 								'Only orders that are missing in %s. Amounts and refunds always wait for you.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							system
 						) }
@@ -670,11 +682,11 @@ export function Reconciliation() {
 				<ConfirmDialog
 					title={ __(
 						'Run the check now?',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					confirmLabel={ __(
 						'Run the check',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					onClose={ () => setDialog( null ) }
 					onConfirm={ async () => {
@@ -683,7 +695,7 @@ export function Reconciliation() {
 							kind: 'info',
 							text: __(
 								'The check started. It runs in the background.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 						} );
 						await overview.reload();
@@ -692,7 +704,7 @@ export function Reconciliation() {
 					<SelectField
 						label={ __(
 							'Compare orders from',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						value={ windowDays }
 						onChange={ setWindowDays }
@@ -701,21 +713,21 @@ export function Reconciliation() {
 								value: '7',
 								label: __(
 									'The last 7 days',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 							},
 							{
 								value: '1',
 								label: __(
 									'The last 24 hours',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 							},
 							{
 								value: '30',
 								label: __(
 									'The last 30 days',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 							},
 						] }
@@ -723,7 +735,7 @@ export function Reconciliation() {
 					<p className="estasoft-sync-muted">
 						{ __(
 							'The check only reads, and runs in the background. About 2,000 orders take a few minutes.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</p>
 				</ConfirmDialog>
@@ -771,14 +783,14 @@ function RepairDialog( {
 			label: sprintf(
 				/* translators: %s: system name */ __(
 					'Send the order to %s',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				system
 			),
 			description: sprintf(
 				/* translators: %s: the value as WooCommerce or the system shows it */ __(
 					'Creates the sale order that is missing: %s.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				diff.wc_value
 			),
@@ -789,14 +801,14 @@ function RepairDialog( {
 			label: sprintf(
 				/* translators: %s: system name */ __(
 					'Create the credit note in %s',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				system
 			),
 			description: sprintf(
 				/* translators: %s: the value as WooCommerce or the system shows it */ __(
 					'A credit note for the refund: %s.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				diff.wc_value
 			),
@@ -808,14 +820,14 @@ function RepairDialog( {
 				label: sprintf(
 					/* translators: %s: system name */ __(
 						'Update %s to match WooCommerce',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					system
 				),
 				description: sprintf(
 					/* translators: %s: the value as WooCommerce or the system shows it */ __(
 						'WooCommerce says %s.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					diff.wc_value
 				),
@@ -825,14 +837,14 @@ function RepairDialog( {
 				label: sprintf(
 					/* translators: %s: system name */ __(
 						'Update WooCommerce to match %s',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					system
 				),
 				description: sprintf(
 					/* translators: %s: the value as WooCommerce or the system shows it */ __(
 						'The system says %s.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					diff.system_value
 				),
@@ -845,12 +857,15 @@ function RepairDialog( {
 			title={ sprintf(
 				/* translators: 1: kind of difference, 2: order label */ __(
 					'Repair %1$s for order %2$s?',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				typeLabel( diff.type ).toLowerCase(),
 				diff.order_label
 			) }
-			confirmLabel={ __( 'Repair', 'estasoft-erp-crm-sync-engine' ) }
+			confirmLabel={ __(
+				'Repair',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			) }
 			onClose={ onClose }
 			onConfirm={ async () => {
 				await api.reconciliation.repair( diff.id, direction );
@@ -859,7 +874,7 @@ function RepairDialog( {
 					text: sprintf(
 						/* translators: %s: order label */ __(
 							'Order %s was repaired. The change is written to the log, with who made it.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						diff.order_label
 					),
@@ -870,7 +885,7 @@ function RepairDialog( {
 			<ChoiceGroup
 				legend={ __(
 					'What should the repair do?',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				hideLegend
 				value={ direction }
@@ -882,7 +897,7 @@ function RepairDialog( {
 			<p className="estasoft-sync-muted">
 				{ __(
 					'Refunds are never sent automatically. The change is written to the log, with who made it.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			</p>
 		</ConfirmDialog>
@@ -902,16 +917,19 @@ function IgnoreDialog( {
 } ) {
 	const { notify } = useNotices();
 	const reasons = [
-		__( 'A known rounding difference', 'estasoft-erp-crm-sync-engine' ),
+		__(
+			'A known rounding difference',
+			'estasoft-enterprise-erpcrm-sync-engine'
+		),
 		sprintf(
 			/* translators: %s: system name */ __(
 				'Fixed by hand in %s',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			system
 		),
-		__( 'Not a real order', 'estasoft-erp-crm-sync-engine' ),
-		__( 'Other', 'estasoft-erp-crm-sync-engine' ),
+		__( 'Not a real order', 'estasoft-enterprise-erpcrm-sync-engine' ),
+		__( 'Other', 'estasoft-enterprise-erpcrm-sync-engine' ),
 	];
 	const [ reason, setReason ] = useState< string >( reasons[ 0 ] );
 	return (
@@ -919,11 +937,14 @@ function IgnoreDialog( {
 			title={ sprintf(
 				/* translators: %s: order label */ __(
 					'Ignore the difference on order %s?',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				diff.order_label
 			) }
-			confirmLabel={ __( 'Ignore', 'estasoft-erp-crm-sync-engine' ) }
+			confirmLabel={ __(
+				'Ignore',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			) }
 			onClose={ onClose }
 			onConfirm={ async () => {
 				await api.reconciliation.ignore( diff.id, reason );
@@ -932,7 +953,7 @@ function IgnoreDialog( {
 					text: sprintf(
 						/* translators: %s: order label */ __(
 							'The difference on order %s is marked Ignored.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						diff.order_label
 					),
@@ -941,7 +962,7 @@ function IgnoreDialog( {
 			} }
 		>
 			<SelectField
-				label={ __( 'Why?', 'estasoft-erp-crm-sync-engine' ) }
+				label={ __( 'Why?', 'estasoft-enterprise-erpcrm-sync-engine' ) }
 				value={ reason }
 				onChange={ setReason }
 				options={ reasons.map( ( entry ) => ( {
@@ -952,7 +973,7 @@ function IgnoreDialog( {
 			<p className="estasoft-sync-muted">
 				{ __(
 					'The difference is marked Ignored with your name and the reason. It stays in the list of differences.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			</p>
 		</ConfirmDialog>

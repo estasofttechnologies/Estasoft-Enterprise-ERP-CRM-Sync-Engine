@@ -41,7 +41,10 @@ export function SaveBar( {
 		<div
 			className="estasoft-sync-savebar"
 			role="region"
-			aria-label={ __( 'Save changes', 'estasoft-erp-crm-sync-engine' ) }
+			aria-label={ __(
+				'Save changes',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			) }
 		>
 			<p className="estasoft-sync-muted" aria-live="polite">
 				{ message ??
@@ -52,11 +55,14 @@ export function SaveBar( {
 									'%d unsaved change',
 									'%d unsaved changes',
 									changes,
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								changes
 							)
-						: __( 'No changes', 'estasoft-erp-crm-sync-engine' ) ) }
+						: __(
+								'No changes',
+								'estasoft-enterprise-erpcrm-sync-engine'
+							) ) }
 			</p>
 			<div className="estasoft-sync-savebar__buttons">
 				<Btn
@@ -64,7 +70,10 @@ export function SaveBar( {
 					disabled={ ! dirty || saving }
 					onClick={ onDiscard }
 				>
-					{ __( 'Discard', 'estasoft-erp-crm-sync-engine' ) }
+					{ __(
+						'Discard',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 				</Btn>
 				<Btn
 					variant="primary"
@@ -73,7 +82,10 @@ export function SaveBar( {
 					onClick={ onSave }
 				>
 					{ saveLabel ??
-						__( 'Save changes', 'estasoft-erp-crm-sync-engine' ) }
+						__(
+							'Save changes',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						) }
 				</Btn>
 			</div>
 		</div>

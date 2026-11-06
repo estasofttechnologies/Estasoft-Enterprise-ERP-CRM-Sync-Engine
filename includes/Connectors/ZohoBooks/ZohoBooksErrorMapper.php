@@ -48,7 +48,7 @@ final class ZohoBooksErrorMapper {
 			return null;
 		}
 		if ( 403 === $status || ( 401 === $status && 1 === preg_match( '/scope|permission/i', $text ) ) ) {
-			return new ConnectorError( ErrorCode::Auth004, array( 'action' => __( 'do this', 'estasoft-erp-crm-sync-engine' ) ), $status, null, null, 'forbidden' );
+			return new ConnectorError( ErrorCode::Auth004, array( 'action' => __( 'do this', 'estasoft-enterprise-erpcrm-sync-engine' ) ), $status, null, null, 'forbidden' );
 		}
 		if ( 401 === $status ) {
 			return new ConnectorError( ErrorCode::Auth002, array(), 401, null, null, 'unauthorized' );
@@ -58,7 +58,7 @@ final class ZohoBooksErrorMapper {
 				ErrorCode::Val002,
 				array(
 					'field'  => 'organization_id',
-					'reason' => __( 'Zoho Books does not know this organisation.', 'estasoft-erp-crm-sync-engine' ),
+					'reason' => __( 'Zoho Books does not know this organisation.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				$status,
 				null,
@@ -83,7 +83,7 @@ final class ZohoBooksErrorMapper {
 		$field = 1 === preg_match( '/\b(?:for|of|in)\s+([a-z_]+)\b/i', $text, $parts ) ? strtolower( $parts[1] ) : 'request';
 		if ( '' === $text ) {
 			/* translators: 1: HTTP status */
-			$text = sprintf( __( 'The system answered with status %d.', 'estasoft-erp-crm-sync-engine' ), $status );
+			$text = sprintf( __( 'The system answered with status %d.', 'estasoft-enterprise-erpcrm-sync-engine' ), $status );
 		}
 		return new ConnectorError(
 			ErrorCode::Val002,

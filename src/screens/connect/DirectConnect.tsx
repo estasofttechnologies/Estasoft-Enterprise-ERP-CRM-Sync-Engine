@@ -74,7 +74,7 @@ export function fieldMessages(
 							/* translators: 1: system name, 2: "key", "secret" or "password" */
 							__(
 								'%1$s refused this user or %2$s.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							system,
 							secretWord( fields )
@@ -83,7 +83,7 @@ export function fieldMessages(
 							/* translators: 1: system name, 2: "key", "secret" or "password" */
 							__(
 								'%1$s refused this %2$s.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							system,
 							secretWord( fields )
@@ -99,7 +99,7 @@ export function fieldMessages(
 				/* translators: %s: system name */
 				__(
 					'%s has no database with this name.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				system
 			);
@@ -132,11 +132,11 @@ export function TestFailureTable( {
 				/* translators: %s: system name */
 				__(
 					'The address is wrong, or %s is down',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				system
 			),
-			see: `${ catalogMessage( 'SYNC-NET-001', {}, system ) } ${ __( 'Check the address.', 'estasoft-erp-crm-sync-engine' ) }`,
+			see: `${ catalogMessage( 'SYNC-NET-001', {}, system ) } ${ __( 'Check the address.', 'estasoft-enterprise-erpcrm-sync-engine' ) }`,
 			code: 'SYNC-NET-001',
 		},
 	];
@@ -144,13 +144,13 @@ export function TestFailureTable( {
 		rows.push( {
 			when: __(
 				'The database name is wrong',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			see: sprintf(
 				/* translators: %s: system name */
 				__(
 					'%s has no database with that name. Check the name on its sign-in page.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				system
 			),
@@ -163,17 +163,17 @@ export function TestFailureTable( {
 				/* translators: %s: system name */
 				__(
 					'The security certificate of %s is not trusted',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				system
 			),
-			see: `${ catalogMessage( 'SYNC-NET-003', {}, system ) } ${ __( 'Ask your host to fix it. Do not turn the check off.', 'estasoft-erp-crm-sync-engine' ) }`,
+			see: `${ catalogMessage( 'SYNC-NET-003', {}, system ) } ${ __( 'Ask your host to fix it. Do not turn the check off.', 'estasoft-enterprise-erpcrm-sync-engine' ) }`,
 			code: 'SYNC-NET-003',
 		},
 		{
 			when: __(
 				'The plan does not include outside access',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			see: catalogMessage( 'SYNC-AUTH-006', {}, system ),
 			code: 'SYNC-AUTH-006',
@@ -183,7 +183,7 @@ export function TestFailureTable( {
 		rows.push( {
 			when: __(
 				'The app is not enabled inside the system yet',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			see: catalogMessage( 'SYNC-AUTH-007', {}, system ),
 			code: 'SYNC-AUTH-007',
@@ -192,13 +192,13 @@ export function TestFailureTable( {
 	rows.push( {
 		when: __(
 			'The user may not do something',
-			'estasoft-erp-crm-sync-engine'
+			'estasoft-enterprise-erpcrm-sync-engine'
 		),
 		see: sprintf(
 			/* translators: %s: system name */
 			__(
 				'This user cannot do everything the plugin needs. Give it the right access in %s.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			system
 		),
@@ -208,7 +208,7 @@ export function TestFailureTable( {
 		<Card
 			title={ __(
 				'If the test does not pass',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			) }
 			flush
 		>
@@ -218,14 +218,14 @@ export function TestFailureTable( {
 				tabIndex={ 0 }
 				aria-label={ __(
 					'Other results of the connection test',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			>
 				<table className="estasoft-sync-plain-table estasoft-sync-plain-table--wide">
 					<caption className="estasoft-sync-sr-only">
 						{ __(
 							'Other results of the connection test',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</caption>
 					<thead>
@@ -233,17 +233,20 @@ export function TestFailureTable( {
 							<th scope="col">
 								{ __(
 									'If this happens',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</th>
 							<th scope="col">
 								{ __(
 									'You see',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</th>
 							<th scope="col">
-								{ __( 'Code', 'estasoft-erp-crm-sync-engine' ) }
+								{ __(
+									'Code',
+									'estasoft-enterprise-erpcrm-sync-engine'
+								) }
 							</th>
 						</tr>
 					</thead>
@@ -292,7 +295,7 @@ export function ConnectedSummary( {
 					? sprintf(
 							/* translators: 1: system name and version, 2: company */ __(
 								'Connected and saved. %1$s, company %2$s.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							connection.version || system,
 							connection.company
@@ -301,7 +304,7 @@ export function ConnectedSummary( {
 							/* translators: %s: system name and version */
 							__(
 								'Connected and saved. %s.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							connection.version || system
 						) }
@@ -315,7 +318,7 @@ export function ConnectedSummary( {
 									'%1$d warehouse found (%2$s).',
 									'%1$d warehouses found (%2$s).',
 									connection.warehouses.length,
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								connection.warehouses.length,
 								connection.warehouses
@@ -328,7 +331,7 @@ export function ConnectedSummary( {
 								/* translators: %s: "key", "secret" or "password" */
 								__(
 									'The %s is stored encrypted.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								word
 							)
@@ -341,7 +344,7 @@ export function ConnectedSummary( {
 						/* translators: 1: "key", "secret" or "password", 2: date */
 						__(
 							'The %1$s ends on %2$s. We remind you before then.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						word,
 						formatDay( connection.credential_expires_at, cfg )
@@ -518,7 +521,7 @@ export function DirectConnect( {
 						system={ system }
 						label={ __(
 							'Company',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						onDone={ ( next ) => {
 							setSaved( next );
@@ -542,7 +545,7 @@ export function DirectConnect( {
 					<p className="estasoft-sync-muted">
 						{ __(
 							'Saved credentials cannot be stored until you add the line below to wp-config.php. Existing connections keep working.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</p>
 					{ boot.encryptionKeyLine ? (
@@ -558,7 +561,7 @@ export function DirectConnect( {
 							/* translators: %s: system name */
 							__(
 								'Your %s server must be reachable from this website.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							system
 						) }
@@ -566,7 +569,7 @@ export function DirectConnect( {
 					<p>
 						{ __(
 							'Many of these servers sit inside an office network. Your IT team may need to publish the address and allow connections from the server that hosts this website. Your web host can tell you that server’s outgoing address.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</p>
 				</Callout>
@@ -575,7 +578,7 @@ export function DirectConnect( {
 				<Callout tone="info">
 					{ __(
 						'Parts of this are done by administrators, not by you. If that is not you, copy the steps and send them.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</Callout>
 			) : null }
@@ -592,7 +595,7 @@ export function DirectConnect( {
 							<p className="estasoft-sync-muted">
 								{ __(
 									'Menu names can differ between Odoo versions. Not the Odoo administrator? Send these steps to them.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</p>
 						) : entry.connector === 'netsuite' ? (
@@ -605,7 +608,7 @@ export function DirectConnect( {
 						/* translators: %s: system name */
 						__(
 							'What to expect from %s',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						system
 					) }
@@ -656,11 +659,11 @@ export function DirectConnect( {
 							{ phase === 'result' && ( partial || failed )
 								? __(
 										'Test again',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									)
 								: __(
 										'Test connection',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									) }
 						</Btn>
 					</div>
@@ -673,11 +676,14 @@ export function DirectConnect( {
 						<Busy
 							label={ __(
 								'Testing the connection… This can take up to 30 seconds.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						/>
 						<Btn small onClick={ cancel }>
-							{ __( 'Cancel', 'estasoft-erp-crm-sync-engine' ) }
+							{ __(
+								'Cancel',
+								'estasoft-enterprise-erpcrm-sync-engine'
+							) }
 						</Btn>
 					</div>
 				) : null }
@@ -692,7 +698,7 @@ export function DirectConnect( {
 				<p className="estasoft-sync-muted">
 					{ __(
 						'Continue stays off until a test passes.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</p>
 			</Card>

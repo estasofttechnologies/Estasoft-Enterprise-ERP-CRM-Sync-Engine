@@ -85,7 +85,7 @@ final class BusinessCentralConnector extends AbstractApiConnector {
 		$environment = trim( (string) $connection->config( 'environment', 'production' ) );
 		$environment = '' === $environment ? 'production' : $environment;
 		if ( 1 !== preg_match( '/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/', $environment ) ) {
-			throw new ApiException( Failures::invalid( $this->label(), 'environment', __( 'The environment name may hold letters, digits, dots, hyphens and underscores.', 'estasoft-erp-crm-sync-engine' ), 'environment refused' ) );
+			throw new ApiException( Failures::invalid( $this->label(), 'environment', __( 'The environment name may hold letters, digits, dots, hyphens and underscores.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'environment refused' ) );
 		}
 		return 'https://' . self::API_HOST . '/v2.0/' . $environment . '/api/v2.0';
 	}
@@ -110,80 +110,80 @@ final class BusinessCentralConnector extends AbstractApiConnector {
 		$text   = static fn( string $name, string $label, string $hint = '' ): CredentialField => EntraCredentialFields::text( $name, $label, $hint );
 		return array_merge(
 			array(
-				new CredentialField( 'environment', __( 'Environment name', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Shown in the Business Central admin center, for example production or sandbox.', 'estasoft-erp-crm-sync-engine' ), 'production' ),
-				new CredentialField( 'company', __( 'Company (name or ID)', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Leave empty when the environment has one company.', 'estasoft-erp-crm-sync-engine' ) ),
+				new CredentialField( 'environment', __( 'Environment name', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Shown in the Business Central admin center, for example production or sandbox.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'production' ),
+				new CredentialField( 'company', __( 'Company (name or ID)', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Leave empty when the environment has one company.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			),
 			EntraCredentialFields::app(),
 			array(
 				$choice(
 					'documents',
-					__( 'Documents', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Documents', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					array(
-						'order'              => __( 'Sales order only', 'estasoft-erp-crm-sync-engine' ),
-						'order_ship_invoice' => __( 'Sales order, shipped and invoiced', 'estasoft-erp-crm-sync-engine' ),
-						'invoice'            => __( 'Posted sales invoice', 'estasoft-erp-crm-sync-engine' ),
+						'order'              => __( 'Sales order only', 'estasoft-enterprise-erpcrm-sync-engine' ),
+						'order_ship_invoice' => __( 'Sales order, shipped and invoiced', 'estasoft-enterprise-erpcrm-sync-engine' ),
+						'invoice'            => __( 'Posted sales invoice', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					),
-					__( 'Shipping and invoicing posts to the books and cannot be undone.', 'estasoft-erp-crm-sync-engine' )
+					__( 'Shipping and invoicing posts to the books and cannot be undone.', 'estasoft-enterprise-erpcrm-sync-engine' )
 				),
 				$choice(
 					'customer_policy',
-					__( 'Customers', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Customers', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					array(
-						'match_or_create' => __( 'Match by email, create when missing', 'estasoft-erp-crm-sync-engine' ),
-						'match_only'      => __( 'Match by email only', 'estasoft-erp-crm-sync-engine' ),
-						'fixed'           => __( 'One fixed customer for every order', 'estasoft-erp-crm-sync-engine' ),
+						'match_or_create' => __( 'Match by email, create when missing', 'estasoft-enterprise-erpcrm-sync-engine' ),
+						'match_only'      => __( 'Match by email only', 'estasoft-enterprise-erpcrm-sync-engine' ),
+						'fixed'           => __( 'One fixed customer for every order', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					)
 				),
-				$text( 'fixed_customer', __( 'Fixed customer number', 'estasoft-erp-crm-sync-engine' ), __( 'Used when Customers is set to one fixed customer.', 'estasoft-erp-crm-sync-engine' ) ),
+				$text( 'fixed_customer', __( 'Fixed customer number', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Used when Customers is set to one fixed customer.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 				$choice(
 					'unknown_sku',
-					__( 'SKU not found as an item', 'estasoft-erp-crm-sync-engine' ),
+					__( 'SKU not found as an item', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					array(
-						'refuse'  => __( 'Refuse the order', 'estasoft-erp-crm-sync-engine' ),
-						'account' => __( 'Post the line to a G/L account', 'estasoft-erp-crm-sync-engine' ),
+						'refuse'  => __( 'Refuse the order', 'estasoft-enterprise-erpcrm-sync-engine' ),
+						'account' => __( 'Post the line to a G/L account', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					)
 				),
-				$text( 'unknown_sku_account', __( 'G/L account for unknown SKUs', 'estasoft-erp-crm-sync-engine' ) ),
+				$text( 'unknown_sku_account', __( 'G/L account for unknown SKUs', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 				$choice(
 					'sku_field',
-					__( 'Match SKU with', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Match SKU with', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					array(
-						'number' => __( 'Item number', 'estasoft-erp-crm-sync-engine' ),
-						'gtin'   => __( 'GTIN', 'estasoft-erp-crm-sync-engine' ),
+						'number' => __( 'Item number', 'estasoft-enterprise-erpcrm-sync-engine' ),
+						'gtin'   => __( 'GTIN', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					)
 				),
 				$choice(
 					'posting_date',
-					__( 'Posting date', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Posting date', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					array(
-						'order' => __( 'Date of the shop order', 'estasoft-erp-crm-sync-engine' ),
-						'today' => __( 'Business Central\'s own date', 'estasoft-erp-crm-sync-engine' ),
+						'order' => __( 'Date of the shop order', 'estasoft-enterprise-erpcrm-sync-engine' ),
+						'today' => __( 'Business Central\'s own date', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					)
 				),
 				$choice(
 					'total_mismatch',
-					__( 'Total differs from the shop', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Total differs from the shop', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					array(
-						'fail' => __( 'Stop and show an error', 'estasoft-erp-crm-sync-engine' ),
-						'warn' => __( 'Go on with a warning', 'estasoft-erp-crm-sync-engine' ),
+						'fail' => __( 'Stop and show an error', 'estasoft-enterprise-erpcrm-sync-engine' ),
+						'warn' => __( 'Go on with a warning', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					)
 				),
 				$choice(
 					'refund_state',
-					__( 'Credit memos', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Credit memos', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					array(
-						'draft' => __( 'Leave as a draft', 'estasoft-erp-crm-sync-engine' ),
-						'post'  => __( 'Post them', 'estasoft-erp-crm-sync-engine' ),
+						'draft' => __( 'Leave as a draft', 'estasoft-enterprise-erpcrm-sync-engine' ),
+						'post'  => __( 'Post them', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					)
 				),
-				$text( 'shipping_item', __( 'Item for shipping', 'estasoft-erp-crm-sync-engine' ) ),
-				$text( 'shipping_account', __( 'G/L account for shipping', 'estasoft-erp-crm-sync-engine' ) ),
-				$text( 'fee_item', __( 'Item for fees', 'estasoft-erp-crm-sync-engine' ) ),
-				$text( 'fee_account', __( 'G/L account for fees', 'estasoft-erp-crm-sync-engine' ) ),
-				$text( 'discount_item', __( 'Item for discounts', 'estasoft-erp-crm-sync-engine' ) ),
-				$text( 'discount_account', __( 'G/L account for discounts', 'estasoft-erp-crm-sync-engine' ) ),
-				$text( 'refund_item', __( 'Item for refunds without lines', 'estasoft-erp-crm-sync-engine' ) ),
-				$text( 'refund_account', __( 'G/L account for refunds without lines', 'estasoft-erp-crm-sync-engine' ) ),
+				$text( 'shipping_item', __( 'Item for shipping', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+				$text( 'shipping_account', __( 'G/L account for shipping', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+				$text( 'fee_item', __( 'Item for fees', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+				$text( 'fee_account', __( 'G/L account for fees', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+				$text( 'discount_item', __( 'Item for discounts', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+				$text( 'discount_account', __( 'G/L account for discounts', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+				$text( 'refund_item', __( 'Item for refunds without lines', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+				$text( 'refund_account', __( 'G/L account for refunds without lines', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			)
 		);
 	}
@@ -204,7 +204,7 @@ final class BusinessCentralConnector extends AbstractApiConnector {
 				array(
 					'system' => $this->label(),
 					'field'  => 'environment',
-					'reason' => __( 'Business Central did not find this environment, company or record. Check the environment name and the company.', 'estasoft-erp-crm-sync-engine' ),
+					'reason' => __( 'Business Central did not find this environment, company or record. Check the environment name and the company.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				404,
 				null,
@@ -255,7 +255,7 @@ final class BusinessCentralConnector extends AbstractApiConnector {
 			ErrorCode::Auth004,
 			array(
 				'system' => $this->label(),
-				'action' => __( 'read customers, items and sales documents', 'estasoft-erp-crm-sync-engine' ),
+				'action' => __( 'read customers, items and sales documents', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			),
 			403,
 			null,
@@ -447,7 +447,7 @@ final class BusinessCentralConnector extends AbstractApiConnector {
 			}
 			$codes[] = array(
 				'code'         => $code,
-				'name'         => trim( ( '' !== (string) ( $row['displayName'] ?? '' ) ? (string) $row['displayName'] : $code ) . ' ' . __( '(rate set in Business Central)', 'estasoft-erp-crm-sync-engine' ) ),
+				'name'         => trim( ( '' !== (string) ( $row['displayName'] ?? '' ) ? (string) $row['displayName'] : $code ) . ' ' . __( '(rate set in Business Central)', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 				'rate_percent' => '',
 			);
 		}
@@ -471,7 +471,7 @@ final class BusinessCentralConnector extends AbstractApiConnector {
 		}
 		$name = '' !== ( $partner['company_name'] ?? '' ) ? $partner['company_name'] : ( $partner['name'] ?? trim( ( $partner['first_name'] ?? '' ) . ' ' . ( $partner['last_name'] ?? '' ) ) );
 		if ( '' === ( $partner['email'] ?? '' ) || '' === $name ) {
-			return SendResult::failure( Failures::invalid( $this->label(), 'partner.email', __( 'A customer needs a name and an email address.', 'estasoft-erp-crm-sync-engine' ), 'customer incomplete' ) );
+			return SendResult::failure( Failures::invalid( $this->label(), 'partner.email', __( 'A customer needs a name and an email address.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'customer incomplete' ) );
 		}
 		$customers = new BcCustomers( $bc, $this->label(), $this->deps->logger );
 		$matches   = $customers->findByEmail( $partner['email'] );

@@ -166,10 +166,10 @@ final class SevdeskConnector extends AbstractApiConnector {
 		return array(
 			new CredentialField(
 				'api_token',
-				__( 'API token', 'estasoft-erp-crm-sync-engine' ),
+				__( 'API token', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				true,
 				true,
-				__( 'In sevDesk: Settings, Users, your user, API token.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'In sevDesk: Settings, Users, your user, API token.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'',
 				'password'
 			),
@@ -318,7 +318,7 @@ final class SevdeskConnector extends AbstractApiConnector {
 				$result = $this->sendCustomer( $api, $payload, $options, $item );
 				break;
 			default:
-				return SendResult::failure( Refusal::value( self::LABEL, 'entity', __( 'This connector does not send this kind of item.', 'estasoft-erp-crm-sync-engine' ), 'unsupported entity' ) );
+				return SendResult::failure( Refusal::value( self::LABEL, 'entity', __( 'This connector does not send this kind of item.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'unsupported entity' ) );
 		}
 		if ( null !== $result->ref ) {
 			$this->known[ $this->key( $connection, $item ) ] = $result->ref;
@@ -455,27 +455,27 @@ final class SevdeskConnector extends AbstractApiConnector {
 			return array(
 				array(
 					'code'         => 'default',
-					'name'         => __( 'Taxable (default)', 'estasoft-erp-crm-sync-engine' ),
+					'name'         => __( 'Taxable (default)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					'rate_percent' => '19',
 				),
 				array(
 					'code'         => 'eu',
-					'name'         => __( 'Intra-community supply', 'estasoft-erp-crm-sync-engine' ),
+					'name'         => __( 'Intra-community supply', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					'rate_percent' => '0',
 				),
 				array(
 					'code'         => 'noteu',
-					'name'         => __( 'Not taxable in Germany (outside the EU)', 'estasoft-erp-crm-sync-engine' ),
+					'name'         => __( 'Not taxable in Germany (outside the EU)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					'rate_percent' => '0',
 				),
 				array(
 					'code'         => 'custom',
-					'name'         => __( 'Custom tax set', 'estasoft-erp-crm-sync-engine' ),
+					'name'         => __( 'Custom tax set', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					'rate_percent' => '0',
 				),
 				array(
 					'code'         => 'ss',
-					'name'         => __( 'Small business (§ 19 UStG)', 'estasoft-erp-crm-sync-engine' ),
+					'name'         => __( 'Small business (§ 19 UStG)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					'rate_percent' => '0',
 				),
 			);
@@ -483,57 +483,57 @@ final class SevdeskConnector extends AbstractApiConnector {
 		return array(
 			array(
 				'code'         => '1',
-				'name'         => __( 'Taxable sales in Germany', 'estasoft-erp-crm-sync-engine' ),
+				'name'         => __( 'Taxable sales in Germany', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'rate_percent' => '19',
 			),
 			array(
 				'code'         => '2',
-				'name'         => __( 'Exports', 'estasoft-erp-crm-sync-engine' ),
+				'name'         => __( 'Exports', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'rate_percent' => '0',
 			),
 			array(
 				'code'         => '3',
-				'name'         => __( 'Intra-community supply', 'estasoft-erp-crm-sync-engine' ),
+				'name'         => __( 'Intra-community supply', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'rate_percent' => '0',
 			),
 			array(
 				'code'         => '4',
-				'name'         => __( 'Tax-free (§ 4 UStG)', 'estasoft-erp-crm-sync-engine' ),
+				'name'         => __( 'Tax-free (§ 4 UStG)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'rate_percent' => '0',
 			),
 			array(
 				'code'         => '5',
-				'name'         => __( 'Reverse charge (§ 13b UStG)', 'estasoft-erp-crm-sync-engine' ),
+				'name'         => __( 'Reverse charge (§ 13b UStG)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'rate_percent' => '0',
 			),
 			array(
 				'code'         => '11',
-				'name'         => __( 'Small business (§ 19 UStG)', 'estasoft-erp-crm-sync-engine' ),
+				'name'         => __( 'Small business (§ 19 UStG)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'rate_percent' => '0',
 			),
 			array(
 				'code'         => '17',
-				'name'         => __( 'Not taxable in Germany', 'estasoft-erp-crm-sync-engine' ),
+				'name'         => __( 'Not taxable in Germany', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'rate_percent' => '0',
 			),
 			array(
 				'code'         => '18',
-				'name'         => __( 'One-Stop-Shop, goods', 'estasoft-erp-crm-sync-engine' ),
+				'name'         => __( 'One-Stop-Shop, goods', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'rate_percent' => '0',
 			),
 			array(
 				'code'         => '19',
-				'name'         => __( 'One-Stop-Shop, electronic services', 'estasoft-erp-crm-sync-engine' ),
+				'name'         => __( 'One-Stop-Shop, electronic services', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'rate_percent' => '0',
 			),
 			array(
 				'code'         => '20',
-				'name'         => __( 'One-Stop-Shop, other services', 'estasoft-erp-crm-sync-engine' ),
+				'name'         => __( 'One-Stop-Shop, other services', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'rate_percent' => '0',
 			),
 			array(
 				'code'         => '21',
-				'name'         => __( 'Reverse charge (§ 18b UStG)', 'estasoft-erp-crm-sync-engine' ),
+				'name'         => __( 'Reverse charge (§ 18b UStG)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'rate_percent' => '0',
 			),
 		);

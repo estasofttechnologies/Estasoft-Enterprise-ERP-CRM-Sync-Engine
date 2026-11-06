@@ -95,48 +95,48 @@ final class DynamicsFinanceConnector extends AbstractApiConnector {
 		$text   = static fn( string $name, string $label, string $hint = '' ): CredentialField => EntraCredentialFields::text( $name, $label, $hint );
 		return array_merge(
 			array(
-				new CredentialField( 'environment_url', __( 'Environment URL', 'estasoft-erp-crm-sync-engine' ), false, true, __( 'The address you open Finance and Operations at, for example https://contoso.operations.dynamics.com.', 'estasoft-erp-crm-sync-engine' ), '', 'url' ),
-				new CredentialField( 'legal_entity', __( 'Legal entity (company ID)', 'estasoft-erp-crm-sync-engine' ), false, true, __( 'The company the orders go to, for example USMF. Every call is limited to it.', 'estasoft-erp-crm-sync-engine' ) ),
+				new CredentialField( 'environment_url', __( 'Environment URL', 'estasoft-enterprise-erpcrm-sync-engine' ), false, true, __( 'The address you open Finance and Operations at, for example https://contoso.operations.dynamics.com.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'url' ),
+				new CredentialField( 'legal_entity', __( 'Legal entity (company ID)', 'estasoft-enterprise-erpcrm-sync-engine' ), false, true, __( 'The company the orders go to, for example USMF. Every call is limited to it.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			),
 			EntraCredentialFields::app(),
 			array(
 				$choice(
 					'customer_policy',
-					__( 'Customers', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Customers', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					array(
-						'match_or_create' => __( 'Match by email, create when missing', 'estasoft-erp-crm-sync-engine' ),
-						'match_only'      => __( 'Match by email only', 'estasoft-erp-crm-sync-engine' ),
-						'fixed'           => __( 'One fixed customer for every order', 'estasoft-erp-crm-sync-engine' ),
+						'match_or_create' => __( 'Match by email, create when missing', 'estasoft-enterprise-erpcrm-sync-engine' ),
+						'match_only'      => __( 'Match by email only', 'estasoft-enterprise-erpcrm-sync-engine' ),
+						'fixed'           => __( 'One fixed customer for every order', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					)
 				),
-				$text( 'fixed_customer', __( 'Fixed customer account', 'estasoft-erp-crm-sync-engine' ), __( 'Used when Customers is set to one fixed customer.', 'estasoft-erp-crm-sync-engine' ) ),
-				$text( 'customer_group', __( 'Customer group for new customers', 'estasoft-erp-crm-sync-engine' ), __( 'Needed to create customers: a customer group ID of the legal entity.', 'estasoft-erp-crm-sync-engine' ) ),
-				$text( 'shipping_item', __( 'Item for shipping', 'estasoft-erp-crm-sync-engine' ), __( 'A service or non-stock item number.', 'estasoft-erp-crm-sync-engine' ) ),
-				$text( 'fee_item', __( 'Item for fees', 'estasoft-erp-crm-sync-engine' ) ),
+				$text( 'fixed_customer', __( 'Fixed customer account', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Used when Customers is set to one fixed customer.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+				$text( 'customer_group', __( 'Customer group for new customers', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Needed to create customers: a customer group ID of the legal entity.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+				$text( 'shipping_item', __( 'Item for shipping', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'A service or non-stock item number.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+				$text( 'fee_item', __( 'Item for fees', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 				$choice(
 					'order_numbering',
-					__( 'Sales order numbers', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Sales order numbers', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					array(
-						'automatic'      => __( 'Assigned by the number sequence of the legal entity', 'estasoft-erp-crm-sync-engine' ),
-						'shop_reference' => __( 'Use the shop reference (WC-123) as the number', 'estasoft-erp-crm-sync-engine' ),
+						'automatic'      => __( 'Assigned by the number sequence of the legal entity', 'estasoft-enterprise-erpcrm-sync-engine' ),
+						'shop_reference' => __( 'Use the shop reference (WC-123) as the number', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					)
 				),
-				$text( 'shipping_warehouse', __( 'Shipping warehouse', 'estasoft-erp-crm-sync-engine' ) ),
-				$text( 'shipping_site', __( 'Shipping site', 'estasoft-erp-crm-sync-engine' ) ),
+				$text( 'shipping_warehouse', __( 'Shipping warehouse', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+				$text( 'shipping_site', __( 'Shipping site', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 				$choice(
 					'shipping_date',
-					__( 'Requested shipping date', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Requested shipping date', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					array(
-						'order' => __( 'Date of the shop order', 'estasoft-erp-crm-sync-engine' ),
-						'today' => __( 'Today', 'estasoft-erp-crm-sync-engine' ),
+						'order' => __( 'Date of the shop order', 'estasoft-enterprise-erpcrm-sync-engine' ),
+						'today' => __( 'Today', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					)
 				),
 				$choice(
 					'total_mismatch',
-					__( 'Total differs from the shop', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Total differs from the shop', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					array(
-						'fail' => __( 'Stop and show an error (also when Finance and Operations gives no total)', 'estasoft-erp-crm-sync-engine' ),
-						'warn' => __( 'Go on with a warning', 'estasoft-erp-crm-sync-engine' ),
+						'fail' => __( 'Stop and show an error (also when Finance and Operations gives no total)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+						'warn' => __( 'Go on with a warning', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					)
 				),
 			)
@@ -165,7 +165,7 @@ final class DynamicsFinanceConnector extends AbstractApiConnector {
 		$company = strtoupper( $entity );
 		$known   = $this->legalEntityRow( $fo );
 		if ( false === $known ) {
-			throw new ApiException( Failures::invalid( $this->label(), 'legal_entity', __( 'This environment has no legal entity with this ID.', 'estasoft-erp-crm-sync-engine' ), 'legal entity not found' ) );
+			throw new ApiException( Failures::invalid( $this->label(), 'legal_entity', __( 'This environment has no legal entity with this ID.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'legal entity not found' ) );
 		}
 		if ( is_array( $known ) && '' !== (string) ( $known['Name'] ?? '' ) ) {
 			$company = (string) $known['Name'];
@@ -192,7 +192,7 @@ final class DynamicsFinanceConnector extends AbstractApiConnector {
 			ErrorCode::Auth004,
 			array(
 				'system' => $this->label(),
-				'action' => __( 'read customers, sales orders and released products', 'estasoft-erp-crm-sync-engine' ),
+				'action' => __( 'read customers, sales orders and released products', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			),
 			403,
 			null,
@@ -345,7 +345,7 @@ final class DynamicsFinanceConnector extends AbstractApiConnector {
 		}
 		$name = '' !== ( $partner['company_name'] ?? '' ) ? $partner['company_name'] : trim( ( $partner['first_name'] ?? '' ) . ' ' . ( $partner['last_name'] ?? ( $partner['name'] ?? '' ) ) );
 		if ( '' === ( $partner['email'] ?? '' ) || '' === $name ) {
-			return SendResult::failure( Failures::invalid( $this->label(), 'partner.email', __( 'A customer needs a name and an email address.', 'estasoft-erp-crm-sync-engine' ), 'customer incomplete' ) );
+			return SendResult::failure( Failures::invalid( $this->label(), 'partner.email', __( 'A customer needs a name and an email address.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'customer incomplete' ) );
 		}
 		$customers = new FoCustomers( $this->client( $connection ), $this->label(), $this->deps->logger );
 		$matches   = $customers->findByEmail( $partner['email'] );
@@ -396,7 +396,7 @@ final class DynamicsFinanceConnector extends AbstractApiConnector {
 	private function client( Connection $connection ): FoClient {
 		$entity = FoOptions::fromConnection( $connection )->legalEntity();
 		if ( '' === $entity ) {
-			throw new ApiException( Failures::invalid( $this->label(), 'legal_entity', __( 'The legal entity ID is one to four letters or digits, for example USMF.', 'estasoft-erp-crm-sync-engine' ), 'legal entity refused' ) );
+			throw new ApiException( Failures::invalid( $this->label(), 'legal_entity', __( 'The legal entity ID is one to four letters or digits, for example USMF.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'legal entity refused' ) );
 		}
 		return new FoClient( $this->api( $connection ), $entity, $this->label() );
 	}
@@ -411,7 +411,7 @@ final class DynamicsFinanceConnector extends AbstractApiConnector {
 	private function environment( Connection $connection ): string {
 		$url = EnvironmentUrl::normalise( (string) $connection->config( 'environment_url', '' ) );
 		if ( null === $url ) {
-			throw new ApiException( Failures::invalid( $this->label(), 'environment_url', __( 'The environment URL must be an https address ending in dynamics.com, for example https://contoso.operations.dynamics.com.', 'estasoft-erp-crm-sync-engine' ), 'environment refused' ) );
+			throw new ApiException( Failures::invalid( $this->label(), 'environment_url', __( 'The environment URL must be an https address ending in dynamics.com, for example https://contoso.operations.dynamics.com.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'environment refused' ) );
 		}
 		return $url;
 	}

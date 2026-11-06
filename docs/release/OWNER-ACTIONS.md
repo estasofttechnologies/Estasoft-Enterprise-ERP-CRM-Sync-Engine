@@ -7,8 +7,8 @@ Everything else is in the repository and checked by a script. The full ordered l
 
 1. **GitHub.** The repository is public (done), so the readme's source-code link works. Still to do: turn on private
    vulnerability reporting (Settings > Code security) and protect `main` with the `CI passed` check.
-2. **Check that the slug is free.** Open <https://wordpress.org/plugins/estasoft-erp-crm-sync-engine/>: "not found"
-   means free. Search the directory for plugins with a similar name.
+2. **The slug.** WordPress.org assigned `estasoft-enterprise-erpcrm-sync-engine` when the zip was uploaded; the plugin's text
+   domain, folder and main file use it. Plugin Check on the uploaded zip found nothing else.
 3. **Run the gate once on GitHub and read it.** Push, wait for CI, then read the job summaries of **Plugin Check**
    (the real one runs only there; see [PLUGIN-CHECK-NOTES.md](PLUGIN-CHECK-NOTES.md) for what it can still find) and
    of the **smoke** job. Commit `composer.lock` and `package-lock.json` first. When the smoke job has passed once,
@@ -33,7 +33,7 @@ Everything else is in the repository and checked by a script. The full ordered l
    block), every admin screen on WordPress 6.4 (older `@wordpress/*` packages), PHP 8.1 and 8.4 on a real shop,
    a screen reader, 200% zoom and a phone.
 10. **Create the translation template** once: `bin/make-pot.sh` needs WP-CLI; commit
-    `languages/estasoft-erp-crm-sync-engine.pot`.
+    `languages/estasoft-enterprise-erpcrm-sync-engine.pot`.
 
 ## Submit and publish
 

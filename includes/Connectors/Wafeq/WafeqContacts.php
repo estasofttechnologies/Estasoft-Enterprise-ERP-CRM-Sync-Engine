@@ -127,7 +127,7 @@ final class WafeqContacts {
 				array(
 					'system' => WafeqConnector::LABEL,
 					'field'  => 'contact',
-					'reason' => __( 'Wafeq did not return the id of the new contact.', 'estasoft-erp-crm-sync-engine' ),
+					'reason' => __( 'Wafeq did not return the id of the new contact.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				null,
 				null,

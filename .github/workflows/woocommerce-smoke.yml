@@ -67,8 +67,8 @@ jobs:
           wp config create --dbname=smoke --dbuser=root --dbpass=root --dbhost=127.0.0.1 --skip-check
           wp core install --url=http://localhost --title=Smoke --admin_user=admin --admin_password=admin --admin_email=admin@example.com --skip-email
           wp plugin install woocommerce --activate
-          ln -s "$GITHUB_WORKSPACE" wp-content/plugins/estasoft-erp-crm-sync-engine
-          wp plugin activate estasoft-erp-crm-sync-engine
+          ln -s "$GITHUB_WORKSPACE" wp-content/plugins/estasoft-enterprise-erpcrm-sync-engine
+          wp plugin activate estasoft-enterprise-erpcrm-sync-engine
           wp plugin list
 
       - name: Choose the order storage

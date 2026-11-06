@@ -145,29 +145,29 @@ final class SuiteCrmConnector extends AbstractSalesConnector {
 	 */
 	protected function credentialDefinition(): array {
 		return array(
-			CredentialFields::address( 'address', __( 'SuiteCRM address', 'estasoft-erp-crm-sync-engine' ), __( 'The address you open SuiteCRM at, for example https://crm.example.com. A folder is allowed.', 'estasoft-erp-crm-sync-engine' ) ),
+			CredentialFields::address( 'address', __( 'SuiteCRM address', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'The address you open SuiteCRM at, for example https://crm.example.com. A folder is allowed.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			CredentialFields::choice(
 				'version',
-				__( 'SuiteCRM version', 'estasoft-erp-crm-sync-engine' ),
+				__( 'SuiteCRM version', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				array(
-					'v8' => __( 'SuiteCRM 8 (API under /legacy/Api)', 'estasoft-erp-crm-sync-engine' ),
-					'v7' => __( 'SuiteCRM 7 (API under /Api)', 'estasoft-erp-crm-sync-engine' ),
+					'v8' => __( 'SuiteCRM 8 (API under /legacy/Api)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'v7' => __( 'SuiteCRM 7 (API under /Api)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				'v8'
 			),
 			CredentialFields::choice(
 				'grant',
-				__( 'Client type', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Client type', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				array(
-					'client_credentials' => __( 'Client credentials (the client acts as its own user)', 'estasoft-erp-crm-sync-engine' ),
-					'password'           => __( 'Password (a named sync user)', 'estasoft-erp-crm-sync-engine' ),
+					'client_credentials' => __( 'Client credentials (the client acts as its own user)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'password'           => __( 'Password (a named sync user)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				'client_credentials'
 			),
-			CredentialFields::clientId( 'client_id', __( 'From Admin, OAuth2 Clients and Tokens.', 'estasoft-erp-crm-sync-engine' ) ),
+			CredentialFields::clientId( 'client_id', __( 'From Admin, OAuth2 Clients and Tokens.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			CredentialFields::clientSecret(),
-			new CredentialField( 'username', __( 'Sync user name', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Only for the password client type.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'app' ),
-			new CredentialField( 'password', __( 'Sync user password', 'estasoft-erp-crm-sync-engine' ), true, false, __( 'Only for the password client type. Saved encrypted. It is never shown again.', 'estasoft-erp-crm-sync-engine' ), '', 'password', array(), 'app' ),
+			new CredentialField( 'username', __( 'Sync user name', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Only for the password client type.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'app' ),
+			new CredentialField( 'password', __( 'Sync user password', 'estasoft-enterprise-erpcrm-sync-engine' ), true, false, __( 'Only for the password client type. Saved encrypted. It is never shown again.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'password', array(), 'app' ),
 		);
 	}
 
@@ -194,16 +194,16 @@ final class SuiteCrmConnector extends AbstractSalesConnector {
 			$field = $this->records( $connection, $options )->referenceField();
 			if ( '' !== $field && ! $api->fieldExists( 'Opportunities', $field ) ) {
 				/* translators: %s: field name. */
-				SuiteCrmFailure::refuse( 'reference_field', sprintf( __( 'SuiteCRM has no field %s on Opportunities. Make it in Admin, Studio (a text field; its name ends in _c) or clear the option reference_field.', 'estasoft-erp-crm-sync-engine' ), $field ) );
+				SuiteCrmFailure::refuse( 'reference_field', sprintf( __( 'SuiteCRM has no field %s on Opportunities. Make it in Admin, Studio (a text field; its name ends in _c) or clear the option reference_field.', 'estasoft-enterprise-erpcrm-sync-engine' ), $field ) );
 			}
 		} catch ( SuiteCrmFailure $failure ) {
 			return new TestResult( false, '', '', array(), array(), $failure->error );
 		}
 		if ( '' === trim( $options->text( 'base_currency' ) ) ) {
-			$warnings[] = __( 'Set the option base_currency to the ISO code of the default currency of SuiteCRM (Admin, Currencies). The default currency is not a row of that list, so until then an order in it is refused.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'Set the option base_currency to the ISO code of the default currency of SuiteCRM (Admin, Currencies). The default currency is not a row of that list, so until then an order in it is refused.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		if ( '' === $field ) {
-			$warnings[] = __( 'Orders are found again by the start of the opportunity name (WC-number). If someone renames an opportunity, the order can be sent a second time. Make a text field on Opportunities in Studio and set the option reference_field to its name (it ends in _c).', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'Orders are found again by the start of the opportunity name (WC-number). If someone renames an opportunity, the order can be sent a second time. Make a text field on Opportunities in Studio and set the option reference_field to its name (it ends in _c).', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		$ok   = array() === array_filter( $permissions, static fn( bool $allowed ): bool => ! $allowed );
 		$name = trim( (string) ( $user['full_name'] ?? $user['user_name'] ?? $user['name'] ?? '' ) );
@@ -330,7 +330,7 @@ final class SuiteCrmConnector extends AbstractSalesConnector {
 			}
 			$deal = $records->opportunity( $refund->orderRef );
 			if ( null === $deal ) {
-				SuiteCrmFailure::refuse( 'order_ref', __( 'The order of this refund is not in SuiteCRM.', 'estasoft-erp-crm-sync-engine' ) );
+				SuiteCrmFailure::refuse( 'order_ref', __( 'The order of this refund is not in SuiteCRM.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$amount  = '' !== $refund->currency ? Amounts::decimal( $refund->amountMinor, $refund->currency ) . ' ' . $refund->currency : (string) $refund->amountMinor;
 			$name    = $refund->reference . ' ' . $amount;
@@ -521,7 +521,7 @@ final class SuiteCrmConnector extends AbstractSalesConnector {
 	 */
 	private function dealName( OrderData $order ): string {
 		if ( Text::length( $order->reference ) >= SuiteCrmRecords::NAME_MAX ) {
-			SuiteCrmFailure::refuse( 'reference', __( 'The order number is too long for the name of an opportunity.', 'estasoft-erp-crm-sync-engine' ) );
+			SuiteCrmFailure::refuse( 'reference', __( 'The order number is too long for the name of an opportunity.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return Text::limit( trim( $order->reference . ' ' . $order->fullName() ), SuiteCrmRecords::NAME_MAX )[0];
 	}
@@ -539,7 +539,7 @@ final class SuiteCrmConnector extends AbstractSalesConnector {
 	private function amountProblem( OrderData $order, array $attributes, SuiteCrmRecords $records, CrmOptions $options, string $sentId = '' ): ConnectorError|string|null {
 		$id = (string) ( $attributes['currency_id'] ?? '' );
 		if ( '' !== $sentId && '' !== $id && $id !== $sentId ) {
-			return $this->invalid( 'currency', __( 'SuiteCRM recorded the opportunity in another currency than the order.', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->invalid( 'currency', __( 'SuiteCRM recorded the opportunity in another currency than the order.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$actual = '' !== $id ? $records->currencyIso( $id ) : '';
 		if ( '' === $sentId && '' !== $actual && $actual !== $order->currency ) {
@@ -582,7 +582,7 @@ final class SuiteCrmConnector extends AbstractSalesConnector {
 			return $found;
 		}
 		if ( 'match_only' === $options->choice( 'customer_policy', array( 'match_or_create', 'match_only' ), 'match_or_create' ) ) {
-			SuiteCrmFailure::refuse( 'contact.email', __( 'No contact with this email address exists in SuiteCRM, and the connection only matches existing contacts.', 'estasoft-erp-crm-sync-engine' ) );
+			SuiteCrmFailure::refuse( 'contact.email', __( 'No contact with this email address exists in SuiteCRM, and the connection only matches existing contacts.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return $records->createContact( $contact );
 	}

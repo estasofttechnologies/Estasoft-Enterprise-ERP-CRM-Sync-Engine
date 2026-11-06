@@ -44,7 +44,7 @@ final class MyobCustomerSender {
 			return SendResult::failure( MyobErrors::noEmail( $item->entityId ) );
 		}
 		if ( '' === ( $partner['name'] ?? '' ) && '' === ( $partner['company_name'] ?? '' ) ) {
-			return SendResult::failure( MyobErrors::refused( 'partner.name', __( 'The customer name is empty.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( MyobErrors::refused( 'partner.name', __( 'The customer name is empty.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$existing = $this->customers->findByEmail( $partner['email'] );
 		if ( null !== $existing ) {

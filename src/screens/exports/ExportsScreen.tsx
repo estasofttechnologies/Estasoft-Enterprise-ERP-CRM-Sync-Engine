@@ -90,7 +90,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 					'The export file %1$s is ready, with %2$d order.',
 					'The export file %1$s is ready, with %2$d orders.',
 					file.orders,
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				file.filename,
 				file.orders
@@ -113,7 +113,10 @@ export function ExportsScreen( { id }: { id: number } ) {
 				speak(
 					sprintf(
 						/* translators: %s: file name */
-						__( 'Downloaded %s', 'estasoft-erp-crm-sync-engine' ),
+						__(
+							'Downloaded %s',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						name
 					),
 					'polite'
@@ -134,28 +137,36 @@ export function ExportsScreen( { id }: { id: number } ) {
 	const waiting = batch?.orders ?? 0;
 	const crumbs = [
 		{
-			label: __( 'Connections', 'estasoft-erp-crm-sync-engine' ),
+			label: __(
+				'Connections',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			to: '/connections',
 		},
 		{
-			label: system || __( 'Connection', 'estasoft-erp-crm-sync-engine' ),
+			label:
+				system ||
+				__( 'Connection', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			to: `/connections/${ id }`,
 		},
-		{ label: __( 'Exports', 'estasoft-erp-crm-sync-engine' ) },
+		{ label: __( 'Exports', 'estasoft-enterprise-erpcrm-sync-engine' ) },
 	];
 
 	if ( list.loading || connection.loading ) {
 		return (
 			<>
 				<PageHeader
-					title={ __( 'Exports', 'estasoft-erp-crm-sync-engine' ) }
+					title={ __(
+						'Exports',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 					breadcrumb={ crumbs }
 				/>
 				<LoadingState
 					rows={ 4 }
 					label={ __(
 						'Loading the exports',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			</>
@@ -165,7 +176,10 @@ export function ExportsScreen( { id }: { id: number } ) {
 		return (
 			<>
 				<PageHeader
-					title={ __( 'Exports', 'estasoft-erp-crm-sync-engine' ) }
+					title={ __(
+						'Exports',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 					breadcrumb={ crumbs }
 				/>
 				<ErrorState
@@ -176,7 +190,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 					} }
 					title={ __(
 						'The exports could not be loaded.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			</>
@@ -192,18 +206,21 @@ export function ExportsScreen( { id }: { id: number } ) {
 	return (
 		<>
 			<PageHeader
-				title={ __( 'Exports', 'estasoft-erp-crm-sync-engine' ) }
+				title={ __(
+					'Exports',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 				breadcrumb={ crumbs }
 				description={ __(
 					'This connection uses files. The plugin writes a file, you import it.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			/>
 
 			<Card
 				title={ __(
 					'Create an export',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				description={ [ system, connection.data.company ]
 					.filter( Boolean )
@@ -216,7 +233,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 								/* translators: %s: number of orders such as "38 orders" */
 								__(
 									'Everything since the last export: %s.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								ordersPhrase( waiting )
 							) }
@@ -225,7 +242,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 							<span className="estasoft-sync-muted">
 								{ __(
 									'The oldest has been waiting since',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }{ ' ' }
 								<DateTime value={ batch.since } kind="smart" />.
 							</span>
@@ -235,7 +252,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 					<p className="estasoft-sync-muted">
 						{ __(
 							'No orders are waiting for a file. New orders appear here as they are placed.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</p>
 				) }
@@ -244,7 +261,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 						/* translators: %s: system name */
 						__(
 							'Check %s first. Every ledger, account, tax code and item named in the file must already exist there, or the program refuses it. Making a file never sends it anywhere.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						system
 					) }
@@ -260,14 +277,14 @@ export function ExportsScreen( { id }: { id: number } ) {
 					>
 						{ __(
 							'Create export file now',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</Btn>
 					{ ! canConfigure ? (
 						<span className="estasoft-sync-muted">
 							{ __(
 								'Only an administrator can create a file.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</span>
 					) : null }
@@ -280,7 +297,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 							<Btn small onClick={ () => void create.run() }>
 								{ __(
 									'Create again',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</Btn>
 						}
@@ -297,7 +314,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 							{ createFailure.code === 'SYNC-EXP-001'
 								? __(
 										'Nothing is lost: the orders stay Queued.',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									)
 								: '' }{ ' ' }
 							{ createFailure.remedy }
@@ -314,7 +331,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 										'%1$s is ready, with %2$d order.',
 										'%1$s is ready, with %2$d orders.',
 										made.orders,
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									made.filename,
 									made.orders
@@ -328,7 +345,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 								>
 									{ __(
 										'Download',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									) }
 								</Btn>
 							</p>
@@ -341,7 +358,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 							/* translators: %s: number of orders such as "3 orders" */
 							__(
 								'%s were left out of this file. See the list below.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							ordersPhrase( madeLeftOut.length )
 						) }{ ' ' }
@@ -354,11 +371,14 @@ export function ExportsScreen( { id }: { id: number } ) {
 				<Card
 					title={ __(
 						'Orders left out of a file',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					description={ sprintf(
 						/* translators: %s: file name */
-						__( 'From %s', 'estasoft-erp-crm-sync-engine' ),
+						__(
+							'From %s',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						withLeftOut.filename
 					) }
 					flush
@@ -374,7 +394,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 										),
 										reason: __(
 											'see the reasons below',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										),
 									},
 									system
@@ -386,7 +406,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 							<p className="estasoft-sync-muted">
 								{ __(
 									'Nothing is lost: these orders are listed under Needs attention. Fix the cause, retry them there, and they go into the next file.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }{ ' ' }
 								<Link
 									to="/queue/attention"
@@ -394,7 +414,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 								>
 									{ __(
 										'Open Needs attention',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									) }
 								</Link>
 							</p>
@@ -406,7 +426,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 					>
 						caption={ __(
 							'Orders left out of the export',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						rows={ withLeftOut.left_out }
 						rowKey={ ( row ) => `${ row.order }|${ row.reason }` }
@@ -415,7 +435,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 								id: 'order',
 								header: __(
 									'Order',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								primary: true,
 								cell: ( row ) => (
@@ -428,7 +448,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 								id: 'reason',
 								header: __(
 									'Why it was left out',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								wide: true,
 								cell: ( row ) => row.reason,
@@ -441,11 +461,11 @@ export function ExportsScreen( { id }: { id: number } ) {
 			<Card
 				title={ __(
 					'Previous exports',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				description={ __(
 					'Files are deleted after 30 days.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				flush={ files.length > 0 }
 			>
@@ -465,19 +485,19 @@ export function ExportsScreen( { id }: { id: number } ) {
 					<EmptyState
 						title={ __(
 							'No exports yet',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					>
 						{ __(
 							'Press Create export file now to make the first file. Nothing is sent anywhere.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</EmptyState>
 				) : (
 					<ResponsiveTable< ExportFileInfo, string | number >
 						caption={ __(
 							'Previous exports',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						rows={ files }
 						rowKey={ ( file ) => file.id }
@@ -486,7 +506,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 								id: 'file',
 								header: __(
 									'File',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								primary: true,
 								cell: ( file ) => (
@@ -514,7 +534,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 								id: 'made',
 								header: __(
 									'Made',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								cell: ( file ) => (
 									<>
@@ -528,7 +548,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 													/* translators: %s: name of the person */
 													__(
 														'By %s',
-														'estasoft-erp-crm-sync-engine'
+														'estasoft-enterprise-erpcrm-sync-engine'
 													),
 													file.created_by
 												) }
@@ -541,7 +561,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 								id: 'contents',
 								header: __(
 									'Contents',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								cell: ( file ) => (
 									<>
@@ -553,7 +573,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 														/* translators: %s: number of orders such as "3 orders" */
 														__(
 															'%s left out',
-															'estasoft-erp-crm-sync-engine'
+															'estasoft-enterprise-erpcrm-sync-engine'
 														),
 														ordersPhrase(
 															file.left_out.length
@@ -569,7 +589,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 								id: 'expires',
 								header: __(
 									'Deleted on',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								cell: ( file ) => (
 									<DateTime
@@ -582,7 +602,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 								id: 'actions',
 								header: __(
 									'Actions',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								hideHeader: true,
 								align: 'end',
@@ -601,7 +621,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 													/* translators: %s: file name */
 													__(
 														'Download %s',
-														'estasoft-erp-crm-sync-engine'
+														'estasoft-enterprise-erpcrm-sync-engine'
 													),
 													file.filename
 												) }
@@ -611,7 +631,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 											>
 												{ __(
 													'Download',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												) }
 											</Btn>
 										) : null }
@@ -635,7 +655,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 																/* translators: 1: name of the list, 2: file name */
 																__(
 																	'Download %1$s for %2$s',
-																	'estasoft-erp-crm-sync-engine'
+																	'estasoft-enterprise-erpcrm-sync-engine'
 																),
 																attachment.name,
 																file.filename
@@ -659,7 +679,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 													/* translators: %s: file name */
 													__(
 														'Delete %s',
-														'estasoft-erp-crm-sync-engine'
+														'estasoft-enterprise-erpcrm-sync-engine'
 													),
 													file.filename
 												) }
@@ -672,7 +692,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 											>
 												{ __(
 													'Delete',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												) }
 											</Btn>
 										) : null }
@@ -698,19 +718,22 @@ export function ExportsScreen( { id }: { id: number } ) {
 			<Card
 				title={ __(
 					'How these orders look in the queue',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			>
 				<p className="estasoft-sync-actions">
 					<StateChip
 						state="queued"
-						label={ __( 'Queued', 'estasoft-erp-crm-sync-engine' ) }
+						label={ __(
+							'Queued',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						) }
 					/>
 					<StateChip
 						state="synced"
 						label={ __(
 							'Exported',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					/>
 				</p>
@@ -719,7 +742,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 						/* translators: %s: system name */
 						__(
 							'An order is Queued until the next export includes it, then Exported. Exported means the order is in a file. It does not mean %s has it: the plugin cannot see whether the program accepted the file.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						system
 					) }
@@ -729,32 +752,32 @@ export function ExportsScreen( { id }: { id: number } ) {
 			<Card
 				title={ __(
 					'Where the files are kept',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			>
 				<ul className="estasoft-sync-list">
 					<li>
 						{ __(
 							'In a folder inside your uploads folder, with a closed index file and a rule that blocks direct web access. File names are long and random. Some servers ignore those rules, so the plugin never links to a file: every download goes through this screen.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</li>
 					<li>
 						{ __(
 							'Only people with the Manage sync permission can download a file.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</li>
 					<li>
 						{ __(
 							'A file holds customer names, addresses and phone numbers. Treat it as personal data. Files are deleted after 30 days.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</li>
 					<li>
 						{ __(
 							'Nothing is uploaded to Estasoft or to any other website.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</li>
 				</ul>
@@ -767,7 +790,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 						>
 							{ __(
 								'Delete all export files now',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Btn>
 					</div>
@@ -781,7 +804,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 							/* translators: %s: system name */
 							__(
 								'Back to the %s connection',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							system
 						) }
@@ -795,17 +818,17 @@ export function ExportsScreen( { id }: { id: number } ) {
 						confirm.kind === 'one'
 							? __(
 									'Delete this export file?',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								)
 							: __(
 									'Delete all export files?',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								)
 					}
 					tone="danger"
 					confirmLabel={ __(
 						'Delete',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					onClose={ () => setConfirm( null ) }
 					onConfirm={ async () => {
@@ -822,7 +845,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 									'%d export file was deleted.',
 									'%d export files were deleted.',
 									targets.length,
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								targets.length
 							),
@@ -836,7 +859,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 									/* translators: %s: file name */
 									__(
 										'%s is removed from your website and cannot be restored. The state of the orders in the queue does not change.',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									confirm.file.filename
 								)
@@ -846,7 +869,7 @@ export function ExportsScreen( { id }: { id: number } ) {
 										'The %d file is removed from your website and cannot be restored. The state of the orders in the queue does not change.',
 										'The %d files are removed from your website and cannot be restored. The state of the orders in the queue does not change.',
 										files.length,
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									files.length
 								) }

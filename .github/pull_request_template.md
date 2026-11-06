@@ -14,7 +14,7 @@
 
 - [ ] `bin/check-all.sh` passes, or I list below what could not run and why
 - [ ] New or changed behaviour has a test; a bug fix has a test that failed before the fix
-- [ ] User-visible strings use `__()` / `_n()` with the text domain `estasoft-erp-crm-sync-engine`
+- [ ] User-visible strings use `__()` / `_n()` with the text domain `estasoft-enterprise-erpcrm-sync-engine`
 - [ ] Output is escaped late, input is sanitised early, queries use `$wpdb->prepare`, state-changing paths check a nonce and a capability
 - [ ] No secret, API key or customer data appears in a log, response, exception or test fixture
 - [ ] No telemetry, outside call, licence or upsell code, and no code downloaded at run time

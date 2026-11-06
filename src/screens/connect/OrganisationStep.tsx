@@ -80,7 +80,7 @@ export function OrganisationStep( {
 			<Busy
 				label={ __(
 					'Looking for your organisations…',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			/>
 		);
@@ -92,7 +92,10 @@ export function OrganisationStep( {
 				role="alert"
 				action={
 					<Btn small onClick={ () => void list.reload() }>
-						{ __( 'Try again', 'estasoft-erp-crm-sync-engine' ) }
+						{ __(
+							'Try again',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						) }
 					</Btn>
 				}
 			>
@@ -108,14 +111,14 @@ export function OrganisationStep( {
 		) : null;
 	}
 	const fieldLabel =
-		label ?? __( 'Organisation', 'estasoft-erp-crm-sync-engine' );
+		label ?? __( 'Organisation', 'estasoft-enterprise-erpcrm-sync-engine' );
 	return (
 		<Card
 			title={ sprintf(
 				/* translators: %s: system name */
 				__(
 					'Which %s organisation gets the orders?',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				system
 			) }
@@ -127,7 +130,10 @@ export function OrganisationStep( {
 				options={ [
 					{
 						value: '',
-						label: __( 'Choose…', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'Choose…',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 					},
 					...organisations.map( ( organisation ) => ( {
 						value: organisation.id,
@@ -136,7 +142,7 @@ export function OrganisationStep( {
 				] }
 				hint={ __(
 					'If you have more than one, pick the one that should receive these orders.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			/>
 			<div className="estasoft-sync-actions">
@@ -148,7 +154,10 @@ export function OrganisationStep( {
 				>
 					{ sprintf(
 						/* translators: %s: "Organisation" or "Company" */
-						__( 'Use this %s', 'estasoft-erp-crm-sync-engine' ),
+						__(
+							'Use this %s',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						fieldLabel.toLowerCase()
 					) }
 				</Btn>

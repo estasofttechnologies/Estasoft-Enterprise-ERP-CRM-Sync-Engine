@@ -16,46 +16,52 @@ export function odooFields(): ConnectorField[] {
 	return [
 		{
 			name: 'address',
-			label: __( 'Odoo address', 'estasoft-erp-crm-sync-engine' ),
+			label: __(
+				'Odoo address',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			secret: false,
 			required: true,
 			hint: __(
 				'The web address you use to sign in to Odoo.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			default: '',
 			type: 'url',
 		},
 		{
 			name: 'database',
-			label: __( 'Database', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'Database', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			secret: false,
 			required: true,
 			hint: __(
 				'Shown on Odoo’s sign-in page.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			default: '',
 		},
 		{
 			name: 'user',
-			label: __( 'Sync user (email)', 'estasoft-erp-crm-sync-engine' ),
+			label: __(
+				'Sync user (email)',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			secret: false,
 			required: false,
 			hint: __(
 				'A dedicated Odoo user for syncing. Odoo 17 and 18 need it with the key. Odoo 19 and later use the key alone, and this field can stay empty.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			default: '',
 		},
 		{
 			name: 'api_key',
-			label: __( 'API key', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'API key', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			secret: true,
 			required: true,
 			hint: __(
 				'Saved encrypted. It is never shown again.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			default: '',
 			type: 'password',
@@ -78,12 +84,15 @@ function standardFields( entry: SystemEntry ): ConnectorField[] {
 			{
 				...base,
 				name: 'api_key',
-				label: __( 'API key', 'estasoft-erp-crm-sync-engine' ),
+				label: __(
+					'API key',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				),
 				secret: true,
 				type: 'password',
 				hint: __(
 					'Saved encrypted. It is never shown again.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 			},
 		];
@@ -93,20 +102,26 @@ function standardFields( entry: SystemEntry ): ConnectorField[] {
 			{
 				...base,
 				name: 'client_id',
-				label: __( 'Client ID', 'estasoft-erp-crm-sync-engine' ),
+				label: __(
+					'Client ID',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				),
 				secret: false,
 				group: 'app',
 			},
 			{
 				...base,
 				name: 'client_secret',
-				label: __( 'Client secret', 'estasoft-erp-crm-sync-engine' ),
+				label: __(
+					'Client secret',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				),
 				secret: true,
 				type: 'password',
 				group: 'app',
 				hint: __(
 					'Saved encrypted. It is never shown again.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 			},
 		];
@@ -145,15 +160,15 @@ export function stepsOf( entry: SystemEntry ): string[] {
 		return [
 			__(
 				'In Odoo, open Settings, then Users, and create a user just for syncing. Give it access to Sales and Inventory.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			__(
 				'Open that user’s profile, go to Account Security, and create an API key. Odoo shows it once and asks for an end date, at most 3 months away. We remind you before it ends.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			__(
 				'The database name is on Odoo’s sign-in page. Paste the address, database, user and key below.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 		];
 	}
@@ -170,7 +185,7 @@ export function planNoteOf( entry: SystemEntry ): string {
 	if ( entry.connector === 'odoo' ) {
 		return __(
 			'Odoo Online needs the Custom plan. The free One App plan and the Standard plan do not allow outside programs. Odoo.sh and your own Odoo server have no such limit. If the key is refused with a plan message, this is the reason.',
-			'estasoft-erp-crm-sync-engine'
+			'estasoft-enterprise-erpcrm-sync-engine'
 		);
 	}
 	return entry.needs;
@@ -187,19 +202,19 @@ export function expectationsOf( entry: SystemEntry ): string[] {
 		return [
 			__(
 				'Orders become sale orders and invoices, and refunds become credit notes. Tracking numbers need the Odoo Delivery module.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			__(
 				'Odoo asks outside programs to make about one call a second, with none at the same time. The plugin keeps to that, so a large backlog empties slowly.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			__(
 				'In Saudi Arabia, the sales journal must be onboarded with ZATCA inside Odoo before invoices are posted. That is done by hand in Odoo, and cannot be undone once Production starts.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			__(
 				'Odoo 17 and 18 and Odoo 19 and later use different connection methods. The plugin detects which one you have.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 		];
 	}
@@ -210,7 +225,7 @@ export function expectationsOf( entry: SystemEntry ): string[] {
 				/* translators: %s: system name */
 				__(
 					'Orders can be sent to %s as invoices, and refunds as credit notes. Stock and tracking numbers come back only if the system offers them to read.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				entry.name
 			)
@@ -221,7 +236,7 @@ export function expectationsOf( entry: SystemEntry ): string[] {
 				/* translators: %s: system name */
 				__(
 					'Customers can become contacts in %s, and each order can show as a deal. Stock, tracking numbers and tax invoices are not part of a CRM.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				entry.name
 			)
@@ -232,7 +247,7 @@ export function expectationsOf( entry: SystemEntry ): string[] {
 				/* translators: %s: system name */
 				__(
 					'Orders, customers and refunds can be sent to %s. Stock and tracking numbers come back only if the system offers them to read.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				entry.name
 			)
@@ -241,13 +256,13 @@ export function expectationsOf( entry: SystemEntry ): string[] {
 	lines.push(
 		__(
 			'The plugin keeps to the call limits the system documents, so a busy hour is slower, not lost. Orders wait in the queue until they are sent.',
-			'estasoft-erp-crm-sync-engine'
+			'estasoft-enterprise-erpcrm-sync-engine'
 		)
 	);
 	lines.push(
 		__(
 			'Your system issues and reports tax invoices. This plugin does not sign them.',
-			'estasoft-erp-crm-sync-engine'
+			'estasoft-enterprise-erpcrm-sync-engine'
 		)
 	);
 	return lines;
@@ -268,82 +283,94 @@ export function guideTexts( shape: ConnectShape, system: string ) {
 					/* translators: %s: system name */
 					__(
 						'Step 1: create your own %s app',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					system
 				),
 				copyLabel: __(
 					'Copy these steps for my accountant',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				formTitle: __(
 					'Your app’s details',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 			};
 		case 'cloud_app':
 			return {
 				title: __(
 					'Steps for your administrators',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				copyLabel: __(
 					'Copy the steps for my administrators',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				formTitle: __(
 					'Paste the details',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 			};
 		case 'server_login':
 			return {
-				title: __( 'Before you start', 'estasoft-erp-crm-sync-engine' ),
+				title: __(
+					'Before you start',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				),
 				copyLabel: __(
 					'Copy the steps for my IT team',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				formTitle: sprintf(
 					/* translators: %s: system name */
-					__( 'Connect to %s', 'estasoft-erp-crm-sync-engine' ),
+					__(
+						'Connect to %s',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					),
 					system
 				),
 			};
 		case 'export_file':
 			return {
-				title: __( 'How it works', 'estasoft-erp-crm-sync-engine' ),
+				title: __(
+					'How it works',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				),
 				copyLabel: __(
 					'Copy these steps for my accountant',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				formTitle: __(
 					'Settings for this connection',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 			};
 		default:
 			return {
 				title: __(
 					'Where do I find these?',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				copyLabel:
 					system === 'Odoo'
 						? __(
 								'Copy these steps for your Odoo administrator',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							)
 						: sprintf(
 								/* translators: %s: system name */
 								__(
 									'Copy these steps for my %s administrator',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								system
 							),
 				formTitle: sprintf(
 					/* translators: %s: system name */
-					__( 'Connect to %s', 'estasoft-erp-crm-sync-engine' ),
+					__(
+						'Connect to %s',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					),
 					system
 				),
 			};

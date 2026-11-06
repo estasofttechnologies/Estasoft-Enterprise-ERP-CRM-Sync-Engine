@@ -16,10 +16,13 @@ import { navigate, routeTo } from '../../app/router';
 export function LatestEvents( { events }: { events: LogEntry[] } ) {
 	return (
 		<Card
-			title={ __( 'Latest events', 'estasoft-erp-crm-sync-engine' ) }
+			title={ __(
+				'Latest events',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			) }
 			description={ __(
 				'Failures and changes. Routine successes are counted, not listed.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			) }
 			flush
 		>
@@ -27,7 +30,7 @@ export function LatestEvents( { events }: { events: LogEntry[] } ) {
 				<p className="estasoft-sync-pad estasoft-sync-muted">
 					{ __(
 						'Nothing to report in the last hour.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</p>
 			) : (
@@ -64,11 +67,14 @@ export function LatestEvents( { events }: { events: LogEntry[] } ) {
 				<span className="estasoft-sync-muted">
 					{ __(
 						'The latest events from the last hour',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</span>
 				<Btn small onClick={ () => navigate( routeTo( '/logs' ) ) }>
-					{ __( 'Open the log', 'estasoft-erp-crm-sync-engine' ) }
+					{ __(
+						'Open the log',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 				</Btn>
 			</div>
 		</Card>

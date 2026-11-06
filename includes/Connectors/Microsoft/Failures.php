@@ -78,7 +78,7 @@ final class Failures {
 	 * @param string $kind   Entity type word.
 	 */
 	public static function unsupported( string $system, string $kind ): ConnectorError {
-		return self::invalid( $system, $kind, __( 'This connector does not send this kind of item.', 'estasoft-erp-crm-sync-engine' ), 'unsupported entity' );
+		return self::invalid( $system, $kind, __( 'This connector does not send this kind of item.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'unsupported entity' );
 	}
 
 	/**
@@ -95,7 +95,7 @@ final class Failures {
 			'total',
 			sprintf(
 				/* translators: 1: the shop's total, 2: the other system's total, 3: what to check. */
-				__( 'The shop total is %1$s but the total in the system is %2$s. %3$s', 'estasoft-erp-crm-sync-engine' ),
+				__( 'The shop total is %1$s but the total in the system is %2$s. %3$s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$expected,
 				$found,
 				$hint
@@ -117,7 +117,7 @@ final class Failures {
 			'currency',
 			sprintf(
 				/* translators: 1: currency code of the order, 2: currency code the system used. */
-				__( 'The order is in %1$s but the document came back in %2$s.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'The order is in %1$s but the document came back in %2$s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$expected,
 				'' !== $found ? $found : '?'
 			),

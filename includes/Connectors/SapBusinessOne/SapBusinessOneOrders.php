@@ -114,7 +114,7 @@ final class SapBusinessOneOrders {
 			$created = $this->find( $data->reference );
 		}
 		if ( null === $created ) {
-			$problem = Problem::validation( $this->system, 'Orders', __( 'SAP accepted the order but it cannot be read back.', 'estasoft-erp-crm-sync-engine' ) );
+			$problem = Problem::validation( $this->system, 'Orders', __( 'SAP accepted the order but it cannot be read back.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			throw new ApiException( $problem ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 		}
 		return $created;
@@ -178,7 +178,7 @@ final class SapBusinessOneOrders {
 				'DocCurrency',
 				sprintf(
 					/* translators: 1: currency in SAP, 2: currency of the shop. */
-					__( 'SAP holds the document in %1$s but the shop charged in %2$s.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'SAP holds the document in %1$s but the shop charged in %2$s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$actual,
 					$currency
 				)
@@ -337,9 +337,9 @@ final class SapBusinessOneOrders {
 	 */
 	private function chargeLine( Charge $charge, OrderData $data ): array {
 		$option = match ( $charge->kind ) {
-			'shipping' => array( 'shipping_item', $this->options->shippingItem(), __( 'shipping', 'estasoft-erp-crm-sync-engine' ) ),
-			'fee'      => array( 'fee_item', $this->options->feeItem(), __( 'fee', 'estasoft-erp-crm-sync-engine' ) ),
-			default    => array( 'discount_item', $this->options->discountItem(), __( 'discount', 'estasoft-erp-crm-sync-engine' ) ),
+			'shipping' => array( 'shipping_item', $this->options->shippingItem(), __( 'shipping', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			'fee'      => array( 'fee_item', $this->options->feeItem(), __( 'fee', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			default    => array( 'discount_item', $this->options->discountItem(), __( 'discount', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 		};
 		if ( '' === $option[1] ) {
 			$problem = Problem::validation(
@@ -347,7 +347,7 @@ final class SapBusinessOneOrders {
 				$option[0],
 				sprintf(
 					/* translators: %s: shipping, fee or discount. */
-					__( 'The order has a %s amount but the connection has no item for it. Enter the item code in the connection options.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The order has a %s amount but the connection has no item for it. Enter the item code in the connection options.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$option[2]
 				)
 			);

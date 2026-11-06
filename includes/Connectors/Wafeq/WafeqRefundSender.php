@@ -91,12 +91,12 @@ final class WafeqRefundSender {
 		}
 		$invoices = $this->docs->findInvoices( $api, $parsed->orderRef );
 		if ( array() === $invoices ) {
-			return SendResult::failure( $this->refused( 'order', __( 'The order of this refund is not in Wafeq.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( $this->refused( 'order', __( 'The order of this refund is not in Wafeq.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$invoice  = $this->docs->invoice( $api, $invoices[0]->id() );
 		$currency = '' !== $invoice->currency() ? $invoice->currency() : $parsed->currency;
 		if ( '' === $currency ) {
-			return SendResult::failure( $this->refused( 'currency', __( 'Wafeq did not report the currency of the invoice and the refund has none.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( $this->refused( 'currency', __( 'Wafeq did not report the currency of the invoice and the refund has none.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$exponent  = $this->amounts->exponent( $currency );
 		$reference = $this->ids->reference( $item );
@@ -121,7 +121,7 @@ final class WafeqRefundSender {
 			$this->docs->patchCreditNote( $api, $record->id(), array( 'status' => 'FINALIZED' ) );
 			$record = $this->docs->creditNote( $api, $record->id() );
 			if ( ! $record->isFinalized() ) {
-				return SendResult::failure( $this->refused( 'status', __( 'Wafeq did not finalize the credit note.', 'estasoft-erp-crm-sync-engine' ) ) );
+				return SendResult::failure( $this->refused( 'status', __( 'Wafeq did not finalize the credit note.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 			}
 		}
 
@@ -164,13 +164,13 @@ final class WafeqRefundSender {
 		$note = '' !== $parsed->reason
 			? sprintf(
 				/* translators: 1: order reference, 2: refund reason. */
-				__( 'Refund of %1$s: %2$s', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Refund of %1$s: %2$s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$parsed->orderRef,
 				$parsed->reason
 			)
 			: sprintf(
 				/* translators: %s: order reference. */
-				__( 'Refund of %s', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Refund of %s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$parsed->orderRef
 			);
 		$body = array(
@@ -221,7 +221,7 @@ final class WafeqRefundSender {
 			}
 			$rows[] = array(
 				'item'        => $item,
-				'name'        => '' !== (string) $line['name'] ? (string) $line['name'] : __( 'Refund', 'estasoft-erp-crm-sync-engine' ),
+				'name'        => '' !== (string) $line['name'] ? (string) $line['name'] : __( 'Refund', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'quantity'    => (float) $line['quantity'] > 0.0 ? (float) $line['quantity'] : 1.0,
 				'total_minor' => (int) $line['amount_minor'],
 				'tax_code'    => '',
@@ -229,13 +229,13 @@ final class WafeqRefundSender {
 			);
 		}
 		if ( $parsed->shippingMinor > 0 ) {
-			$rows[] = $this->plain( __( 'Shipping', 'estasoft-erp-crm-sync-engine' ), $parsed->shippingMinor );
+			$rows[] = $this->plain( __( 'Shipping', 'estasoft-enterprise-erpcrm-sync-engine' ), $parsed->shippingMinor );
 		}
 		if ( $parsed->otherMinor > 0 ) {
-			$rows[] = $this->plain( __( 'Other refund', 'estasoft-erp-crm-sync-engine' ), $parsed->otherMinor );
+			$rows[] = $this->plain( __( 'Other refund', 'estasoft-enterprise-erpcrm-sync-engine' ), $parsed->otherMinor );
 		}
 		if ( array() === $rows ) {
-			$rows[] = $this->plain( __( 'Refund', 'estasoft-erp-crm-sync-engine' ), $parsed->expectedTotal() );
+			$rows[] = $this->plain( __( 'Refund', 'estasoft-enterprise-erpcrm-sync-engine' ), $parsed->expectedTotal() );
 		}
 		return $rows;
 	}
@@ -273,12 +273,12 @@ final class WafeqRefundSender {
 	 */
 	private function apply( ApiClient $api, Item $item, WafeqRecord $invoice, WafeqRecord $note, int $exponent, WafeqRefundPayload $parsed, array &$warnings ): void {
 		if ( ! $invoice->isFinalized() ) {
-			$warnings[] = __( 'The credit note was not applied because the invoice is not posted.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'The credit note was not applied because the invoice is not posted.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			return;
 		}
 		$applied = $invoice->appliedCreditNotes();
 		if ( null === $applied ) {
-			$warnings[] = __( 'The credit note was not applied because Wafeq did not show which credit notes the invoice already has.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'The credit note was not applied because Wafeq did not show which credit notes the invoice already has.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			return;
 		}
 		if ( isset( $applied[ $note->id() ] ) ) {
@@ -294,7 +294,7 @@ final class WafeqRefundSender {
 			if ( ErrorCode::Val002 !== $exception->error()->code ) {
 				throw $exception;
 			}
-			$warnings[] = __( 'Wafeq did not accept the application of the credit note to the invoice. It is posted and can be applied in Wafeq.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'Wafeq did not accept the application of the credit note to the invoice. It is posted and can be applied in Wafeq.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 	}
 

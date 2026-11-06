@@ -102,7 +102,7 @@ final class FoCustomers {
 		if ( 'fixed' === $options->customerPolicy() ) {
 			$row = $this->byAccount( $options->fixedCustomer() );
 			return null === $row
-				? Failures::invalid( $this->system, 'fixed_customer', __( 'The fixed customer account does not exist in this legal entity.', 'estasoft-erp-crm-sync-engine' ), 'fixed customer missing' )
+				? Failures::invalid( $this->system, 'fixed_customer', __( 'The fixed customer account does not exist in this legal entity.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'fixed customer missing' )
 				: array(
 					'row'     => $row,
 					'created' => false,
@@ -120,7 +120,7 @@ final class FoCustomers {
 			);
 		}
 		if ( 'match_only' === $options->customerPolicy() ) {
-			return Failures::invalid( $this->system, 'partner.email', __( 'No customer has this email in Finance and Operations, and the connection only uses existing customers.', 'estasoft-erp-crm-sync-engine' ), 'customer not found' );
+			return Failures::invalid( $this->system, 'partner.email', __( 'No customer has this email in Finance and Operations, and the connection only uses existing customers.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'customer not found' );
 		}
 		$created = $this->create( $order->partner, $order->personName(), $order->currency, $options );
 		return $created instanceof ConnectorError ? $created : array(
@@ -142,7 +142,7 @@ final class FoCustomers {
 	 */
 	public function create( array $partner, string $name, string $currency, FoOptions $options ): array|ConnectorError {
 		if ( '' === $options->customerGroup() ) {
-			return Failures::invalid( $this->system, 'customer_group', __( 'Finance and Operations needs a customer group for a new customer. Set the option customer_group, or match existing customers only.', 'estasoft-erp-crm-sync-engine' ), 'customer group missing' );
+			return Failures::invalid( $this->system, 'customer_group', __( 'Finance and Operations needs a customer group for a new customer. Set the option customer_group, or match existing customers only.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'customer group missing' );
 		}
 		$body = array(
 			'CustomerGroupId'     => $options->customerGroup(),

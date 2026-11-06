@@ -44,7 +44,7 @@ final class QuickBooksCustomerSender {
 			return SendResult::failure( QuickBooksErrors::noEmail( $item->entityId ) );
 		}
 		if ( '' === ( $partner['name'] ?? '' ) && '' === ( $partner['company_name'] ?? '' ) ) {
-			return SendResult::failure( QuickBooksErrors::refused( 'partner.name', __( 'The customer name is empty.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( QuickBooksErrors::refused( 'partner.name', __( 'The customer name is empty.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$existing = $this->customers->findByEmail( $partner['email'] );
 		if ( null !== $existing ) {

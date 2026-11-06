@@ -269,7 +269,7 @@ final class AcumaticaOrderSender {
 		$stored = $this->client->put( 'SalesOrder', $body, array( '$expand' => 'Details' ) );
 		$order  = $this->flat( $stored );
 		if ( '' === $order['nbr'] ) {
-			return Problems::refused( $this->system, 'sales_order', __( 'Acumatica did not return the new order.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $this->system, 'sales_order', __( 'Acumatica did not return the new order.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( '' === $order['status'] ) {
 			$order['status'] = 'Hold';
@@ -285,21 +285,21 @@ final class AcumaticaOrderSender {
 	 */
 	private function precheck( OrderPayload $payload ): ?ConnectorError {
 		if ( '' === $payload->currency ) {
-			return Problems::refused( $this->system, 'currency', __( 'The order has no currency.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $this->system, 'currency', __( 'The order has no currency.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( Text::exceeds( $payload->clientRef, self::REF_MAX ) ) {
-			return Problems::refused( $this->system, 'client_ref', __( 'The order reference is longer than the Customer Order field of Acumatica takes.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $this->system, 'client_ref', __( 'The order reference is longer than the Customer Order field of Acumatica takes.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( $payload->pricesIncludeTax ) {
 			return Problems::refused(
 				$this->system,
 				'prices_include_tax',
-				__( 'Acumatica works out tax itself from the customer and the tax category, and this connector sends prices without tax. Set the shop to show prices without tax in the mapping.', 'estasoft-erp-crm-sync-engine' )
+				__( 'Acumatica works out tax itself from the customer and the tax category, and this connector sends prices without tax. Set the shop to show prices without tax in the mapping.', 'estasoft-enterprise-erpcrm-sync-engine' )
 			);
 		}
 		foreach ( $payload->lines as $line ) {
 			if ( is_array( $line['tax'] ?? null ) && count( $line['tax'] ) > 1 ) {
-				return Problems::refused( $this->system, 'order_line[].tax', __( 'A line in Acumatica has one tax category. This order has a line with several tax codes.', 'estasoft-erp-crm-sync-engine' ) );
+				return Problems::refused( $this->system, 'order_line[].tax', __( 'A line in Acumatica has one tax category. This order has a line with several tax codes.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 		}
 		foreach ( $payload->extras as $row ) {
@@ -310,7 +310,7 @@ final class AcumaticaOrderSender {
 					$option,
 					sprintf(
 						/* translators: %s: option name. */
-						__( 'The order has a shipping, fee or discount amount, so the connection settings need the inventory ID in "%s".', 'estasoft-erp-crm-sync-engine' ),
+						__( 'The order has a shipping, fee or discount amount, so the connection settings need the inventory ID in "%s".', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$option
 					)
 				);
@@ -378,7 +378,7 @@ final class AcumaticaOrderSender {
 				'currency',
 				sprintf(
 					/* translators: 1: order number in Acumatica, 2: currency the order has there, 3: currency of the shop. */
-					__( 'Order %1$s came back in %2$s but the shop order is in %3$s. It stays on hold in Acumatica; cancel it there and check the currency settings of the customer.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Order %1$s came back in %2$s but the shop order is in %3$s. It stays on hold in Acumatica; cancel it there and check the currency settings of the customer.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$order['nbr'],
 					'' !== $order['currency'] ? $order['currency'] : '?',
 					$payload->currency
@@ -392,7 +392,7 @@ final class AcumaticaOrderSender {
 			return null;
 		}
 		if ( $check->isStrict() ) {
-			return $check->error( $diff, __( 'The order stays on hold in Acumatica. Cancel it there after fixing the tax setup; the next try makes a new one.', 'estasoft-erp-crm-sync-engine' ) );
+			return $check->error( $diff, __( 'The order stays on hold in Acumatica. Cancel it there after fixing the tax setup; the next try makes a new one.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$warnings[] = $diff['message'];
 		return null;

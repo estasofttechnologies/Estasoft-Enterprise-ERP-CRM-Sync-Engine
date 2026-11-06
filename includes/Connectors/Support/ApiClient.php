@@ -221,8 +221,8 @@ final class ApiClient {
 					ErrorCode::Val002,
 					array(
 						'system' => $this->system,
-						'field'  => __( 'the answer', 'estasoft-erp-crm-sync-engine' ),
-						'reason' => __( 'The answer was larger than 5 MB. Narrow the request.', 'estasoft-erp-crm-sync-engine' ),
+						'field'  => __( 'the answer', 'estasoft-enterprise-erpcrm-sync-engine' ),
+						'reason' => __( 'The answer was larger than 5 MB. Narrow the request.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					),
 					$raw->status,
 					null,
@@ -398,8 +398,8 @@ final class ApiClient {
 					ErrorCode::Val002,
 					array(
 						'system' => $this->system,
-						'field'  => __( 'the request', 'estasoft-erp-crm-sync-engine' ),
-						'reason' => __( 'The data could not be encoded as JSON.', 'estasoft-erp-crm-sync-engine' ),
+						'field'  => __( 'the request', 'estasoft-enterprise-erpcrm-sync-engine' ),
+						'reason' => __( 'The data could not be encoded as JSON.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					),
 					null,
 					null,

@@ -64,13 +64,13 @@ export function Routes( { route }: { route: RouteState } ) {
 				<PageHeader
 					title={ __(
 						'ESTASOFT SYNC',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 				<Callout tone="info">
 					{ __(
 						'Your account does not have access to ESTASOFT SYNC. Ask an administrator to give you the “View and operate” permission.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</Callout>
 			</>

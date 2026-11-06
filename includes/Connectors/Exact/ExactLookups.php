@@ -211,7 +211,7 @@ final class ExactLookups {
 		}
 		$code = $this->pickJournal( 20, $wanted );
 		if ( '' === $code ) {
-			ExactFailure::refuse( 'journal', __( 'No sales journal was found in Exact Online. Set the journal in the connection options.', 'estasoft-erp-crm-sync-engine' ) );
+			ExactFailure::refuse( 'journal', __( 'No sales journal was found in Exact Online. Set the journal in the connection options.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$this->journals[ $kind ] = $code;
 		return $code;

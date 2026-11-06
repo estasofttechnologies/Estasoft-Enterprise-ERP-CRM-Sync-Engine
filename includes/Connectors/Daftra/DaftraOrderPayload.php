@@ -81,7 +81,7 @@ final class DaftraOrderPayload {
 			);
 		}
 		if ( '' === $customer['name'] ) {
-			return self::refused( 'customer.name', __( 'The customer name is empty.', 'estasoft-erp-crm-sync-engine' ) );
+			return self::refused( 'customer.name', __( 'The customer name is empty.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 
 		$lines = array();
@@ -93,7 +93,7 @@ final class DaftraOrderPayload {
 			$lines[] = $line;
 		}
 		if ( array() === $lines ) {
-			return self::refused( 'lines', __( 'The order has no product lines.', 'estasoft-erp-crm-sync-engine' ) );
+			return self::refused( 'lines', __( 'The order has no product lines.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 
 		$extras   = array();
@@ -103,7 +103,7 @@ final class DaftraOrderPayload {
 			$name     = DaftraPayloadReader::text( $shipping['name'] ?? '' );
 			$extras[] = array(
 				'kind'        => 'shipping',
-				'name'        => '' !== $name ? $name : __( 'Shipping', 'estasoft-erp-crm-sync-engine' ),
+				'name'        => '' !== $name ? $name : __( 'Shipping', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'quantity'    => 1.0,
 				'total_minor' => $ship,
 				'tax_code'    => DaftraPayloadReader::taxCode( $shipping['tax_code'] ?? '' ),
@@ -118,7 +118,7 @@ final class DaftraOrderPayload {
 			$name     = DaftraPayloadReader::text( $fee['name'] ?? '' );
 			$extras[] = array(
 				'kind'        => 'fee',
-				'name'        => '' !== $name ? $name : __( 'Fee', 'estasoft-erp-crm-sync-engine' ),
+				'name'        => '' !== $name ? $name : __( 'Fee', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'quantity'    => 1.0,
 				'total_minor' => $total,
 				'tax_code'    => DaftraPayloadReader::taxCode( $fee['tax_code'] ?? '' ),
@@ -207,7 +207,7 @@ final class DaftraOrderPayload {
 				'lines[].quantity',
 				sprintf(
 					/* translators: %d: line number. */
-					__( 'Line %d has no quantity.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Line %d has no quantity.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$number
 				)
 			);
@@ -218,7 +218,7 @@ final class DaftraOrderPayload {
 				'lines[].total',
 				sprintf(
 					/* translators: %d: line number. */
-					__( 'Line %d has no amount.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Line %d has no amount.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$number
 				)
 			);

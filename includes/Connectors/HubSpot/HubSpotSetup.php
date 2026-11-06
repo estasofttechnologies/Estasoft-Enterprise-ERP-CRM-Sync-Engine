@@ -52,8 +52,8 @@ final class HubSpotSetup {
 			'deals',
 			array(
 				'name'           => self::PROPERTY,
-				'label'          => __( 'WooCommerce order reference', 'estasoft-erp-crm-sync-engine' ),
-				'description'    => __( 'The order number the WooCommerce sync found this deal by. Please leave it as it is.', 'estasoft-erp-crm-sync-engine' ),
+				'label'          => __( 'WooCommerce order reference', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				'description'    => __( 'The order number the WooCommerce sync found this deal by. Please leave it as it is.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'type'           => 'string',
 				'fieldType'      => 'text',
 				'groupName'      => 'dealinformation',

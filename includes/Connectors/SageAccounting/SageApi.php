@@ -135,7 +135,7 @@ final class SageApi {
 		if ( isset( $data['id'] ) && is_scalar( $data['id'] ) ) {
 			return $data;
 		}
-		$failure = SageErrors::exception( SageErrors::refused( $what, __( 'Sage answered without the record.', 'estasoft-erp-crm-sync-engine' ), $response->status() ), $response );
+		$failure = SageErrors::exception( SageErrors::refused( $what, __( 'Sage answered without the record.', 'estasoft-enterprise-erpcrm-sync-engine' ), $response->status() ), $response );
 		throw $failure;
 	}
 }

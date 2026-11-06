@@ -73,7 +73,7 @@ final class SupportReportBuilder {
 			'ESTASOFT SYNC',
 			sprintf(
 				/* translators: %s: date and time in UTC. */
-				__( 'Support report, %s UTC', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Support report, %s UTC', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$now->setTimezone( new \DateTimeZone( 'UTC' ) )->format( 'Y-m-d H:i' )
 			),
 			'',
@@ -98,12 +98,12 @@ final class SupportReportBuilder {
 	private function versions(): array {
 		$woo = $this->environment->wooVersion();
 		return array(
-			__( 'Versions', 'estasoft-erp-crm-sync-engine' ),
-			'  ' . __( 'Plugin', 'estasoft-erp-crm-sync-engine' ) . ': ' . $this->environment->pluginVersion(),
+			__( 'Versions', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'  ' . __( 'Plugin', 'estasoft-enterprise-erpcrm-sync-engine' ) . ': ' . $this->environment->pluginVersion(),
 			'  WordPress: ' . $this->environment->wpVersion(),
-			'  WooCommerce: ' . ( '' === $woo ? __( 'not active', 'estasoft-erp-crm-sync-engine' ) : $woo ),
+			'  WooCommerce: ' . ( '' === $woo ? __( 'not active', 'estasoft-enterprise-erpcrm-sync-engine' ) : $woo ),
 			'  PHP: ' . $this->environment->phpVersion(),
-			'  ' . __( 'Database', 'estasoft-erp-crm-sync-engine' ) . ': ' . $this->environment->databaseVersion(),
+			'  ' . __( 'Database', 'estasoft-enterprise-erpcrm-sync-engine' ) . ': ' . $this->environment->databaseVersion(),
 			'',
 		);
 	}
@@ -116,13 +116,13 @@ final class SupportReportBuilder {
 	private function runtime(): array {
 		$zone = $this->environment->timezone()->getName();
 		return array(
-			__( 'Runtime', 'estasoft-erp-crm-sync-engine' ),
-			'  ' . __( 'Memory limit', 'estasoft-erp-crm-sync-engine' ) . ': ' . $this->environment->memoryLimit(),
-			'  ' . __( 'Background tasks', 'estasoft-erp-crm-sync-engine' ) . ': ' . ( ( $this->usesActionScheduler )() ? 'Action Scheduler' : 'WP-Cron' )
-				. ', ' . ( $this->environment->cronRunsOnVisits() ? __( 'on site visits', 'estasoft-erp-crm-sync-engine' ) : __( 'real cron job', 'estasoft-erp-crm-sync-engine' ) ),
-			'  ' . __( 'Order storage', 'estasoft-erp-crm-sync-engine' ) . ': ' . ( $this->environment->hposEnabled() ? 'HPOS' : __( 'posts', 'estasoft-erp-crm-sync-engine' ) ),
-			'  ' . __( 'Store', 'estasoft-erp-crm-sync-engine' ) . ': ' . $zone . ', ' . $this->environment->currency() . ' (' . $this->environment->currencyDecimals() . ' ' . __( 'decimals', 'estasoft-erp-crm-sync-engine' ) . ')',
-			'  ' . __( 'Encryption key', 'estasoft-erp-crm-sync-engine' ) . ': ' . ( $this->box->keyAvailable() ? __( 'present', 'estasoft-erp-crm-sync-engine' ) : __( 'missing', 'estasoft-erp-crm-sync-engine' ) ),
+			__( 'Runtime', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'  ' . __( 'Memory limit', 'estasoft-enterprise-erpcrm-sync-engine' ) . ': ' . $this->environment->memoryLimit(),
+			'  ' . __( 'Background tasks', 'estasoft-enterprise-erpcrm-sync-engine' ) . ': ' . ( ( $this->usesActionScheduler )() ? 'Action Scheduler' : 'WP-Cron' )
+				. ', ' . ( $this->environment->cronRunsOnVisits() ? __( 'on site visits', 'estasoft-enterprise-erpcrm-sync-engine' ) : __( 'real cron job', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			'  ' . __( 'Order storage', 'estasoft-enterprise-erpcrm-sync-engine' ) . ': ' . ( $this->environment->hposEnabled() ? 'HPOS' : __( 'posts', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			'  ' . __( 'Store', 'estasoft-enterprise-erpcrm-sync-engine' ) . ': ' . $zone . ', ' . $this->environment->currency() . ' (' . $this->environment->currencyDecimals() . ' ' . __( 'decimals', 'estasoft-enterprise-erpcrm-sync-engine' ) . ')',
+			'  ' . __( 'Encryption key', 'estasoft-enterprise-erpcrm-sync-engine' ) . ': ' . ( $this->box->keyAvailable() ? __( 'present', 'estasoft-enterprise-erpcrm-sync-engine' ) : __( 'missing', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			'',
 		);
 	}
@@ -133,16 +133,16 @@ final class SupportReportBuilder {
 	 * @return array<int,string>
 	 */
 	private function connectionLines(): array {
-		$lines = array( __( 'Connections', 'estasoft-erp-crm-sync-engine' ) );
+		$lines = array( __( 'Connections', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		$all   = $this->connections->all();
 		if ( array() === $all ) {
-			$lines[] = '  ' . __( 'None', 'estasoft-erp-crm-sync-engine' );
+			$lines[] = '  ' . __( 'None', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		foreach ( $all as $connection ) {
 			$host    = (string) wp_parse_url( (string) $connection['address'], PHP_URL_HOST );
 			$lines[] = sprintf(
 				/* translators: 1: connector id, 2: status, 3: system version, 4: host name, 5: failures in a row, 6: last success, 7: last failure. */
-				__( '  %1$s: %2$s, version %3$s, host %4$s, %5$d failures in a row, last success %6$s, last failure %7$s', 'estasoft-erp-crm-sync-engine' ),
+				__( '  %1$s: %2$s, version %3$s, host %4$s, %5$d failures in a row, last success %6$s, last failure %7$s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				(string) $connection['connector'],
 				(string) $connection['status'],
 				'' === (string) $connection['version'] ? '-' : (string) $connection['version'],
@@ -169,11 +169,11 @@ final class SupportReportBuilder {
 			$parts[] = $state . ' ' . $n;
 		}
 		return array(
-			__( 'Queue', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Queue', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			'  ' . implode( ', ', $parts ),
 			'  ' . sprintf(
 				/* translators: %d: number of items built in shadow mode. */
-				__( 'Shadow items: %d', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Shadow items: %d', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$shadow
 			),
 			'',
@@ -187,16 +187,16 @@ final class SupportReportBuilder {
 	 */
 	private function readinessLines(): array {
 		$last  = $this->readiness->last();
-		$lines = array( __( 'Readiness', 'estasoft-erp-crm-sync-engine' ) );
+		$lines = array( __( 'Readiness', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		if ( array() === $last['checks'] ) {
-			$lines[] = '  ' . __( 'Not checked yet', 'estasoft-erp-crm-sync-engine' );
+			$lines[] = '  ' . __( 'Not checked yet', 'estasoft-enterprise-erpcrm-sync-engine' );
 			$lines[] = '';
 			return $lines;
 		}
 		$counts  = array_count_values( array_column( $last['checks'], 'status' ) );
 		$lines[] = '  ' . sprintf(
 			/* translators: 1: passed, 2: worth fixing, 3: needs fixing. */
-			__( '%1$d passed, %2$d worth fixing, %3$d need fixing', 'estasoft-erp-crm-sync-engine' ),
+			__( '%1$d passed, %2$d worth fixing, %3$d need fixing', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			$counts['passed'] ?? 0,
 			$counts['worth_fixing'] ?? 0,
 			$counts['needs_fixing'] ?? 0
@@ -217,10 +217,10 @@ final class SupportReportBuilder {
 	 * @return array<int,string>
 	 */
 	private function errorLines( bool $withOrderNumbers ): array {
-		$lines   = array( sprintf( /* translators: %d: number of errors listed. */ __( 'Last %d errors', 'estasoft-erp-crm-sync-engine' ), self::ERRORS ) );
+		$lines   = array( sprintf( /* translators: %d: number of errors listed. */ __( 'Last %d errors', 'estasoft-enterprise-erpcrm-sync-engine' ), self::ERRORS ) );
 		$entries = $this->logs->query( new LogQuery( 'error', null, null, null, null, 1, self::ERRORS ) )->items;
 		if ( array() === $entries ) {
-			$lines[] = '  ' . __( 'None', 'estasoft-erp-crm-sync-engine' );
+			$lines[] = '  ' . __( 'None', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		foreach ( $entries as $entry ) {
 			$ref     = $withOrderNumbers && ! empty( $entry['entity_ref'] ) ? ' ' . $this->redactor->message( (string) $entry['entity_ref'], true ) : '';

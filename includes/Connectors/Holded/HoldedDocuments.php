@@ -161,7 +161,7 @@ final class HoldedDocuments {
 				array(
 					'system' => HoldedConnector::LABEL,
 					'field'  => $type,
-					'reason' => __( 'Holded did not return the id of the new document.', 'estasoft-erp-crm-sync-engine' ),
+					'reason' => __( 'Holded did not return the id of the new document.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				null,
 				null,
@@ -207,7 +207,7 @@ final class HoldedDocuments {
 			array(
 				'system' => HoldedConnector::LABEL,
 				'field'  => $type,
-				'reason' => __( 'Holded lists documents without their notes and too many documents are dated around this one to check each of them.', 'estasoft-erp-crm-sync-engine' ),
+				'reason' => __( 'Holded lists documents without their notes and too many documents are dated around this one to check each of them.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			),
 			null,
 			null,

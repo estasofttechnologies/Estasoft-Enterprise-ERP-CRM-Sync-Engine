@@ -62,7 +62,7 @@ final class IdempotencyCache {
 		if ( strlen( $header ) > self::MAX_KEY_LENGTH || 1 !== preg_match( '/^[A-Za-z0-9_.:\-]+$/', $header ) ) {
 			throw new ApiException(
 				'estasoft_sync_bad_idempotency_key',
-				esc_html__( 'The Idempotency-Key header must be up to 128 letters, digits, dots, colons, dashes or underscores.', 'estasoft-erp-crm-sync-engine' ),
+				esc_html__( 'The Idempotency-Key header must be up to 128 letters, digits, dots, colons, dashes or underscores.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				400
 			);
 		}
@@ -91,7 +91,7 @@ final class IdempotencyCache {
 		if ( ! hash_equals( (string) $stored['fingerprint'], $this->fingerprint( $body, $query, $routeParams ) ) ) {
 			throw new ApiException(
 				'estasoft_sync_idempotency_conflict',
-				esc_html__( 'This Idempotency-Key was already used for a different request. Use a new key.', 'estasoft-erp-crm-sync-engine' ),
+				esc_html__( 'This Idempotency-Key was already used for a different request. Use a new key.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				409
 			);
 		}

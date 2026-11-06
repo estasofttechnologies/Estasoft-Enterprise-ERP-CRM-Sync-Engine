@@ -146,7 +146,7 @@ final class HostPolicy {
 					array(
 						'system' => $system,
 						'field'  => 'address',
-						'reason' => __( $reason, 'estasoft-erp-crm-sync-engine' ), // phpcs:ignore WordPress.WP.I18n.NonSingularStringLiteralText -- a fixed list of reasons above.
+						'reason' => __( $reason, 'estasoft-enterprise-erpcrm-sync-engine' ), // phpcs:ignore WordPress.WP.I18n.NonSingularStringLiteralText -- a fixed list of reasons above.
 					),
 					null,
 					null,
@@ -179,7 +179,7 @@ final class HostPolicy {
 				array(
 					'system' => $system,
 					'field'  => 'address',
-					'reason' => __( 'The system sent a link to a different server than the one this connection uses.', 'estasoft-erp-crm-sync-engine' ),
+					'reason' => __( 'The system sent a link to a different server than the one this connection uses.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				null,
 				null,

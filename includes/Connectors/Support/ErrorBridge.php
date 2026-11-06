@@ -41,7 +41,7 @@ final class ErrorBridge {
 				'field'  => 'connector',
 				'reason' => sprintf(
 					/* translators: %s: PHP error class name. */
-					__( 'The connector stopped unexpectedly (%s).', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The connector stopped unexpectedly (%s).', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					( new \ReflectionClass( $throwable ) )->getShortName()
 				),
 			),

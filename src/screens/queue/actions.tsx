@@ -57,17 +57,17 @@ export function unavailableReason( kind: QueueActionKind ): string {
 		case 'retry':
 			return __(
 				'Retry needs at least one failed or retrying order in the selection.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 		case 'skip':
 			return __(
 				'Skip needs at least one queued, retrying or failed order in the selection.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 		default:
 			return __(
 				'Restore needs at least one skipped order in the selection.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 	}
 }
@@ -113,16 +113,16 @@ export function useQueueActions( onChanged: () => void ): QueueActions {
 				kind === 'retry'
 					? __(
 							'No order was sent back to the queue. Only a failed or retrying order can be retried, and these may have changed since the list was loaded.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						)
 					: kind === 'skip'
 						? __(
 								'No order was skipped. An order that has already finished cannot be skipped.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							)
 						: __(
 								'No order was restored. Only a skipped order can be restored.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							);
 		} else if ( left > 0 ) {
 			text =
@@ -133,7 +133,7 @@ export function useQueueActions( onChanged: () => void ): QueueActions {
 								'%1$d order was sent back to the queue. %2$d more could not be sent back, because only a failed or retrying order can be.',
 								'%1$d orders were sent back to the queue. %2$d more could not be sent back, because only a failed or retrying order can be.',
 								done,
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							done,
 							left
@@ -145,7 +145,7 @@ export function useQueueActions( onChanged: () => void ): QueueActions {
 									'%1$d order skipped. %2$d more could not be skipped, because an order that has already finished cannot be.',
 									'%1$d orders skipped. %2$d more could not be skipped, because an order that has already finished cannot be.',
 									done,
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								done,
 								left
@@ -156,7 +156,7 @@ export function useQueueActions( onChanged: () => void ): QueueActions {
 									'%1$d order was restored. %2$d more could not be restored, because only a skipped order can be.',
 									'%1$d orders were restored. %2$d more could not be restored, because only a skipped order can be.',
 									done,
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								done,
 								left
@@ -168,7 +168,7 @@ export function useQueueActions( onChanged: () => void ): QueueActions {
 					'%d order was sent back to the queue. It will be sent next.',
 					'%d orders were sent back to the queue. They will be sent oldest first, two at a time.',
 					done,
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				done
 			);
@@ -179,7 +179,7 @@ export function useQueueActions( onChanged: () => void ): QueueActions {
 					'%d order skipped. It is in the Skipped list and is not sent.',
 					'%d orders skipped. They are in the Skipped list and are not sent.',
 					done,
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				done
 			);
@@ -190,7 +190,7 @@ export function useQueueActions( onChanged: () => void ): QueueActions {
 					'%d order was restored. It goes back to the queue and is sent with its latest data.',
 					'%d orders were restored. They go back to the queue and are sent with their latest data.',
 					done,
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				done
 			);
@@ -202,7 +202,7 @@ export function useQueueActions( onChanged: () => void ): QueueActions {
 				? {
 						actionLabel: __(
 							'Undo',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						onAction: undo,
 					}
@@ -298,7 +298,7 @@ export function RetryDialog( {
 			title={ sprintf(
 				/* translators: %s: "3 orders" */ __(
 					'Retry %s?',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				ordersPhrase( items.length )
 			) }
@@ -307,7 +307,7 @@ export function RetryDialog( {
 			confirmLabel={ sprintf(
 				/* translators: %s: "3 orders" */ __(
 					'Retry %s',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				ordersPhrase( items.length )
 			) }
@@ -321,7 +321,7 @@ export function RetryDialog( {
 							'%d selected order is not failed or retrying, so it is left as it is.',
 							'%d selected orders are not failed or retrying, so they are left as they are.',
 							leftOut,
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						leftOut
 					) }
@@ -338,7 +338,7 @@ export function RetryDialog( {
 						{ sprintf(
 							/* translators: %d: number of further orders */ __(
 								'and %d more',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							items.length - 10
 						) }
@@ -348,7 +348,7 @@ export function RetryDialog( {
 			<p className="estasoft-sync-muted">
 				{ __(
 					'They are sent oldest first, two at a time. Each one that fails again stays in Needs attention.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			</p>
 		</ConfirmDialog>
@@ -383,10 +383,13 @@ export function SkipDialog( {
 	system,
 }: SkipDialogProps ) {
 	const reasons = [
-		__( 'Handled another way', 'estasoft-erp-crm-sync-engine' ),
-		__( 'Test order', 'estasoft-erp-crm-sync-engine' ),
-		__( 'Duplicate of another order', 'estasoft-erp-crm-sync-engine' ),
-		__( 'Other', 'estasoft-erp-crm-sync-engine' ),
+		__( 'Handled another way', 'estasoft-enterprise-erpcrm-sync-engine' ),
+		__( 'Test order', 'estasoft-enterprise-erpcrm-sync-engine' ),
+		__(
+			'Duplicate of another order',
+			'estasoft-enterprise-erpcrm-sync-engine'
+		),
+		__( 'Other', 'estasoft-enterprise-erpcrm-sync-engine' ),
 	];
 	const [ reason, setReason ] = useState< string >( reasons[ 0 ] );
 	const [ detail, setDetail ] = useState( '' );
@@ -397,7 +400,7 @@ export function SkipDialog( {
 			: sprintf(
 					/* translators: 1: first three order numbers, 2: number of further orders */ __(
 						'%1$s and %2$d more',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					labels.slice( 0, 3 ).join( ', ' ),
 					labels.length - 3
@@ -406,7 +409,7 @@ export function SkipDialog( {
 		reason === reasons[ 3 ] && detail.trim()
 			? sprintf(
 					/* translators: %s: the few words the person typed after choosing "Other" */
-					__( 'Other: %s', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Other: %s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					detail.trim()
 				)
 			: reason;
@@ -415,7 +418,7 @@ export function SkipDialog( {
 			title={ sprintf(
 				/* translators: %s: "3 orders" */ __(
 					'Skip %s?',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				ordersPhrase( items.length )
 			) }
@@ -424,7 +427,7 @@ export function SkipDialog( {
 			confirmLabel={ sprintf(
 				/* translators: %s: "3 orders" */ __(
 					'Skip %s',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				ordersPhrase( items.length )
 			) }
@@ -433,7 +436,7 @@ export function SkipDialog( {
 				{ sprintf(
 					/* translators: 1: order numbers, 2: system name */ __(
 						'%1$s will not be sent to %2$s.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					list,
 					system
@@ -447,7 +450,7 @@ export function SkipDialog( {
 							'%d selected order has already finished, so it is left as it is.',
 							'%d selected orders have already finished, so they are left as they are.',
 							leftOut,
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						leftOut
 					) }
@@ -456,7 +459,7 @@ export function SkipDialog( {
 			<SelectField
 				label={ __(
 					'Why are you skipping them?',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				value={ reason }
 				onChange={ setReason }
@@ -469,7 +472,7 @@ export function SkipDialog( {
 				<TextField
 					label={ __(
 						'Add a few words (optional)',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					value={ detail }
 					onChange={ setDetail }
@@ -478,7 +481,7 @@ export function SkipDialog( {
 			<p className="estasoft-sync-muted">
 				{ __(
 					'A skipped order is not sent. It stays in the log and in the Skipped list, and you can restore it later.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			</p>
 		</ConfirmDialog>
@@ -510,7 +513,7 @@ export function RestoreDialog( {
 			title={ sprintf(
 				/* translators: %s: order number */ __(
 					'Restore order #%s?',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				item.entity_label
 			) }
@@ -518,13 +521,13 @@ export function RestoreDialog( {
 			onConfirm={ onConfirm }
 			confirmLabel={ __(
 				'Restore order',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			) }
 		>
 			<p>
 				{ __(
 					'It goes back to the queue and is sent with its latest data.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			</p>
 			{ item.skip_reason ? (
@@ -532,7 +535,7 @@ export function RestoreDialog( {
 					{ sprintf(
 						/* translators: %s: the reason it was skipped */ __(
 							'The reason it was skipped, “%s”, stays in the log.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						item.skip_reason
 					) }
@@ -571,7 +574,7 @@ export function RestoreManyDialog( {
 			title={ sprintf(
 				/* translators: %s: "3 orders" */ __(
 					'Restore %s?',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				ordersPhrase( items.length )
 			) }
@@ -580,7 +583,7 @@ export function RestoreManyDialog( {
 			confirmLabel={ sprintf(
 				/* translators: %s: "3 orders" */ __(
 					'Restore %s',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				ordersPhrase( items.length )
 			) }
@@ -588,7 +591,7 @@ export function RestoreManyDialog( {
 			<p>
 				{ __(
 					'They go back to the queue and are sent with their latest data.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			</p>
 			{ leftOut > 0 ? (
@@ -599,7 +602,7 @@ export function RestoreManyDialog( {
 							'%d selected order is not skipped, so it is left as it is.',
 							'%d selected orders are not skipped, so they are left as they are.',
 							leftOut,
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						leftOut
 					) }

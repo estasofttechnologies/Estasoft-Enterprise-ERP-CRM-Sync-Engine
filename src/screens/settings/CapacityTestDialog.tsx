@@ -25,7 +25,10 @@ export function CapacityTestDialog( { onClose }: { onClose: () => void } ) {
 	} );
 	return (
 		<Dialog
-			title={ __( 'Capacity test', 'estasoft-erp-crm-sync-engine' ) }
+			title={ __(
+				'Capacity test',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			) }
 			onClose={ onClose }
 			locked={ run.busy }
 			footer={
@@ -35,7 +38,10 @@ export function CapacityTestDialog( { onClose }: { onClose: () => void } ) {
 						onClick={ onClose }
 						disabled={ run.busy }
 					>
-						{ __( 'Close', 'estasoft-erp-crm-sync-engine' ) }
+						{ __(
+							'Close',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						) }
 					</Btn>
 					{ ! result ? (
 						<Btn
@@ -46,7 +52,7 @@ export function CapacityTestDialog( { onClose }: { onClose: () => void } ) {
 						>
 							{ __(
 								'Run the test',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Btn>
 					) : null }
@@ -56,14 +62,14 @@ export function CapacityTestDialog( { onClose }: { onClose: () => void } ) {
 			<p>
 				{ __(
 					'Sends test items through a connection that sends nothing, then shows how fast this server works through them. It uses some of your server’s capacity while it runs, so run it when the shop is quiet.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			</p>
 			{ run.busy ? (
 				<Busy
 					label={ __(
 						'Running the test…',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			) : null }
@@ -79,26 +85,26 @@ export function CapacityTestDialog( { onClose }: { onClose: () => void } ) {
 							{
 								label: __(
 									'Items a minute',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								value: result.items_per_minute,
 							},
 							{
 								label: __(
 									'Items sent through',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								value: result.items,
 							},
 							{
 								label: __(
 									'Time taken',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								value: sprintf(
 									/* translators: %s: seconds */ __(
 										'%s s',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									String( result.seconds )
 								),

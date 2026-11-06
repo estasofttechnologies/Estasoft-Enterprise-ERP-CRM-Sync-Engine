@@ -40,7 +40,7 @@ final class XeroErrors {
 				ErrorCode::Auth004,
 				array(
 					'system' => self::SYSTEM,
-					'action' => __( 'use this part of Xero (a permission of the app is missing; add it and sign in again)', 'estasoft-erp-crm-sync-engine' ),
+					'action' => __( 'use this part of Xero (a permission of the app is missing; add it and sign in again)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				401,
 				null,

@@ -213,7 +213,7 @@ export function formatSmartTime(
 	if ( dayKey( iso ) === dayKey( now ) ) {
 		return sprintf(
 			/* translators: %s: clock time such as 11:40 */
-			__( 'Today %s', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Today %s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			time
 		);
 	}
@@ -221,7 +221,7 @@ export function formatSmartTime(
 	if ( dayKey( iso ) === dayKey( yesterday ) ) {
 		return sprintf(
 			/* translators: %s: clock time such as 18:00 */
-			__( 'Yesterday %s', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Yesterday %s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			time
 		);
 	}
@@ -347,14 +347,14 @@ export function formatDuration( ms: number | null | undefined ): string {
 	if ( ms < 1000 ) {
 		return sprintf(
 			/* translators: %d: milliseconds */
-			__( '%d ms', 'estasoft-erp-crm-sync-engine' ),
+			__( '%d ms', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			Math.round( ms )
 		);
 	}
 	const seconds = ms / 1000;
 	return sprintf(
 		/* translators: %s: seconds, for example 1.1 */
-		__( '%s s', 'estasoft-erp-crm-sync-engine' ),
+		__( '%s s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		seconds >= 10 ? String( Math.round( seconds ) ) : seconds.toFixed( 1 )
 	);
 }
@@ -374,7 +374,7 @@ export function formatSpan( seconds: number ): string {
 				'%d second',
 				'%d seconds',
 				total,
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			total
 		);
@@ -383,7 +383,7 @@ export function formatSpan( seconds: number ): string {
 	if ( minutes < 60 ) {
 		return sprintf(
 			/* translators: %d: minutes */
-			__( '%d min', 'estasoft-erp-crm-sync-engine' ),
+			__( '%d min', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			minutes
 		);
 	}
@@ -396,18 +396,21 @@ export function formatSpan( seconds: number ): string {
 				'%d day',
 				'%d days',
 				Math.floor( hours / 24 ),
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			Math.floor( hours / 24 )
 		);
 	}
 	if ( rest === 0 ) {
-		/* translators: %d: hours */
-		return sprintf( __( '%d h', 'estasoft-erp-crm-sync-engine' ), hours );
+		return sprintf(
+			/* translators: %d: hours */
+			__( '%d h', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			hours
+		);
 	}
 	return sprintf(
 		/* translators: 1: hours, 2: minutes */
-		__( '%1$d h %2$d min', 'estasoft-erp-crm-sync-engine' ),
+		__( '%1$d h %2$d min', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		hours,
 		rest
 	);
@@ -423,13 +426,13 @@ export function formatTimeLeft( seconds: number ): string {
 	if ( seconds < 0 ) {
 		return sprintf(
 			/* translators: %s: span such as 2 h */
-			__( 'Late by %s', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Late by %s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			formatSpan( seconds )
 		);
 	}
 	return sprintf(
 		/* translators: %s: span such as 5 h 40 min */
-		__( '%s left', 'estasoft-erp-crm-sync-engine' ),
+		__( '%s left', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		formatSpan( seconds )
 	);
 }
@@ -461,7 +464,7 @@ export function timeLeftTone(
 export function formatKilobytes( bytes: number ): string {
 	return sprintf(
 		/* translators: %d: kilobytes */
-		__( '%d KB', 'estasoft-erp-crm-sync-engine' ),
+		__( '%d KB', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		Math.round( bytes / 1024 )
 	);
 }
@@ -476,7 +479,7 @@ export function formatFileSize( bytes: number ): string {
 	if ( bytes < 1024 ) {
 		return sprintf(
 			/* translators: %d: bytes */
-			__( '%d B', 'estasoft-erp-crm-sync-engine' ),
+			__( '%d B', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			bytes
 		);
 	}
@@ -484,13 +487,13 @@ export function formatFileSize( bytes: number ): string {
 		const kb = bytes / 1024;
 		return sprintf(
 			/* translators: %s: kilobytes, such as 4.2 */
-			__( '%s KB', 'estasoft-erp-crm-sync-engine' ),
+			__( '%s KB', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			kb < 10 ? kb.toFixed( 1 ) : String( Math.round( kb ) )
 		);
 	}
 	return sprintf(
 		/* translators: %s: megabytes, such as 1.3 */
-		__( '%s MB', 'estasoft-erp-crm-sync-engine' ),
+		__( '%s MB', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		( bytes / ( 1024 * 1024 ) ).toFixed( 1 )
 	);
 }

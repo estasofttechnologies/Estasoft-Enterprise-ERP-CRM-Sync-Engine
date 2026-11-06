@@ -46,10 +46,10 @@ final class CredentialFields {
 	public static function apiKey( string $name = 'api_key', string $label = '', string $hint = '' ): CredentialField {
 		return new CredentialField(
 			$name,
-			'' !== $label ? $label : __( 'API key', 'estasoft-erp-crm-sync-engine' ),
+			'' !== $label ? $label : __( 'API key', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			true,
 			true,
-			'' !== $hint ? $hint : __( 'Saved encrypted. It is never shown again.', 'estasoft-erp-crm-sync-engine' ),
+			'' !== $hint ? $hint : __( 'Saved encrypted. It is never shown again.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			'',
 			'password'
 		);
@@ -63,7 +63,7 @@ final class CredentialFields {
 	 * @param string $hint  Hint.
 	 */
 	public static function username( string $name = 'username', string $label = '', string $hint = '' ): CredentialField {
-		return new CredentialField( $name, '' !== $label ? $label : __( 'User name', 'estasoft-erp-crm-sync-engine' ), false, true, $hint );
+		return new CredentialField( $name, '' !== $label ? $label : __( 'User name', 'estasoft-enterprise-erpcrm-sync-engine' ), false, true, $hint );
 	}
 
 	/**
@@ -76,10 +76,10 @@ final class CredentialFields {
 	public static function password( string $name = 'password', string $label = '', string $hint = '' ): CredentialField {
 		return new CredentialField(
 			$name,
-			'' !== $label ? $label : __( 'Password', 'estasoft-erp-crm-sync-engine' ),
+			'' !== $label ? $label : __( 'Password', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			true,
 			true,
-			'' !== $hint ? $hint : __( 'Saved encrypted. It is never shown again.', 'estasoft-erp-crm-sync-engine' ),
+			'' !== $hint ? $hint : __( 'Saved encrypted. It is never shown again.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			'',
 			'password'
 		);
@@ -92,7 +92,7 @@ final class CredentialFields {
 	 * @param string $hint Hint.
 	 */
 	public static function clientId( string $name = 'client_id', string $hint = '' ): CredentialField {
-		return new CredentialField( $name, __( 'Client ID', 'estasoft-erp-crm-sync-engine' ), false, true, $hint, '', 'text', array(), 'app' );
+		return new CredentialField( $name, __( 'Client ID', 'estasoft-enterprise-erpcrm-sync-engine' ), false, true, $hint, '', 'text', array(), 'app' );
 	}
 
 	/**
@@ -104,10 +104,10 @@ final class CredentialFields {
 	public static function clientSecret( string $name = 'client_secret', string $hint = '' ): CredentialField {
 		return new CredentialField(
 			$name,
-			__( 'Client secret', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Client secret', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			true,
 			true,
-			'' !== $hint ? $hint : __( 'Saved encrypted. It is never shown again.', 'estasoft-erp-crm-sync-engine' ),
+			'' !== $hint ? $hint : __( 'Saved encrypted. It is never shown again.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			'',
 			'password',
 			array(),
@@ -124,10 +124,10 @@ final class CredentialFields {
 	public static function privateKey( string $name = 'private_key', string $hint = '' ): CredentialField {
 		return new CredentialField(
 			$name,
-			__( 'Private key (PEM)', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Private key (PEM)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			true,
 			true,
-			'' !== $hint ? $hint : __( 'Paste the whole key, including the BEGIN and END lines. Saved encrypted. It is never shown again.', 'estasoft-erp-crm-sync-engine' ),
+			'' !== $hint ? $hint : __( 'Paste the whole key, including the BEGIN and END lines. Saved encrypted. It is never shown again.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			'',
 			'textarea',
 			array(),
@@ -143,7 +143,7 @@ final class CredentialFields {
 	 * @param string $hint  Hint.
 	 */
 	public static function address( string $name = 'address', string $label = '', string $hint = '' ): CredentialField {
-		return new CredentialField( $name, '' !== $label ? $label : __( 'Address', 'estasoft-erp-crm-sync-engine' ), false, true, $hint, '', 'url' );
+		return new CredentialField( $name, '' !== $label ? $label : __( 'Address', 'estasoft-enterprise-erpcrm-sync-engine' ), false, true, $hint, '', 'url' );
 	}
 
 	/**
@@ -165,10 +165,10 @@ final class CredentialFields {
 	public static function redirectUri(): CredentialField {
 		return new CredentialField(
 			'redirect_uri',
-			__( 'Redirect address', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Redirect address', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			false,
 			false,
-			__( 'Add this address to the redirect addresses of your app in the system. It must match exactly.', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Add this address to the redirect addresses of your app in the system. It must match exactly.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			OAuthRedirect::uri(),
 			'display',
 			array(),

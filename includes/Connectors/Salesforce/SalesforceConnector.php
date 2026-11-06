@@ -96,29 +96,29 @@ final class SalesforceConnector extends AbstractSalesConnector implements OAuthC
 	 */
 	protected function credentialDefinition(): array {
 		return array(
-			new CredentialField( 'domain', __( 'My Domain address', 'estasoft-erp-crm-sync-engine' ), false, true, __( 'For example mycompany.my.salesforce.com. For a sandbox use its own address.', 'estasoft-erp-crm-sync-engine' ), '', 'text' ),
-			new CredentialField( 'client_id', __( 'Consumer key', 'estasoft-erp-crm-sync-engine' ), false, true, '', '', 'text', array(), 'app' ),
-			new CredentialField( 'client_secret', __( 'Consumer secret', 'estasoft-erp-crm-sync-engine' ), true, true, __( 'Saved encrypted. It is never shown again.', 'estasoft-erp-crm-sync-engine' ), '', 'password', array(), 'app' ),
-			new CredentialField( 'stage_paid', __( 'Stage for paid orders', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Leave empty for Closed Won.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
-			new CredentialField( 'stage_unpaid', __( 'Stage for unpaid orders', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Leave empty for Prospecting.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
-			new CredentialField( 'org_currency', __( 'Currency of the org', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Needed only when the org does not use several currencies; orders in another currency are refused.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
-			new CredentialField( 'api_version', __( 'API version', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'For example v66.0.', 'estasoft-erp-crm-sync-engine' ), 'v66.0', 'text', array(), 'advanced' ),
+			new CredentialField( 'domain', __( 'My Domain address', 'estasoft-enterprise-erpcrm-sync-engine' ), false, true, __( 'For example mycompany.my.salesforce.com. For a sandbox use its own address.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text' ),
+			new CredentialField( 'client_id', __( 'Consumer key', 'estasoft-enterprise-erpcrm-sync-engine' ), false, true, '', '', 'text', array(), 'app' ),
+			new CredentialField( 'client_secret', __( 'Consumer secret', 'estasoft-enterprise-erpcrm-sync-engine' ), true, true, __( 'Saved encrypted. It is never shown again.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'password', array(), 'app' ),
+			new CredentialField( 'stage_paid', __( 'Stage for paid orders', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Leave empty for Closed Won.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'advanced' ),
+			new CredentialField( 'stage_unpaid', __( 'Stage for unpaid orders', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Leave empty for Prospecting.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'advanced' ),
+			new CredentialField( 'org_currency', __( 'Currency of the org', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Needed only when the org does not use several currencies; orders in another currency are refused.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'advanced' ),
+			new CredentialField( 'api_version', __( 'API version', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'For example v66.0.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'v66.0', 'text', array(), 'advanced' ),
 			new CredentialField(
 				'auth_method',
-				__( 'Sign-in method', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Sign-in method', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				false,
 				false,
 				'',
 				'web_server',
 				'select',
 				array(
-					'web_server' => __( 'Sign in with Salesforce', 'estasoft-erp-crm-sync-engine' ),
-					'jwt_bearer' => __( 'Certificate (JWT bearer)', 'estasoft-erp-crm-sync-engine' ),
+					'web_server' => __( 'Sign in with Salesforce', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'jwt_bearer' => __( 'Certificate (JWT bearer)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				'advanced'
 			),
-			new CredentialField( 'jwt_username', __( 'User name for the certificate sign-in', 'estasoft-erp-crm-sync-engine' ), false, false, '', '', 'text', array(), 'advanced' ),
-			new CredentialField( 'private_key', __( 'Private key (PEM)', 'estasoft-erp-crm-sync-engine' ), true, false, __( 'Only for the certificate sign-in. Saved encrypted.', 'estasoft-erp-crm-sync-engine' ), '', 'textarea', array(), 'advanced' ),
+			new CredentialField( 'jwt_username', __( 'User name for the certificate sign-in', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, '', '', 'text', array(), 'advanced' ),
+			new CredentialField( 'private_key', __( 'Private key (PEM)', 'estasoft-enterprise-erpcrm-sync-engine' ), true, false, __( 'Only for the certificate sign-in. Saved encrypted.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'textarea', array(), 'advanced' ),
 		);
 	}
 
@@ -169,7 +169,7 @@ final class SalesforceConnector extends AbstractSalesConnector implements OAuthC
 	protected function baseUrl( Connection $connection ): string {
 		$host = SalesforceOAuthProvider::host( $connection );
 		if ( '' === $host ) {
-			throw new ApiException( $this->invalid( 'domain', __( 'Enter your My Domain address, for example mycompany.my.salesforce.com.', 'estasoft-erp-crm-sync-engine' ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
+			throw new ApiException( $this->invalid( 'domain', __( 'Enter your My Domain address, for example mycompany.my.salesforce.com.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 		}
 		return 'https://' . $host;
 	}
@@ -227,7 +227,7 @@ final class SalesforceConnector extends AbstractSalesConnector implements OAuthC
 		$options = $this->options( $connection );
 		$version = $this->version( $options );
 		if ( ! in_array( $version, $sf->versions(), true ) ) {
-			throw new ApiException( $this->invalid( 'api_version', __( 'This org does not serve the API version you entered.', 'estasoft-erp-crm-sync-engine' ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
+			throw new ApiException( $this->invalid( 'api_version', __( 'This org does not serve the API version you entered.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 		}
 		$org         = $this->organisations( $connection )[0];
 		$permissions = array();
@@ -436,7 +436,7 @@ final class SalesforceConnector extends AbstractSalesConnector implements OAuthC
 			}
 			if ( $orgCurrency !== $order->currency ) {
 				/* translators: 1: order currency, 2: org currency */
-				return SendResult::failure( $this->invalid( 'CurrencyIsoCode', sprintf( __( 'The order is in %1$s but this Salesforce org works in %2$s.', 'estasoft-erp-crm-sync-engine' ), $order->currency, $orgCurrency ) ) );
+				return SendResult::failure( $this->invalid( 'CurrencyIsoCode', sprintf( __( 'The order is in %1$s but this Salesforce org works in %2$s.', 'estasoft-enterprise-erpcrm-sync-engine' ), $order->currency, $orgCurrency ) ) );
 			}
 		}
 		$lines = 'products' === $options->choice( 'lines', array( 'description', 'products' ), 'description' ) ? $this->resolveLines( $sf, $options, $order, $multi ) : null;
@@ -501,7 +501,7 @@ final class SalesforceConnector extends AbstractSalesConnector implements OAuthC
 			$warnings[] = $problem;
 		}
 		if ( $cut ) {
-			$warnings[] = __( 'The order summary was cut because Salesforce limits the description to 32,000 characters.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'The order summary was cut because Salesforce limits the description to 32,000 characters.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		$ref = new ExternalRef(
 			$oppId,
@@ -532,7 +532,7 @@ final class SalesforceConnector extends AbstractSalesConnector implements OAuthC
 		$opp = $this->findOpportunity( $sf, $this->reference( $sf, $connection ), $refund->orderRef );
 		if ( null === $opp ) {
 			/* translators: 1: order reference */
-			return SendResult::failure( $this->invalid( 'Opportunity', sprintf( __( 'The order %s is not in Salesforce yet.', 'estasoft-erp-crm-sync-engine' ), $refund->orderRef ) ) );
+			return SendResult::failure( $this->invalid( 'Opportunity', sprintf( __( 'The order %s is not in Salesforce yet.', 'estasoft-enterprise-erpcrm-sync-engine' ), $refund->orderRef ) ) );
 		}
 		$oppId = (string) $opp['Id'];
 		$task  = $this->findTask( $sf, $oppId, $refund->reference );
@@ -637,7 +637,7 @@ final class SalesforceConnector extends AbstractSalesConnector implements OAuthC
 	 * The error for a single-currency org whose currency is not known.
 	 */
 	private function currencyMissing(): ConnectorError {
-		return $this->invalid( 'org_currency', __( 'This Salesforce org does not use several currencies, so an amount carries no currency. Enter the currency of the org in the connection settings; orders in any other currency are then refused.', 'estasoft-erp-crm-sync-engine' ) );
+		return $this->invalid( 'org_currency', __( 'This Salesforce org does not use several currencies, so an amount carries no currency. Enter the currency of the org in the connection settings; orders in any other currency are then refused.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**
@@ -794,7 +794,7 @@ final class SalesforceConnector extends AbstractSalesConnector implements OAuthC
 		$name  = $options->text( 'pricebook' );
 		$books = $sf->query( 'SELECT Id FROM Pricebook2 WHERE ' . ( '' !== $name ? 'Name = ' . $this->literal( $name ) : 'IsStandard = true' ) . ' LIMIT 1' );
 		if ( array() === $books ) {
-			return $this->invalid( 'Pricebook2', __( 'Salesforce has no such price book.', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->invalid( 'Pricebook2', __( 'Salesforce has no such price book.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$pricebook = (string) $books[0]['Id'];
 		$wanted    = array();
@@ -802,9 +802,9 @@ final class SalesforceConnector extends AbstractSalesConnector implements OAuthC
 			$wanted[ $index ] = array( $line->sku, $line->totalMinor + $line->taxMinor, '' !== $line->sku ? $line->name . ' (' . $line->sku . ')' : $line->name, $line->quantity );
 		}
 		$extras = array(
-			'shipping_product' => array( $order->shippingMinor, __( 'Shipping', 'estasoft-erp-crm-sync-engine' ) ),
-			'fee_product'      => array( array_sum( array_column( $order->fees, 'total' ) ), __( 'Fees', 'estasoft-erp-crm-sync-engine' ) ),
-			'discount_product' => array( -$order->discountMinor, __( 'Discount', 'estasoft-erp-crm-sync-engine' ) ),
+			'shipping_product' => array( $order->shippingMinor, __( 'Shipping', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			'fee_product'      => array( array_sum( array_column( $order->fees, 'total' ) ), __( 'Fees', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			'discount_product' => array( -$order->discountMinor, __( 'Discount', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 		);
 		foreach ( $extras as $key => $extra ) {
 			if ( '' !== $options->text( $key ) && 0 !== $extra[0] ) {

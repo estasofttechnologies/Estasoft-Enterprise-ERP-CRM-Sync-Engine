@@ -80,11 +80,11 @@ final class SapBusinessOneRefunds {
 	public function create( RefundData $refund, Warnings $warnings ): array {
 		$order = $this->orders->find( $refund->orderRef );
 		if ( null === $order ) {
-			$problem = Problem::validation( $this->system, 'order_ref', __( 'The order of this refund is not in SAP yet.', 'estasoft-erp-crm-sync-engine' ) );
+			$problem = Problem::validation( $this->system, 'order_ref', __( 'The order of this refund is not in SAP yet.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			throw new ApiException( $problem ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 		}
 		if ( null === $this->orders->invoiceOf( $refund->orderRef ) && ! $this->options->refundWithoutInvoice() ) {
-			$problem = Problem::validation( $this->system, 'invoice', __( 'SAP has no A/R invoice for this order, so a credit note would book against a sale that was never invoiced. Set documents to "order and invoice", or turn on refund_without_invoice, or credit it in SAP.', 'estasoft-erp-crm-sync-engine' ) );
+			$problem = Problem::validation( $this->system, 'invoice', __( 'SAP has no A/R invoice for this order, so a credit note would book against a sale that was never invoiced. Set documents to "order and invoice", or turn on refund_without_invoice, or credit it in SAP.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			throw new ApiException( $problem ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 		}
 		$currency = $this->orders->currencyOf( $order );
@@ -140,14 +140,14 @@ final class SapBusinessOneRefunds {
 				'DocCurrency',
 				sprintf(
 					/* translators: 1: currency in SAP, 2: currency of the order. */
-					__( 'SAP holds the credit note in %1$s but the order is in %2$s.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'SAP holds the credit note in %1$s but the order is in %2$s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$actual,
 					$currency
 				)
 			);
 		}
 		$figure = $this->orders->totalOf( $note, $currency );
-		return $total->run( $expected, null === $figure ? null : abs( $figure ), $currency, $warnings, __( 'credit note total', 'estasoft-erp-crm-sync-engine' ) );
+		return $total->run( $expected, null === $figure ? null : abs( $figure ), $currency, $warnings, __( 'credit note total', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**
@@ -199,7 +199,7 @@ final class SapBusinessOneRefunds {
 	private function lines( RefundData $refund, string $currency ): array {
 		if ( array() === $refund->lines ) {
 			if ( '' === $this->options->refundItem() || null === $refund->amountMinor ) {
-				$problem = Problem::validation( $this->system, 'refund_item', __( 'The refund names no products. Enter the code of an item for such refunds in the connection options.', 'estasoft-erp-crm-sync-engine' ) );
+				$problem = Problem::validation( $this->system, 'refund_item', __( 'The refund names no products. Enter the code of an item for such refunds in the connection options.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 				throw new ApiException( $problem ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 			}
 			return array(
@@ -218,7 +218,7 @@ final class SapBusinessOneRefunds {
 				'LineTotal' => $this->amounts->toNumber( $line->amountMinor, $currency ),
 			);
 			if ( '' === $entry['ItemCode'] ) {
-				$problem = Problem::validation( $this->system, 'refund_item', __( 'A refund line names no product. Enter the code of an item for such lines in the connection options.', 'estasoft-erp-crm-sync-engine' ) );
+				$problem = Problem::validation( $this->system, 'refund_item', __( 'A refund line names no product. Enter the code of an item for such lines in the connection options.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 				throw new ApiException( $problem ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 			}
 			if ( '' !== $line->taxCode() ) {

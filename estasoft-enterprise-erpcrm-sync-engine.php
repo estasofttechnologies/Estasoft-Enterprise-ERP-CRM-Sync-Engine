@@ -11,7 +11,7 @@
  * Author URI:        https://estasoft.com
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain:       estasoft-erp-crm-sync-engine
+ * Text Domain:       estasoft-enterprise-erpcrm-sync-engine
  * Domain Path:       /languages
  * WC requires at least: 8.2
  * WC tested up to:   11.2
@@ -30,7 +30,7 @@ define( 'ESTASOFT_SYNC_URL', plugin_dir_url( __FILE__ ) );
 define( 'ESTASOFT_SYNC_MIN_PHP', '8.1' );
 define( 'ESTASOFT_SYNC_MIN_WP', '6.4' );
 define( 'ESTASOFT_SYNC_MIN_WC', '8.2' );
-define( 'ESTASOFT_SYNC_TEXT_DOMAIN', 'estasoft-erp-crm-sync-engine' );
+define( 'ESTASOFT_SYNC_TEXT_DOMAIN', 'estasoft-enterprise-erpcrm-sync-engine' );
 
 /*
  * The first guard runs before any class is loaded, so an old PHP version can never hit a parse

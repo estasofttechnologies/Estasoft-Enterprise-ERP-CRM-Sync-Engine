@@ -16,7 +16,7 @@ export function useSignInStart() {
 			throw new Error(
 				__(
 					'The sign-in page address was not a web address, so it was not opened. Try again. If it keeps happening, the log has the details.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				)
 			);
 		}

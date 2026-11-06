@@ -125,7 +125,7 @@ final class SettingsPorter {
 		$this->userName      = $userName ?? static function ( int $userId ): string {
 			$user = get_userdata( $userId );
 			/* translators: %d: user id. */
-			return false === $user ? sprintf( __( 'User #%d', 'estasoft-erp-crm-sync-engine' ), $userId ) : (string) $user->display_name;
+			return false === $user ? sprintf( __( 'User #%d', 'estasoft-enterprise-erpcrm-sync-engine' ), $userId ) : (string) $user->display_name;
 		};
 	}
 
@@ -193,7 +193,7 @@ final class SettingsPorter {
 					}
 					$lines[] = sprintf(
 						/* translators: 1: setting name, 2: old value, 3: new value. */
-						__( 'Notifications, %1$s: from %2$s to %3$s.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'Notifications, %1$s: from %2$s to %3$s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$this->label( (string) $field ),
 						$this->show( $old ),
 						$this->show( $new )
@@ -204,7 +204,7 @@ final class SettingsPorter {
 			if ( ! $this->same( $current[ $key ] ?? null, $value ) ) {
 				$lines[] = sprintf(
 					/* translators: 1: setting name, 2: old value, 3: new value. */
-					__( '%1$s: from %2$s to %3$s.', 'estasoft-erp-crm-sync-engine' ),
+					__( '%1$s: from %2$s to %3$s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$this->label( (string) $key ),
 					$this->show( $current[ $key ] ?? null ),
 					$this->show( $value )
@@ -217,7 +217,7 @@ final class SettingsPorter {
 			if ( null === $connection ) {
 				$lines[] = sprintf(
 					/* translators: %s: connector id. */
-					__( 'Limits for %s are skipped because it is not connected here.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Limits for %s are skipped because it is not connected here.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					(string) $connector
 				);
 				continue;
@@ -232,7 +232,7 @@ final class SettingsPorter {
 					if ( ! $this->same( $now[ $group ][ $key ] ?? null, $value ) ) {
 						$lines[] = sprintf(
 							/* translators: 1: connector id, 2: setting name, 3: old value, 4: new value. */
-							__( '%1$s, %2$s: from %3$s to %4$s.', 'estasoft-erp-crm-sync-engine' ),
+							__( '%1$s, %2$s: from %3$s to %4$s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 							(string) $connector,
 							$this->label( (string) $key ),
 							$this->show( $now[ $group ][ $key ] ?? null ),
@@ -249,7 +249,7 @@ final class SettingsPorter {
 				if ( null === $connection ) {
 					$lines[] = sprintf(
 						/* translators: 1: mapping type, 2: connector id. */
-						__( 'The %1$s mapping for %2$s is skipped because it is not connected here.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'The %1$s mapping for %2$s is skipped because it is not connected here.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						(string) $type,
 						(string) $connector
 					);
@@ -260,7 +260,7 @@ final class SettingsPorter {
 				}
 				$lines[] = sprintf(
 					/* translators: 1: connector id, 2: mapping type, 3: number of rules. */
-					_n( 'A draft of the %2$s mapping for %1$s is created with %3$d rule. The live mapping does not change.', 'A draft of the %2$s mapping for %1$s is created with %3$d rules. The live mapping does not change.', count( $rules ), 'estasoft-erp-crm-sync-engine' ),
+					_n( 'A draft of the %2$s mapping for %1$s is created with %3$d rule. The live mapping does not change.', 'A draft of the %2$s mapping for %1$s is created with %3$d rules. The live mapping does not change.', count( $rules ), 'estasoft-enterprise-erpcrm-sync-engine' ),
 					(string) $connector,
 					(string) $type,
 					count( $rules )
@@ -268,7 +268,7 @@ final class SettingsPorter {
 			}
 		}
 		if ( array() === $lines ) {
-			$lines[] = __( 'Nothing would change.', 'estasoft-erp-crm-sync-engine' );
+			$lines[] = __( 'Nothing would change.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		return array( 'preview' => $lines );
 	}
@@ -320,7 +320,7 @@ final class SettingsPorter {
 					continue;
 				}
 				try {
-					( $this->saveDraft )( (int) $connection['id'], (string) $type, $rules, __( 'Imported from a settings file', 'estasoft-erp-crm-sync-engine' ), $by );
+					( $this->saveDraft )( (int) $connection['id'], (string) $type, $rules, __( 'Imported from a settings file', 'estasoft-enterprise-erpcrm-sync-engine' ), $by );
 					++$drafts;
 				} catch ( \Throwable $e ) {
 					$skipped[] = $connector . ':' . $type;
@@ -330,7 +330,7 @@ final class SettingsPorter {
 		$this->logger->info(
 			sprintf(
 				/* translators: 1: user id, 2: number of mapping drafts created. */
-				_n( 'Settings were imported by user #%1$d. %2$d mapping draft was created.', 'Settings were imported by user #%1$d. %2$d mapping drafts were created.', $drafts, 'estasoft-erp-crm-sync-engine' ),
+				_n( 'Settings were imported by user #%1$d. %2$d mapping draft was created.', 'Settings were imported by user #%1$d. %2$d mapping drafts were created.', $drafts, 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$userId,
 				$drafts
 			)
@@ -368,7 +368,7 @@ final class SettingsPorter {
 					'json' => esc_html(
 						sprintf(
 							/* translators: %s: name of the setting that is not valid. */
-							__( 'The file has a value that is not allowed (%s). Nothing was imported.', 'estasoft-erp-crm-sync-engine' ),
+							__( 'The file has a value that is not allowed (%s). Nothing was imported.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 							$this->label( (string) array_key_first( $problems ) )
 						)
 					),
@@ -396,10 +396,10 @@ final class SettingsPorter {
 							'json' => esc_html(
 								sprintf(
 									/* translators: 1: mapping type, 2: connector id, 3: what is wrong. */
-									__( 'The %1$s mapping for %2$s has a problem: %3$s Nothing was imported.', 'estasoft-erp-crm-sync-engine' ),
+									__( 'The %1$s mapping for %2$s has a problem: %3$s Nothing was imported.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 									$this->plain( (string) $type ),
 									$this->plain( (string) $connector ),
-									'' === $message ? __( 'its rules are not valid.', 'estasoft-erp-crm-sync-engine' ) : rtrim( mb_substr( $message, 0, 200 ), '.' ) . '.'
+									'' === $message ? __( 'its rules are not valid.', 'estasoft-enterprise-erpcrm-sync-engine' ) : rtrim( mb_substr( $message, 0, 200 ), '.' ) . '.'
 								)
 							),
 						)
@@ -423,42 +423,42 @@ final class SettingsPorter {
 			return new ValidationException( array( 'json' => $message ) );
 		};
 		if ( strlen( $json ) > self::MAX_BYTES ) {
-			throw $fail( esc_html__( 'The file is larger than 1 MB, so it is not a settings file from this plugin.', 'estasoft-erp-crm-sync-engine' ) );
+			throw $fail( esc_html__( 'The file is larger than 1 MB, so it is not a settings file from this plugin.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$data = json_decode( $json, true, 12 );
 		if ( ! is_array( $data ) ) {
-			throw $fail( esc_html__( 'The file is not valid JSON.', 'estasoft-erp-crm-sync-engine' ) );
+			throw $fail( esc_html__( 'The file is not valid JSON.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( ( $data['estasoft_sync'] ?? null ) !== self::SCHEMA ) {
-			throw $fail( esc_html__( 'This is not a settings file from this plugin, or it was made by a version with a different layout.', 'estasoft-erp-crm-sync-engine' ) );
+			throw $fail( esc_html__( 'This is not a settings file from this plugin, or it was made by a version with a different layout.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$unknown = array_diff( array_keys( $data ), self::KEYS );
 		if ( array() !== $unknown ) {
-			throw $fail( esc_html( sprintf( /* translators: %s: the key. */ __( 'The file has a part this plugin does not know (%s).', 'estasoft-erp-crm-sync-engine' ), $this->plain( (string) reset( $unknown ) ) ) ) );
+			throw $fail( esc_html( sprintf( /* translators: %s: the key. */ __( 'The file has a part this plugin does not know (%s).', 'estasoft-enterprise-erpcrm-sync-engine' ), $this->plain( (string) reset( $unknown ) ) ) ) );
 		}
 		$settings = $data['settings'] ?? array();
 		$mappings = $data['mappings'] ?? array();
 		$limits   = $data['connection_settings'] ?? array();
 		if ( ! is_array( $settings ) || ! is_array( $mappings ) || ! is_array( $limits ) ) {
-			throw $fail( esc_html__( 'The file is not laid out as expected.', 'estasoft-erp-crm-sync-engine' ) );
+			throw $fail( esc_html__( 'The file is not laid out as expected.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$known = array_keys( $this->settings->defaults() );
 		foreach ( array_keys( $settings ) as $key ) {
 			if ( ! in_array( $key, $known, true ) ) {
-				throw $fail( esc_html( sprintf( /* translators: %s: the setting. */ __( 'The file has a setting this plugin does not know (%s).', 'estasoft-erp-crm-sync-engine' ), $this->plain( (string) $key ) ) ) );
+				throw $fail( esc_html( sprintf( /* translators: %s: the setting. */ __( 'The file has a setting this plugin does not know (%s).', 'estasoft-enterprise-erpcrm-sync-engine' ), $this->plain( (string) $key ) ) ) );
 			}
 		}
 		foreach ( $mappings as $connector => $types ) {
 			if ( ! is_string( $connector ) || 1 !== preg_match( '/^[a-z0-9][a-z0-9_\-]{0,39}$/', $connector ) || ! is_array( $types ) ) {
-				throw $fail( esc_html__( 'The mappings in the file are not laid out as expected.', 'estasoft-erp-crm-sync-engine' ) );
+				throw $fail( esc_html__( 'The mappings in the file are not laid out as expected.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			foreach ( $types as $type => $rules ) {
 				if ( ! in_array( $type, self::TYPES, true ) || ! is_array( $rules ) || ! \Estasoft\SyncEngine\Core\Support\Lists::isList( $rules ) || count( $rules ) > self::MAX_RULES ) {
-					throw $fail( esc_html( sprintf( /* translators: %s: mapping type. */ __( 'The %s mapping in the file is not valid.', 'estasoft-erp-crm-sync-engine' ), $this->plain( (string) $type ) ) ) );
+					throw $fail( esc_html( sprintf( /* translators: %s: mapping type. */ __( 'The %s mapping in the file is not valid.', 'estasoft-enterprise-erpcrm-sync-engine' ), $this->plain( (string) $type ) ) ) );
 				}
 				foreach ( $rules as $rule ) {
 					if ( ! is_array( $rule ) ) {
-						throw $fail( esc_html( sprintf( /* translators: %s: mapping type. */ __( 'The %s mapping in the file is not valid.', 'estasoft-erp-crm-sync-engine' ), $this->plain( (string) $type ) ) ) );
+						throw $fail( esc_html( sprintf( /* translators: %s: mapping type. */ __( 'The %s mapping in the file is not valid.', 'estasoft-enterprise-erpcrm-sync-engine' ), $this->plain( (string) $type ) ) ) );
 					}
 				}
 			}
@@ -470,11 +470,11 @@ final class SettingsPorter {
 		);
 		foreach ( $limits as $connector => $groups ) {
 			if ( ! is_string( $connector ) || 1 !== preg_match( '/^[a-z0-9][a-z0-9_\-]{0,39}$/', $connector ) || ! is_array( $groups ) ) {
-				throw $fail( esc_html__( 'The limits in the file are not laid out as expected.', 'estasoft-erp-crm-sync-engine' ) );
+				throw $fail( esc_html__( 'The limits in the file are not laid out as expected.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			foreach ( $groups as $group => $values ) {
 				if ( ! isset( $allowed[ $group ] ) || ! is_array( $values ) || array() !== array_diff( array_keys( $values ), $allowed[ $group ] ) ) {
-					throw $fail( esc_html__( 'The limits in the file have a part this plugin does not know.', 'estasoft-erp-crm-sync-engine' ) );
+					throw $fail( esc_html__( 'The limits in the file have a part this plugin does not know.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 				}
 			}
 		}
@@ -529,10 +529,10 @@ final class SettingsPorter {
 	 */
 	private function show( mixed $value ): string {
 		if ( is_bool( $value ) ) {
-			return $value ? __( 'on', 'estasoft-erp-crm-sync-engine' ) : __( 'off', 'estasoft-erp-crm-sync-engine' );
+			return $value ? __( 'on', 'estasoft-enterprise-erpcrm-sync-engine' ) : __( 'off', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		if ( null === $value ) {
-			return __( 'not set', 'estasoft-erp-crm-sync-engine' );
+			return __( 'not set', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		if ( is_array( $value ) ) {
 			return implode( ', ', array_map( static fn( $item ): string => is_scalar( $item ) ? (string) $item : '…', $value ) );
@@ -547,36 +547,36 @@ final class SettingsPorter {
 	 */
 	private function label( string $key ): string {
 		$labels = array(
-			'display_time'            => __( 'Time display', 'estasoft-erp-crm-sync-engine' ),
-			'log_retention_days'      => __( 'Days to keep logs', 'estasoft-erp-crm-sync-engine' ),
-			'log_excerpt_bytes'       => __( 'Log excerpt size', 'estasoft-erp-crm-sync-engine' ),
-			'redaction'               => __( 'Redaction', 'estasoft-erp-crm-sync-engine' ),
-			'payload_cap_bytes'       => __( 'Largest payload kept', 'estasoft-erp-crm-sync-engine' ),
-			'delete_on_uninstall'     => __( 'Delete data on uninstall', 'estasoft-erp-crm-sync-engine' ),
-			'runtime_profile'         => __( 'Runtime profile', 'estasoft-erp-crm-sync-engine' ),
-			'global_concurrency'      => __( 'Items at once, all connections', 'estasoft-erp-crm-sync-engine' ),
-			'backlog_threshold'       => __( 'Queue warning limit', 'estasoft-erp-crm-sync-engine' ),
-			'admin_bar'               => __( 'Admin bar item', 'estasoft-erp-crm-sync-engine' ),
-			'recipients'              => __( 'recipients', 'estasoft-erp-crm-sync-engine' ),
-			'on_paused'               => __( 'when syncing pauses', 'estasoft-erp-crm-sync-engine' ),
-			'daily_digest'            => __( 'daily list of failed orders', 'estasoft-erp-crm-sync-engine' ),
-			'digest_time'             => __( 'time of the daily list', 'estasoft-erp-crm-sync-engine' ),
-			'on_backlog'              => __( 'when the queue backs up', 'estasoft-erp-crm-sync-engine' ),
-			'on_signin_expired'       => __( 'when a sign-in expires', 'estasoft-erp-crm-sync-engine' ),
-			'retry_delays_seconds'    => __( 'Retry delays', 'estasoft-erp-crm-sync-engine' ),
-			'jitter'                  => __( 'Random extra wait', 'estasoft-erp-crm-sync-engine' ),
-			'breaker_threshold'       => __( 'Pause after failures in a row', 'estasoft-erp-crm-sync-engine' ),
-			'probe_interval_minutes'  => __( 'Check again every (minutes)', 'estasoft-erp-crm-sync-engine' ),
-			'requests_per_second'     => __( 'Requests per second', 'estasoft-erp-crm-sync-engine' ),
-			'concurrency'             => __( 'Items at once', 'estasoft-erp-crm-sync-engine' ),
-			'obey_retry_after'        => __( 'Obey Retry-After', 'estasoft-erp-crm-sync-engine' ),
-			'enabled'                 => __( 'Stock sync', 'estasoft-erp-crm-sync-engine' ),
-			'interval_minutes'        => __( 'Stock check every (minutes)', 'estasoft-erp-crm-sync-engine' ),
-			'safety_buffer'           => __( 'Safety buffer', 'estasoft-erp-crm-sync-engine' ),
-			'subtract_held'           => __( 'Subtract held stock', 'estasoft-erp-crm-sync-engine' ),
-			'tracking_enabled'        => __( 'Delivery tracking', 'estasoft-erp-crm-sync-engine' ),
-			'delivered_becomes'       => __( 'Delivered orders become', 'estasoft-erp-crm-sync-engine' ),
-			'cod_payment_on_delivery' => __( 'Cash on delivery payment', 'estasoft-erp-crm-sync-engine' ),
+			'display_time'            => __( 'Time display', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'log_retention_days'      => __( 'Days to keep logs', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'log_excerpt_bytes'       => __( 'Log excerpt size', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'redaction'               => __( 'Redaction', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'payload_cap_bytes'       => __( 'Largest payload kept', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'delete_on_uninstall'     => __( 'Delete data on uninstall', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'runtime_profile'         => __( 'Runtime profile', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'global_concurrency'      => __( 'Items at once, all connections', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'backlog_threshold'       => __( 'Queue warning limit', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'admin_bar'               => __( 'Admin bar item', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'recipients'              => __( 'recipients', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'on_paused'               => __( 'when syncing pauses', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'daily_digest'            => __( 'daily list of failed orders', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'digest_time'             => __( 'time of the daily list', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'on_backlog'              => __( 'when the queue backs up', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'on_signin_expired'       => __( 'when a sign-in expires', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'retry_delays_seconds'    => __( 'Retry delays', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'jitter'                  => __( 'Random extra wait', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'breaker_threshold'       => __( 'Pause after failures in a row', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'probe_interval_minutes'  => __( 'Check again every (minutes)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'requests_per_second'     => __( 'Requests per second', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'concurrency'             => __( 'Items at once', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'obey_retry_after'        => __( 'Obey Retry-After', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'enabled'                 => __( 'Stock sync', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'interval_minutes'        => __( 'Stock check every (minutes)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'safety_buffer'           => __( 'Safety buffer', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'subtract_held'           => __( 'Subtract held stock', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'tracking_enabled'        => __( 'Delivery tracking', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'delivered_becomes'       => __( 'Delivered orders become', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'cod_payment_on_delivery' => __( 'Cash on delivery payment', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		);
 		return $labels[ $key ] ?? $this->plain( $key );
 	}

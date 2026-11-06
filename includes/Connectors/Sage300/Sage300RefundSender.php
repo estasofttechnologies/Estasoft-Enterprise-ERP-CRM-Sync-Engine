@@ -107,7 +107,7 @@ final class Sage300RefundSender {
 		return Problems::refused(
 			$this->system,
 			'refund_total_property',
-			__( 'Enter the property that holds the total of a credit note in "refund_total_property", so the credit note can be compared with the refund. Or choose "Continue with a warning" for totals that differ, and accept that refunds are not compared.', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Enter the property that holds the total of a credit note in "refund_total_property", so the credit note can be compared with the refund. Or choose "Continue with a warning" for totals that differ, and accept that refunds are not compared.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			'refund total not verifiable'
 		);
 	}
@@ -130,11 +130,11 @@ final class Sage300RefundSender {
 				return Problems::refused(
 					$this->system,
 					'refund_total_property',
-					__( 'The credit note was made but its answer has no value in the "refund_total_property" property, so it could not be compared with the refund. It stays in Sage 300; check the property name, or choose "Continue with a warning".', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The credit note was made but its answer has no value in the "refund_total_property" property, so it could not be compared with the refund. It stays in Sage 300; check the property name, or choose "Continue with a warning".', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					'refund total missing'
 				);
 			}
-			$warnings[] = __( 'The credit note total was not compared with the refund.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'The credit note total was not compared with the refund.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			return null;
 		}
 		$customer = trim( (string) ( $note['CustomerNumber'] ?? '' ) );
@@ -145,7 +145,7 @@ final class Sage300RefundSender {
 			return null;
 		}
 		if ( $check->isStrict() ) {
-			return $check->error( $diff, __( 'The credit note stays in Sage 300. Delete it there after fixing the tax setup; the next try makes a new one.', 'estasoft-erp-crm-sync-engine' ) );
+			return $check->error( $diff, __( 'The credit note stays in Sage 300. Delete it there after fixing the tax setup; the next try makes a new one.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$warnings[] = $diff['message'];
 		return null;
@@ -196,7 +196,7 @@ final class Sage300RefundSender {
 				'order_ref',
 				sprintf(
 					/* translators: %s: order reference. */
-					__( 'The order %s is not in Sage 300, so it cannot be refunded there. Send the order first.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The order %s is not in Sage 300, so it cannot be refunded there. Send the order first.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$payload->orderRef
 				),
 				'order not found'
@@ -205,10 +205,10 @@ final class Sage300RefundSender {
 		$shipping = $this->options->text( 'shipping_charge_code' );
 		$generic  = $this->options->text( 'refund_charge_code' );
 		if ( $payload->shippingMinor > 0 && '' === $shipping ) {
-			return Problems::refused( $this->system, 'shipping_charge_code', __( 'The refund includes shipping, so the connection settings need the shipping charge code.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $this->system, 'shipping_charge_code', __( 'The refund includes shipping, so the connection settings need the shipping charge code.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( $payload->isAmountOnly() && ( '' === $generic || null === $payload->amountMinor || $payload->amountMinor <= 0 ) ) {
-			return Problems::refused( $this->system, 'refund_line', __( 'This refund has no product lines. Enter a miscellaneous charge code for refunds without lines in the connection settings ("refund_charge_code"), or refund by line.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $this->system, 'refund_line', __( 'This refund has no product lines. Enter a miscellaneous charge code for refunds without lines in the connection settings ("refund_charge_code"), or refund by line.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$codes = array_map( static fn( array $line ): string => (string) $line['sku'], $payload->lines );
 		$items = $this->lookups->items( $codes );
@@ -268,7 +268,7 @@ final class Sage300RefundSender {
 		if ( array() === $stored ) {
 			$found = $this->find( $payload->clientRef );
 			if ( null === $found ) {
-				return Problems::refused( $this->system, 'OECreditDebitNotes', __( 'Sage 300 did not return the new credit note.', 'estasoft-erp-crm-sync-engine' ) );
+				return Problems::refused( $this->system, 'OECreditDebitNotes', __( 'Sage 300 did not return the new credit note.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			return $found;
 		}

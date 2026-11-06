@@ -230,7 +230,7 @@ final class QoyodDocuments {
 			array(
 				'system' => QoyodConnector::LABEL,
 				'field'  => $key,
-				'reason' => __( 'Qoyod did not return the id of the new record.', 'estasoft-erp-crm-sync-engine' ),
+				'reason' => __( 'Qoyod did not return the id of the new record.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			),
 			null,
 			null,

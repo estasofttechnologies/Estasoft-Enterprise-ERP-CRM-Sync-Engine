@@ -88,11 +88,11 @@ final class ExactOrder {
 			);
 		}
 		if ( '' === ( $partner['name'] ?? '' ) && '' === ( $partner['company_name'] ?? '' ) ) {
-			return self::refused( 'partner.name', __( 'The customer name is empty.', 'estasoft-erp-crm-sync-engine' ) );
+			return self::refused( 'partner.name', __( 'The customer name is empty.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$currency = strtoupper( ExactPayload::text( $payload['currency'] ?? '' ) );
 		if ( 1 !== preg_match( '/^[A-Z]{3}$/', $currency ) ) {
-			return self::refused( 'currency', __( 'The order has no valid currency code.', 'estasoft-erp-crm-sync-engine' ) );
+			return self::refused( 'currency', __( 'The order has no valid currency code.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$lines = array();
 		foreach ( ExactPayload::rows( $payload['order_line'] ?? null ) as $index => $row ) {
@@ -103,7 +103,7 @@ final class ExactOrder {
 			$lines[] = $line;
 		}
 		if ( array() === $lines ) {
-			return self::refused( 'order_line', __( 'The order has no product lines.', 'estasoft-erp-crm-sync-engine' ) );
+			return self::refused( 'order_line', __( 'The order has no product lines.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$extras = self::extras( $payload );
 		$total  = ExactPayload::minor( $payload['total'] ?? null );
@@ -145,11 +145,11 @@ final class ExactOrder {
 		$unit     = ExactPayload::minor( $row['price_unit'] ?? null );
 		if ( '' === $sku ) {
 			/* translators: %d: line number. */
-			return self::refused( 'order_line.product', sprintf( __( 'Line %d has no SKU.', 'estasoft-erp-crm-sync-engine' ), $number ) );
+			return self::refused( 'order_line.product', sprintf( __( 'Line %d has no SKU.', 'estasoft-enterprise-erpcrm-sync-engine' ), $number ) );
 		}
 		if ( null === $quantity || null === $unit ) {
 			/* translators: %d: line number. */
-			return self::refused( 'order_line', sprintf( __( 'Line %d has no valid quantity or price.', 'estasoft-erp-crm-sync-engine' ), $number ) );
+			return self::refused( 'order_line', sprintf( __( 'Line %d has no valid quantity or price.', 'estasoft-enterprise-erpcrm-sync-engine' ), $number ) );
 		}
 		return array(
 			'sku'      => $sku,

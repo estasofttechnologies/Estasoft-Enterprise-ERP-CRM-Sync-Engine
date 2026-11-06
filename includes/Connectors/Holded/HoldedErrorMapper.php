@@ -43,7 +43,7 @@ final class HoldedErrorMapper {
 				ErrorCode::Auth004,
 				array(
 					'system' => HoldedConnector::LABEL,
-					'action' => __( 'do this (check the permissions of the API key)', 'estasoft-erp-crm-sync-engine' ),
+					'action' => __( 'do this (check the permissions of the API key)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				403,
 				null,
@@ -52,12 +52,12 @@ final class HoldedErrorMapper {
 			);
 		}
 		if ( 404 === $status ) {
-			return $this->refused( __( 'a related record', 'estasoft-erp-crm-sync-engine' ), __( 'Holded does not have this record.', 'estasoft-erp-crm-sync-engine' ), 404, 'not found' );
+			return $this->refused( __( 'a related record', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Holded does not have this record.', 'estasoft-enterprise-erpcrm-sync-engine' ), 404, 'not found' );
 		}
 		if ( 400 === $status || 422 === $status ) {
 			$reason = $this->reason( $response->json() );
 			return $this->refused(
-				__( 'the request', 'estasoft-erp-crm-sync-engine' ),
+				__( 'the request', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'' !== $reason ? $reason : HttpErrorMapper::message( $response ),
 				$status,
 				'validation'
@@ -77,8 +77,8 @@ final class HoldedErrorMapper {
 		}
 		$reason = $this->reason( $json );
 		return $this->refused(
-			__( 'the request', 'estasoft-erp-crm-sync-engine' ),
-			'' !== $reason ? $reason : __( 'Holded refused the request.', 'estasoft-erp-crm-sync-engine' ),
+			__( 'the request', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'' !== $reason ? $reason : __( 'Holded refused the request.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			null,
 			'status 0'
 		);

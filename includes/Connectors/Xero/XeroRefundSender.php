@@ -89,7 +89,7 @@ final class XeroRefundSender {
 					'Invoice',
 					sprintf(
 						/* translators: %s: the shop's reference of the order, such as WC-1042. */
-						__( 'The invoice for %s was not found in Xero, so the refund cannot be linked to it.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'The invoice for %s was not found in Xero, so the refund cannot be linked to it.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$parsed->orderRef
 					)
 				)
@@ -276,7 +276,7 @@ final class XeroRefundSender {
 			'CreditNote',
 			sprintf(
 				/* translators: %s: the shop's reference of the refund, such as WC-77. */
-				__( 'The credit note for %s was voided in Xero. Restore it there, or delete the voided credit note, then retry.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'The credit note for %s was voided in Xero. Restore it there, or delete the voided credit note, then retry.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$reference
 			)
 		);

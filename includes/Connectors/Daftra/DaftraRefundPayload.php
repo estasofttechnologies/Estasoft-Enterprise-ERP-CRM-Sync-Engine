@@ -55,7 +55,7 @@ final class DaftraRefundPayload {
 	public static function parse( array $payload ): self|ConnectorError {
 		$orderRef = DaftraPayloadReader::text( $payload['order_ref'] ?? '' );
 		if ( '' === $orderRef ) {
-			return self::refused( 'order_ref', __( 'The refund does not say which order it belongs to.', 'estasoft-erp-crm-sync-engine' ) );
+			return self::refused( 'order_ref', __( 'The refund does not say which order it belongs to.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$lines = array();
 		foreach ( DaftraPayloadReader::rows( $payload['lines'] ?? null ) as $raw ) {
@@ -76,7 +76,7 @@ final class DaftraRefundPayload {
 		}
 		$amount = abs( (int) DaftraPayloadReader::minor( $payload['amount'] ?? null ) );
 		if ( 0 === $amount && array() === $lines ) {
-			return self::refused( 'amount', __( 'The refund has no amount and no lines.', 'estasoft-erp-crm-sync-engine' ) );
+			return self::refused( 'amount', __( 'The refund has no amount and no lines.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return new self(
 			strtoupper( DaftraPayloadReader::text( $payload['currency'] ?? '' ) ),

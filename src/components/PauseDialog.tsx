@@ -43,7 +43,7 @@ export function PauseDialog( {
 			kind: 'success',
 			text: __(
 				'Syncing resumed. Waiting orders are sent oldest first.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 		} );
 		onDone();
@@ -54,15 +54,21 @@ export function PauseDialog( {
 				scope === 'connection'
 					? __(
 							'Pause this connection?',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						)
-					: __( 'Pause syncing?', 'estasoft-erp-crm-sync-engine' )
+					: __(
+							'Pause syncing?',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						)
 			}
 			onClose={ onClose }
 			confirmLabel={
 				scope === 'connection'
-					? __( 'Pause', 'estasoft-erp-crm-sync-engine' )
-					: __( 'Pause syncing', 'estasoft-erp-crm-sync-engine' )
+					? __( 'Pause', 'estasoft-enterprise-erpcrm-sync-engine' )
+					: __(
+							'Pause syncing',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						)
 			}
 			onConfirm={ async () => {
 				const summary = await api.pause( {
@@ -79,17 +85,17 @@ export function PauseDialog( {
 									/* translators: %s: clock time when syncing resumes */
 									__(
 										'Syncing is paused for 1 hour. Orders wait in the queue. It resumes at %s.',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									formatTime( until, cfg )
 								)
 							: __(
 									'Syncing is paused. Orders wait in the queue until you resume.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 					actionLabel: __(
 						'Resume now',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					onAction: () => {
 						// A refused resume must be said out loud, not dropped.
@@ -105,7 +111,10 @@ export function PauseDialog( {
 			} }
 		>
 			<ChoiceGroup
-				legend={ __( 'How long?', 'estasoft-erp-crm-sync-engine' ) }
+				legend={ __(
+					'How long?',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 				hideLegend
 				cards={ false }
 				value={ length }
@@ -115,14 +124,14 @@ export function PauseDialog( {
 						value: 'hour',
 						label: __(
 							'For 1 hour',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 					},
 					{
 						value: 'until',
 						label: __(
 							'Until I resume',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 					},
 				] }
@@ -131,11 +140,11 @@ export function PauseDialog( {
 				{ scope === 'connection'
 					? __(
 							'Orders wait in the queue. Other connections keep running.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						)
 					: __(
 							'Customers can still check out. Orders wait in the queue. An item that is being sent right now finishes first.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 			</p>
 		</ConfirmDialog>

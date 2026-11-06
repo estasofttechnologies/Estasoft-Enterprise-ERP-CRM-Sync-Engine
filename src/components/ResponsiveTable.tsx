@@ -103,7 +103,7 @@ export function ResponsiveTable< T, K extends Key >( {
 									}
 									aria-label={ __(
 										'Select all on this page',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									) }
 								/>
 							</th>

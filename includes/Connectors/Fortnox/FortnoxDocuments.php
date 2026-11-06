@@ -162,7 +162,7 @@ final class FortnoxDocuments {
 		if ( null === $row ) {
 			$original = $this->find( $refund->orderRef );
 			if ( null === $original || '' === (string) ( $original['CustomerNumber'] ?? '' ) ) {
-				FortnoxFailure::refuse( 'order_ref', __( 'The order of this refund is not in Fortnox.', 'estasoft-erp-crm-sync-engine' ) );
+				FortnoxFailure::refuse( 'order_ref', __( 'The order of this refund is not in Fortnox.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			if ( '' === $currency ) {
 				$currency = '' !== (string) ( $original['Currency'] ?? '' ) ? (string) $original['Currency'] : 'SEK';
@@ -207,13 +207,13 @@ final class FortnoxDocuments {
 		$customer = $this->lookups->customerByEmail( $order->partner['email'] );
 		if ( null === $customer ) {
 			if ( 'match_only' === $this->options->choice( 'customer_policy', array( 'match_or_create', 'match_only' ), 'match_or_create' ) ) {
-				FortnoxFailure::refuse( 'partner.email', __( 'No customer with this email address exists in Fortnox, and the connection only matches existing customers.', 'estasoft-erp-crm-sync-engine' ) );
+				FortnoxFailure::refuse( 'partner.email', __( 'No customer with this email address exists in Fortnox, and the connection only matches existing customers.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$customer = $this->lookups->createCustomer( $order->partner );
 		}
 		$number = (string) ( $customer['CustomerNumber'] ?? '' );
 		if ( '' === $number ) {
-			FortnoxFailure::refuse( 'customer', __( 'Fortnox did not return a customer number.', 'estasoft-erp-crm-sync-engine' ) );
+			FortnoxFailure::refuse( 'customer', __( 'Fortnox did not return a customer number.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$days = max( 0, min( 90, (int) $this->options->text( 'due_days', '0' ) ) );
 		$due  = ( new \DateTimeImmutable( $order->date . ' 00:00:00', new \DateTimeZone( 'UTC' ) ) )->modify( '+' . $days . ' days' )->format( 'Y-m-d' );
@@ -257,10 +257,10 @@ final class FortnoxDocuments {
 			$rows[] = $this->refundRow( (string) $line['sku'], (string) $line['name'], (string) $line['quantity'], (int) $line['amount'], (string) $line['tax'], $currency );
 		}
 		if ( $refund->shippingMinor > 0 ) {
-			$rows[] = $this->refundRow( '', __( 'Shipping', 'estasoft-erp-crm-sync-engine' ), '1', $refund->shippingMinor, $refund->shippingTax, $currency );
+			$rows[] = $this->refundRow( '', __( 'Shipping', 'estasoft-enterprise-erpcrm-sync-engine' ), '1', $refund->shippingMinor, $refund->shippingTax, $currency );
 		}
 		if ( array() === $rows ) {
-			$rows[] = $this->refundRow( '', __( 'Refund', 'estasoft-erp-crm-sync-engine' ), '1', $refund->amountMinor, '', $currency );
+			$rows[] = $this->refundRow( '', __( 'Refund', 'estasoft-enterprise-erpcrm-sync-engine' ), '1', $refund->amountMinor, '', $currency );
 		}
 		$body = array(
 			'CustomerNumber'            => $customerNumber,
@@ -275,7 +275,7 @@ final class FortnoxDocuments {
 			$body['Currency'] = $currency;
 		}
 		/* translators: 1: refund reference, 2: order reference */
-		$comment          = trim( sprintf( __( 'Refund %1$s of %2$s', 'estasoft-erp-crm-sync-engine' ), $refund->reference, $refund->orderRef ) . ( '' !== $refund->reason ? "\n" . $refund->reason : '' ) );
+		$comment          = trim( sprintf( __( 'Refund %1$s of %2$s', 'estasoft-enterprise-erpcrm-sync-engine' ), $refund->reference, $refund->orderRef ) . ( '' !== $refund->reason ? "\n" . $refund->reason : '' ) );
 		$body['Comments'] = Text::limit( $comment, 1000 )[0];
 		return $this->completeRecord( $this->api->create( 'invoices', 'Invoice', $body ), false );
 	}
@@ -354,7 +354,7 @@ final class FortnoxDocuments {
 		if ( '' !== $name ) {
 			list( $text, $cut ) = Text::limit( $name, 50 );
 			if ( $cut ) {
-				$this->warnings[] = __( 'A row text was cut to 50 characters.', 'estasoft-erp-crm-sync-engine' );
+				$this->warnings[] = __( 'A row text was cut to 50 characters.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			}
 			$row['Description'] = $text;
 		}
@@ -377,7 +377,7 @@ final class FortnoxDocuments {
 	private function completeRecord( array $made, bool $orders ): array {
 		$number = (string) ( $made['DocumentNumber'] ?? '' );
 		if ( '' === $number ) {
-			FortnoxFailure::refuse( 'document', __( 'Fortnox created the document but did not return its number.', 'estasoft-erp-crm-sync-engine' ) );
+			FortnoxFailure::refuse( 'document', __( 'Fortnox created the document but did not return its number.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( isset( $made['Total'] ) ) {
 			return $made;
@@ -403,17 +403,17 @@ final class FortnoxDocuments {
 		$actual = '' !== (string) ( $row['Currency'] ?? '' ) ? strtoupper( (string) $row['Currency'] ) : 'SEK';
 		if ( $actual !== $currency ) {
 			/* translators: 1: currency of the order, 2: currency in Fortnox */
-			$reason = sprintf( __( 'The order is in %1$s but Fortnox recorded it in %2$s.', 'estasoft-erp-crm-sync-engine' ), $currency, $actual );
+			$reason = sprintf( __( 'The order is in %1$s but Fortnox recorded it in %2$s.', 'estasoft-enterprise-erpcrm-sync-engine' ), $currency, $actual );
 		} elseif ( null !== $totalMinor ) {
 			$recorded = Amounts::minor( $row['Total'] ?? null, $currency );
 			if ( null !== $recorded && ! Amounts::agree( $totalMinor, $recorded ) ) {
 				$rounding = $this->roundingOf( $row, $currency, $orders );
 				if ( 0 !== $rounding && abs( $rounding ) <= intdiv( 10 ** Money::exponent( $currency ), 2 ) && abs( $totalMinor - $recorded ) <= abs( $rounding ) + Amounts::TOLERANCE ) {
 					/* translators: 1: rounding amount, 2: currency */
-					$this->warnings[] = sprintf( __( 'Fortnox rounded the total by %1$s %2$s (the company rounds its totals).', 'estasoft-erp-crm-sync-engine' ), Amounts::decimal( $rounding, $currency ), $currency );
+					$this->warnings[] = sprintf( __( 'Fortnox rounded the total by %1$s %2$s (the company rounds its totals).', 'estasoft-enterprise-erpcrm-sync-engine' ), Amounts::decimal( $rounding, $currency ), $currency );
 				} else {
 					/* translators: 1: total of the order, 2: total in Fortnox, 3: currency */
-					$reason = sprintf( __( 'The total is %1$s but Fortnox recorded %2$s %3$s.', 'estasoft-erp-crm-sync-engine' ), Amounts::decimal( $totalMinor, $currency ), Amounts::decimal( $recorded, $currency ), $currency );
+					$reason = sprintf( __( 'The total is %1$s but Fortnox recorded %2$s %3$s.', 'estasoft-enterprise-erpcrm-sync-engine' ), Amounts::decimal( $totalMinor, $currency ), Amounts::decimal( $recorded, $currency ), $currency );
 				}
 			}
 		}
@@ -425,7 +425,7 @@ final class FortnoxDocuments {
 			return;
 		}
 		if ( $justCreated ) {
-			$reason .= ' ' . __( 'The document stays in Fortnox marked as pending; cancel it there, correct the settings and try again.', 'estasoft-erp-crm-sync-engine' );
+			$reason .= ' ' . __( 'The document stays in Fortnox marked as pending; cancel it there, correct the settings and try again.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		FortnoxFailure::refuse( 'total', $reason );
 	}
@@ -508,11 +508,11 @@ final class FortnoxDocuments {
 	 */
 	private function pay( array $row, FortnoxOrder $order ): void {
 		if ( 'SEK' !== $order->currency ) {
-			FortnoxFailure::refuse( 'currency', __( 'Payments in a foreign currency are not recorded automatically. Turn off record_payment or record the payment in Fortnox.', 'estasoft-erp-crm-sync-engine' ) );
+			FortnoxFailure::refuse( 'currency', __( 'Payments in a foreign currency are not recorded automatically. Turn off record_payment or record the payment in Fortnox.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$mode = $this->options->text( 'payment_mode' );
 		if ( '' === $mode ) {
-			FortnoxFailure::refuse( 'payment_mode', __( 'Set the mode of payment code in the connection option payment_mode.', 'estasoft-erp-crm-sync-engine' ) );
+			FortnoxFailure::refuse( 'payment_mode', __( 'Set the mode of payment code in the connection option payment_mode.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$balance = Amounts::minor( $row['Balance'] ?? null, 'SEK' );
 		if ( null === $balance || $balance <= 0 || true !== ( $row['Booked'] ?? false ) ) {

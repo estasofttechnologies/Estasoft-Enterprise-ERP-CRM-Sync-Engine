@@ -67,8 +67,8 @@ final class LexwareErrorMapper {
 				ErrorCode::Val002,
 				array(
 					'system' => LexwareOfficeConnector::LABEL,
-					'field'  => __( 'the document', 'estasoft-erp-crm-sync-engine' ),
-					'reason' => '' !== $joined ? $joined : __( 'Lexware Office did not accept the document.', 'estasoft-erp-crm-sync-engine' ),
+					'field'  => __( 'the document', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'reason' => '' !== $joined ? $joined : __( 'Lexware Office did not accept the document.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				406,
 				null,

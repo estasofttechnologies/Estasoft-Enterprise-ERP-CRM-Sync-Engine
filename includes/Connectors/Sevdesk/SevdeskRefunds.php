@@ -62,7 +62,7 @@ final class SevdeskRefunds {
 	 */
 	public function sendRefund( ApiClient $api, Connection $connection, Item $item, RefundPayload $refund, Options $options ): SendResult {
 		if ( '1.0' === $this->reference->version( $api, $connection ) ) {
-			return SendResult::failure( Refusal::value( SevdeskConnector::LABEL, 'creditNote', __( 'Credit notes need sevDesk-Update 2.0.', 'estasoft-erp-crm-sync-engine' ), 'version 1.0' ) );
+			return SendResult::failure( Refusal::value( SevdeskConnector::LABEL, 'creditNote', __( 'Credit notes need sevDesk-Update 2.0.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'version 1.0' ) );
 		}
 		if ( '' !== $refund->currency && 'EUR' !== $refund->currency ) {
 			return SendResult::failure( $this->documents->currencyRefusal( $refund->currency ) );
@@ -126,7 +126,7 @@ final class SevdeskRefunds {
 		$created = (array) ( $api->post( 'CreditNote/Factory/saveCreditNote', array(), $body )->json()['objects'] ?? array() );
 		$id      = (string) ( $created['creditNote']['id'] ?? '' );
 		if ( '' === $id ) {
-			return SendResult::failure( Refusal::value( SevdeskConnector::LABEL, 'creditNote', __( 'sevDesk did not return the new credit note.', 'estasoft-erp-crm-sync-engine' ), 'no credit note id' ) );
+			return SendResult::failure( Refusal::value( SevdeskConnector::LABEL, 'creditNote', __( 'sevDesk did not return the new credit note.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'no credit note id' ) );
 		}
 		$read    = $this->readCredit( $api, $id ) ?? array( 'id' => $id );
 		$problem = $this->documents->check( $read, $refund->expectedTotal(), $options, $warnings, $refund->rows(), $this->creditDate( $refund ) );
@@ -232,7 +232,7 @@ final class SevdeskRefunds {
 		if ( array() === $rows ) {
 			$rest = $refund->expectedTotal();
 			if ( $rest <= 0 ) {
-				return Refusal::value( SevdeskConnector::LABEL, 'amount', __( 'The refund has no amount.', 'estasoft-erp-crm-sync-engine' ), 'empty refund' );
+				return Refusal::value( SevdeskConnector::LABEL, 'amount', __( 'The refund has no amount.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'empty refund' );
 			}
 			$rows[] = array( 'Erstattung', 1.0, $this->amounts->netFromGross( $rest, $fallback ), $fallback );
 		}
@@ -301,6 +301,6 @@ final class SevdeskRefunds {
 	 * SYNC-VAL-002 for an order that has no invoice to credit.
 	 */
 	private function noInvoice(): ConnectorError {
-		return Refusal::value( SevdeskConnector::LABEL, 'order_ref', __( 'sevDesk has no invoice for the refunded order.', 'estasoft-erp-crm-sync-engine' ), 'no invoice for the refund' );
+		return Refusal::value( SevdeskConnector::LABEL, 'order_ref', __( 'sevDesk has no invoice for the refunded order.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'no invoice for the refund' );
 	}
 }

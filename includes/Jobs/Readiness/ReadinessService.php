@@ -192,16 +192,16 @@ final class ReadinessService {
 		if ( $this->environment->hposEnabled() ) {
 			return $this->check(
 				'hpos',
-				__( 'Orders use High-Performance Order Storage', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Orders use High-Performance Order Storage', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'passed',
-				__( 'Compatible. The plugin reads and writes orders through WooCommerce, never through raw tables.', 'estasoft-erp-crm-sync-engine' )
+				__( 'Compatible. The plugin reads and writes orders through WooCommerce, never through raw tables.', 'estasoft-enterprise-erpcrm-sync-engine' )
 			);
 		}
 		return $this->check(
 			'hpos',
-			__( 'Orders use the older posts storage', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Orders use the older posts storage', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			'passed',
-			__( 'Compatible. The plugin works with the older storage and with High-Performance Order Storage alike.', 'estasoft-erp-crm-sync-engine' )
+			__( 'Compatible. The plugin works with the older storage and with High-Performance Order Storage alike.', 'estasoft-enterprise-erpcrm-sync-engine' )
 		);
 	}
 
@@ -211,32 +211,32 @@ final class ReadinessService {
 	 * @return array<string,mixed>
 	 */
 	private function cronRunning(): array {
-		$title = __( 'Background tasks are running', 'estasoft-erp-crm-sync-engine' );
+		$title = __( 'Background tasks are running', 'estasoft-enterprise-erpcrm-sync-engine' );
 		$last  = ( $this->lastQueueRun )();
 		$at    = null === $last ? null : Time::fromSql( $last );
 		if ( null === $at ) {
 			return $this->check(
 				'cron_running',
-				__( 'Background tasks have not run yet', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Background tasks have not run yet', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'worth_fixing',
-				__( 'The sync runs as a background task each minute. It has not run yet; this is normal right after installing. Visit a few pages, then check again.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'The sync runs as a background task each minute. It has not run yet; this is normal right after installing. Visit a few pages, then check again.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$this->urls->route( '/settings/performance' ),
-				__( 'How to set it up', 'estasoft-erp-crm-sync-engine' )
+				__( 'How to set it up', 'estasoft-enterprise-erpcrm-sync-engine' )
 			);
 		}
 		$minutes = (int) floor( ( $this->clock->now()->getTimestamp() - $at->getTimestamp() ) / 60 );
 		if ( $minutes > self::STALE_MINUTES ) {
 			return $this->check(
 				'cron_running',
-				__( 'Background tasks have stopped', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Background tasks have stopped', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'needs_fixing',
 				sprintf(
 					/* translators: %d: minutes since the last run. */
-					_n( 'The last run was %d minute ago. Nothing is sent while background tasks are stopped.', 'The last run was %d minutes ago. Nothing is sent while background tasks are stopped.', $minutes, 'estasoft-erp-crm-sync-engine' ),
+					_n( 'The last run was %d minute ago. Nothing is sent while background tasks are stopped.', 'The last run was %d minutes ago. Nothing is sent while background tasks are stopped.', $minutes, 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$minutes
 				),
 				$this->urls->route( '/settings/performance' ),
-				__( 'How to set it up', 'estasoft-erp-crm-sync-engine' )
+				__( 'How to set it up', 'estasoft-enterprise-erpcrm-sync-engine' )
 			);
 		}
 		return $this->check(
@@ -245,7 +245,7 @@ final class ReadinessService {
 			'passed',
 			sprintf(
 				/* translators: %d: minutes since the last run. */
-				_n( 'The last run was %d minute ago. This is healthy.', 'The last run was %d minutes ago. This is healthy.', max( 1, $minutes ), 'estasoft-erp-crm-sync-engine' ),
+				_n( 'The last run was %d minute ago. This is healthy.', 'The last run was %d minutes ago. This is healthy.', max( 1, $minutes ), 'estasoft-enterprise-erpcrm-sync-engine' ),
 				max( 1, $minutes )
 			)
 		);
@@ -260,18 +260,18 @@ final class ReadinessService {
 		if ( $this->environment->cronRunsOnVisits() ) {
 			return $this->check(
 				'cron_visits',
-				__( 'Scheduled tasks depend on site visits', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Scheduled tasks depend on site visits', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'worth_fixing',
-				__( 'Scheduled tasks only run when someone visits the site. A real cron job keeps timing steady.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Scheduled tasks only run when someone visits the site. A real cron job keeps timing steady.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$this->urls->route( '/settings/performance' ),
-				__( 'How to set it up', 'estasoft-erp-crm-sync-engine' )
+				__( 'How to set it up', 'estasoft-enterprise-erpcrm-sync-engine' )
 			);
 		}
 		return $this->check(
 			'cron_visits',
-			__( 'Scheduled tasks run on a real cron job', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Scheduled tasks run on a real cron job', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			'passed',
-			__( 'WordPress cron is switched off for page visits, so a server cron job drives the schedule.', 'estasoft-erp-crm-sync-engine' )
+			__( 'WordPress cron is switched off for page visits, so a server cron job drives the schedule.', 'estasoft-enterprise-erpcrm-sync-engine' )
 		);
 	}
 
@@ -285,11 +285,11 @@ final class ReadinessService {
 		if ( 0 === $found['total'] ) {
 			return $this->check(
 				'dup_sku',
-				__( 'No duplicate SKUs', 'estasoft-erp-crm-sync-engine' ),
+				__( 'No duplicate SKUs', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'passed',
 				sprintf(
 					/* translators: %s: number of products checked. */
-					_n( '%s product checked.', '%s products checked.', $this->catalog->productCount(), 'estasoft-erp-crm-sync-engine' ),
+					_n( '%s product checked.', '%s products checked.', $this->catalog->productCount(), 'estasoft-enterprise-erpcrm-sync-engine' ),
 					number_format_i18n( $this->catalog->productCount() )
 				)
 			);
@@ -298,17 +298,17 @@ final class ReadinessService {
 			'dup_sku',
 			sprintf(
 				/* translators: %d: number of SKUs used by more than one product. */
-				_n( '%d SKU is used by more than one product', '%d SKUs are used by more than one product', $found['total'], 'estasoft-erp-crm-sync-engine' ),
+				_n( '%d SKU is used by more than one product', '%d SKUs are used by more than one product', $found['total'], 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$found['total']
 			),
 			'worth_fixing',
 			sprintf(
 				/* translators: %s: list of SKUs. */
-				__( 'Your system matches products by SKU, so a shared SKU can send an order to the wrong product. Examples: %s.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Your system matches products by SKU, so a shared SKU can send an order to the wrong product. Examples: %s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				implode( ', ', array_column( $found['items'], 'sku' ) )
 			),
 			$this->urls->products(),
-			__( 'Open the products', 'estasoft-erp-crm-sync-engine' )
+			__( 'Open the products', 'estasoft-enterprise-erpcrm-sync-engine' )
 		);
 	}
 
@@ -322,9 +322,9 @@ final class ReadinessService {
 		if ( 0 === $found['total'] ) {
 			return $this->check(
 				'no_sku',
-				__( 'Every product has a SKU', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Every product has a SKU', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'passed',
-				__( 'Your system matches products by SKU, and none is missing one.', 'estasoft-erp-crm-sync-engine' )
+				__( 'Your system matches products by SKU, and none is missing one.', 'estasoft-enterprise-erpcrm-sync-engine' )
 			);
 		}
 		$names = array();
@@ -336,20 +336,20 @@ final class ReadinessService {
 			'no_sku',
 			sprintf(
 				/* translators: %d: number of products without a SKU. */
-				_n( '%d product has no SKU', '%d products have no SKU', $found['total'], 'estasoft-erp-crm-sync-engine' ),
+				_n( '%d product has no SKU', '%d products have no SKU', $found['total'], 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$found['total']
 			),
 			'worth_fixing',
 			sprintf(
 				/* translators: 1: number of products, 2: list of product names. */
-				_n( 'Your system matches products by SKU, so %1$d product cannot sync until it has one: %2$s.', 'Your system matches products by SKU, so these %1$d cannot sync until they have one: %2$s.', $found['total'], 'estasoft-erp-crm-sync-engine' ),
+				_n( 'Your system matches products by SKU, so %1$d product cannot sync until it has one: %2$s.', 'Your system matches products by SKU, so these %1$d cannot sync until they have one: %2$s.', $found['total'], 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$found['total'],
-				implode( ', ', $names ) . ( $more > 0 ? sprintf( /* translators: %d: number of products not listed. */ __( ' and %d more', 'estasoft-erp-crm-sync-engine' ), $more ) : '' )
+				implode( ', ', $names ) . ( $more > 0 ? sprintf( /* translators: %d: number of products not listed. */ __( ' and %d more', 'estasoft-enterprise-erpcrm-sync-engine' ), $more ) : '' )
 			),
 			$this->urls->route( '/mapping/products' ),
 			sprintf(
 				/* translators: %d: number of products. */
-				_n( 'View the %d product', 'View the %d products', $found['total'], 'estasoft-erp-crm-sync-engine' ),
+				_n( 'View the %d product', 'View the %d products', $found['total'], 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$found['total']
 			)
 		);
@@ -365,22 +365,22 @@ final class ReadinessService {
 		if ( 0 === $found['total'] ) {
 			return $this->check(
 				'state',
-				__( 'Customer states can be matched', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Customer states can be matched', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'passed',
-				__( 'Every saved billing state is one WooCommerce knows.', 'estasoft-erp-crm-sync-engine' )
+				__( 'Every saved billing state is one WooCommerce knows.', 'estasoft-enterprise-erpcrm-sync-engine' )
 			);
 		}
 		return $this->check(
 			'state',
 			sprintf(
 				/* translators: %d: number of customers. */
-				_n( '%d customer has a free-text state', '%d customers have a free-text state', $found['total'], 'estasoft-erp-crm-sync-engine' ),
+				_n( '%d customer has a free-text state', '%d customers have a free-text state', $found['total'], 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$found['total']
 			),
 			'worth_fixing',
-			__( 'Your system needs a state it can match, such as Dubai (AE-DU).', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Your system needs a state it can match, such as Dubai (AE-DU).', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			$this->urls->customers(),
-			__( 'Open the customers', 'estasoft-erp-crm-sync-engine' )
+			__( 'Open the customers', 'estasoft-enterprise-erpcrm-sync-engine' )
 		);
 	}
 
@@ -390,7 +390,7 @@ final class ReadinessService {
 	 * @return array<string,mixed>
 	 */
 	private function currency(): array {
-		$title    = __( 'Currency decimals match', 'estasoft-erp-crm-sync-engine' );
+		$title    = __( 'Currency decimals match', 'estasoft-enterprise-erpcrm-sync-engine' );
 		$store    = strtoupper( $this->environment->currency() );
 		$decimals = $this->environment->currencyDecimals();
 		foreach ( $this->connections->all() as $connection ) {
@@ -406,11 +406,11 @@ final class ReadinessService {
 			if ( '' !== $system && $system !== $store ) {
 				return $this->check(
 					'currency',
-					__( 'The system uses another main currency', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The system uses another main currency', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					'worth_fixing',
 					sprintf(
 						/* translators: 1: store currency, 2: system currency. */
-						__( 'Your shop sells in %1$s and the system keeps its books in %2$s. Orders are sent in %1$s; the system converts them.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'Your shop sells in %1$s and the system keeps its books in %2$s. Orders are sent in %1$s; the system converts them.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$store,
 						$system
 					)
@@ -423,13 +423,13 @@ final class ReadinessService {
 					'needs_fixing',
 					sprintf(
 						/* translators: 1: currency, 2: decimals in WooCommerce, 3: decimals in the system. */
-						__( '%1$s has %2$d decimals in WooCommerce and %3$d in the system. Amounts would be off. Change the number of decimals in WooCommerce under Settings, General.', 'estasoft-erp-crm-sync-engine' ),
+						__( '%1$s has %2$d decimals in WooCommerce and %3$d in the system. Amounts would be off. Change the number of decimals in WooCommerce under Settings, General.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$store,
 						$decimals,
 						$systemDecs
 					),
 					$this->urls->wooSettings(),
-					__( 'Open WooCommerce settings', 'estasoft-erp-crm-sync-engine' )
+					__( 'Open WooCommerce settings', 'estasoft-enterprise-erpcrm-sync-engine' )
 				);
 			}
 			return $this->check(
@@ -438,7 +438,7 @@ final class ReadinessService {
 				'passed',
 				sprintf(
 					/* translators: 1: currency, 2: number of decimals. */
-					__( '%1$s uses %2$d decimals in WooCommerce and in the system.', 'estasoft-erp-crm-sync-engine' ),
+					__( '%1$s uses %2$d decimals in WooCommerce and in the system.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$store,
 					$decimals
 				)
@@ -450,8 +450,8 @@ final class ReadinessService {
 			'passed',
 			sprintf(
 				/* translators: 1: currency, 2: number of decimals. */
-				__( '%1$s uses %2$d decimals in WooCommerce. This is checked against your system once it is connected.', 'estasoft-erp-crm-sync-engine' ),
-				'' === $store ? __( 'Your currency', 'estasoft-erp-crm-sync-engine' ) : $store,
+				__( '%1$s uses %2$d decimals in WooCommerce. This is checked against your system once it is connected.', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				'' === $store ? __( 'Your currency', 'estasoft-enterprise-erpcrm-sync-engine' ) : $store,
 				$decimals
 			)
 		);
@@ -467,19 +467,19 @@ final class ReadinessService {
 		if ( str_starts_with( $charset, 'utf8mb4' ) ) {
 			return $this->check(
 				'charset',
-				__( 'The database stores Arabic and other scripts', 'estasoft-erp-crm-sync-engine' ),
+				__( 'The database stores Arabic and other scripts', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'passed',
-				__( 'The database setting that keeps names and addresses intact is in place.', 'estasoft-erp-crm-sync-engine' )
+				__( 'The database setting that keeps names and addresses intact is in place.', 'estasoft-enterprise-erpcrm-sync-engine' )
 			);
 		}
 		return $this->check(
 			'charset',
-			__( 'The database cannot store every script', 'estasoft-erp-crm-sync-engine' ),
+			__( 'The database cannot store every script', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			'needs_fixing',
 			sprintf(
 				/* translators: %s: character set name. */
-				__( 'The plugin tables use %s. Names and addresses in Arabic, emoji and some other scripts would be damaged. Ask your host to convert the tables to utf8mb4.', 'estasoft-erp-crm-sync-engine' ),
-				'' === $charset ? __( 'an unknown character set', 'estasoft-erp-crm-sync-engine' ) : $charset
+				__( 'The plugin tables use %s. Names and addresses in Arabic, emoji and some other scripts would be damaged. Ask your host to convert the tables to utf8mb4.', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				'' === $charset ? __( 'an unknown character set', 'estasoft-enterprise-erpcrm-sync-engine' ) : $charset
 			)
 		);
 	}
@@ -494,25 +494,25 @@ final class ReadinessService {
 			if ( SecretBox::SOURCE_WORDPRESS === $this->box->keySource() ) {
 				return $this->check(
 					'key',
-					__( 'Credentials are encrypted with your WordPress security keys', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Credentials are encrypted with your WordPress security keys', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					'passed',
-					__( 'Saved credentials cannot be read from a copy of the database. If you ever change the WordPress security keys, the saved credentials must be entered again; a key of its own in wp-config.php (ESTASOFT_SYNC_KEY) avoids that.', 'estasoft-erp-crm-sync-engine' )
+					__( 'Saved credentials cannot be read from a copy of the database. If you ever change the WordPress security keys, the saved credentials must be entered again; a key of its own in wp-config.php (ESTASOFT_SYNC_KEY) avoids that.', 'estasoft-enterprise-erpcrm-sync-engine' )
 				);
 			}
 			return $this->check(
 				'key',
-				__( 'The encryption key is in wp-config.php', 'estasoft-erp-crm-sync-engine' ),
+				__( 'The encryption key is in wp-config.php', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'passed',
-				__( 'Saved credentials cannot be read from a copy of the database.', 'estasoft-erp-crm-sync-engine' )
+				__( 'Saved credentials cannot be read from a copy of the database.', 'estasoft-enterprise-erpcrm-sync-engine' )
 			);
 		}
 		return $this->check(
 			'key',
-			__( 'The encryption key is missing from wp-config.php', 'estasoft-erp-crm-sync-engine' ),
+			__( 'The encryption key is missing from wp-config.php', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			'needs_fixing',
-			__( 'Credentials cannot be saved without it. Add the line shown under Connections to wp-config.php, then reload.', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Credentials cannot be saved without it. Add the line shown under Connections to wp-config.php, then reload.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			$this->urls->route( '/connections' ),
-			__( 'Show the line to add', 'estasoft-erp-crm-sync-engine' )
+			__( 'Show the line to add', 'estasoft-enterprise-erpcrm-sync-engine' )
 		);
 	}
 
@@ -526,22 +526,22 @@ final class ReadinessService {
 		if ( version_compare( $version, '8.1', '>=' ) ) {
 			return $this->check(
 				'php',
-				__( 'PHP 8.1 or newer', 'estasoft-erp-crm-sync-engine' ),
+				__( 'PHP 8.1 or newer', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'passed',
 				sprintf(
 					/* translators: %s: PHP version. */
-					__( 'This site runs PHP %s.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'This site runs PHP %s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$version
 				)
 			);
 		}
 		return $this->check(
 			'php',
-			__( 'PHP is older than 8.1', 'estasoft-erp-crm-sync-engine' ),
+			__( 'PHP is older than 8.1', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			'needs_fixing',
 			sprintf(
 				/* translators: %s: PHP version. */
-				__( 'This site runs PHP %s. Ask your host to switch to PHP 8.1 or newer.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'This site runs PHP %s. Ask your host to switch to PHP 8.1 or newer.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$version
 			)
 		);

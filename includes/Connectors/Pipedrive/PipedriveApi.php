@@ -60,7 +60,7 @@ final class PipedriveApi {
 					'cursor'      => $cursor,
 				),
 				null,
-				array( 'action' => __( 'search records', 'estasoft-erp-crm-sync-engine' ) )
+				array( 'action' => __( 'search records', 'estasoft-enterprise-erpcrm-sync-engine' ) )
 			)->json();
 			foreach ( (array) ( $json['data']['items'] ?? array() ) as $row ) {
 				if ( is_array( $row ) ) {
@@ -95,7 +95,7 @@ final class PipedriveApi {
 	 * @return array<string,mixed>
 	 */
 	public function create( string $collection, array $body ): array {
-		$data = $this->api->post( '/api/v2/' . $collection, array(), $body, array( 'action' => __( 'create records', 'estasoft-erp-crm-sync-engine' ) ) )->json()['data'] ?? array();
+		$data = $this->api->post( '/api/v2/' . $collection, array(), $body, array( 'action' => __( 'create records', 'estasoft-enterprise-erpcrm-sync-engine' ) ) )->json()['data'] ?? array();
 		return is_array( $data ) ? $data : array();
 	}
 
@@ -107,7 +107,7 @@ final class PipedriveApi {
 	 * @return array<string,mixed>
 	 */
 	public function patchDeal( string $id, array $changes ): array {
-		$data = $this->api->patch( '/api/v2/deals/' . rawurlencode( $id ), array(), $changes, array( 'action' => __( 'change deals', 'estasoft-erp-crm-sync-engine' ) ) )->json()['data'] ?? array();
+		$data = $this->api->patch( '/api/v2/deals/' . rawurlencode( $id ), array(), $changes, array( 'action' => __( 'change deals', 'estasoft-enterprise-erpcrm-sync-engine' ) ) )->json()['data'] ?? array();
 		return is_array( $data ) ? $data : array();
 	}
 
@@ -117,7 +117,7 @@ final class PipedriveApi {
 	 * @param string $id Deal id.
 	 */
 	public function deleteDeal( string $id ): void {
-		$this->api->delete( '/api/v2/deals/' . rawurlencode( $id ), array(), null, array( 'action' => __( 'delete deals', 'estasoft-erp-crm-sync-engine' ) ) );
+		$this->api->delete( '/api/v2/deals/' . rawurlencode( $id ), array(), null, array( 'action' => __( 'delete deals', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 	}
 
 	/**
@@ -138,7 +138,7 @@ final class PipedriveApi {
 					'limit'   => self::PAGE,
 				),
 				null,
-				array( 'action' => __( 'read notes', 'estasoft-erp-crm-sync-engine' ) )
+				array( 'action' => __( 'read notes', 'estasoft-enterprise-erpcrm-sync-engine' ) )
 			)->json();
 			foreach ( (array) ( $json['data'] ?? array() ) as $note ) {
 				if ( is_array( $note ) ) {
@@ -168,7 +168,7 @@ final class PipedriveApi {
 				'content' => $content,
 				'deal_id' => ctype_digit( $dealId ) ? (int) $dealId : $dealId,
 			),
-			array( 'action' => __( 'create notes', 'estasoft-erp-crm-sync-engine' ) )
+			array( 'action' => __( 'create notes', 'estasoft-enterprise-erpcrm-sync-engine' ) )
 		)->json()['data'] ?? array();
 		return is_array( $data ) ? $data : array();
 	}
@@ -190,7 +190,7 @@ final class PipedriveApi {
 					'cursor' => $cursor,
 				),
 				null,
-				array( 'action' => __( 'read deal products', 'estasoft-erp-crm-sync-engine' ) )
+				array( 'action' => __( 'read deal products', 'estasoft-enterprise-erpcrm-sync-engine' ) )
 			)->json();
 			foreach ( (array) ( $json['data'] ?? array() ) as $row ) {
 				if ( is_array( $row ) ) {
@@ -212,7 +212,7 @@ final class PipedriveApi {
 	 * @param array<string,mixed> $body   product_id, item_price, quantity, comments.
 	 */
 	public function addDealProduct( string $dealId, array $body ): void {
-		$this->api->post( '/api/v2/deals/' . rawurlencode( $dealId ) . '/products', array(), $body, array( 'action' => __( 'add deal products', 'estasoft-erp-crm-sync-engine' ) ) );
+		$this->api->post( '/api/v2/deals/' . rawurlencode( $dealId ) . '/products', array(), $body, array( 'action' => __( 'add deal products', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 	}
 
 	/**
@@ -235,7 +235,7 @@ final class PipedriveApi {
 					'custom_fields' => '' !== $customField ? $customField : null,
 				),
 				null,
-				array( 'action' => __( 'read deals', 'estasoft-erp-crm-sync-engine' ) )
+				array( 'action' => __( 'read deals', 'estasoft-enterprise-erpcrm-sync-engine' ) )
 			)->json();
 			foreach ( (array) ( $json['data'] ?? array() ) as $row ) {
 				if ( is_array( $row ) ) {
@@ -268,7 +268,7 @@ final class PipedriveApi {
 				null,
 				array(
 					'allow'  => array( 403 ),
-					'action' => __( 'read the deal fields', 'estasoft-erp-crm-sync-engine' ),
+					'action' => __( 'read the deal fields', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				)
 			);
 			if ( 403 === $response->status() ) {
@@ -305,7 +305,7 @@ final class PipedriveApi {
 			),
 			array(
 				'allow'  => array( 400, 403 ),
-				'action' => __( 'create deal fields', 'estasoft-erp-crm-sync-engine' ),
+				'action' => __( 'create deal fields', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			)
 		);
 		$data     = $response->isSuccess() ? ( $response->json()['data'] ?? null ) : null;
@@ -318,7 +318,7 @@ final class PipedriveApi {
 	 * @return array<string,mixed>
 	 */
 	public function me(): array {
-		$data = $this->api->get( '/api/v1/users/me', array(), null, array( 'action' => __( 'read the user', 'estasoft-erp-crm-sync-engine' ) ) )->json()['data'] ?? array();
+		$data = $this->api->get( '/api/v1/users/me', array(), null, array( 'action' => __( 'read the user', 'estasoft-enterprise-erpcrm-sync-engine' ) ) )->json()['data'] ?? array();
 		return is_array( $data ) ? $data : array();
 	}
 
@@ -328,7 +328,7 @@ final class PipedriveApi {
 	 * @return array<int,array<string,mixed>>
 	 */
 	public function pipelines(): array {
-		$rows = $this->api->get( '/api/v2/pipelines', array( 'limit' => self::PAGE ), null, array( 'action' => __( 'read pipelines', 'estasoft-erp-crm-sync-engine' ) ) )->json()['data'] ?? array();
+		$rows = $this->api->get( '/api/v2/pipelines', array( 'limit' => self::PAGE ), null, array( 'action' => __( 'read pipelines', 'estasoft-enterprise-erpcrm-sync-engine' ) ) )->json()['data'] ?? array();
 		return is_array( $rows ) ? array_values( array_filter( $rows, 'is_array' ) ) : array();
 	}
 

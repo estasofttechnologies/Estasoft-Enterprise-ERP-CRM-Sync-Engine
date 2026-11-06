@@ -156,7 +156,7 @@ final class TrackingService {
 				$this->logger->warning(
 					sprintf(
 						/* translators: %d: number of deliveries. */
-						_n( '%d delivery from your system has no completion time, so it was not applied. It is read again next time.', '%d deliveries from your system have no completion time, so they were not applied. They are read again next time.', $skipped, 'estasoft-erp-crm-sync-engine' ),
+						_n( '%d delivery from your system has no completion time, so it was not applied. It is read again next time.', '%d deliveries from your system have no completion time, so they were not applied. They are read again next time.', $skipped, 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$skipped
 					),
 					array( 'connection_id' => $connection->id )
@@ -207,7 +207,7 @@ final class TrackingService {
 		if ( TrackingSettings::NONE !== $target && StatusRank::isForward( (string) $order['status'], $target ) ) {
 			$note = sprintf(
 				/* translators: %s: name of the connected system, for example Odoo. */
-				__( 'Delivery completed in %s. The order was moved forward.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Delivery completed in %s. The order was moved forward.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$system
 			);
 			if ( $this->orders->updateStatus( $orderId, $target, $note ) ) {
@@ -264,9 +264,9 @@ final class TrackingService {
 			$orderId,
 			'' !== $carrier
 				/* translators: 1: name of the connected system, 2: carrier, 3: tracking number. */
-				? sprintf( __( 'Tracking from %1$s: %2$s, %3$s.', 'estasoft-erp-crm-sync-engine' ), $system, $carrier, $number )
+				? sprintf( __( 'Tracking from %1$s: %2$s, %3$s.', 'estasoft-enterprise-erpcrm-sync-engine' ), $system, $carrier, $number )
 				/* translators: 1: name of the connected system, 2: tracking number. */
-				: sprintf( __( 'Tracking from %1$s: %2$s.', 'estasoft-erp-crm-sync-engine' ), $system, $number )
+				: sprintf( __( 'Tracking from %1$s: %2$s.', 'estasoft-enterprise-erpcrm-sync-engine' ), $system, $number )
 		);
 		$this->state->mergeExtra( $connectionId, EntityType::Order, (string) $orderId, array( 'tracking' => $saved ) );
 		$this->log->add( $connectionId, $orderId, (string) $order['label'], $carrier, $number, $at );

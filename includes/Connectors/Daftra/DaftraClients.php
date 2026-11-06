@@ -115,7 +115,7 @@ final class DaftraClients {
 				array(
 					'system' => DaftraConnector::LABEL,
 					'field'  => 'Client',
-					'reason' => __( 'Daftra did not return the id of the new client.', 'estasoft-erp-crm-sync-engine' ),
+					'reason' => __( 'Daftra did not return the id of the new client.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				null,
 				null,

@@ -83,10 +83,13 @@ export function CopyButton( {
 		speak(
 			ok
 				? ( copiedLabel ??
-						__( 'Copied', 'estasoft-erp-crm-sync-engine' ) )
+						__(
+							'Copied',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						) )
 				: __(
 						'Copy failed. Select the text and copy it by hand.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 			'polite'
 		);
@@ -97,9 +100,11 @@ export function CopyButton( {
 	};
 	let shown = label;
 	if ( state === 'copied' ) {
-		shown = copiedLabel ?? __( 'Copied', 'estasoft-erp-crm-sync-engine' );
+		shown =
+			copiedLabel ??
+			__( 'Copied', 'estasoft-enterprise-erpcrm-sync-engine' );
 	} else if ( state === 'failed' ) {
-		shown = __( 'Copy failed', 'estasoft-erp-crm-sync-engine' );
+		shown = __( 'Copy failed', 'estasoft-enterprise-erpcrm-sync-engine' );
 	}
 	return (
 		<Btn

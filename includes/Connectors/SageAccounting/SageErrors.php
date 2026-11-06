@@ -61,7 +61,7 @@ final class SageErrors {
 				ErrorCode::Auth004,
 				array(
 					'system' => self::SYSTEM,
-					'action' => __( 'do this in Sage (the signed-in user needs a role with access to this part of the business)', 'estasoft-erp-crm-sync-engine' ),
+					'action' => __( 'do this in Sage (the signed-in user needs a role with access to this part of the business)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				$status,
 				null,

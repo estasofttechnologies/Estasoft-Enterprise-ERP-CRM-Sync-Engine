@@ -134,7 +134,7 @@ export function JsonView( {
 								<span className="estasoft-sync-sr-only">
 									{ __(
 										'Changed by a rule:',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									) }
 								</span>
 							) : null }

@@ -67,14 +67,17 @@ export function SignInReturn( {
 		result === 'ok'
 			? sprintf(
 					/* translators: %s: system name */
-					__( 'Signed in at %s', 'estasoft-erp-crm-sync-engine' ),
+					__(
+						'Signed in at %s',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					),
 					system
 				)
 			: sprintf(
 					/* translators: %s: system name */
 					__(
 						'The sign-in at %s did not finish',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					system
 				)
@@ -129,7 +132,7 @@ export function SignInReturn( {
 							/* translators: %s: system name */
 							__(
 								'The sign-in at %s did not finish',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							system
 						) }
@@ -141,7 +144,7 @@ export function SignInReturn( {
 						<p>
 							{ __(
 								'Sign-in was cancelled. Nothing was connected.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }{ ' ' }
 							<span className="estasoft-sync-mono">
 								SYNC-AUTH-003
@@ -152,7 +155,7 @@ export function SignInReturn( {
 								/* translators: %s: system name */
 								__(
 									'Press Try again to sign in at %s. If the sign-in page did not open, check that your browser is not blocking it.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								system
 							) }
@@ -165,7 +168,7 @@ export function SignInReturn( {
 								/* translators: %s: system name */
 								__(
 									'The sign-in with %s could not be finished. Nothing was connected.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								system
 							) }
@@ -173,12 +176,12 @@ export function SignInReturn( {
 						<p className="estasoft-sync-muted">
 							{ __(
 								'Check the Client ID and the secret of your app, then try again. The log has the details.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }{ ' ' }
 							<Link to="/logs" className="estasoft-sync-link">
 								{ __(
 									'Open the log',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</Link>
 						</p>
@@ -195,10 +198,16 @@ export function SignInReturn( {
 						busy={ signIn.busy }
 						onClick={ () => void signIn.run( connection.id ) }
 					>
-						{ __( 'Try again', 'estasoft-erp-crm-sync-engine' ) }
+						{ __(
+							'Try again',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						) }
 					</Btn>
 					<Btn onClick={ onClose }>
-						{ __( 'Close', 'estasoft-erp-crm-sync-engine' ) }
+						{ __(
+							'Close',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						) }
 					</Btn>
 				</div>
 			</Card>
@@ -214,7 +223,10 @@ export function SignInReturn( {
 				<span ref={ heading } tabIndex={ -1 }>
 					{ sprintf(
 						/* translators: %s: system name */
-						__( 'Signed in at %s', 'estasoft-erp-crm-sync-engine' ),
+						__(
+							'Signed in at %s',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						system
 					) }
 				</span>
@@ -231,7 +243,7 @@ export function SignInReturn( {
 				<Busy
 					label={ __(
 						'Testing the connection… This can take up to 30 seconds.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			) : null }
@@ -251,7 +263,7 @@ export function SignInReturn( {
 									/* translators: %s: system name */
 									__(
 										'Connected to %s.',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									system
 								) }
@@ -264,7 +276,7 @@ export function SignInReturn( {
 							<p className="estasoft-sync-muted">
 								{ __(
 									'Waiting orders are sent in the order they arrived.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</p>
 						</Callout>
@@ -280,7 +292,7 @@ export function SignInReturn( {
 							>
 								{ __(
 									'Sign in again',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</Btn>
 						) : null }
@@ -288,7 +300,7 @@ export function SignInReturn( {
 							<Btn onClick={ () => void runTest() }>
 								{ __(
 									'Test again',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</Btn>
 						) : null }
@@ -299,16 +311,19 @@ export function SignInReturn( {
 							>
 								{ __(
 									'Continue setup',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</Link>
 						) : null }
 						<Btn onClick={ onClose }>
 							{ passed
-								? __( 'Done', 'estasoft-erp-crm-sync-engine' )
+								? __(
+										'Done',
+										'estasoft-enterprise-erpcrm-sync-engine'
+									)
 								: __(
 										'Close',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									) }
 						</Btn>
 					</div>

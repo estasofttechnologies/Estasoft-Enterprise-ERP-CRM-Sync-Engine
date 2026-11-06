@@ -51,13 +51,13 @@ export function KeyPairCommands() {
 			<p className="estasoft-sync-muted">
 				{ __(
 					'Make the key pair on your own computer with OpenSSL. These two commands make an ES256 key, the default below. Upload public.pem to NetSuite and paste the contents of private.pem into the form. Choose PS256 only if you made an RSA key.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			</p>
 			<CodeBlock
 				label={ __(
 					'Commands that make the key pair',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			>
 				{ commands }
@@ -67,7 +67,7 @@ export function KeyPairCommands() {
 				text={ commands }
 				label={ __(
 					'Copy the commands',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			/>
 		</>
@@ -137,7 +137,7 @@ export function ConnectGuide( {
 								/* translators: %s: system name */
 								__(
 									'Open the %s developer area',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								system
 							) }
@@ -184,7 +184,10 @@ export function DataDisclosure( {
 			href: entry.terms_url,
 			text: sprintf(
 				/* translators: %s: system name */
-				__( '%s terms of use', 'estasoft-erp-crm-sync-engine' ),
+				__(
+					'%s terms of use',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				),
 				entry.name
 			),
 		},
@@ -192,7 +195,10 @@ export function DataDisclosure( {
 			href: entry.privacy_url,
 			text: sprintf(
 				/* translators: %s: system name */
-				__( '%s privacy policy', 'estasoft-erp-crm-sync-engine' ),
+				__(
+					'%s privacy policy',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				),
 				entry.name
 			),
 		},
@@ -201,14 +207,14 @@ export function DataDisclosure( {
 		<Card
 			title={ __(
 				'What is sent, and where',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			) }
 		>
 			{ shape === 'export_file' ? (
 				<p>
 					{ __(
 						'Nothing is sent to any website. The file is made on your own website and stays there until you download it.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</p>
 			) : (
@@ -218,7 +224,7 @@ export function DataDisclosure( {
 							/* translators: %s: system name */
 							__(
 								'Once this connection is on and syncing, the plugin sends the orders, customers and products that you choose to sync from this website to %s, at these addresses. Testing the connection does not send orders or customers. Nothing goes to Estasoft.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							entry.name
 						) }
@@ -239,7 +245,7 @@ export function DataDisclosure( {
 								<li>
 									{ __(
 										'The address you type in the form.',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									) }
 								</li>
 							) : null }

@@ -102,7 +102,7 @@ function Frame( { boot, wrap }: { boot: BootData; wrap: boolean } ) {
 							tabIndex={ -1 }
 							aria-label={ __(
 								'ESTASOFT SYNC',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						>
 							<ErrorBoundary resetKey={ route.path }>

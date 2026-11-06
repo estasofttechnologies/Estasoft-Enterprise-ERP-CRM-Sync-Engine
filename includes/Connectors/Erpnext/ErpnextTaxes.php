@@ -58,7 +58,7 @@ final class ErpnextTaxes {
 				'taxes_and_charges',
 				sprintf(
 					/* translators: %s: template name. */
-					__( 'The tax template "%s" is disabled or belongs to another company.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The tax template "%s" is disabled or belongs to another company.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$name
 				)
 			);
@@ -92,7 +92,7 @@ final class ErpnextTaxes {
 				'taxes_and_charges',
 				sprintf(
 					/* translators: %s: template name. */
-					__( 'The tax template "%s" has no rows.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The tax template "%s" has no rows.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$name
 				)
 			);
@@ -103,7 +103,7 @@ final class ErpnextTaxes {
 				'taxes_and_charges',
 				sprintf(
 					/* translators: %s: template name. */
-					__( 'The tax template "%s" mixes rows that are included in the price and rows that are not.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The tax template "%s" mixes rows that are included in the price and rows that are not.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$name
 				)
 			);
@@ -134,7 +134,7 @@ final class ErpnextTaxes {
 				'taxes_and_charges',
 				sprintf(
 					/* translators: %s: template name. */
-					__( 'The tax template "%s" treats prices differently from the shop and has rows that are not plain percentages on the net total, so prices cannot be converted exactly.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The tax template "%s" treats prices differently from the shop and has rows that are not plain percentages on the net total, so prices cannot be converted exactly.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$template['name']
 				)
 			);

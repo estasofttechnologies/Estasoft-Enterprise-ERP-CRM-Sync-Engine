@@ -62,7 +62,7 @@ final class SageBuilder {
 			}
 			$name = '' !== (string) $line['name'] ? (string) $line['name'] : ( null !== $product ? SagePayloadReader::text( $product['description'] ?? $sku ) : $sku );
 			if ( '' === $name ) {
-				$name = __( 'Item', 'estasoft-erp-crm-sync-engine' );
+				$name = __( 'Item', 'estasoft-enterprise-erpcrm-sync-engine' );
 			}
 			$lines[] = $this->line( $product, (string) $ledgers['sales'], $name, (string) $line['quantity'], (int) $line['price_minor'], (float) $line['discount'], $rate, $currency, $payload->pricesIncludeTax, $cut );
 		}
@@ -92,7 +92,7 @@ final class SageBuilder {
 			$invoice += $shipping;
 		}
 		if ( $cut ) {
-			$warnings[] = __( 'A long value was shortened to fit Sage.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'A long value was shortened to fit Sage.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		return $invoice;
 	}
@@ -131,7 +131,7 @@ final class SageBuilder {
 			if ( $rate instanceof ConnectorError ) {
 				return $rate;
 			}
-			$text = '' !== (string) $line['name'] ? (string) $line['name'] : ( '' !== $sku ? $sku : __( 'Refund', 'estasoft-erp-crm-sync-engine' ) );
+			$text = '' !== (string) $line['name'] ? (string) $line['name'] : ( '' !== $sku ? $sku : __( 'Refund', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			if ( 0 === $index && '' !== $payload->reason ) {
 				$text = $payload->reason . ': ' . $text;
 			}
@@ -156,7 +156,7 @@ final class SageBuilder {
 		);
 		$note += $shipping;
 		if ( $cut ) {
-			$warnings[] = __( 'A long description was shortened to fit Sage.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'A long description was shortened to fit Sage.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		return $note;
 	}
@@ -201,10 +201,10 @@ final class SageBuilder {
 			return SageErrors::refused(
 				'order_line[].tax',
 				0 === $number
-					? __( 'A fee or discount line has no tax code. Sage needs a tax rate on every line.', 'estasoft-erp-crm-sync-engine' )
+					? __( 'A fee or discount line has no tax code. Sage needs a tax rate on every line.', 'estasoft-enterprise-erpcrm-sync-engine' )
 					: sprintf(
 						/* translators: %d: line number. */
-						__( 'Line %d has no tax code. Sage needs a tax rate on every line.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'Line %d has no tax code. Sage needs a tax rate on every line.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$number
 					)
 			);
@@ -212,7 +212,7 @@ final class SageBuilder {
 		$rate = $rates[ strtolower( $code ) ] ?? null;
 		if ( null === $rate ) {
 			return '' === $code
-				? SageErrors::refused( 'no_tax_rate', __( 'Sage has no tax rate for a line without tax that this connector can find. Set the tax rate id in the connection option "no_tax_rate".', 'estasoft-erp-crm-sync-engine' ) )
+				? SageErrors::refused( 'no_tax_rate', __( 'Sage has no tax rate for a line without tax that this connector can find. Set the tax rate id in the connection option "no_tax_rate".', 'estasoft-enterprise-erpcrm-sync-engine' ) )
 				: SageErrors::unknownTax( '', $code );
 		}
 		return $rate;

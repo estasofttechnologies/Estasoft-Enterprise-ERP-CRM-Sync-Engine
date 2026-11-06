@@ -96,10 +96,10 @@ final class CustomerLink {
 			: sprintf( '<a href="%1$s" rel="noopener noreferrer">%2$s</a>', esc_url( $link['external_url'] ), esc_html( $label ) );
 
 		/* translators: %s: name of the connected system. */
-		$row = sprintf( __( '%s contact', 'estasoft-erp-crm-sync-engine' ), $this->connection->systemName( $connectionId ) );
+		$row = sprintf( __( '%s contact', 'estasoft-enterprise-erpcrm-sync-engine' ), $this->connection->systemName( $connectionId ) );
 		return sprintf(
 			'<h2>%1$s</h2><table class="form-table" role="presentation"><tbody><tr><th scope="row">%2$s</th><td dir="auto">%3$s</td></tr></tbody></table>',
-			esc_html__( 'ESTASOFT SYNC', 'estasoft-erp-crm-sync-engine' ),
+			esc_html__( 'ESTASOFT SYNC', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			esc_html( $row ),
 			$value
 		);

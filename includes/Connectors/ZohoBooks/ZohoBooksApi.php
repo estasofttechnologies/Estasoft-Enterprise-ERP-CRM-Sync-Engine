@@ -48,7 +48,7 @@ final class ZohoBooksApi {
 	 * @return array<int,array<string,mixed>>
 	 */
 	public function organizations(): array {
-		$rows = $this->api->get( '/books/v3/organizations', array(), null, array( 'action' => __( 'read organisations', 'estasoft-erp-crm-sync-engine' ) ) )->json()['organizations'] ?? array();
+		$rows = $this->api->get( '/books/v3/organizations', array(), null, array( 'action' => __( 'read organisations', 'estasoft-enterprise-erpcrm-sync-engine' ) ) )->json()['organizations'] ?? array();
 		return is_array( $rows ) ? array_values( array_filter( $rows, 'is_array' ) ) : array();
 	}
 
@@ -102,7 +102,7 @@ final class ZohoBooksApi {
 				array(
 					'system' => $this->system,
 					'field'  => 'organization_id',
-					'reason' => __( 'Choose the Zoho Books organisation in the connection settings.', 'estasoft-erp-crm-sync-engine' ),
+					'reason' => __( 'Choose the Zoho Books organisation in the connection settings.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				null,
 				null,
@@ -114,7 +114,7 @@ final class ZohoBooksApi {
 		$query = array( 'organization_id' => $this->organizationId ) + $query;
 		$url   = '/books/v3/' . ltrim( $path, '/' );
 		$opt   = array(
-			'action' => __( 'use this data', 'estasoft-erp-crm-sync-engine' ),
+			'action' => __( 'use this data', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			'allow'  => $missingOk ? array( 404 ) : array(),
 		);
 		$resp  = match ( $method ) {

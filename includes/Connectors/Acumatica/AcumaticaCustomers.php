@@ -88,13 +88,13 @@ final class AcumaticaCustomers {
 			return Problems::refused(
 				$this->system,
 				'partner.email',
-				__( 'No customer has this email address and the customer setting is "match only". Create the customer or change the setting.', 'estasoft-erp-crm-sync-engine' )
+				__( 'No customer has this email address and the customer setting is "match only". Create the customer or change the setting.', 'estasoft-enterprise-erpcrm-sync-engine' )
 			);
 		}
 		$stored = $this->client->put( 'Customer', $this->body( $partner ) );
 		$id     = AcumaticaValue::text( $stored, 'CustomerID' );
 		if ( '' === $id ) {
-			return Problems::refused( $this->system, 'customer', __( 'Acumatica did not return the new customer.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $this->system, 'customer', __( 'Acumatica did not return the new customer.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return array(
 			'id'      => $id,

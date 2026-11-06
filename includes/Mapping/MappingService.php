@@ -95,7 +95,7 @@ final class MappingService {
 	public function saveDraft( int $connectionId, string $type, array $rules, ?string $note, string $by ): array {
 		$draft = $this->store->saveDraft( $connectionId, $type, $this->sanitizer->clean( $rules ), $note, $by );
 		$this->log->info(
-			__( 'Mapping draft saved.', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Mapping draft saved.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			array(
 				'connection_id' => $connectionId,
 				'type'          => $type,
@@ -129,7 +129,7 @@ final class MappingService {
 						'',
 						'target',
 						'fields_unavailable',
-						__( 'The fields of the connected system could not be read, so this mapping cannot be checked. Check the connection, then try again.', 'estasoft-erp-crm-sync-engine' )
+						__( 'The fields of the connected system could not be read, so this mapping cannot be checked. Check the connection, then try again.', 'estasoft-enterprise-erpcrm-sync-engine' )
 					),
 				),
 				$this->engine->validate( $rules, array() )
@@ -182,7 +182,7 @@ final class MappingService {
 	public function publish( int $connectionId, string $type, string $by ): array {
 		$draft = $this->store->draft( $connectionId, $type );
 		if ( null === $draft ) {
-			throw new \LogicException( esc_html__( 'There is no draft to publish.', 'estasoft-erp-crm-sync-engine' ) );
+			throw new \LogicException( esc_html__( 'There is no draft to publish.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$errors = $this->validate( $connectionId, $type, $this->rulesOf( $draft ) );
 		if ( array() !== $errors ) {
@@ -191,7 +191,7 @@ final class MappingService {
 		}
 		$live = $this->store->publish( $connectionId, $type, $by );
 		$this->log->info(
-			__( 'Mapping version published.', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Mapping version published.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			array(
 				'connection_id' => $connectionId,
 				'type'          => $type,
@@ -214,7 +214,7 @@ final class MappingService {
 		$discarded = $this->store->discardDraft( $connectionId, $type );
 		if ( $discarded ) {
 			$this->log->info(
-				__( 'Mapping draft discarded.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Mapping draft discarded.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				array(
 					'connection_id' => $connectionId,
 					'type'          => $type,
@@ -239,7 +239,7 @@ final class MappingService {
 	public function rollback( int $connectionId, string $type, int $version, string $by ): array {
 		$live = $this->store->rollback( $connectionId, $type, $version, $by );
 		$this->log->info(
-			__( 'Mapping rolled back.', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Mapping rolled back.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			array(
 				'connection_id' => $connectionId,
 				'type'          => $type,
@@ -322,19 +322,19 @@ final class MappingService {
 	 * @return array<int,array{path:string,label:string,type:string,required:bool,group:string}>
 	 */
 	private function wooTargets( string $type ): array {
-		$group = __( 'WooCommerce', 'estasoft-erp-crm-sync-engine' );
+		$group = __( 'WooCommerce', 'estasoft-enterprise-erpcrm-sync-engine' );
 		if ( 'stock' === $type ) {
 			return array(
 				array(
 					'path'     => 'product.stock_quantity',
-					'label'    => __( 'Product stock quantity', 'estasoft-erp-crm-sync-engine' ),
+					'label'    => __( 'Product stock quantity', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					'type'     => 'number',
 					'required' => false,
 					'group'    => $group,
 				),
 				array(
 					'path'     => 'product.stock_status',
-					'label'    => __( 'Stock status', 'estasoft-erp-crm-sync-engine' ),
+					'label'    => __( 'Stock status', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					'type'     => 'text',
 					'required' => false,
 					'group'    => $group,
@@ -344,28 +344,28 @@ final class MappingService {
 		return array(
 			array(
 				'path'     => 'order.status',
-				'label'    => __( 'Order status', 'estasoft-erp-crm-sync-engine' ),
+				'label'    => __( 'Order status', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'type'     => 'text',
 				'required' => false,
 				'group'    => $group,
 			),
 			array(
 				'path'     => 'order.tracking.carrier',
-				'label'    => __( 'Carrier', 'estasoft-erp-crm-sync-engine' ),
+				'label'    => __( 'Carrier', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'type'     => 'text',
 				'required' => false,
 				'group'    => $group,
 			),
 			array(
 				'path'     => 'order.tracking.number',
-				'label'    => __( 'Tracking number', 'estasoft-erp-crm-sync-engine' ),
+				'label'    => __( 'Tracking number', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'type'     => 'text',
 				'required' => false,
 				'group'    => $group,
 			),
 			array(
 				'path'     => 'order.note',
-				'label'    => __( 'Order note', 'estasoft-erp-crm-sync-engine' ),
+				'label'    => __( 'Order note', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'type'     => 'text',
 				'required' => false,
 				'group'    => $group,

@@ -638,7 +638,7 @@ final class JobsModule implements ModuleInterface {
 			$container->get( Services::LOGGER )->error(
 				sprintf(
 					/* translators: %s: PHP error class name. */
-					__( 'A background task stopped unexpectedly (%s). It will run again at its next time.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'A background task stopped unexpectedly (%s). It will run again at its next time.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					( new \ReflectionClass( $e ) )->getShortName()
 				)
 			);

@@ -87,7 +87,7 @@ final class OdooPartners {
 				'partner.email',
 				sprintf(
 					/* translators: %s: customer email address. */
-					__( 'More than one customer in Odoo has the email %s. Merge them in Odoo or choose to use the oldest.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'More than one customer in Odoo has the email %s. Merge them in Odoo or choose to use the oldest.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$partner['email'] ?? ''
 				)
 			);
@@ -101,7 +101,7 @@ final class OdooPartners {
 				'partner.email',
 				sprintf(
 					/* translators: %s: customer email address. */
-					__( 'Odoo has no customer with the email %s, and creating customers is switched off.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Odoo has no customer with the email %s, and creating customers is switched off.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$partner['email'] ?? ''
 				)
 			);

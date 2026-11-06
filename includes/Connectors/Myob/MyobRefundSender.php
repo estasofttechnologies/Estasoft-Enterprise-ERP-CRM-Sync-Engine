@@ -83,7 +83,7 @@ final class MyobRefundSender {
 					'Invoice',
 					sprintf(
 						/* translators: %s: the shop's reference of the order, such as WC-1042. */
-						__( 'The invoice %s was not found in MYOB, so the refund cannot be linked to it.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'The invoice %s was not found in MYOB, so the refund cannot be linked to it.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$parsed->orderRef
 					)
 				)
@@ -143,7 +143,7 @@ final class MyobRefundSender {
 				'Status',
 				sprintf(
 					/* translators: %s: the status MYOB reported, such as Open. */
-					__( 'MYOB did not make a credit (its status is "%s"). The document was removed. Check the credit in MYOB by hand.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'MYOB did not make a credit (its status is "%s"). The document was removed. Check the credit in MYOB by hand.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					MyobPayloadReader::text( $credit['Status'] ?? '' )
 				)
 			);

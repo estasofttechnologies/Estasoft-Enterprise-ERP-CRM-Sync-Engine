@@ -120,7 +120,7 @@ final class StockService {
 	public function rules( int $connectionId ): array {
 		$public = $this->connections->findPublic( $connectionId );
 		if ( null === $public ) {
-			throw new JobException( esc_html__( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ), 404 );
+			throw new JobException( esc_html__( 'That connection does not exist.', 'estasoft-enterprise-erpcrm-sync-engine' ), 404 );
 		}
 		$stored = $this->config->get( $connectionId, self::AREA, self::DEFAULTS );
 		return array(
@@ -189,7 +189,7 @@ final class StockService {
 			if ( array_key_exists( $key, $rules ) ) {
 				$bool = is_bool( $rules[ $key ] ) ? $rules[ $key ] : filter_var( $rules[ $key ], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
 				if ( null === $bool ) {
-					$errors[ $key ] = __( 'Choose on or off.', 'estasoft-erp-crm-sync-engine' );
+					$errors[ $key ] = __( 'Choose on or off.', 'estasoft-enterprise-erpcrm-sync-engine' );
 				} else {
 					$values[ $key ] = $bool;
 				}
@@ -212,7 +212,7 @@ final class StockService {
 			}
 		}
 		if ( array_key_exists( 'system_wins', $rules ) && true !== $rules['system_wins'] && 'true' !== $rules['system_wins'] && 1 !== $rules['system_wins'] && '1' !== $rules['system_wins'] ) {
-			$errors['system_wins'] = __( 'The system is always the source of truth for stock.', 'estasoft-erp-crm-sync-engine' );
+			$errors['system_wins'] = __( 'The system is always the source of truth for stock.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		$warehouses = null;
 		if ( array_key_exists( 'warehouses', $rules ) ) {
@@ -297,14 +297,14 @@ final class StockService {
 	public function acceptConflict( string $id ): void {
 		$conflict = $this->openConflict( $id );
 		if ( $this->onboarding->isShadowActive( $this->clock->now() ) ) {
-			throw new JobException( esc_html__( 'Shadow mode changes nothing in your shop. End it first to accept a quantity.', 'estasoft-erp-crm-sync-engine' ), 409 );
+			throw new JobException( esc_html__( 'Shadow mode changes nothing in your shop. End it first to accept a quantity.', 'estasoft-enterprise-erpcrm-sync-engine' ), 409 );
 		}
 		$connectionId = (int) $conflict['connection_id'];
 		$productId    = (int) $conflict['product_id'];
 		$product      = $this->shop->product( $productId );
 		if ( null === $product ) {
 			$this->store->decide( (int) $conflict['id'], 'accept', Time::iso( Time::sql( $this->clock->now() ) ) ?? '' );
-			throw new JobException( esc_html__( 'That product no longer exists.', 'estasoft-erp-crm-sync-engine' ), 404 );
+			throw new JobException( esc_html__( 'That product no longer exists.', 'estasoft-enterprise-erpcrm-sync-engine' ), 404 );
 		}
 		$rules  = $this->rules( $connectionId );
 		$system = (int) $conflict['system_quantity'];
@@ -431,7 +431,7 @@ final class StockService {
 			$summary['unsynced_unknown'] = true;
 			$this->store->saveLast( $connection->id, array_replace( $state, array( 'unsynced_warned_at' => (string) Time::iso( Time::sql( $this->clock->now() ) ) ) ) );
 			$this->logger->warning(
-				__( 'Stock sync was skipped this time because too many orders are still waiting to reach your system to count them all. Shop quantities were not changed. It tries again soon; clearing the queue fixes it.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Stock sync was skipped this time because too many orders are still waiting to reach your system to count them all. Shop quantities were not changed. It tries again soon; clearing the queue fixes it.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				array( 'connection_id' => $connection->id )
 			);
 			return;
@@ -518,7 +518,7 @@ final class StockService {
 			$this->logger->info(
 				sprintf(
 					/* translators: %d: number of products whose shop quantity was updated. */
-					_n( 'Stock sync updated %d product.', 'Stock sync updated %d products.', $partial['changed'], 'estasoft-erp-crm-sync-engine' ),
+					_n( 'Stock sync updated %d product.', 'Stock sync updated %d products.', $partial['changed'], 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$partial['changed']
 				),
 				array( 'connection_id' => $connection->id )
@@ -673,7 +673,7 @@ final class StockService {
 	private function openConflict( string $id ): array {
 		$conflict = ctype_digit( $id ) ? $this->store->conflict( (int) $id ) : null;
 		if ( null === $conflict ) {
-			throw new JobException( esc_html__( 'That stock conflict does not exist, or it was already decided.', 'estasoft-erp-crm-sync-engine' ), 404 );
+			throw new JobException( esc_html__( 'That stock conflict does not exist, or it was already decided.', 'estasoft-enterprise-erpcrm-sync-engine' ), 404 );
 		}
 		return $conflict;
 	}
@@ -721,7 +721,7 @@ final class StockService {
 		if ( ! is_array( $input ) ) {
 			return array(
 				'list'  => null,
-				'error' => __( 'Send the list of warehouses.', 'estasoft-erp-crm-sync-engine' ),
+				'error' => __( 'Send the list of warehouses.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			);
 		}
 		$known = array();
@@ -733,7 +733,7 @@ final class StockService {
 			if ( ! isset( $known[ $id ] ) ) {
 				return array(
 					'list'  => null,
-					'error' => __( 'One of the warehouses is not one of this connection\'s warehouses.', 'estasoft-erp-crm-sync-engine' ),
+					'error' => __( 'One of the warehouses is not one of this connection\'s warehouses.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				);
 			}
 			if ( isset( $row['counts_toward_stock'] ) ) {
@@ -746,7 +746,7 @@ final class StockService {
 					if ( 1 !== preg_match( '/^[A-Z]{2}$/', $code ) ) {
 						return array(
 							'list'  => null,
-							'error' => __( 'Countries are two-letter codes such as AE or SA.', 'estasoft-erp-crm-sync-engine' ),
+							'error' => __( 'Countries are two-letter codes such as AE or SA.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						);
 					}
 					$countries[ $code ] = $code;
@@ -758,7 +758,7 @@ final class StockService {
 		if ( array() !== $list && array() === array_filter( array_column( $list, 'counts_toward_stock' ) ) ) {
 			return array(
 				'list'  => null,
-				'error' => __( 'At least one warehouse must count toward shop stock.', 'estasoft-erp-crm-sync-engine' ),
+				'error' => __( 'At least one warehouse must count toward shop stock.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			);
 		}
 		return array(

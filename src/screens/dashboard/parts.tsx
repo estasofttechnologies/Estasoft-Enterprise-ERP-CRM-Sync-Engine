@@ -40,40 +40,43 @@ export function ConnectionCard( {
 		connection.status === 'paused_circuit';
 	const items: KeyValueItem[] = [
 		{
-			label: __( 'System', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'System', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			value: connection.version || connection.label,
 		},
 		{
-			label: __( 'Address', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'Address', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			value: <span dir="ltr">{ connection.address }</span>,
 		},
 	];
 	if ( status.mode === 'shadow' ) {
 		items.push( {
-			label: __( 'Mode', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'Mode', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			value: (
 				<StateChip
 					state="queued"
-					label={ __( 'Shadow', 'estasoft-erp-crm-sync-engine' ) }
+					label={ __(
+						'Shadow',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 				/>
 			),
 		} );
 	} else if ( connection.status === 'needs_reconnect' ) {
 		items.push( {
-			label: __( 'State', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'State', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			value: (
 				<StateChip
 					state="retrying"
 					label={ __(
 						'Needs reconnect',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			),
 		} );
 	} else if ( connection.status !== 'active' ) {
 		items.push( {
-			label: __( 'State', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'State', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			value: (
 				<StateChip
 					state="paused"
@@ -82,11 +85,14 @@ export function ConnectionCard( {
 							? sprintf(
 									/* translators: %s: system name */ __(
 										'Paused: %s is not answering',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									systemName( connection )
 								)
-							: __( 'Paused', 'estasoft-erp-crm-sync-engine' )
+							: __(
+									'Paused',
+									'estasoft-enterprise-erpcrm-sync-engine'
+								)
 					}
 				/>
 			),
@@ -94,36 +100,50 @@ export function ConnectionCard( {
 	}
 	items.push(
 		{
-			label: __( 'Response time', 'estasoft-erp-crm-sync-engine' ),
+			label: __(
+				'Response time',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			value:
 				connection.typical_response_ms === null
 					? '—'
 					: sprintf(
 							/* translators: %s: duration such as 340 ms */ __(
 								'%s typical',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							formatDuration( connection.typical_response_ms )
 						),
 		},
 		{
-			label: __( 'Last success', 'estasoft-erp-crm-sync-engine' ),
+			label: __(
+				'Last success',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			value: <DateTime value={ connection.last_success_at } />,
 		},
 		{
-			label: __( 'Last failure', 'estasoft-erp-crm-sync-engine' ),
+			label: __(
+				'Last failure',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			value: <DateTime value={ connection.last_failure_at } />,
 		}
 	);
 	return (
-		<Card title={ __( 'Connection', 'estasoft-erp-crm-sync-engine' ) }>
+		<Card
+			title={ __(
+				'Connection',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			) }
+		>
 			<KeyValueList items={ items } stacked />
 			<div className="estasoft-sync-actions">
 				{ onCheck && canConfigure ? (
 					<Btn small busy={ checking } onClick={ onCheck }>
 						{ __(
 							'Test connection',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</Btn>
 				) : null }
@@ -137,7 +157,10 @@ export function ConnectionCard( {
 							)
 						}
 					>
-						{ __( 'Reconnect', 'estasoft-erp-crm-sync-engine' ) }
+						{ __(
+							'Reconnect',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						) }
 					</Btn>
 				) : null }
 				<Btn
@@ -146,7 +169,10 @@ export function ConnectionCard( {
 						navigate( `/connections/${ connection.id }` )
 					}
 				>
-					{ __( 'Open connection', 'estasoft-erp-crm-sync-engine' ) }
+					{ __(
+						'Open connection',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 				</Btn>
 			</div>
 		</Card>
@@ -172,24 +198,36 @@ export function QueueMeters( { status }: { status: Status } ) {
 	return (
 		<div className="estasoft-sync-meters">
 			<Meter
-				label={ __( 'Queued', 'estasoft-erp-crm-sync-engine' ) }
+				label={ __(
+					'Queued',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 				value={ counts.queued }
 				max={ max }
 				tone="queued"
 			/>
 			<Meter
-				label={ __( 'Syncing', 'estasoft-erp-crm-sync-engine' ) }
+				label={ __(
+					'Syncing',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 				value={ counts.syncing }
 				max={ max }
 			/>
 			<Meter
-				label={ __( 'Retrying', 'estasoft-erp-crm-sync-engine' ) }
+				label={ __(
+					'Retrying',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 				value={ counts.retrying }
 				max={ max }
 				tone="retrying"
 			/>
 			<Meter
-				label={ __( 'Failed', 'estasoft-erp-crm-sync-engine' ) }
+				label={ __(
+					'Failed',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 				value={ counts.failed }
 				max={ max }
 				tone="failed"

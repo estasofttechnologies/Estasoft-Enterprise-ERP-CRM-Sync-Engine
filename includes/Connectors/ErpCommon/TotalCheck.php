@@ -68,7 +68,7 @@ final class TotalCheck {
 			'document'       => $document,
 			'message'        => sprintf(
 				/* translators: 1: system name, 2: document number, 3: the system's total with currency, 4: the shop's total with currency. */
-				__( '%1$s calculates %3$s for %2$s but the shop total is %4$s. Check that the taxes there have the same rates as the shop and that prices with or without tax are set the same way on both sides.', 'estasoft-erp-crm-sync-engine' ),
+				__( '%1$s calculates %3$s for %2$s but the shop total is %4$s. Check that the taxes there have the same rates as the shop and that prices with or without tax are set the same way on both sides.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$this->system,
 				$document,
 				$this->amounts->toDecimalString( $actual, $exponent ) . ' ' . $currency,

@@ -139,7 +139,7 @@ final class ConnectionSettings {
 					$results[ $key ] = null === $bool
 						? array(
 							'value' => null,
-							'error' => __( 'Choose on or off.', 'estasoft-erp-crm-sync-engine' ),
+							'error' => __( 'Choose on or off.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						)
 						: array(
 							'value' => $bool,
@@ -192,7 +192,7 @@ final class ConnectionSettings {
 	private function delays( mixed $value ): array {
 		$error = sprintf(
 			/* translators: 1: most delays, 2: longest delay in seconds. */
-			__( 'Enter up to %1$d delays in seconds, each from 1 to %2$d.', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Enter up to %1$d delays in seconds, each from 1 to %2$d.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			self::MAX_DELAYS,
 			self::MAX_DELAY
 		);

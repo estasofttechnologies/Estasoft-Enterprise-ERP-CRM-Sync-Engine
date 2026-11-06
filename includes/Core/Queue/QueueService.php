@@ -136,7 +136,7 @@ final class QueueService {
 	 * @return array<string,mixed>|null The item after the change, or null when it cannot be skipped.
 	 */
 	public function skip( int $id, string $reason ): ?array {
-		$reason = '' === trim( $reason ) ? __( 'Skipped by a person.', 'estasoft-erp-crm-sync-engine' ) : trim( $reason );
+		$reason = '' === trim( $reason ) ? __( 'Skipped by a person.', 'estasoft-enterprise-erpcrm-sync-engine' ) : trim( $reason );
 		if ( ! $this->queue->skip( $id, $reason ) ) {
 			return null;
 		}
@@ -285,18 +285,18 @@ final class QueueService {
 		if ( $user > 0 ) {
 			$messages = array(
 				/* translators: %d: user id. */
-				'retry'   => __( 'Retry requested by user #%d.', 'estasoft-erp-crm-sync-engine' ),
+				'retry'   => __( 'Retry requested by user #%d.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				/* translators: %d: user id. */
-				'skip'    => __( 'Skipped by user #%d.', 'estasoft-erp-crm-sync-engine' ),
+				'skip'    => __( 'Skipped by user #%d.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				/* translators: %d: user id. */
-				'restore' => __( 'Restored by user #%d.', 'estasoft-erp-crm-sync-engine' ),
+				'restore' => __( 'Restored by user #%d.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			);
 			$message  = sprintf( $messages[ $what ], $user );
 		} else {
 			$messages = array(
-				'retry'   => __( 'Retry requested.', 'estasoft-erp-crm-sync-engine' ),
-				'skip'    => __( 'Skipped.', 'estasoft-erp-crm-sync-engine' ),
-				'restore' => __( 'Restored.', 'estasoft-erp-crm-sync-engine' ),
+				'retry'   => __( 'Retry requested.', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				'skip'    => __( 'Skipped.', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				'restore' => __( 'Restored.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			);
 			$message  = $messages[ $what ];
 		}

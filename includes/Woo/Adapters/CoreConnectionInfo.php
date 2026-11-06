@@ -48,7 +48,7 @@ final class CoreConnectionInfo implements ConnectionInfo {
 		$id         = $connectionId ?? $this->activeId();
 		$connection = null === $id || $id <= 0 ? null : $this->connections->findWithoutSecrets( $id );
 		if ( null === $connection ) {
-			return __( 'the connected system', 'estasoft-erp-crm-sync-engine' );
+			return __( 'the connected system', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		$registry  = ( $this->registry )();
 		$connector = $registry->get( $connection->connector );

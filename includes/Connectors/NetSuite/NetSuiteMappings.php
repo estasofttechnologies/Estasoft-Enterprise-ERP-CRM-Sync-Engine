@@ -27,7 +27,7 @@ final class NetSuiteMappings {
 	 * @return array<int,FieldDef>
 	 */
 	public function fields( string $mappingType ): array {
-		$fields = new DefaultFields( 'NetSuite', __( 'Product (the item\'s internal id, found by the SKU match)', 'estasoft-erp-crm-sync-engine' ), true, false );
+		$fields = new DefaultFields( 'NetSuite', __( 'Product (the item\'s internal id, found by the SKU match)', 'estasoft-enterprise-erpcrm-sync-engine' ), true, false );
 		return match ( $mappingType ) {
 			'orders'    => $fields->orders()->build(),
 			'customers' => $fields->customers()->build(),

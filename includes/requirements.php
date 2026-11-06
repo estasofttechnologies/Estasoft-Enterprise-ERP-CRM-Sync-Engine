@@ -53,17 +53,17 @@ function estasoft_sync_missing_requirement( $include_woocommerce = true ) {
 	switch ( estasoft_sync_unmet_requirement( $include_woocommerce ) ) {
 		case 'php':
 			/* translators: 1: required PHP version, 2: current PHP version. */
-			return sprintf( __( 'PHP %1$s or newer is required. This site runs PHP %2$s.', 'estasoft-erp-crm-sync-engine' ), ESTASOFT_SYNC_MIN_PHP, PHP_VERSION );
+			return sprintf( __( 'PHP %1$s or newer is required. This site runs PHP %2$s.', 'estasoft-enterprise-erpcrm-sync-engine' ), ESTASOFT_SYNC_MIN_PHP, PHP_VERSION );
 		case 'wp':
 			/* translators: %s: required WordPress version. */
-			return sprintf( __( 'WordPress %s or newer is required.', 'estasoft-erp-crm-sync-engine' ), ESTASOFT_SYNC_MIN_WP );
+			return sprintf( __( 'WordPress %s or newer is required.', 'estasoft-enterprise-erpcrm-sync-engine' ), ESTASOFT_SYNC_MIN_WP );
 		case 'sodium':
-			return __( 'The PHP sodium extension is required to keep credentials encrypted.', 'estasoft-erp-crm-sync-engine' );
+			return __( 'The PHP sodium extension is required to keep credentials encrypted.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		case 'woocommerce':
-			return __( 'WooCommerce must be installed and active.', 'estasoft-erp-crm-sync-engine' );
+			return __( 'WooCommerce must be installed and active.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		case 'woocommerce-version':
 			/* translators: %s: required WooCommerce version. */
-			return sprintf( __( 'WooCommerce %s or newer is required.', 'estasoft-erp-crm-sync-engine' ), ESTASOFT_SYNC_MIN_WC );
+			return sprintf( __( 'WooCommerce %s or newer is required.', 'estasoft-enterprise-erpcrm-sync-engine' ), ESTASOFT_SYNC_MIN_WC );
 	}
 	return '';
 }
@@ -89,7 +89,7 @@ function estasoft_sync_requirement_notice( $include_woocommerce = true ) {
 			}
 			printf(
 				'<div class="notice notice-error"><p><strong>%1$s</strong> %2$s</p></div>',
-				esc_html__( 'Estasoft Enterprise ERP/CRM Sync Engine is not running.', 'estasoft-erp-crm-sync-engine' ),
+				esc_html__( 'Estasoft Enterprise ERP/CRM Sync Engine is not running.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				esc_html( $message )
 			);
 		}

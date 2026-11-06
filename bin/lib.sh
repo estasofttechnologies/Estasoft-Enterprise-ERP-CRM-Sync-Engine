@@ -15,7 +15,7 @@ fi
 ESTASOFT_LIB_LOADED=1
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SLUG="estasoft-erp-crm-sync-engine"
+SLUG="estasoft-enterprise-erpcrm-sync-engine"
 PLUGIN_FILE="${ROOT_DIR}/${SLUG}.php"
 README_FILE="${ROOT_DIR}/readme.txt"
 EXIT_SKIPPED=77

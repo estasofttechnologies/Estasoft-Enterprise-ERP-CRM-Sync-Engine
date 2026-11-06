@@ -249,7 +249,7 @@ final class OrderHooks {
 					return;
 				}
 				if ( null !== $this->choices && ( ! $this->choices->sendOrders() || ! $this->choices->sendRefunds() ) ) {
-					$this->log->info( __( 'A refund was not queued because refunds are turned off in your setup.', 'estasoft-erp-crm-sync-engine' ), array( 'refund_id' => (int) $refundId ) );
+					$this->log->info( __( 'A refund was not queued because refunds are turned off in your setup.', 'estasoft-enterprise-erpcrm-sync-engine' ), array( 'refund_id' => (int) $refundId ) );
 					return;
 				}
 				$refund = wc_get_order( (int) $refundId );
@@ -257,12 +257,12 @@ final class OrderHooks {
 					return;
 				}
 				if ( $this->eligibility->refundHasOnlyExcludedProducts( $refund ) ) {
-					$this->log->info( __( 'A refund was not queued because it only covers products that are marked Exclude from syncing.', 'estasoft-erp-crm-sync-engine' ), array( 'refund_id' => (int) $refundId ) );
+					$this->log->info( __( 'A refund was not queued because it only covers products that are marked Exclude from syncing.', 'estasoft-enterprise-erpcrm-sync-engine' ), array( 'refund_id' => (int) $refundId ) );
 					return;
 				}
 				$parent = $this->load( (int) $refund->get_parent_id() );
 				if ( null === $parent || ! in_array( $this->orders->state( $parent ), array( 'queued', 'syncing', 'synced', 'retrying', 'failed', 'shadow' ), true ) ) {
-					$this->log->info( __( 'A refund was not queued because its order was never queued.', 'estasoft-erp-crm-sync-engine' ), array( 'refund_id' => (int) $refundId ) );
+					$this->log->info( __( 'A refund was not queued because its order was never queued.', 'estasoft-enterprise-erpcrm-sync-engine' ), array( 'refund_id' => (int) $refundId ) );
 					return;
 				}
 				$this->queue->enqueue(
@@ -310,7 +310,7 @@ final class OrderHooks {
 			return;
 		}
 		if ( $this->eligibility->hasOnlyExcludedProducts( $order ) ) {
-			$this->log->info( __( 'An order was not queued because all of its products are marked Exclude from syncing.', 'estasoft-erp-crm-sync-engine' ), array( 'order_id' => $orderId ) );
+			$this->log->info( __( 'An order was not queued because all of its products are marked Exclude from syncing.', 'estasoft-enterprise-erpcrm-sync-engine' ), array( 'order_id' => $orderId ) );
 			return;
 		}
 		$queueId = $this->queue->enqueue( EntityType::Order, (string) $orderId, $event );
@@ -415,7 +415,7 @@ final class OrderHooks {
 		try {
 			$work();
 		} catch ( \Throwable $e ) {
-			$this->log->error( __( 'A WooCommerce event could not be queued. Checkout was not affected.', 'estasoft-erp-crm-sync-engine' ), array( 'error' => get_class( $e ) ) );
+			$this->log->error( __( 'A WooCommerce event could not be queued. Checkout was not affected.', 'estasoft-enterprise-erpcrm-sync-engine' ), array( 'error' => get_class( $e ) ) );
 		}
 	}
 }

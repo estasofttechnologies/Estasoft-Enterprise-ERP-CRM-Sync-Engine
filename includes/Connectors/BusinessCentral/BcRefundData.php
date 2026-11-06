@@ -53,7 +53,7 @@ final class BcRefundData {
 	public static function parse( array $payload, string $system ): self|ConnectorError {
 		$orderRef = is_string( $payload['order_ref'] ?? null ) ? trim( $payload['order_ref'] ) : '';
 		if ( 1 !== preg_match( '/^WC-\d+$/', $orderRef ) ) {
-			return Failures::invalid( $system, 'order_ref', __( 'A refund needs the reference of its order, WC- and the order number.', 'estasoft-erp-crm-sync-engine' ), 'order ref' );
+			return Failures::invalid( $system, 'order_ref', __( 'A refund needs the reference of its order, WC- and the order number.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'order ref' );
 		}
 		$lines = array();
 		foreach ( is_array( $payload['refund_line'] ?? null ) ? array_values( $payload['refund_line'] ) : array() as $row ) {
@@ -62,7 +62,7 @@ final class BcRefundData {
 			$quantity = $row['quantity'] ?? null;
 			$amount   = self::minor( $row['amount'] ?? null );
 			if ( '' === $sku || ! ( is_int( $quantity ) || is_float( $quantity ) || ( is_string( $quantity ) && is_numeric( $quantity ) ) ) || $quantity + 0 <= 0 || null === $amount || $amount < 0 ) {
-				return Failures::invalid( $system, 'refund_line[]', __( 'A refund line needs a product, a quantity above zero and an amount.', 'estasoft-erp-crm-sync-engine' ), 'refund line' );
+				return Failures::invalid( $system, 'refund_line[]', __( 'A refund line needs a product, a quantity above zero and an amount.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'refund line' );
 			}
 			$lines[] = array(
 				'sku'      => $sku,
@@ -79,7 +79,7 @@ final class BcRefundData {
 			$other = $amount;
 		}
 		if ( array() === $lines && ( $shipping ?? 0 ) <= 0 && ( $other ?? 0 ) <= 0 ) {
-			return Failures::invalid( $system, 'amount', __( 'The refund has no lines and no amount.', 'estasoft-erp-crm-sync-engine' ), 'empty refund' );
+			return Failures::invalid( $system, 'amount', __( 'The refund has no lines and no amount.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'empty refund' );
 		}
 		return new self(
 			$orderRef,

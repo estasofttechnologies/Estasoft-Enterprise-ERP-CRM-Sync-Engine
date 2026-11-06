@@ -85,7 +85,7 @@ final class TrackingSettings {
 			}
 			$bool = is_bool( $input[ $key ] ) ? $input[ $key ] : filter_var( $input[ $key ], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
 			if ( null === $bool ) {
-				$errors[ $key ] = __( 'Choose on or off.', 'estasoft-erp-crm-sync-engine' );
+				$errors[ $key ] = __( 'Choose on or off.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			} else {
 				$values[ $key ] = $bool;
 			}
@@ -98,7 +98,7 @@ final class TrackingSettings {
 			} else {
 				$errors['delivered_becomes'] = sprintf(
 					/* translators: %s: list of order statuses, for example processing, completed. */
-					__( 'Choose none (leave the order status alone) or a status an order can be moved up to: %s.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Choose none (leave the order status alone) or a status an order can be moved up to: %s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					implode( ', ', $allowed )
 				);
 			}

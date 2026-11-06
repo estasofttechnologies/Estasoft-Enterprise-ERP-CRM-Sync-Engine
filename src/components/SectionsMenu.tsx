@@ -30,7 +30,7 @@ export function SectionsMenu( {
 	const button = useRef< HTMLButtonElement >( null );
 	const currentLabel =
 		sections.find( ( section ) => section.id === current )?.label ??
-		__( 'Menu', 'estasoft-erp-crm-sync-engine' );
+		__( 'Menu', 'estasoft-enterprise-erpcrm-sync-engine' );
 
 	useEffect( () => {
 		if ( ! open ) {
@@ -56,7 +56,10 @@ export function SectionsMenu( {
 				aria-controls={ listId }
 				aria-label={ sprintf(
 					/* translators: %s: name of the current section */
-					__( 'Sections, now %s', 'estasoft-erp-crm-sync-engine' ),
+					__(
+						'Sections, now %s',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					),
 					currentLabel
 				) }
 				onClick={ () => setOpen( ! open ) }
@@ -70,7 +73,7 @@ export function SectionsMenu( {
 					className="estasoft-sync-sections__list"
 					aria-label={ __(
 						'ESTASOFT SYNC sections',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				>
 					{ sections.map( ( section ) => (

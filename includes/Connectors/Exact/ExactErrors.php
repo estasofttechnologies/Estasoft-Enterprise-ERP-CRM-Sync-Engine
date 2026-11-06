@@ -64,7 +64,7 @@ final class ExactErrors {
 				array(
 					'system' => ExactConnector::LABEL,
 					'field'  => 'division',
-					'reason' => __( 'The administration is not available to this sign-in. Reconnect and choose it again.', 'estasoft-erp-crm-sync-engine' ),
+					'reason' => __( 'The administration is not available to this sign-in. Reconnect and choose it again.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				$status,
 				null,
@@ -77,7 +77,7 @@ final class ExactErrors {
 				ErrorCode::Auth004,
 				array(
 					'system' => ExactConnector::LABEL,
-					'action' => __( 'use this part of Exact Online (check the permissions of the app and that the module is in your licence)', 'estasoft-erp-crm-sync-engine' ),
+					'action' => __( 'use this part of Exact Online (check the permissions of the app and that the module is in your licence)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				403,
 				null,
@@ -89,8 +89,8 @@ final class ExactErrors {
 			ErrorCode::Val002,
 			array(
 				'system' => ExactConnector::LABEL,
-				'field'  => __( 'the request', 'estasoft-erp-crm-sync-engine' ),
-				'reason' => '' !== $text ? $text : __( 'Exact Online refused the request.', 'estasoft-erp-crm-sync-engine' ),
+				'field'  => __( 'the request', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				'reason' => '' !== $text ? $text : __( 'Exact Online refused the request.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			),
 			$status,
 			null,

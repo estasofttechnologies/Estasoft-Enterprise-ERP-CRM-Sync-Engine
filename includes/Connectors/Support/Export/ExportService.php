@@ -73,11 +73,11 @@ final class ExportService {
 	public function create( int $connectionId, string $createdBy = '' ): ExportFile {
 		$connector = ( $this->connectorFor )( $connectionId );
 		if ( ! $connector instanceof AbstractExportConnector ) {
-			throw ExportException::refused( __( 'This connection does not make export files.', 'estasoft-erp-crm-sync-engine' ) );
+			throw ExportException::refused( __( 'This connection does not make export files.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$owner = null === $this->lock ? '' : $this->lock->acquire( 'export:' . $connectionId, self::LOCK_TTL );
 		if ( null === $owner ) {
-			throw ExportException::refused( __( 'An export is already being made. Wait a moment and look at the list.', 'estasoft-erp-crm-sync-engine' ) );
+			throw ExportException::refused( __( 'An export is already being made. Wait a moment and look at the list.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		try {
 			return $this->build( $connector, $connectionId, $createdBy );
@@ -139,7 +139,7 @@ final class ExportService {
 	private function build( AbstractExportConnector $connector, int $connectionId, string $createdBy ): ExportFile {
 		$batch = $this->store->openBatch( $connectionId );
 		if ( array() === $batch->includedIds() && array() === $batch->leftOut() ) {
-			throw ExportException::refused( __( 'No orders are waiting for an export file.', 'estasoft-erp-crm-sync-engine' ) );
+			throw ExportException::refused( __( 'No orders are waiting for an export file.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$batch->forConnection( null === $this->connectionFor ? null : ( $this->connectionFor )( $connectionId ) );
 		$file     = $connector->finish( $batch );

@@ -194,7 +194,7 @@ final class QoyodLines {
 				'field'  => 'lines[].tax_code',
 				'reason' => sprintf(
 					/* translators: %s: name of the line. */
-					__( 'The line "%s" has no tax code. Map its tax under Tax mapping, or choose in the connection settings whether lines without tax are zero-rated (code 2) or exempt (code 3).', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The line "%s" has no tax code. Map its tax under Tax mapping, or choose in the connection settings whether lines without tax are zero-rated (code 2) or exempt (code 3).', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$name
 				),
 			),

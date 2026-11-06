@@ -65,7 +65,7 @@ if ( is_file( $allow_file ) ) {
 }
 
 $files = array();
-foreach ( array( 'estasoft-erp-crm-sync-engine.php', 'uninstall.php' ) as $name ) {
+foreach ( array( 'estasoft-enterprise-erpcrm-sync-engine.php', 'uninstall.php' ) as $name ) {
 	if ( is_file( "$root/$name" ) ) {
 		$files[] = "$root/$name";
 	}

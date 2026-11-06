@@ -129,7 +129,7 @@ final class QueueController extends BaseController {
 		$queue  = $this->serviceAs( Services::QUEUE_SERVICE, QueueService::class );
 		$detail = $queue->detail( (int) $request['id'] );
 		if ( null === $detail ) {
-			throw ApiException::notFound( esc_html__( 'That queue item does not exist.', 'estasoft-erp-crm-sync-engine' ) );
+			throw ApiException::notFound( esc_html__( 'That queue item does not exist.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return $detail;
 	}
@@ -146,7 +146,7 @@ final class QueueController extends BaseController {
 		$queue = $this->serviceAs( Services::QUEUE_SERVICE, QueueService::class );
 		$item  = $queue->retry( (int) $request['id'] );
 		if ( null === $item ) {
-			throw ApiException::conflict( esc_html__( 'Only failed or retrying orders can be retried.', 'estasoft-erp-crm-sync-engine' ), 'estasoft_sync_cannot_retry' );
+			throw ApiException::conflict( esc_html__( 'Only failed or retrying orders can be retried.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'estasoft_sync_cannot_retry' );
 		}
 		return $item;
 	}
@@ -163,7 +163,7 @@ final class QueueController extends BaseController {
 		$queue = $this->serviceAs( Services::QUEUE_SERVICE, QueueService::class );
 		$item  = $queue->skip( (int) $request['id'], Sanitize::line( $request->get_param( 'reason' ), 500 ) );
 		if ( null === $item ) {
-			throw ApiException::conflict( esc_html__( 'This item has already finished and cannot be skipped.', 'estasoft-erp-crm-sync-engine' ), 'estasoft_sync_cannot_skip' );
+			throw ApiException::conflict( esc_html__( 'This item has already finished and cannot be skipped.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'estasoft_sync_cannot_skip' );
 		}
 		return $item;
 	}
@@ -180,7 +180,7 @@ final class QueueController extends BaseController {
 		$queue = $this->serviceAs( Services::QUEUE_SERVICE, QueueService::class );
 		$item  = $queue->restore( (int) $request['id'] );
 		if ( null === $item ) {
-			throw ApiException::conflict( esc_html__( 'Only skipped orders can be restored.', 'estasoft-erp-crm-sync-engine' ), 'estasoft_sync_cannot_restore' );
+			throw ApiException::conflict( esc_html__( 'Only skipped orders can be restored.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'estasoft_sync_cannot_restore' );
 		}
 		return $item;
 	}
@@ -202,7 +202,7 @@ final class QueueController extends BaseController {
 		}
 		$ids = Sanitize::idList( $request->get_param( 'ids' ) );
 		if ( array() === $ids ) {
-			throw ApiException::invalid( esc_html__( 'Choose the orders to retry, or an error code.', 'estasoft-erp-crm-sync-engine' ), array( 'ids' => esc_html__( 'Choose at least one order.', 'estasoft-erp-crm-sync-engine' ) ) );
+			throw ApiException::invalid( esc_html__( 'Choose the orders to retry, or an error code.', 'estasoft-enterprise-erpcrm-sync-engine' ), array( 'ids' => esc_html__( 'Choose at least one order.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		return array( 'retried' => $queue->retryMany( $ids ) );
 	}
@@ -220,7 +220,7 @@ final class QueueController extends BaseController {
 		$reason = Sanitize::line( $request->get_param( 'reason' ), 500 );
 		$done   = $queue->bulk( Sanitize::idList( $request->get_param( 'ids' ) ), (string) $request->get_param( 'action' ), '' === $reason ? null : $reason );
 		if ( null === $done ) {
-			throw ApiException::invalid( esc_html__( 'That action is not known.', 'estasoft-erp-crm-sync-engine' ), array( 'action' => esc_html__( 'Choose skip, retry or restore.', 'estasoft-erp-crm-sync-engine' ) ) );
+			throw ApiException::invalid( esc_html__( 'That action is not known.', 'estasoft-enterprise-erpcrm-sync-engine' ), array( 'action' => esc_html__( 'Choose skip, retry or restore.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		return array( 'done' => $done );
 	}

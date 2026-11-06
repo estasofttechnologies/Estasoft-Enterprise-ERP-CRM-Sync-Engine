@@ -54,7 +54,7 @@ final class CryptoException extends \RuntimeException {
 		return new self(
 			sprintf(
 				/* translators: %d: the shortest accepted length of the encryption key, in characters. */
-				esc_html__( 'The encryption key in wp-config.php is too short. It needs at least %d characters. Replace it with a longer random value and reload.', 'estasoft-erp-crm-sync-engine' ),
+				esc_html__( 'The encryption key in wp-config.php is too short. It needs at least %d characters. Replace it with a longer random value and reload.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$minimum
 			),
 			ErrorCode::Cfg002
@@ -65,7 +65,7 @@ final class CryptoException extends \RuntimeException {
 	 * Only some credentials were sent while the saved ones belong to another key. The rest would stay unreadable.
 	 */
 	public static function partialSaveRefused(): self {
-		return new self( esc_html__( 'The encryption key was changed after these credentials were saved, so they cannot be read. Enter all the credentials again; saving only some of them would leave the others unreadable.', 'estasoft-erp-crm-sync-engine' ) );
+		return new self( esc_html__( 'The encryption key was changed after these credentials were saved, so they cannot be read. Enter all the credentials again; saving only some of them would leave the others unreadable.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**
@@ -73,14 +73,14 @@ final class CryptoException extends \RuntimeException {
 	 * This is not a refused sign-in, so it carries no AUTH code.
 	 */
 	public static function keyChanged(): self {
-		return new self( esc_html__( 'The saved credentials cannot be read with the key in wp-config.php. The key may have been changed. Enter the credentials again.', 'estasoft-erp-crm-sync-engine' ) );
+		return new self( esc_html__( 'The saved credentials cannot be read with the key in wp-config.php. The key may have been changed. Enter the credentials again.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**
 	 * The stored value is not in the format this version writes.
 	 */
 	public static function malformed(): self {
-		return new self( esc_html__( 'The saved credentials are damaged. Enter the credentials again.', 'estasoft-erp-crm-sync-engine' ) );
+		return new self( esc_html__( 'The saved credentials are damaged. Enter the credentials again.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**

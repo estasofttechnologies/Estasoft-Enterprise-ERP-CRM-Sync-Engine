@@ -88,7 +88,7 @@ final class SageX3OrderSender {
 	public function send( Item $item, OrderPayload $payload ): SendResult {
 		unset( $item );
 		if ( '' === $this->settings->get( 'customer_code' ) ) {
-			return SendResult::failure( Problems::refused( $this->system, 'customer_code', __( 'Enter the customer code that should receive the web orders in the connection settings.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( Problems::refused( $this->system, 'customer_code', __( 'Enter the customer code that should receive the web orders in the connection settings.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$unchecked = $this->totalUnchecked();
 		if ( $unchecked instanceof ConnectorError ) {
@@ -127,7 +127,7 @@ final class SageX3OrderSender {
 		return Problems::refused(
 			$this->system,
 			'total_property',
-			__( 'Enter the property that holds the order total in "total_property", so the total can be compared with the shop. Or choose "Continue with a warning" for totals that differ, and accept that prices from the folder\'s price lists can differ unnoticed.', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Enter the property that holds the order total in "total_property", so the total can be compared with the shop. Or choose "Continue with a warning" for totals that differ, and accept that prices from the folder\'s price lists can differ unnoticed.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			'total not verifiable'
 		);
 	}
@@ -241,7 +241,7 @@ final class SageX3OrderSender {
 		if ( '' === $this->numberOf( $created['body'], $created['location'] ) || '' === trim( (string) ( $created['body'][ $this->settings->get( 'prop_reference' ) ] ?? '' ) ) ) {
 			$found = $this->find( $payload->clientRef );
 			if ( null === $found ) {
-				return Problems::refused( $this->system, 'order_class', __( 'Sage X3 accepted the order but it cannot be found again by its reference. Check that the reference property is the one that holds the customer order reference.', 'estasoft-erp-crm-sync-engine' ) );
+				return Problems::refused( $this->system, 'order_class', __( 'Sage X3 accepted the order but it cannot be found again by its reference. Check that the reference property is the one that holds the customer order reference.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$created['body'] = $found + $created['body'];
 		}
@@ -255,13 +255,13 @@ final class SageX3OrderSender {
 	 */
 	private function precheck( OrderPayload $payload ): ?ConnectorError {
 		if ( '' === $payload->currency ) {
-			return Problems::refused( $this->system, 'currency', __( 'The order has no currency.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $this->system, 'currency', __( 'The order has no currency.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( $payload->pricesIncludeTax ) {
 			return Problems::refused(
 				$this->system,
 				'prices_include_tax',
-				__( 'Sage X3 works out tax itself and this connector sends prices without tax. Set the shop to show prices without tax in the mapping.', 'estasoft-erp-crm-sync-engine' )
+				__( 'Sage X3 works out tax itself and this connector sends prices without tax. Set the shop to show prices without tax in the mapping.', 'estasoft-enterprise-erpcrm-sync-engine' )
 			);
 		}
 		foreach ( $payload->extras as $extra ) {
@@ -272,7 +272,7 @@ final class SageX3OrderSender {
 					$option,
 					sprintf(
 						/* translators: %s: setting name. */
-						__( 'The order has a shipping, fee or discount amount. How Sage X3 carries these differs per folder, so the connection settings need the item code of a service item in "%s"; the amount is then sent as a line with that item.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'The order has a shipping, fee or discount amount. How Sage X3 carries these differs per folder, so the connection settings need the item code of a service item in "%s"; the amount is then sent as a line with that item.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$option
 					)
 				);
@@ -309,7 +309,7 @@ final class SageX3OrderSender {
 				'currency',
 				sprintf(
 					/* translators: 1: currency the order has in Sage X3, 2: currency of the shop. */
-					__( 'The order has the currency %1$s in Sage X3 but the shop order is in %2$s; Sage X3 takes the currency of the customer. It stays in Sage X3; delete it there and use a customer in the currency of the shop.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The order has the currency %1$s in Sage X3 but the shop order is in %2$s; Sage X3 takes the currency of the customer. It stays in Sage X3; delete it there and use a customer in the currency of the shop.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					strtoupper( trim( $seen ) ),
 					$payload->currency
 				),
@@ -325,14 +325,14 @@ final class SageX3OrderSender {
 					'total_property',
 					sprintf(
 						/* translators: 1: order number, 2: property name. */
-						__( 'Order %1$s was made but its answer has no "%2$s" value, so the total could not be compared with the shop. The order stays in Sage X3; check the property name, or choose "Continue with a warning".', 'estasoft-erp-crm-sync-engine' ),
+						__( 'Order %1$s was made but its answer has no "%2$s" value, so the total could not be compared with the shop. The order stays in Sage X3; check the property name, or choose "Continue with a warning".', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$this->numberOf( $order, '' ),
 						$this->settings->get( 'total_property' )
 					),
 					'total missing'
 				);
 			}
-			$warnings[] = __( 'No total was compared with the shop: the answer has no value in the "total_property" property.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'No total was compared with the shop: the answer has no value in the "total_property" property.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			return null;
 		}
 		$diff = $check->difference( $payload->totalMinor, $total, $payload->currency, $this->numberOf( $order, '' ) );
@@ -340,7 +340,7 @@ final class SageX3OrderSender {
 			return null;
 		}
 		if ( $check->isStrict() ) {
-			return $check->error( $diff, __( 'The order stays in Sage X3. Delete it there after fixing the tax setup; the next try makes a new one.', 'estasoft-erp-crm-sync-engine' ) );
+			return $check->error( $diff, __( 'The order stays in Sage X3. Delete it there after fixing the tax setup; the next try makes a new one.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$warnings[] = $diff['message'];
 		return null;

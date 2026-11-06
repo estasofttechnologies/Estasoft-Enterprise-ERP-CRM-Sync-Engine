@@ -80,6 +80,6 @@ abstract class BaseTransform implements Transform {
 	 */
 	protected function missing( string $key ): string {
 		/* translators: %s: name of a rule argument, for example separator. */
-		return sprintf( __( 'The argument ‘%s’ is missing or not valid.', 'estasoft-erp-crm-sync-engine' ), $key );
+		return sprintf( __( 'The argument ‘%s’ is missing or not valid.', 'estasoft-enterprise-erpcrm-sync-engine' ), $key );
 	}
 }

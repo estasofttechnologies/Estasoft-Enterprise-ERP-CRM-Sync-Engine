@@ -89,7 +89,7 @@ final class Enqueuer {
 			$this->logger->error(
 				sprintf(
 					/* translators: %s: PHP error class name. */
-					__( 'An event could not be added to the queue (%s).', 'estasoft-erp-crm-sync-engine' ),
+					__( 'An event could not be added to the queue (%s).', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					get_class( $e )
 				),
 				array(
@@ -142,7 +142,7 @@ final class Enqueuer {
 		);
 		if ( false === $id ) {
 			$this->logger->error(
-				__( 'An event could not be added to the queue.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'An event could not be added to the queue.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				array(
 					'connection_id' => $connection->id,
 					'entity_ref'    => $type->value . ':' . $entityId,

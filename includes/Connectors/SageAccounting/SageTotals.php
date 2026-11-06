@@ -43,7 +43,7 @@ final class SageTotals {
 				'currency',
 				sprintf(
 					/* translators: 1: currency the business works in, 2: currency Sage used. */
-					__( 'The business works in %1$s but Sage made the document in %2$s.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The business works in %1$s but Sage made the document in %2$s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$currency,
 					$actualCurrency
 				)
@@ -54,7 +54,7 @@ final class SageTotals {
 		}
 		$actual = $this->amounts->fromNumber( $document['total_amount'] ?? null, '' !== $currency ? $currency : 'GBP' );
 		if ( null === $actual ) {
-			return SageErrors::refused( 'total_amount', __( 'Sage did not report a total to compare.', 'estasoft-erp-crm-sync-engine' ) );
+			return SageErrors::refused( 'total_amount', __( 'Sage did not report a total to compare.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( $this->amounts->agree( abs( $expected ), abs( $actual ), $tolerance ) ) {
 			return null;
@@ -63,7 +63,7 @@ final class SageTotals {
 			'total_amount',
 			sprintf(
 				/* translators: 1: total of the shop, 2: total Sage worked out. */
-				__( 'The shop total is %1$s but Sage worked out %2$s. Check the tax mapping.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'The shop total is %1$s but Sage worked out %2$s. Check the tax mapping.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$this->amounts->show( abs( $expected ), $currency ),
 				$this->amounts->show( abs( $actual ), $currency )
 			)

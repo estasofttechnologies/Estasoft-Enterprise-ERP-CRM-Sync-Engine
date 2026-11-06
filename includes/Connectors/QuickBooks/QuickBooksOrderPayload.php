@@ -66,7 +66,7 @@ final class QuickBooksOrderPayload {
 			return QuickBooksErrors::noEmail( $item->entityId );
 		}
 		if ( '' === ( $partner['name'] ?? '' ) && '' === ( $partner['company_name'] ?? '' ) ) {
-			return QuickBooksErrors::refused( 'partner.name', __( 'The customer name is empty.', 'estasoft-erp-crm-sync-engine' ) );
+			return QuickBooksErrors::refused( 'partner.name', __( 'The customer name is empty.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 
 		$lines = array();
@@ -78,7 +78,7 @@ final class QuickBooksOrderPayload {
 			$lines[] = $line;
 		}
 		if ( array() === $lines ) {
-			return QuickBooksErrors::refused( 'order_line', __( 'The order has no product lines.', 'estasoft-erp-crm-sync-engine' ) );
+			return QuickBooksErrors::refused( 'order_line', __( 'The order has no product lines.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$extras = self::extras( $payload );
 		if ( $extras instanceof ConnectorError ) {
@@ -126,7 +126,7 @@ final class QuickBooksOrderPayload {
 				'order_line[].quantity',
 				sprintf(
 					/* translators: %d: line number. */
-					__( 'Line %d has no quantity.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Line %d has no quantity.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$number
 				)
 			);
@@ -137,7 +137,7 @@ final class QuickBooksOrderPayload {
 				'order_line[].price_unit',
 				sprintf(
 					/* translators: %d: line number. */
-					__( 'Line %d has no price in minor units (a whole number such as 21900).', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Line %d has no price in minor units (a whole number such as 21900).', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$number
 				)
 			);
@@ -150,7 +150,7 @@ final class QuickBooksOrderPayload {
 					'order_line[].tax',
 					sprintf(
 						/* translators: %d: line number. */
-						__( 'Line %d has more than one tax code. QuickBooks takes one tax code per line.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'Line %d has more than one tax code. QuickBooks takes one tax code per line.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$number
 					)
 				);
@@ -176,12 +176,12 @@ final class QuickBooksOrderPayload {
 	private static function extras( array $payload ): array|ConnectorError {
 		$extras   = array();
 		$shipping = isset( $payload['shipping'] ) && is_array( $payload['shipping'] ) ? $payload['shipping'] : array();
-		$blocks   = array( array( 'shipping', $shipping, __( 'Shipping', 'estasoft-erp-crm-sync-engine' ) ) );
+		$blocks   = array( array( 'shipping', $shipping, __( 'Shipping', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		foreach ( QuickBooksPayloadReader::rows( $payload['fee'] ?? null ) as $fee ) {
-			$blocks[] = array( 'fee', $fee, __( 'Fee', 'estasoft-erp-crm-sync-engine' ) );
+			$blocks[] = array( 'fee', $fee, __( 'Fee', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$discount = isset( $payload['discount'] ) && is_array( $payload['discount'] ) ? $payload['discount'] : array();
-		$blocks[] = array( 'discount', $discount, __( 'Discount', 'estasoft-erp-crm-sync-engine' ) );
+		$blocks[] = array( 'discount', $discount, __( 'Discount', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 
 		foreach ( $blocks as $block ) {
 			list( $kind, $raw, $fallback ) = $block;
@@ -193,7 +193,7 @@ final class QuickBooksOrderPayload {
 			if ( array_key_exists( 'tax', $raw ) ) {
 				$codes = QuickBooksPayloadReader::taxCodes( $raw['tax'] );
 				if ( count( $codes ) > 1 ) {
-					return QuickBooksErrors::refused( $kind . '.tax', __( 'More than one tax code on a shipping, fee or discount line. QuickBooks takes one tax code per line.', 'estasoft-erp-crm-sync-engine' ) );
+					return QuickBooksErrors::refused( $kind . '.tax', __( 'More than one tax code on a shipping, fee or discount line. QuickBooks takes one tax code per line.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 				}
 				$tax = array() === $codes ? '' : $codes[0];
 			}

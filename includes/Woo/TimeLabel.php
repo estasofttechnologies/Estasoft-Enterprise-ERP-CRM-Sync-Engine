@@ -41,13 +41,13 @@ final class TimeLabel {
 		$day  = wp_date( 'Y-m-d', $stamp );
 		if ( wp_date( 'Y-m-d', $now ) === $day ) {
 			/* translators: %s: time of day, for example 11:39. */
-			return sprintf( __( 'Today %s', 'estasoft-erp-crm-sync-engine' ), $time );
+			return sprintf( __( 'Today %s', 'estasoft-enterprise-erpcrm-sync-engine' ), $time );
 		}
 		if ( wp_date( 'Y-m-d', $now - DAY_IN_SECONDS ) === $day ) {
 			/* translators: %s: time of day, for example 11:39. */
-			return sprintf( __( 'Yesterday %s', 'estasoft-erp-crm-sync-engine' ), $time );
+			return sprintf( __( 'Yesterday %s', 'estasoft-enterprise-erpcrm-sync-engine' ), $time );
 		}
 		/* translators: 1: date, for example 2 Nov. 2: time of day. */
-		return sprintf( __( '%1$s, %2$s', 'estasoft-erp-crm-sync-engine' ), wp_date( 'j M', $stamp ), $time );
+		return sprintf( __( '%1$s, %2$s', 'estasoft-enterprise-erpcrm-sync-engine' ), wp_date( 'j M', $stamp ), $time );
 	}
 }

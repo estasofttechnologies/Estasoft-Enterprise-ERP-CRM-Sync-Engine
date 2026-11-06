@@ -62,7 +62,7 @@ final class XeroOrganisation {
 			$data     = $response->json();
 			$row      = isset( $data['Organisations'][0] ) && is_array( $data['Organisations'][0] ) ? $data['Organisations'][0] : null;
 			if ( null === $row ) {
-				$failure = XeroErrors::exception( XeroErrors::refused( 'Organisation', __( 'Xero did not return the organisation.', 'estasoft-erp-crm-sync-engine' ), $response->status() ), $response );
+				$failure = XeroErrors::exception( XeroErrors::refused( 'Organisation', __( 'Xero did not return the organisation.', 'estasoft-enterprise-erpcrm-sync-engine' ), $response->status() ), $response );
 				throw $failure;
 			}
 			$left = $response->header( 'x-daylimit-remaining' );

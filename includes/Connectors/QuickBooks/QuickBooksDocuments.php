@@ -79,7 +79,7 @@ final class QuickBooksDocuments {
 			return null;
 		}
 		if ( 400 === $response->status() ) {
-			$failure = QuickBooksErrors::exception( QuickBooksErrors::fromResponse( $response ) ?? QuickBooksErrors::refused( $entity, __( 'QuickBooks refused the request.', 'estasoft-erp-crm-sync-engine' ), 400 ), $response );
+			$failure = QuickBooksErrors::exception( QuickBooksErrors::fromResponse( $response ) ?? QuickBooksErrors::refused( $entity, __( 'QuickBooks refused the request.', 'estasoft-enterprise-erpcrm-sync-engine' ), 400 ), $response );
 			throw $failure;
 		}
 		return $this->api->entity( $response, self::key( $entity ) );

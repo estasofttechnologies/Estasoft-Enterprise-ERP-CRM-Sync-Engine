@@ -46,7 +46,7 @@ final class HoldedTotals {
 			return $this->refused(
 				sprintf(
 					/* translators: 1: currency Holded shows, 2: currency of the order. */
-					__( 'Holded made the document in %1$s but the order is in %2$s.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Holded made the document in %1$s but the order is in %2$s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$actualCurrency,
 					$currency
 				)
@@ -58,7 +58,7 @@ final class HoldedTotals {
 		$exponent = $this->amounts->exponent( '' !== $currency ? $currency : $actualCurrency );
 		$actual   = $record->totalMinor( $exponent );
 		if ( null === $actual ) {
-			$message = __( 'Holded did not report the total of the document, so it could not be compared with the order.', 'estasoft-erp-crm-sync-engine' );
+			$message = __( 'Holded did not report the total of the document, so it could not be compared with the order.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			if ( $fail ) {
 				return $this->refused( $message );
 			}
@@ -70,7 +70,7 @@ final class HoldedTotals {
 		}
 		$message = sprintf(
 			/* translators: 1: total Holded shows, 2: total of the order, 3: currency code. */
-			__( 'Holded shows %1$s but the order is %2$s (%3$s). Check the tax mapping.', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Holded shows %1$s but the order is %2$s (%3$s). Check the tax mapping.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			$this->amounts->decimalString( $actual, $exponent ),
 			$this->amounts->decimalString( $expected, $exponent ),
 			'' !== $currency ? $currency : $actualCurrency
@@ -100,7 +100,7 @@ final class HoldedTotals {
 		$exponent = $this->amounts->exponent( $currency );
 		$message  = sprintf(
 			/* translators: 1: total of the lines, 2: total of the order, 3: currency code. */
-			__( 'The lines add up to %1$s but the order is %2$s (%3$s). Check the tax mapping.', 'estasoft-erp-crm-sync-engine' ),
+			__( 'The lines add up to %1$s but the order is %2$s (%3$s). Check the tax mapping.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			$this->amounts->decimalString( $planned, $exponent ),
 			$this->amounts->decimalString( $expected, $exponent ),
 			$currency

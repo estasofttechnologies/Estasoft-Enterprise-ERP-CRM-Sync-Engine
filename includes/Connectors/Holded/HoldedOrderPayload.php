@@ -71,7 +71,7 @@ final class HoldedOrderPayload {
 			);
 		}
 		if ( '' === $customer['name'] ) {
-			return self::refused( 'customer.name', __( 'The customer name is empty.', 'estasoft-erp-crm-sync-engine' ) );
+			return self::refused( 'customer.name', __( 'The customer name is empty.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 
 		$lines = array();
@@ -83,7 +83,7 @@ final class HoldedOrderPayload {
 			$lines[] = $line;
 		}
 		if ( array() === $lines ) {
-			return self::refused( 'lines', __( 'The order has no product lines.', 'estasoft-erp-crm-sync-engine' ) );
+			return self::refused( 'lines', __( 'The order has no product lines.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 
 		$extras   = array();
@@ -93,7 +93,7 @@ final class HoldedOrderPayload {
 			$name     = HoldedPayloadReader::text( $shipping['name'] ?? '' );
 			$extras[] = array(
 				'kind'        => 'shipping',
-				'name'        => '' !== $name ? $name : __( 'Shipping', 'estasoft-erp-crm-sync-engine' ),
+				'name'        => '' !== $name ? $name : __( 'Shipping', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'quantity'    => 1.0,
 				'total_minor' => $ship,
 				'tax_code'    => HoldedPayloadReader::taxCode( $shipping['tax_code'] ?? '' ),
@@ -108,7 +108,7 @@ final class HoldedOrderPayload {
 			$name     = HoldedPayloadReader::text( $fee['name'] ?? '' );
 			$extras[] = array(
 				'kind'        => 'fee',
-				'name'        => '' !== $name ? $name : __( 'Fee', 'estasoft-erp-crm-sync-engine' ),
+				'name'        => '' !== $name ? $name : __( 'Fee', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'quantity'    => 1.0,
 				'total_minor' => $total,
 				'tax_code'    => HoldedPayloadReader::taxCode( $fee['tax_code'] ?? '' ),
@@ -187,7 +187,7 @@ final class HoldedOrderPayload {
 				'lines[].quantity',
 				sprintf(
 					/* translators: %d: line number. */
-					__( 'Line %d has no quantity.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Line %d has no quantity.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$number
 				)
 			);
@@ -198,7 +198,7 @@ final class HoldedOrderPayload {
 				'lines[].total',
 				sprintf(
 					/* translators: %d: line number. */
-					__( 'Line %d has no amount.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Line %d has no amount.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$number
 				)
 			);

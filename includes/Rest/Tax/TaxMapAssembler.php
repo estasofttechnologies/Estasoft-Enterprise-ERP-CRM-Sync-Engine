@@ -106,16 +106,16 @@ final class TaxMapAssembler {
 		$problems = array();
 		foreach ( array_values( $rows ) as $index => $row ) {
 			if ( ! $this->isCountry( $row['country'] ?? null ) ) {
-				$problems[ 'rows.' . $index . '.country' ] = __( 'Enter a two-letter country code, for example SA.', 'estasoft-erp-crm-sync-engine' );
+				$problems[ 'rows.' . $index . '.country' ] = __( 'Enter a two-letter country code, for example SA.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			}
 			$key = MinorUnits::rateKey( $row['rate_percent'] ?? null );
 			if ( null === $key || (float) $key < 0 || (float) $key > 100 ) {
-				$problems[ 'rows.' . $index . '.rate_percent' ] = __( 'Enter a rate from 0 to 100.', 'estasoft-erp-crm-sync-engine' );
+				$problems[ 'rows.' . $index . '.rate_percent' ] = __( 'Enter a rate from 0 to 100.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			}
 		}
 		foreach ( array_values( $buyerRules ?? array() ) as $index => $rule ) {
 			if ( ! $this->isCountry( $rule['country'] ?? null ) ) {
-				$problems[ 'buyer_tax_rules.' . $index . '.country' ] = __( 'Enter a two-letter country code, for example SA.', 'estasoft-erp-crm-sync-engine' );
+				$problems[ 'buyer_tax_rules.' . $index . '.country' ] = __( 'Enter a two-letter country code, for example SA.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			}
 		}
 		if ( array() !== $problems ) {

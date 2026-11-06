@@ -201,45 +201,45 @@ final class Sage200Connector extends AbstractApiConnector implements OAuthConnec
 	protected function credentialDefinition(): array {
 		$advanced = static fn( string $name, string $label, string $hint = '', string $type = 'text', array $options = array(), string $initial = '' ): CredentialField => new CredentialField( $name, $label, false, false, $hint, $initial, $type, $options, 'advanced' );
 		return array(
-			CredentialFields::clientId( 'client_id', __( 'The Client ID Sage sent for your application.', 'estasoft-erp-crm-sync-engine' ) ),
-			CredentialFields::clientSecret( 'client_secret', __( 'The Client Secret Sage sent. Saved encrypted.', 'estasoft-erp-crm-sync-engine' ) ),
-			new CredentialField( 'subscription_key', __( 'Subscription key (if Sage sent one)', 'estasoft-erp-crm-sync-engine' ), true, false, __( 'Leave empty unless Sage sent a subscription key with your credentials. Saved encrypted.', 'estasoft-erp-crm-sync-engine' ), '', 'password', array(), 'app' ),
+			CredentialFields::clientId( 'client_id', __( 'The Client ID Sage sent for your application.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			CredentialFields::clientSecret( 'client_secret', __( 'The Client Secret Sage sent. Saved encrypted.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			new CredentialField( 'subscription_key', __( 'Subscription key (if Sage sent one)', 'estasoft-enterprise-erpcrm-sync-engine' ), true, false, __( 'Leave empty unless Sage sent a subscription key with your credentials. Saved encrypted.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'password', array(), 'app' ),
 			CredentialFields::choice(
 				'edition',
-				__( 'Edition', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Edition', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				array(
-					'standard'     => __( 'Sage 200 Standard', 'estasoft-erp-crm-sync-engine' ),
-					'professional' => __( 'Sage 200 Professional', 'estasoft-erp-crm-sync-engine' ),
+					'standard'     => __( 'Sage 200 Standard', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'professional' => __( 'Sage 200 Professional', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				'standard'
 			),
-			$advanced( 'base_currency', __( 'Base currency of the company', 'estasoft-erp-crm-sync-engine' ), __( 'Orders are sent only in this currency. Empty: GBP.', 'estasoft-erp-crm-sync-engine' ) ),
+			$advanced( 'base_currency', __( 'Base currency of the company', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Orders are sent only in this currency. Empty: GBP.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			$advanced(
 				'customer_policy',
-				__( 'Customers', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Customers', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'',
 				'select',
 				array(
-					'match_or_create' => __( 'Match by email, create when missing', 'estasoft-erp-crm-sync-engine' ),
-					'match_only'      => __( 'Match by email only', 'estasoft-erp-crm-sync-engine' ),
+					'match_or_create' => __( 'Match by email, create when missing', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'match_only'      => __( 'Match by email only', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				'match_or_create'
 			),
-			$advanced( 'customer_reference_prefix', __( 'Account reference prefix for new customers', 'estasoft-erp-crm-sync-engine' ), __( 'Up to three letters. Empty: WEB.', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'default_tax_code', __( 'Tax code for new customers', 'estasoft-erp-crm-sync-engine' ), __( 'The tax code number.', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'country_code_id', __( 'Country code id for new customers', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'shipping_product', __( 'Product code for shipping', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'fee_product', __( 'Product code for fees', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'discount_product', __( 'Product code for discounts', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'refund_product', __( 'Product code for refunds without lines', 'estasoft-erp-crm-sync-engine' ) ),
+			$advanced( 'customer_reference_prefix', __( 'Account reference prefix for new customers', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Up to three letters. Empty: WEB.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'default_tax_code', __( 'Tax code for new customers', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'The tax code number.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'country_code_id', __( 'Country code id for new customers', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'shipping_product', __( 'Product code for shipping', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'fee_product', __( 'Product code for fees', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'discount_product', __( 'Product code for discounts', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'refund_product', __( 'Product code for refunds without lines', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			$advanced(
 				'total_mismatch',
-				__( 'When Sage 200 totals differ from the shop', 'estasoft-erp-crm-sync-engine' ),
+				__( 'When Sage 200 totals differ from the shop', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'',
 				'select',
 				array(
-					'fail' => __( 'Stop and report', 'estasoft-erp-crm-sync-engine' ),
-					'warn' => __( 'Continue with a warning', 'estasoft-erp-crm-sync-engine' ),
+					'fail' => __( 'Stop and report', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'warn' => __( 'Continue with a warning', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				'fail'
 			),
@@ -256,7 +256,7 @@ final class Sage200Connector extends AbstractApiConnector implements OAuthConnec
 	protected function identify( Connection $connection ): TestResult {
 		$edition = 'professional' === Sage200Site::edition( $connection ) ? 'Sage 200 Professional' : 'Sage 200 Standard';
 		if ( '' === Sage200Site::siteId( $connection ) || '' === Sage200Site::companyId( $connection ) ) {
-			return new TestResult( false, $edition, '', array(), array(), Problems::refused( self::LABEL, 'site_id', __( 'No site and company are chosen yet. Sign in with Sage and choose one.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return new TestResult( false, $edition, '', array(), array(), Problems::refused( self::LABEL, 'site_id', __( 'No site and company are chosen yet. Sign in with Sage and choose one.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$client      = $this->client( $connection );
 		$permissions = array();
@@ -291,7 +291,7 @@ final class Sage200Connector extends AbstractApiConnector implements OAuthConnec
 					'edition',
 					sprintf(
 						/* translators: %s: resource names. */
-						__( 'Sage 200 did not answer for: %s. Check the edition, the site and company chosen, and that the user may open Sales Order Processing.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'Sage 200 did not answer for: %s. Check the edition, the site and company chosen, and that the user may open Sales Order Processing.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						implode( ', ', $refused )
 					)
 				)
@@ -362,8 +362,8 @@ final class Sage200Connector extends AbstractApiConnector implements OAuthConnec
 		return match ( $mappingType ) {
 			'orders'    => FieldSets::orders( self::LABEL ),
 			'customers' => FieldSets::customers(),
-			'products'  => FieldSets::products( __( 'Product code', 'estasoft-erp-crm-sync-engine' ) ),
-			'refunds'   => FieldSets::refunds( self::LABEL, __( 'Sales return', 'estasoft-erp-crm-sync-engine' ) ),
+			'products'  => FieldSets::products( __( 'Product code', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			'refunds'   => FieldSets::refunds( self::LABEL, __( 'Sales return', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			default     => array(),
 		};
 	}
@@ -430,7 +430,7 @@ final class Sage200Connector extends AbstractApiConnector implements OAuthConnec
 		if ( EntityType::Customer === $item->entityType ) {
 			return $this->sendCustomer( $connection, $payload, $item );
 		}
-		return SendResult::failure( Problems::refused( self::LABEL, 'entity', __( 'This kind of item cannot be sent to Sage 200.', 'estasoft-erp-crm-sync-engine' ), 'unsupported entity' ) );
+		return SendResult::failure( Problems::refused( self::LABEL, 'entity', __( 'This kind of item cannot be sent to Sage 200.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'unsupported entity' ) );
 	}
 
 	/**
@@ -562,7 +562,7 @@ final class Sage200Connector extends AbstractApiConnector implements OAuthConnec
 			return SendResult::failure( Problems::missingEmail( $item->entityId ) );
 		}
 		if ( '' === ( $partner['name'] ?? '' ) && '' === ( $partner['company_name'] ?? '' ) ) {
-			return SendResult::failure( Problems::refused( self::LABEL, 'partner.name', __( 'The customer name is empty.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( Problems::refused( self::LABEL, 'partner.name', __( 'The customer name is empty.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$client   = $this->client( $connection );
 		$resolved = ( new Sage200Customers( $client, new Sage200Lookups( $client ), Options::of( $connection ), self::LABEL ) )->resolve( $partner, array(), $item->entityId );

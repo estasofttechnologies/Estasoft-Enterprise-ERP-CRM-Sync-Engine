@@ -35,10 +35,10 @@ final class ZohoBooksModel {
 		return array_merge(
 			$fields,
 			FieldCatalogBuilder::make()
-				->group( __( 'Tax', 'estasoft-erp-crm-sync-engine' ) )
-				->taxCode( 'lines[].tax_code', __( 'Line tax code', 'estasoft-erp-crm-sync-engine' ) )
-				->taxCode( 'shipping.tax_code', __( 'Shipping tax code', 'estasoft-erp-crm-sync-engine' ) )
-				->taxCode( 'fees[].tax_code', __( 'Fee tax code', 'estasoft-erp-crm-sync-engine' ) )
+				->group( __( 'Tax', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+				->taxCode( 'lines[].tax_code', __( 'Line tax code', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+				->taxCode( 'shipping.tax_code', __( 'Shipping tax code', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+				->taxCode( 'fees[].tax_code', __( 'Fee tax code', 'estasoft-enterprise-erpcrm-sync-engine' ) )
 				->build()
 		);
 	}

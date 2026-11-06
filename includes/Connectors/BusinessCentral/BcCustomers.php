@@ -133,7 +133,7 @@ final class BcCustomers {
 		if ( 'fixed' === $options->customerPolicy() ) {
 			$row = $this->byNumber( $options->fixedCustomer() );
 			return null === $row
-				? Failures::invalid( $this->system, 'fixed_customer', __( 'The fixed customer number does not exist in Business Central.', 'estasoft-erp-crm-sync-engine' ), 'fixed customer missing' )
+				? Failures::invalid( $this->system, 'fixed_customer', __( 'The fixed customer number does not exist in Business Central.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'fixed customer missing' )
 				: array(
 					'row'     => $row,
 					'created' => false,
@@ -146,7 +146,7 @@ final class BcCustomers {
 		$matches = $this->findByEmail( $email );
 		if ( array() !== $matches ) {
 			if ( $this->isBlocked( $matches[0] ) ) {
-				return Failures::invalid( $this->system, 'partner.email', __( 'The customer with this email is blocked in Business Central.', 'estasoft-erp-crm-sync-engine' ), 'customer blocked' );
+				return Failures::invalid( $this->system, 'partner.email', __( 'The customer with this email is blocked in Business Central.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'customer blocked' );
 			}
 			return array(
 				'row'     => $matches[0],
@@ -154,7 +154,7 @@ final class BcCustomers {
 			);
 		}
 		if ( 'match_only' === $options->customerPolicy() ) {
-			return Failures::invalid( $this->system, 'partner.email', __( 'No customer has this email in Business Central, and the connection only uses existing customers.', 'estasoft-erp-crm-sync-engine' ), 'customer not found' );
+			return Failures::invalid( $this->system, 'partner.email', __( 'No customer has this email in Business Central, and the connection only uses existing customers.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'customer not found' );
 		}
 		return array(
 			'row'     => $this->create( $order->partner, $order->buyerName() ),

@@ -150,7 +150,7 @@ final class ReconService {
 		$this->userName         = $userName ?? static function ( int $userId ): string {
 			$user = get_userdata( $userId );
 			/* translators: %d: user id. */
-			return false === $user ? sprintf( __( 'User #%d', 'estasoft-erp-crm-sync-engine' ), $userId ) : (string) $user->display_name;
+			return false === $user ? sprintf( __( 'User #%d', 'estasoft-enterprise-erpcrm-sync-engine' ), $userId ) : (string) $user->display_name;
 		};
 		$this->scheduleContinue = $scheduleContinue ?? static function (): void {
 			wp_schedule_single_event( time() + 15, 'estasoft_sync_recon_continue' );
@@ -208,7 +208,7 @@ final class ReconService {
 			if ( null !== $running ) {
 				return $this->runShape( $running, 'running' );
 			}
-			throw new JobException( esc_html__( 'A check is starting right now. Wait a minute and open this page again.', 'estasoft-erp-crm-sync-engine' ), 409 );
+			throw new JobException( esc_html__( 'A check is starting right now. Wait a minute and open this page again.', 'estasoft-enterprise-erpcrm-sync-engine' ), 409 );
 		}
 		try {
 			$progress = $this->progress();
@@ -316,11 +316,11 @@ final class ReconService {
 	public function repair( int $diffId, string $direction, int $userId ): array {
 		$diff = $this->openDiff( $diffId );
 		if ( ! in_array( $direction, array( 'wc_to_system', 'system_to_wc' ), true ) ) {
-			throw new ValidationException( array( 'direction' => esc_html__( 'Choose wc_to_system or system_to_wc.', 'estasoft-erp-crm-sync-engine' ) ) );
+			throw new ValidationException( array( 'direction' => esc_html__( 'Choose wc_to_system or system_to_wc.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$connectionId = $this->diffConnection( $diff );
 		if ( $this->shadowOpen( $connectionId ) ) {
-			throw new JobException( esc_html__( 'Shadow mode is on for this connection, so nothing is repaired. End shadow mode first.', 'estasoft-erp-crm-sync-engine' ), 409 );
+			throw new JobException( esc_html__( 'Shadow mode is on for this connection, so nothing is repaired. End shadow mode first.', 'estasoft-enterprise-erpcrm-sync-engine' ), 409 );
 		}
 		$orderId = (int) $diff['order_id'];
 		if ( 'system_to_wc' === $direction ) {
@@ -333,7 +333,7 @@ final class ReconService {
 		$this->logger->info(
 			sprintf(
 				/* translators: 1: order number, 2: name of the person. */
-				__( 'Difference on order #%1$s repaired by %2$s.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Difference on order #%1$s repaired by %2$s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				(string) $diff['order_label'],
 				$by
 			),
@@ -360,7 +360,7 @@ final class ReconService {
 		$this->openDiff( $diffId );
 		$reason = trim( $reason );
 		if ( '' === $reason ) {
-			throw new ValidationException( array( 'reason' => esc_html__( 'Say why you are ignoring this difference.', 'estasoft-erp-crm-sync-engine' ) ) );
+			throw new ValidationException( array( 'reason' => esc_html__( 'Say why you are ignoring this difference.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$this->recon->ignore( $diffId, mb_substr( $reason, 0, 250 ), ( $this->userName )( $userId ) );
 		return (array) $this->recon->diff( $diffId );
@@ -379,7 +379,7 @@ final class ReconService {
 	private function start( int $windowDays, ?int $connectionId, string $trigger ): array {
 		$targets = $this->gateway->targets( Capability::Reconciliation, $connectionId );
 		if ( array() === $targets ) {
-			throw new JobException( esc_html__( 'There is no connected system to compare with. Connect one, or resume the paused connection.', 'estasoft-erp-crm-sync-engine' ), 409 );
+			throw new JobException( esc_html__( 'There is no connected system to compare with. Connect one, or resume the paused connection.', 'estasoft-enterprise-erpcrm-sync-engine' ), 409 );
 		}
 		$connection = $targets[0]['connection'];
 		$connector  = $targets[0]['connector'];
@@ -522,7 +522,7 @@ final class ReconService {
 		if ( $autoRepair && 'missing_in_system' === $difference['type'] && $id > 0 ) {
 			try {
 				$this->requeue( (int) $progress['connection_id'], (int) $order['id'], 'missing_in_system', (string) $order['label'] );
-				$this->recon->markRepaired( $id, __( 'Automatic repair', 'estasoft-erp-crm-sync-engine' ) );
+				$this->recon->markRepaired( $id, __( 'Automatic repair', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 				++$progress['repaired'];
 			} catch ( JobException $e ) {
 				unset( $e );
@@ -546,7 +546,7 @@ final class ReconService {
 			$this->logger->info(
 				sprintf(
 					/* translators: %d: number of differences found. */
-					_n( 'The nightly check found %d difference.', 'The nightly check found %d differences.', $n, 'estasoft-erp-crm-sync-engine' ),
+					_n( 'The nightly check found %d difference.', 'The nightly check found %d differences.', $n, 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$n
 				),
 				array(
@@ -556,7 +556,7 @@ final class ReconService {
 			);
 		} else {
 			$this->logger->info(
-				__( 'The check found no differences.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'The check found no differences.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				array( 'connection_id' => (int) $progress['connection_id'] )
 			);
 		}
@@ -590,7 +590,7 @@ final class ReconService {
 				array(
 					'type'         => 'missing_in_system',
 					'wc_value'     => $total,
-					'system_value' => __( 'Not found', 'estasoft-erp-crm-sync-engine' ),
+					'system_value' => __( 'Not found', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 			);
 		}
@@ -649,7 +649,7 @@ final class ReconService {
 	private function requeue( int $connectionId, int $orderId, string $type, string $label ): void {
 		$order = $this->orders->find( $orderId );
 		if ( null === $order ) {
-			throw new JobException( esc_html__( 'That order no longer exists in WooCommerce.', 'estasoft-erp-crm-sync-engine' ), 404 );
+			throw new JobException( esc_html__( 'That order no longer exists in WooCommerce.', 'estasoft-enterprise-erpcrm-sync-engine' ), 404 );
 		}
 		$meta = array(
 			'label'       => $label,
@@ -666,7 +666,7 @@ final class ReconService {
 				$queued = null !== $this->enqueuer->enqueue( EntityType::Refund, (string) $refundId, 'updated', $connectionId, array( 'partition' => 'order:' . $orderId ) + $meta ) || $queued;
 			}
 			if ( ! $queued ) {
-				throw new JobException( esc_html__( 'There is no refund to send again.', 'estasoft-erp-crm-sync-engine' ), 409 );
+				throw new JobException( esc_html__( 'There is no refund to send again.', 'estasoft-enterprise-erpcrm-sync-engine' ), 409 );
 			}
 			return;
 		}
@@ -675,7 +675,7 @@ final class ReconService {
 		}
 		$this->state->forget( $connectionId, EntityType::Order, (string) $orderId );
 		if ( null === $this->enqueuer->enqueue( EntityType::Order, (string) $orderId, 'updated', $connectionId, $meta ) ) {
-			throw new JobException( esc_html__( 'The order could not be added to the queue.', 'estasoft-erp-crm-sync-engine' ), 500 );
+			throw new JobException( esc_html__( 'The order could not be added to the queue.', 'estasoft-enterprise-erpcrm-sync-engine' ), 500 );
 		}
 	}
 
@@ -690,12 +690,12 @@ final class ReconService {
 	 */
 	private function copyStatus( array $diff, int $orderId ): void {
 		if ( 'status_differs' !== $diff['type'] || 'cancel' !== strtolower( (string) $diff['system_value'] ) ) {
-			throw new ValidationException( array( 'direction' => esc_html__( 'Only a cancellation in the system can be copied into WooCommerce. Amounts and refunds are never copied.', 'estasoft-erp-crm-sync-engine' ) ) );
+			throw new ValidationException( array( 'direction' => esc_html__( 'Only a cancellation in the system can be copied into WooCommerce. Amounts and refunds are never copied.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		// The check may be hours old. Cancel only an order that still has the status the check saw.
 		$order = $this->orders->find( $orderId );
 		if ( null === $order ) {
-			throw new JobException( esc_html__( 'That order no longer exists in WooCommerce.', 'estasoft-erp-crm-sync-engine' ), 404 );
+			throw new JobException( esc_html__( 'That order no longer exists in WooCommerce.', 'estasoft-enterprise-erpcrm-sync-engine' ), 404 );
 		}
 		$now = strtolower( (string) preg_replace( '/^wc-/', '', (string) $order['status'] ) );
 		$was = strtolower( (string) preg_replace( '/^wc-/', '', (string) $diff['wc_value'] ) );
@@ -704,7 +704,7 @@ final class ReconService {
 				esc_html(
 					sprintf(
 						/* translators: 1: status of the order now, 2: status the check saw. */
-						__( 'The order is "%1$s" in WooCommerce now, not "%2$s" as when the check ran, so it was not cancelled. Run the check again.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'The order is "%1$s" in WooCommerce now, not "%2$s" as when the check ran, so it was not cancelled. Run the check again.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$now,
 						$was
 					)
@@ -712,8 +712,8 @@ final class ReconService {
 				409
 			);
 		}
-		if ( ! $this->orders->updateStatus( $orderId, 'cancelled', __( 'Cancelled to match the connected system (reconciliation).', 'estasoft-erp-crm-sync-engine' ) ) ) {
-			throw new JobException( esc_html__( 'The order could not be cancelled. It may already be cancelled.', 'estasoft-erp-crm-sync-engine' ), 409 );
+		if ( ! $this->orders->updateStatus( $orderId, 'cancelled', __( 'Cancelled to match the connected system (reconciliation).', 'estasoft-enterprise-erpcrm-sync-engine' ) ) ) {
+			throw new JobException( esc_html__( 'The order could not be cancelled. It may already be cancelled.', 'estasoft-enterprise-erpcrm-sync-engine' ), 409 );
 		}
 	}
 
@@ -728,10 +728,10 @@ final class ReconService {
 	private function openDiff( int $diffId ): array {
 		$diff = $this->recon->diff( $diffId );
 		if ( null === $diff ) {
-			throw new JobException( esc_html__( 'That difference does not exist.', 'estasoft-erp-crm-sync-engine' ), 404 );
+			throw new JobException( esc_html__( 'That difference does not exist.', 'estasoft-enterprise-erpcrm-sync-engine' ), 404 );
 		}
 		if ( 'open' !== $diff['status'] ) {
-			throw new JobException( esc_html__( 'That difference was already dealt with.', 'estasoft-erp-crm-sync-engine' ), 409 );
+			throw new JobException( esc_html__( 'That difference was already dealt with.', 'estasoft-enterprise-erpcrm-sync-engine' ), 409 );
 		}
 		return $diff;
 	}
@@ -749,11 +749,11 @@ final class ReconService {
 		if ( $stored > 0 ) {
 			$connection = $this->connections->findWithoutSecrets( $stored );
 			if ( null === $connection || ConnectionStatus::Disconnected === $connection->status ) {
-				throw new JobException( esc_html__( 'The system this difference was found in is no longer connected.', 'estasoft-erp-crm-sync-engine' ), 409 );
+				throw new JobException( esc_html__( 'The system this difference was found in is no longer connected.', 'estasoft-enterprise-erpcrm-sync-engine' ), 409 );
 			}
 			return $stored;
 		}
-		throw new JobException( esc_html__( 'It is not known which system this difference belongs to. Run the check again, then repair the new difference.', 'estasoft-erp-crm-sync-engine' ), 409 );
+		throw new JobException( esc_html__( 'It is not known which system this difference belongs to. Run the check again, then repair the new difference.', 'estasoft-enterprise-erpcrm-sync-engine' ), 409 );
 	}
 
 	/**

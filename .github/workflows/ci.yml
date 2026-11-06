@@ -279,7 +279,7 @@ jobs:
       - name: Keep the zip for a week
         uses: actions/upload-artifact@v4
         with:
-          name: estasoft-erp-crm-sync-engine-zip
+          name: estasoft-enterprise-erpcrm-sync-engine-zip
           path: ${{ runner.temp }}/zip/*
           if-no-files-found: error
           retention-days: 7

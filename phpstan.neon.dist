@@ -3,7 +3,7 @@ parameters:
   level: 6
   paths:
     - includes
-    - estasoft-erp-crm-sync-engine.php
+    - estasoft-enterprise-erpcrm-sync-engine.php
   scanFiles:
     - vendor/php-stubs/woocommerce-stubs/woocommerce-stubs.php
     - tests/phpstan-stubs.php

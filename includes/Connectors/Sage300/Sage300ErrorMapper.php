@@ -35,7 +35,7 @@ final class Sage300ErrorMapper {
 		$code   = isset( $error['code'] ) && is_string( $error['code'] ) ? $error['code'] : '';
 		if ( '' === $code ) {
 			if ( 1 === preg_match( '/^\s*(<!doctype|<html|<head|<body)/i', $response->body() ) && $status >= 400 && $status < 500 && 401 !== $status && 403 !== $status ) {
-				return Problems::refused( $system, 'address', __( 'This address is not a Sage 300 Web API. Check the address and the company ID.', 'estasoft-erp-crm-sync-engine' ), 'not the web api' );
+				return Problems::refused( $system, 'address', __( 'This address is not a Sage 300 Web API. Check the address and the company ID.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'not the web api' );
 			}
 			return null;
 		}
@@ -48,7 +48,7 @@ final class Sage300ErrorMapper {
 					ErrorCode::Auth004,
 					array(
 						'system' => $system,
-						'action' => __( 'use this part of Sage 300 (check the Web API, Order Entry and Accounts Receivable rights of the user)', 'estasoft-erp-crm-sync-engine' ),
+						'action' => __( 'use this part of Sage 300 (check the Web API, Order Entry and Accounts Receivable rights of the user)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					),
 					$status,
 					null,
@@ -94,7 +94,7 @@ final class Sage300ErrorMapper {
 					'duplicate'
 				);
 			case 'ResourceNotFound':
-				$text = __( 'The Web API does not offer this resource, or the company ID is wrong.', 'estasoft-erp-crm-sync-engine' );
+				$text = __( 'The Web API does not offer this resource, or the company ID is wrong.', 'estasoft-enterprise-erpcrm-sync-engine' );
 				break;
 			default:
 				break;

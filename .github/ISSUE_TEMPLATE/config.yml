@@ -4,5 +4,5 @@ contact_links:
     url: https://github.com/estasofttechnologies/estasoft-enterprise-erp-crm-sync-engine/security/advisories/new
     about: Do not open a public issue for a vulnerability. Use GitHub private vulnerability reporting. See SECURITY.md.
   - name: Ask for help using the plugin
-    url: https://wordpress.org/support/plugin/estasoft-erp-crm-sync-engine/
+    url: https://wordpress.org/support/plugin/estasoft-enterprise-erpcrm-sync-engine/
     about: Questions about setup and day-to-day use go to the WordPress.org support forum once the plugin is listed there.

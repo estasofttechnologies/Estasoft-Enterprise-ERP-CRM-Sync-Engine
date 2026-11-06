@@ -28,11 +28,11 @@ final class OracleFusionMappings {
 	 * @return array<int,FieldDef>
 	 */
 	public function fields( string $mappingType ): array {
-		$fields = new DefaultFields( 'Oracle Fusion', __( 'Product (item number, found by the SKU match)', 'estasoft-erp-crm-sync-engine' ), false, false, false );
+		$fields = new DefaultFields( 'Oracle Fusion', __( 'Product (item number, found by the SKU match)', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, false );
 		return match ( $mappingType ) {
 			'orders'   => $fields->orders()
-				->group( __( 'Billing', 'estasoft-erp-crm-sync-engine' ) )
-				->text( 'bill_to_customer_number', __( 'Customer account number (overrides the connection setting)', 'estasoft-erp-crm-sync-engine' ) )
+				->group( __( 'Billing', 'estasoft-enterprise-erpcrm-sync-engine' ) )
+				->text( 'bill_to_customer_number', __( 'Customer account number (overrides the connection setting)', 'estasoft-enterprise-erpcrm-sync-engine' ) )
 				->build(),
 			'products' => $fields->products()->build(),
 			'refunds'  => $fields->refunds()->build(),

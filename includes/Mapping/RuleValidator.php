@@ -43,7 +43,7 @@ final class RuleValidator {
 	 */
 	public function validate( array $rules, array $fields = array(), bool $checkSources = true ): array {
 		if ( array() !== $rules && ! \Estasoft\SyncEngine\Core\Support\Lists::isList( $rules ) ) {
-			return array( new RuleError( '', 'rules', 'rules_not_a_list', __( 'The rules must be a list.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return array( new RuleError( '', 'rules', 'rules_not_a_list', __( 'The rules must be a list.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 
 		$errors  = array();
@@ -54,7 +54,7 @@ final class RuleValidator {
 		foreach ( $rules as $position => $raw ) {
 			if ( ! is_array( $raw ) ) {
 				/* translators: %d: position of the rule in the list, starting at 1. */
-				$errors[] = new RuleError( '', 'rules', 'rule_not_an_object', sprintf( __( 'Rule %d is not valid.', 'estasoft-erp-crm-sync-engine' ), $position + 1 ) );
+				$errors[] = new RuleError( '', 'rules', 'rule_not_an_object', sprintf( __( 'Rule %d is not valid.', 'estasoft-enterprise-erpcrm-sync-engine' ), $position + 1 ) );
 				continue;
 			}
 			$rule      = Rule::fromArray( $raw );
@@ -106,10 +106,10 @@ final class RuleValidator {
 	 */
 	private function checkId( Rule $rule, array &$ids ): array {
 		if ( 1 !== preg_match( '/^[A-Za-z0-9_\-]{1,64}$/', $rule->id ) ) {
-			return array( new RuleError( $rule->id, 'id', 'id_invalid', __( 'Every rule needs an id of letters, numbers, dashes or underscores.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return array( new RuleError( $rule->id, 'id', 'id_invalid', __( 'Every rule needs an id of letters, numbers, dashes or underscores.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		if ( isset( $ids[ $rule->id ] ) ) {
-			return array( new RuleError( $rule->id, 'id', 'id_duplicate', __( 'Two rules have the same id.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return array( new RuleError( $rule->id, 'id', 'id_duplicate', __( 'Two rules have the same id.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$ids[ $rule->id ] = true;
 		return array();
@@ -125,10 +125,10 @@ final class RuleValidator {
 	private function checkTarget( Rule $rule, array $known ): array {
 		$ok = 1 === preg_match( '/^[A-Za-z0-9_\-]+(\[\])?(\.[A-Za-z0-9_\-]+(\[\])?)*$/', $rule->target ) && substr_count( $rule->target, '[]' ) <= 1;
 		if ( ! $ok ) {
-			return array( new RuleError( $rule->id, 'target', 'target_invalid', __( 'The target is not a valid field path.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return array( new RuleError( $rule->id, 'target', 'target_invalid', __( 'The target is not a valid field path.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		if ( array() !== $known && ! isset( $known[ self::normalise( $rule->target ) ] ) ) {
-			return array( new RuleError( $rule->id, 'target', 'target_unknown', __( 'The connected system has no such field.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return array( new RuleError( $rule->id, 'target', 'target_unknown', __( 'The connected system has no such field.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		return array();
 	}
@@ -146,17 +146,17 @@ final class RuleValidator {
 		if ( $rule->isConstant ) {
 			return is_scalar( $rule->constant ) || null === $rule->constant
 				? array()
-				: array( new RuleError( $rule->id, 'source', 'source_invalid', __( 'A constant must be a single value.', 'estasoft-erp-crm-sync-engine' ) ) );
+				: array( new RuleError( $rule->id, 'source', 'source_invalid', __( 'A constant must be a single value.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		if ( array() === $rule->sources || ( is_array( $source ) && count( $source ) !== count( $rule->sources ) ) ) {
-			return array( new RuleError( $rule->id, 'source', 'source_invalid', __( 'A rule needs a source field, a list of source fields or a constant.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return array( new RuleError( $rule->id, 'source', 'source_invalid', __( 'A rule needs a source field, a list of source fields or a constant.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$errors = array();
 		foreach ( $rule->sources as $path ) {
 			if ( $checkSources && self::isBlockedMeta( $path ) ) {
-				$errors[] = new RuleError( $rule->id, 'source', 'source_blocked', __( 'This field holds payment, card, password or visitor data and cannot be sent to another system.', 'estasoft-erp-crm-sync-engine' ) );
+				$errors[] = new RuleError( $rule->id, 'source', 'source_blocked', __( 'This field holds payment, card, password or visitor data and cannot be sent to another system.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			} elseif ( ! CanonicalOrder::isValidPath( $path ) || ( $checkSources && ! $this->sources->has( $path ) ) ) {
-				$errors[] = new RuleError( $rule->id, 'source', 'source_unknown', __( 'This WooCommerce field does not exist.', 'estasoft-erp-crm-sync-engine' ) );
+				$errors[] = new RuleError( $rule->id, 'source', 'source_unknown', __( 'This WooCommerce field does not exist.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 		}
 		return $errors;
@@ -172,13 +172,13 @@ final class RuleValidator {
 	private function checkTransforms( Rule $rule, array $raw ): array {
 		$stored = $raw['transforms'] ?? array();
 		if ( ! is_array( $stored ) || count( $stored ) !== count( $rule->transforms ) ) {
-			return array( new RuleError( $rule->id, 'transforms', 'transforms_invalid', __( 'Transforms must be a list of steps, each with a type.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return array( new RuleError( $rule->id, 'transforms', 'transforms_invalid', __( 'Transforms must be a list of steps, each with a type.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$errors = array();
 		foreach ( $rule->transforms as $position => $step ) {
 			$field = sprintf( 'transforms[%d]', $position );
 			if ( ! $this->transforms->has( $step['type'] ) ) {
-				$errors[] = new RuleError( $rule->id, $field, 'transform_unknown', __( 'This transform does not exist.', 'estasoft-erp-crm-sync-engine' ) );
+				$errors[] = new RuleError( $rule->id, $field, 'transform_unknown', __( 'This transform does not exist.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 				continue;
 			}
 			foreach ( $this->transforms->get( $step['type'] )->check( $step['args'] ) as $problem ) {
@@ -198,12 +198,12 @@ final class RuleValidator {
 	private function checkOptions( Rule $rule, bool $checkSources ): array {
 		$errors = array();
 		if ( '' !== $rule->errorCode && null === ErrorCode::tryFrom( $rule->errorCode ) ) {
-			$errors[] = new RuleError( $rule->id, 'error_code', 'error_code_unknown', __( 'This error code is not in the catalog.', 'estasoft-erp-crm-sync-engine' ) );
+			$errors[] = new RuleError( $rule->id, 'error_code', 'error_code_unknown', __( 'This error code is not in the catalog.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( null !== $rule->when && $checkSources && self::isBlockedMeta( $rule->when['source'] ) ) {
-			$errors[] = new RuleError( $rule->id, 'when', 'when_blocked', __( 'The condition reads a field that holds payment, card, password or visitor data.', 'estasoft-erp-crm-sync-engine' ) );
+			$errors[] = new RuleError( $rule->id, 'when', 'when_blocked', __( 'The condition reads a field that holds payment, card, password or visitor data.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		} elseif ( null !== $rule->when && ( ! CanonicalOrder::isValidPath( $rule->when['source'] ) || ( $checkSources && ! $this->sources->has( $rule->when['source'] ) ) ) ) {
-			$errors[] = new RuleError( $rule->id, 'when', 'when_unknown', __( 'The condition reads a WooCommerce field that does not exist.', 'estasoft-erp-crm-sync-engine' ) );
+			$errors[] = new RuleError( $rule->id, 'when', 'when_unknown', __( 'The condition reads a WooCommerce field that does not exist.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return $errors;
 	}
@@ -236,7 +236,7 @@ final class RuleValidator {
 				'target',
 				'required_target_missing',
 				/* translators: %s: field path in the connected system. */
-				sprintf( __( 'The field "%s" is required by the connected system but no rule fills it.', 'estasoft-erp-crm-sync-engine' ), $path )
+				sprintf( __( 'The field "%s" is required by the connected system but no rule fills it.', 'estasoft-enterprise-erpcrm-sync-engine' ), $path )
 			);
 		}
 		return $errors;

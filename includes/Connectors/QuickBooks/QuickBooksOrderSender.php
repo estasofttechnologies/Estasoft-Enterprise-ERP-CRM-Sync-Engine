@@ -112,7 +112,7 @@ final class QuickBooksOrderSender {
 			$done = $this->finish( $invoice, $parsed, $warnings );
 		}
 		if ( null === $done ) {
-			return SendResult::failure( QuickBooksErrors::refused( 'Invoice', __( 'QuickBooks keeps answering with an invoice that no longer exists. Try again later.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( QuickBooksErrors::refused( 'Invoice', __( 'QuickBooks keeps answering with an invoice that no longer exists. Try again later.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		if ( $done instanceof ConnectorError ) {
 			return SendResult::failure( $done );
@@ -134,7 +134,7 @@ final class QuickBooksOrderSender {
 		if ( ! $this->company->customNumbers() ) {
 			return QuickBooksErrors::refused(
 				'DocNumber',
-				__( 'Turn on Custom transaction numbers in QuickBooks (Account and settings, Sales, Sales form content). Without it QuickBooks does not keep the shop reference and a retry could make a second invoice.', 'estasoft-erp-crm-sync-engine' )
+				__( 'Turn on Custom transaction numbers in QuickBooks (Account and settings, Sales, Sales form content). Without it QuickBooks does not keep the shop reference and a retry could make a second invoice.', 'estasoft-enterprise-erpcrm-sync-engine' )
 			);
 		}
 		$home     = $this->company->homeCurrency();
@@ -145,7 +145,7 @@ final class QuickBooksOrderSender {
 				'CurrencyRef',
 				sprintf(
 					/* translators: 1: order currency, 2: home currency of the company. */
-					__( 'The order is in %1$s but the company works in %2$s and multicurrency is off in QuickBooks.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The order is in %1$s but the company works in %2$s and multicurrency is off in QuickBooks.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$currency,
 					$home
 				)
@@ -153,7 +153,7 @@ final class QuickBooksOrderSender {
 		}
 		$us = $this->company->isUs();
 		if ( $us && $parsed->pricesIncludeTax ) {
-			return QuickBooksErrors::refused( 'prices_include_tax', __( 'QuickBooks US adds sales tax on top of prices, so prices that include tax cannot be sent. Send prices without tax.', 'estasoft-erp-crm-sync-engine' ) );
+			return QuickBooksErrors::refused( 'prices_include_tax', __( 'QuickBooks US adds sales tax on top of prices, so prices that include tax cannot be sent. Send prices without tax.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$skus = array();
 		foreach ( $parsed->lines as $line ) {
@@ -343,7 +343,7 @@ final class QuickBooksOrderSender {
 			'Invoice',
 			sprintf(
 				/* translators: %s: the shop's reference of the order, such as WC-1042. */
-				__( 'The invoice %s was voided in QuickBooks. Delete the voided invoice there, then retry.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'The invoice %s was voided in QuickBooks. Delete the voided invoice there, then retry.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$reference
 			)
 		);

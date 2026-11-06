@@ -102,7 +102,7 @@ final class DaftraRefundSender {
 		$reference = $this->ids->reference( $item );
 		$invoices  = $this->docs->findInvoices( $api, $parsed->orderRef );
 		if ( array() === $invoices ) {
-			return SendResult::failure( $this->refused( 'order', __( 'The order of this refund is not in Daftra.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( $this->refused( 'order', __( 'The order of this refund is not in Daftra.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$invoice  = $this->docs->invoice( $api, $invoices[0]->id() );
 		$existing = '' === $invoice->clientId() ? array() : $this->docs->findCreditNotes( $api, $reference, $invoice->clientId() );
@@ -110,11 +110,11 @@ final class DaftraRefundSender {
 			return SendResult::existing( $this->reference( $this->docs->creditNote( $api, $existing[0]->id() ), array() ) );
 		}
 		if ( $invoice->isDraft() ) {
-			return SendResult::failure( $this->refused( 'order', __( 'The invoice of this order is still a draft in Daftra. Issue it first.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( $this->refused( 'order', __( 'The invoice of this order is still a draft in Daftra. Issue it first.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$currency = '' !== $invoice->currency() ? $invoice->currency() : $parsed->currency;
 		if ( '' === $currency ) {
-			return SendResult::failure( $this->refused( 'currency', __( 'Daftra did not report the currency of the invoice and the refund has none.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( $this->refused( 'currency', __( 'Daftra did not report the currency of the invoice and the refund has none.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$taxes = $this->catalog->taxes( $api, $connection->id );
 		$rows  = $this->rows( $api, $parsed );
@@ -148,7 +148,7 @@ final class DaftraRefundSender {
 				$this->docs->deleteCreditNote( $api, $id );
 			} catch ( ApiException $exception ) {
 				unset( $exception );
-				$note = __( 'The credit note could not be removed. Delete it in Daftra before syncing the refund again.', 'estasoft-erp-crm-sync-engine' );
+				$note = __( 'The credit note could not be removed. Delete it in Daftra before syncing the refund again.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			}
 			$context           = $failure->context;
 			$context['reason'] = trim( (string) ( $context['reason'] ?? '' ) . ' ' . $note );
@@ -176,7 +176,7 @@ final class DaftraRefundSender {
 			}
 			$rows[] = array(
 				'item'        => $id,
-				'name'        => '' !== (string) $line['name'] ? (string) $line['name'] : __( 'Refund', 'estasoft-erp-crm-sync-engine' ),
+				'name'        => '' !== (string) $line['name'] ? (string) $line['name'] : __( 'Refund', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'quantity'    => (float) $line['quantity'] > 0.0 ? (float) $line['quantity'] : 1.0,
 				'total_minor' => (int) $line['amount_minor'],
 				'tax_code'    => '',
@@ -184,13 +184,13 @@ final class DaftraRefundSender {
 			);
 		}
 		if ( $parsed->shippingMinor > 0 ) {
-			$rows[] = $this->plain( __( 'Shipping', 'estasoft-erp-crm-sync-engine' ), $parsed->shippingMinor );
+			$rows[] = $this->plain( __( 'Shipping', 'estasoft-enterprise-erpcrm-sync-engine' ), $parsed->shippingMinor );
 		}
 		if ( $parsed->otherMinor > 0 ) {
-			$rows[] = $this->plain( __( 'Other refund', 'estasoft-erp-crm-sync-engine' ), $parsed->otherMinor );
+			$rows[] = $this->plain( __( 'Other refund', 'estasoft-enterprise-erpcrm-sync-engine' ), $parsed->otherMinor );
 		}
 		if ( array() === $rows ) {
-			$rows[] = $this->plain( __( 'Refund', 'estasoft-erp-crm-sync-engine' ), $parsed->expectedTotal() );
+			$rows[] = $this->plain( __( 'Refund', 'estasoft-enterprise-erpcrm-sync-engine' ), $parsed->expectedTotal() );
 		}
 		return $rows;
 	}
@@ -222,13 +222,13 @@ final class DaftraRefundSender {
 		$text = '' !== $parsed->reason
 			? sprintf(
 				/* translators: 1: order reference, 2: refund reason. */
-				__( 'Refund of %1$s: %2$s', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Refund of %1$s: %2$s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$parsed->orderRef,
 				$parsed->reason
 			)
 			: sprintf(
 				/* translators: %s: order reference. */
-				__( 'Refund of %s', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Refund of %s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$parsed->orderRef
 			);
 		return DaftraPayloadReader::shorten( $text, 1000 );

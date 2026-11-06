@@ -370,15 +370,15 @@ final class CoreModule implements ModuleInterface {
 		if ( empty( $after['redaction'] ) ) {
 			$message = $user > 0
 				/* translators: %d: user id. */
-				? sprintf( __( 'Redaction was turned off by user #%d. Names, emails and addresses can now appear in log entries.', 'estasoft-erp-crm-sync-engine' ), $user )
-				: __( 'Redaction was turned off. Names, emails and addresses can now appear in log entries.', 'estasoft-erp-crm-sync-engine' );
+				? sprintf( __( 'Redaction was turned off by user #%d. Names, emails and addresses can now appear in log entries.', 'estasoft-enterprise-erpcrm-sync-engine' ), $user )
+				: __( 'Redaction was turned off. Names, emails and addresses can now appear in log entries.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			$c->get( Services::LOGGER )->warning( $message );
 			return;
 		}
 		$message = $user > 0
 			/* translators: %d: user id. */
-			? sprintf( __( 'Redaction was turned on by user #%d.', 'estasoft-erp-crm-sync-engine' ), $user )
-			: __( 'Redaction was turned on.', 'estasoft-erp-crm-sync-engine' );
+			? sprintf( __( 'Redaction was turned on by user #%d.', 'estasoft-enterprise-erpcrm-sync-engine' ), $user )
+			: __( 'Redaction was turned on.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		$c->get( Services::LOGGER )->info( $message );
 	}
 }

@@ -62,11 +62,11 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 	if ( caps.stock_in === false ) {
 		notOffered.push( {
 			key: 'stock',
-			title: __( 'Stock', 'estasoft-erp-crm-sync-engine' ),
+			title: __( 'Stock', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			text: sprintf(
 				/* translators: %s: system name */ __(
 					'%s does not give the plugin stock quantities to read, so WooCommerce stock stays as it is.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				system
 			),
@@ -75,11 +75,14 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 	if ( caps.tracking_in === false ) {
 		notOffered.push( {
 			key: 'tracking',
-			title: __( 'Tracking numbers', 'estasoft-erp-crm-sync-engine' ),
+			title: __(
+				'Tracking numbers',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			text: sprintf(
 				/* translators: %s: system name */ __(
 					'%s does not give the plugin tracking numbers to read. Tracking stays in WooCommerce.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				system
 			),
@@ -88,21 +91,21 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 	if ( caps.prices_in === false ) {
 		notOffered.push( {
 			key: 'prices',
-			title: __( 'Prices', 'estasoft-erp-crm-sync-engine' ),
+			title: __( 'Prices', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			text: __(
 				'Prices stay in WooCommerce.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 		} );
 	}
 	if ( caps.refunds === false ) {
 		notOffered.push( {
 			key: 'refunds',
-			title: __( 'Refunds', 'estasoft-erp-crm-sync-engine' ),
+			title: __( 'Refunds', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			text: sprintf(
 				/* translators: %s: system name */ __(
 					'Refunds are not sent to %s.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				system
 			),
@@ -116,7 +119,7 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 				title={ sprintf(
 					/* translators: %s: system name */ __(
 						'What should sync to %s?',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					system
 				) }
@@ -127,7 +130,7 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 							{ sprintf(
 								/* translators: %s: system name */ __(
 									'Orders to %s',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								system
 							) }
@@ -135,12 +138,12 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 						<CheckField
 							label={ __(
 								'Send orders',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 							hint={ sprintf(
 								/* translators: %s: system name */ __(
 									'Each order becomes a sale order in %s.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								system
 							) }
@@ -150,7 +153,7 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 						<SelectField
 							label={ __(
 								'Send when',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 							value={ value.send_when }
 							onChange={ ( next ) =>
@@ -165,21 +168,21 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 									value: 'paid_or_cod',
 									label: __(
 										'An order is paid, or placed with cash on delivery',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 								},
 								{
 									value: 'placed',
 									label: __(
 										'An order is placed',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 								},
 								{
 									value: 'completed',
 									label: __(
 										'An order is completed',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 								},
 							] }
@@ -188,7 +191,7 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 							label={ sprintf(
 								/* translators: %s: system name */ __(
 									'Documents in %s',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								system
 							) }
@@ -205,28 +208,28 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 									value: 'order',
 									label: __(
 										'Sale order only',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 								},
 								{
 									value: 'order_invoice',
 									label: __(
 										'Sale order and invoice',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 								},
 								{
 									value: 'order_invoice_payment',
 									label: __(
 										'Sale order, invoice and payment',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 								},
 							] }
 							hint={ sprintf(
 								/* translators: %s: system name */ __(
 									'Your %s issues and reports tax invoices. This plugin does not sign them.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								system
 							) }
@@ -238,13 +241,13 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 						<legend className="estasoft-sync-subtitle">
 							{ __(
 								'Customers',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</legend>
 						<SelectField
 							label={ __(
 								'When a customer is new',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 							value={ value.customer_match }
 							onChange={ ( next ) =>
@@ -258,21 +261,21 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 									value: 'match_create',
 									label: __(
 										'Match by email, create if missing',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 								},
 								{
 									value: 'match_only',
 									label: __(
 										'Only match, never create',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 								},
 								{
 									value: 'always_create',
 									label: __(
 										'Always create a new contact',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 								},
 							] }
@@ -282,12 +285,15 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 				{ caps.refunds !== false ? (
 					<fieldset className="estasoft-sync-fieldset">
 						<legend className="estasoft-sync-subtitle">
-							{ __( 'Refunds', 'estasoft-erp-crm-sync-engine' ) }
+							{ __(
+								'Refunds',
+								'estasoft-enterprise-erpcrm-sync-engine'
+							) }
 						</legend>
 						<CheckField
 							label={ __(
 								'Send refunds as credit notes',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 							checked={ value.send_refunds }
 							onChange={ ( next ) => set( 'send_refunds', next ) }
@@ -300,7 +306,7 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 							{ sprintf(
 								/* translators: %s: system name */ __(
 									'Stock from %s',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								system
 							) }
@@ -308,14 +314,14 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 						<CheckField
 							label={ __(
 								'Update WooCommerce stock',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 							hint={
 								warehouses
 									? sprintf(
 											/* translators: %s: warehouse names */ __(
 												'Warehouses: %s.',
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											),
 											warehouses
 										)
@@ -332,7 +338,7 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 							{ sprintf(
 								/* translators: %s: system name */ __(
 									'Tracking from %s',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								system
 							) }
@@ -340,7 +346,7 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 						<CheckField
 							label={ __(
 								'Update order status and tracking numbers',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 							checked={ value.tracking_in }
 							onChange={ ( next ) => set( 'tracking_in', next ) }
@@ -353,7 +359,7 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 							{ sprintf(
 								/* translators: %s: system name */ __(
 									'Prices from %s',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								system
 							) }
@@ -361,12 +367,12 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 						<CheckField
 							label={ __(
 								'Update WooCommerce prices',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 							hint={ sprintf(
 								/* translators: %s: system name */ __(
 									'Leave off unless %s is your price list.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								system
 							) }
@@ -382,7 +388,7 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 					title={ sprintf(
 						/* translators: %s: system name */ __(
 							'Not offered for %s',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						system
 					) }
@@ -408,11 +414,11 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 			<Card
 				title={ __(
 					'When both sides change something',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				description={ __(
 					'Choosing one winner per field stops the two systems from overwriting each other.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			>
 				{ caps.stock_in ? (
@@ -420,7 +426,7 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 						{ sprintf(
 							/* translators: %s: system name */ __(
 								'Stock quantity: %s wins. WooCommerce never writes stock to it.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							system
 						) }
@@ -430,7 +436,7 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 					<SelectField
 						label={ __(
 							'Order status',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						value={ value.winner_status }
 						onChange={ ( next ) =>
@@ -445,7 +451,7 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 								label: sprintf(
 									/* translators: %s: system name */ __(
 										'WooCommerce until shipped, then %s',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									system
 								),
@@ -454,7 +460,7 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 								value: 'woo',
 								label: __(
 									'WooCommerce wins',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 							},
 							{
@@ -462,7 +468,7 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 								label: sprintf(
 									/* translators: %s: system name */ __(
 										'%s wins',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									system
 								),
@@ -473,7 +479,7 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 				<SelectField
 					label={ __(
 						'Customer address',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					value={ value.winner_address }
 					onChange={ ( next ) =>
@@ -487,7 +493,7 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 							value: 'woo',
 							label: __(
 								'WooCommerce wins',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 						},
 						{
@@ -495,7 +501,7 @@ function ErpWhat( { connection, value, onChange }: WhatStepProps ) {
 							label: sprintf(
 								/* translators: %s: system name */ __(
 									'%s wins',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								system
 							),

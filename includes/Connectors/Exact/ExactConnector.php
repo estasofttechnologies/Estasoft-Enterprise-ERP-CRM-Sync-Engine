@@ -119,12 +119,12 @@ final class ExactConnector extends AbstractApiConnector implements OAuthConnecto
 		return array(
 			CredentialFields::choice(
 				'region',
-				__( 'Region', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Region', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				ExactRegions::choices(),
 				'nl',
-				__( 'The country of the Exact Online site you sign in to. An app works only in the country it was made in.', 'estasoft-erp-crm-sync-engine' )
+				__( 'The country of the Exact Online site you sign in to. An app works only in the country it was made in.', 'estasoft-enterprise-erpcrm-sync-engine' )
 			),
-			CredentialFields::clientId( 'client_id', __( 'Shown on the Develop your app tab of your app.', 'estasoft-erp-crm-sync-engine' ) ),
+			CredentialFields::clientId( 'client_id', __( 'Shown on the Develop your app tab of your app.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			CredentialFields::clientSecret(),
 		);
 	}
@@ -232,7 +232,7 @@ final class ExactConnector extends AbstractApiConnector implements OAuthConnecto
 		$division = (string) $connection->config( 'division', '' );
 		$me       = ( new ExactApi( $client, '0' ) )->me();
 		if ( '' === $division ) {
-			return new TestResult( false, '', '', array(), array(), ExactFailure::invalid( 'division', __( 'Choose the administration (division) that should receive the orders, then test again.', 'estasoft-erp-crm-sync-engine' ) )->error );
+			return new TestResult( false, '', '', array(), array(), ExactFailure::invalid( 'division', __( 'Choose the administration (division) that should receive the orders, then test again.', 'estasoft-enterprise-erpcrm-sync-engine' ) )->error );
 		}
 		$api         = new ExactApi( $client, $division );
 		$options     = $this->options( $connection );
@@ -360,7 +360,7 @@ final class ExactConnector extends AbstractApiConnector implements OAuthConnecto
 			if ( EntityType::Customer === $item->entityType ) {
 				return $this->sendCustomer( $connection, $item, $payload );
 			}
-			return SendResult::failure( ExactFailure::invalid( 'entity', __( 'This connector does not send that kind of item.', 'estasoft-erp-crm-sync-engine' ) )->error );
+			return SendResult::failure( ExactFailure::invalid( 'entity', __( 'This connector does not send that kind of item.', 'estasoft-enterprise-erpcrm-sync-engine' ) )->error );
 		} catch ( ExactFailure $failure ) {
 			return SendResult::failure( $failure->error );
 		} catch ( \Throwable $throwable ) {
@@ -527,14 +527,14 @@ final class ExactConnector extends AbstractApiConnector implements OAuthConnecto
 			);
 		}
 		if ( '' === ( $partner['name'] ?? '' ) && '' === ( $partner['company_name'] ?? '' ) ) {
-			ExactFailure::refuse( 'partner.name', __( 'The customer name is empty.', 'estasoft-erp-crm-sync-engine' ) );
+			ExactFailure::refuse( 'partner.name', __( 'The customer name is empty.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$lookups = $this->lookups( $connection );
 		$row     = $lookups->accountByEmail( $partner['email'] );
 		$created = false;
 		if ( null === $row ) {
 			if ( 'match_only' === $this->options( $connection )->choice( 'customer_policy', array( 'match_or_create', 'match_only' ), 'match_or_create' ) ) {
-				ExactFailure::refuse( 'partner.email', __( 'No customer with this email address exists in Exact Online.', 'estasoft-erp-crm-sync-engine' ) );
+				ExactFailure::refuse( 'partner.email', __( 'No customer with this email address exists in Exact Online.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$row     = $lookups->createAccount( $partner );
 			$created = true;
@@ -603,7 +603,7 @@ final class ExactConnector extends AbstractApiConnector implements OAuthConnecto
 	private function exactApi( Connection $connection ): ExactApi {
 		$division = trim( (string) $connection->config( 'division', '' ) );
 		if ( '' === $division ) {
-			ExactFailure::refuse( 'division', __( 'Choose the administration (division) that should receive the orders.', 'estasoft-erp-crm-sync-engine' ) );
+			ExactFailure::refuse( 'division', __( 'Choose the administration (division) that should receive the orders.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return new ExactApi( $this->api( $connection ), $division );
 	}

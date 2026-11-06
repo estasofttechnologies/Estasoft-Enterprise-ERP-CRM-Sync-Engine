@@ -49,14 +49,17 @@ export function GoLiveStep( {
 	return (
 		<div className="estasoft-sync-stack">
 			<Card
-				title={ __( 'Ready to start', 'estasoft-erp-crm-sync-engine' ) }
+				title={ __(
+					'Ready to start',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 			>
 				<KeyValueList
 					items={ [
 						{
 							label: __(
 								'System',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							value: (
 								<span dir="auto">
@@ -69,14 +72,14 @@ export function GoLiveStep( {
 						{
 							label: __(
 								'Orders',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							value: summary.orders,
 						},
 						{
 							label: __(
 								'Customers',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							value: summary.customers,
 						},
@@ -85,7 +88,7 @@ export function GoLiveStep( {
 									{
 										label: __(
 											'Stock',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										),
 										value: summary.stock,
 									},
@@ -96,7 +99,7 @@ export function GoLiveStep( {
 									{
 										label: __(
 											'Tracking',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										),
 										value: summary.tracking,
 									},
@@ -105,7 +108,7 @@ export function GoLiveStep( {
 						{
 							label: __(
 								'Store checks',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							value: ! readiness ? (
 								<Link
@@ -114,7 +117,7 @@ export function GoLiveStep( {
 								>
 									{ __(
 										'Not checked yet',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									) }
 								</Link>
 							) : open > 0 ? (
@@ -128,7 +131,7 @@ export function GoLiveStep( {
 											'%d note still open',
 											'%d notes still open',
 											open,
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										),
 										open
 									) }
@@ -136,14 +139,14 @@ export function GoLiveStep( {
 							) : (
 								__(
 									'All passed',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								)
 							),
 						},
 						{
 							label: __(
 								'Mapping',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							value: (
 								<>
@@ -151,7 +154,7 @@ export function GoLiveStep( {
 										? sprintf(
 												/* translators: 1: system name, 2: order label */ __(
 													'%1$s presets, previewed on order %2$s',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												),
 												system,
 												previewLabel
@@ -159,7 +162,7 @@ export function GoLiveStep( {
 										: sprintf(
 												/* translators: %s: system name */ __(
 													'%s presets',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												),
 												system
 											) }{ ' ' }
@@ -169,7 +172,7 @@ export function GoLiveStep( {
 									>
 										{ __(
 											'Change',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										) }
 									</Link>
 								</>
@@ -185,7 +188,7 @@ export function GoLiveStep( {
 					>
 						{ __(
 							'Change what syncs',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</button>
 				</p>
@@ -193,13 +196,13 @@ export function GoLiveStep( {
 			<Card
 				title={ __(
 					'How do you want to start?',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			>
 				<ChoiceGroup
 					legend={ __(
 						'How do you want to start?',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					hideLegend
 					value={ mode }
@@ -211,13 +214,13 @@ export function GoLiveStep( {
 							value: 'shadow',
 							label: __(
 								'Start in shadow mode for 7 days (recommended)',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							description: sprintf(
 								/* translators: 1: system name */
 								__(
 									'The plugin builds every request and sends nothing. Each night it compares the result with the sale orders your team enters in %1$s and lists the differences. Nothing changes in WooCommerce or %1$s. After day 7 we ask you whether to go live; nothing switches by itself.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								system
 							),
@@ -226,13 +229,13 @@ export function GoLiveStep( {
 							value: 'live',
 							label: __(
 								'Go live now',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							description: sprintf(
 								/* translators: %s: system name */
 								__(
 									'Orders are sent to %s as they arrive. Orders placed before now are not sent; you can send one by hand. You will be asked to confirm first.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								system
 							),

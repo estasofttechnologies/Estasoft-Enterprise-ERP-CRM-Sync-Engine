@@ -170,7 +170,7 @@ final class ExactDocuments {
 		if ( null === $row ) {
 			$original = $this->find( $refund->orderRef );
 			if ( null === $original || '' === (string) ( $original['OrderedBy'] ?? '' ) ) {
-				ExactFailure::refuse( 'order_ref', __( 'The order of this refund is not in Exact Online.', 'estasoft-erp-crm-sync-engine' ) );
+				ExactFailure::refuse( 'order_ref', __( 'The order of this refund is not in Exact Online.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			if ( '' === $currency ) {
 				$currency = (string) ( $original['Currency'] ?? '' );
@@ -182,7 +182,7 @@ final class ExactDocuments {
 		}
 		$this->verify( $row, $currency, $refund->amountMinor, true, $created, 'salesinvoice/SalesInvoices' );
 		/* translators: 1: refund reference, 2: order reference */
-		$description = sprintf( __( 'Refund %1$s of %2$s', 'estasoft-erp-crm-sync-engine' ), $refund->reference, $refund->orderRef );
+		$description = sprintf( __( 'Refund %1$s of %2$s', 'estasoft-enterprise-erpcrm-sync-engine' ), $refund->reference, $refund->orderRef );
 		$row         = $this->finalise( $row, $description, $refund->date, true );
 		return $created ? SendResult::created( $this->ref( $row ) ) : SendResult::existing( $this->ref( $row ) );
 	}
@@ -217,14 +217,14 @@ final class ExactDocuments {
 	 */
 	private function create( ExactOrder $order, bool $orders ): array {
 		if ( strlen( $order->reference ) > 30 ) {
-			ExactFailure::refuse( 'reference', __( 'The order number is too long for the reference field of Exact Online.', 'estasoft-erp-crm-sync-engine' ) );
+			ExactFailure::refuse( 'reference', __( 'The order number is too long for the reference field of Exact Online.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$lines   = array_merge( $this->productLines( $order ), $this->extraLines( $order ) );
 		$journal = $orders ? '' : $this->lookups->journal( false );
 		$account = $this->lookups->accountByEmail( $order->partner['email'] );
 		if ( null === $account ) {
 			if ( 'match_only' === $this->options->choice( 'customer_policy', array( 'match_or_create', 'match_only' ), 'match_or_create' ) ) {
-				ExactFailure::refuse( 'partner.email', __( 'No customer with this email address exists in Exact Online, and the connection only matches existing customers.', 'estasoft-erp-crm-sync-engine' ) );
+				ExactFailure::refuse( 'partner.email', __( 'No customer with this email address exists in Exact Online, and the connection only matches existing customers.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$account = $this->lookups->createAccount( $order->partner );
 		}
@@ -260,7 +260,7 @@ final class ExactDocuments {
 	 */
 	private function createCreditNote( ExactRefund $refund, string $accountId, string $currency ): array {
 		if ( strlen( $refund->reference ) > 30 ) {
-			ExactFailure::refuse( 'reference', __( 'The refund number is too long for the reference field of Exact Online.', 'estasoft-erp-crm-sync-engine' ) );
+			ExactFailure::refuse( 'reference', __( 'The refund number is too long for the reference field of Exact Online.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$lines = array();
 		foreach ( $refund->lines as $line ) {
@@ -278,11 +278,11 @@ final class ExactDocuments {
 		if ( $refund->shippingMinor > 0 ) {
 			$item    = $this->requireItem( $this->options->text( 'shipping_item' ), 'shipping_item' );
 			$unit    = $this->netUnit( $refund->shippingMinor, $refund->shippingTax, $refund->pricesIncludeTax );
-			$lines[] = $this->line( $item, __( 'Shipping', 'estasoft-erp-crm-sync-engine' ), '1', $unit, $refund->shippingTax, $currency );
+			$lines[] = $this->line( $item, __( 'Shipping', 'estasoft-enterprise-erpcrm-sync-engine' ), '1', $unit, $refund->shippingTax, $currency );
 		}
 		if ( array() === $lines ) {
 			$item    = $this->requireItem( $this->options->text( 'refund_item' ), 'refund_item' );
-			$lines[] = $this->line( $item, __( 'Refund', 'estasoft-erp-crm-sync-engine' ), '1', $refund->amountMinor, '', $currency );
+			$lines[] = $this->line( $item, __( 'Refund', 'estasoft-enterprise-erpcrm-sync-engine' ), '1', $refund->amountMinor, '', $currency );
 		}
 		$body = array(
 			'Type'              => 8021,
@@ -315,7 +315,7 @@ final class ExactDocuments {
 		$id      = (string) ( $made[ $idField ] ?? '' );
 		$row     = $this->api->byKey( $orders ? 'salesorder/SalesOrders' : 'salesinvoice/SalesInvoices', $idField, $id, $this->select( $orders ) );
 		if ( null === $row ) {
-			ExactFailure::refuse( 'document', __( 'Exact Online created the document but did not return it.', 'estasoft-erp-crm-sync-engine' ) );
+			ExactFailure::refuse( 'document', __( 'Exact Online created the document but did not return it.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return $row;
 	}
@@ -352,19 +352,19 @@ final class ExactDocuments {
 		$firm   = false;
 		$actual = (string) ( $row['Currency'] ?? '' );
 		if ( $creditNote && isset( $row['Type'] ) && 8021 !== (int) $row['Type'] ) {
-			$reason = __( 'Exact Online did not make a credit note.', 'estasoft-erp-crm-sync-engine' );
+			$reason = __( 'Exact Online did not make a credit note.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			$firm   = true;
 		} elseif ( $creditNote && ! self::reducesReceivables( $row, $currency ) ) {
-			$reason = __( 'Exact Online recorded the credit note with an amount that is not negative, which would add to what the customer owes.', 'estasoft-erp-crm-sync-engine' );
+			$reason = __( 'Exact Online recorded the credit note with an amount that is not negative, which would add to what the customer owes.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			$firm   = true;
 		} elseif ( '' !== $actual && '' !== $currency && strtoupper( trim( $actual ) ) !== $currency ) {
 			/* translators: 1: currency of the order, 2: currency in Exact Online */
-			$reason = sprintf( __( 'The order is in %1$s but Exact Online recorded it in %2$s.', 'estasoft-erp-crm-sync-engine' ), $currency, trim( $actual ) );
+			$reason = sprintf( __( 'The order is in %1$s but Exact Online recorded it in %2$s.', 'estasoft-enterprise-erpcrm-sync-engine' ), $currency, trim( $actual ) );
 		} elseif ( null !== $totalMinor && '' !== $currency ) {
 			$recorded = Amounts::minor( $row['AmountFC'] ?? null, $currency );
 			if ( null !== $recorded && ! Amounts::agree( abs( $totalMinor ), abs( $recorded ) ) ) {
 				/* translators: 1: total of the order, 2: total in Exact Online, 3: currency */
-				$reason = sprintf( __( 'The total is %1$s but Exact Online recorded %2$s %3$s.', 'estasoft-erp-crm-sync-engine' ), Amounts::decimal( abs( $totalMinor ), $currency ), Amounts::decimal( abs( $recorded ), $currency ), $currency );
+				$reason = sprintf( __( 'The total is %1$s but Exact Online recorded %2$s %3$s.', 'estasoft-enterprise-erpcrm-sync-engine' ), Amounts::decimal( abs( $totalMinor ), $currency ), Amounts::decimal( abs( $recorded ), $currency ), $currency );
 			}
 		}
 		if ( '' === $reason ) {
@@ -377,9 +377,9 @@ final class ExactDocuments {
 		if ( $justCreated ) {
 			$id = (string) ( $row['InvoiceID'] ?? $row['OrderID'] ?? '' );
 			if ( 20 === (int) ( $row['Status'] ?? 20 ) && $this->api->delete( $endpoint, $id ) ) {
-				$reason .= ' ' . __( 'The document was removed again.', 'estasoft-erp-crm-sync-engine' );
+				$reason .= ' ' . __( 'The document was removed again.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			} else {
-				$reason .= ' ' . __( 'The open document stays in Exact Online and has to be deleted there by a person.', 'estasoft-erp-crm-sync-engine' );
+				$reason .= ' ' . __( 'The open document stays in Exact Online and has to be deleted there by a person.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			}
 		}
 		ExactFailure::refuse( 'total', $reason );
@@ -400,7 +400,7 @@ final class ExactDocuments {
 		if ( str_contains( (string) ( $row['Description'] ?? '' ), trim( self::PENDING ) ) ) {
 			list( $text, $cut ) = Text::limit( $description, self::DESCRIPTION_MAX );
 			if ( $cut ) {
-				$this->warnings[] = __( 'The description was cut to 60 characters.', 'estasoft-erp-crm-sync-engine' );
+				$this->warnings[] = __( 'The description was cut to 60 characters.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			}
 			$this->api->update( $orders ? 'salesorder/SalesOrders' : 'salesinvoice/SalesInvoices', $id, array( 'Description' => $text ) );
 			$row['Description'] = $text;
@@ -488,7 +488,7 @@ final class ExactDocuments {
 		if ( '' !== $name ) {
 			list( $text, $cut ) = Text::limit( $name, self::DESCRIPTION_MAX );
 			if ( $cut ) {
-				$this->warnings[] = __( 'A line text was cut to 60 characters.', 'estasoft-erp-crm-sync-engine' );
+				$this->warnings[] = __( 'A line text was cut to 60 characters.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			}
 			$line['Description'] = $text;
 		}
@@ -512,7 +512,7 @@ final class ExactDocuments {
 	private function requireItem( string $code, string $option ): array {
 		if ( '' === $code ) {
 			/* translators: %s: name of a connection option. */
-			ExactFailure::refuse( $option, sprintf( __( 'Set the item code in the connection option %s.', 'estasoft-erp-crm-sync-engine' ), $option ) );
+			ExactFailure::refuse( $option, sprintf( __( 'Set the item code in the connection option %s.', 'estasoft-enterprise-erpcrm-sync-engine' ), $option ) );
 		}
 		$item = $this->lookups->item( $code );
 		if ( null === $item ) {
@@ -520,7 +520,7 @@ final class ExactDocuments {
 		}
 		if ( false === ( $item['IsSalesItem'] ?? true ) ) {
 			/* translators: %s: item code. */
-			ExactFailure::refuse( 'order_line.product', sprintf( __( 'Item %s is not allowed for sales in Exact Online.', 'estasoft-erp-crm-sync-engine' ), $code ) );
+			ExactFailure::refuse( 'order_line.product', sprintf( __( 'Item %s is not allowed for sales in Exact Online.', 'estasoft-enterprise-erpcrm-sync-engine' ), $code ) );
 		}
 		return $item;
 	}
@@ -538,7 +538,7 @@ final class ExactDocuments {
 			return $price;
 		}
 		if ( '' === $taxCode ) {
-			ExactFailure::refuse( 'order_line.tax', __( 'The prices include tax but a line has no VAT code. Map the tax of every line.', 'estasoft-erp-crm-sync-engine' ) );
+			ExactFailure::refuse( 'order_line.tax', __( 'The prices include tax but a line has no VAT code. Map the tax of every line.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$vat = $this->lookups->vatCode( $taxCode );
 		if ( null === $vat ) {
@@ -547,7 +547,7 @@ final class ExactDocuments {
 		$points = ExactTax::basisPoints( $vat['Percentage'] ?? null );
 		if ( null === $points ) {
 			/* translators: %s: VAT code. */
-			ExactFailure::refuse( 'order_line.tax', sprintf( __( 'VAT code %s is not a plain percentage, so a price with tax cannot be converted.', 'estasoft-erp-crm-sync-engine' ), $taxCode ) );
+			ExactFailure::refuse( 'order_line.tax', sprintf( __( 'VAT code %s is not a plain percentage, so a price with tax cannot be converted.', 'estasoft-enterprise-erpcrm-sync-engine' ), $taxCode ) );
 		}
 		return ExactTax::net( $price, $points );
 	}

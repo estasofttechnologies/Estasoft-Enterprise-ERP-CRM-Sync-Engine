@@ -102,7 +102,7 @@ abstract class BaseController {
 		}
 		return new \WP_Error(
 			'rest_forbidden',
-			__( 'You do not have permission to do this.', 'estasoft-erp-crm-sync-engine' ),
+			__( 'You do not have permission to do this.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			array(
 				'status' => rest_authorization_required_code(),
 				'class'  => ErrorClass::NeedsPerson->value,

@@ -67,7 +67,7 @@ final class OrderPayload {
 			return Refusal::email( $system, $item->entityId );
 		}
 		if ( '' === $customer['name'] ) {
-			return Refusal::value( $system, 'customer.name', __( 'The customer name is empty.', 'estasoft-erp-crm-sync-engine' ), 'payload refused' );
+			return Refusal::value( $system, 'customer.name', __( 'The customer name is empty.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'payload refused' );
 		}
 		$lines = array();
 		foreach ( PayloadReader::rows( $payload['lines'] ?? null ) as $index => $raw ) {
@@ -78,7 +78,7 @@ final class OrderPayload {
 			$lines[] = $line;
 		}
 		if ( array() === $lines ) {
-			return Refusal::value( $system, 'lines', __( 'The order has no product lines.', 'estasoft-erp-crm-sync-engine' ), 'payload refused' );
+			return Refusal::value( $system, 'lines', __( 'The order has no product lines.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'payload refused' );
 		}
 		$extras   = array();
 		$shipping = PayloadReader::block( $payload['shipping'] ?? null );
@@ -87,7 +87,7 @@ final class OrderPayload {
 			$name     = PayloadReader::text( $shipping['name'] ?? '' );
 			$extras[] = array(
 				'kind'        => 'shipping',
-				'name'        => '' !== $name ? $name : __( 'Shipping', 'estasoft-erp-crm-sync-engine' ),
+				'name'        => '' !== $name ? $name : __( 'Shipping', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'total_minor' => $ship,
 				'tax_code'    => PayloadReader::taxCode( $shipping['tax_code'] ?? '' ),
 				'rate_bp'     => self::rate( $shipping['tax_rate'] ?? null ),
@@ -101,7 +101,7 @@ final class OrderPayload {
 			$name     = PayloadReader::text( $fee['name'] ?? '' );
 			$extras[] = array(
 				'kind'        => 'fee',
-				'name'        => '' !== $name ? $name : __( 'Fee', 'estasoft-erp-crm-sync-engine' ),
+				'name'        => '' !== $name ? $name : __( 'Fee', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'total_minor' => $total,
 				'tax_code'    => PayloadReader::taxCode( $fee['tax_code'] ?? '' ),
 				'rate_bp'     => self::rate( $fee['tax_rate'] ?? null ),
@@ -190,7 +190,7 @@ final class OrderPayload {
 				'lines[].quantity',
 				sprintf(
 					/* translators: %d: line number. */
-					__( 'Line %d has no quantity.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Line %d has no quantity.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$number
 				),
 				'payload refused'
@@ -203,7 +203,7 @@ final class OrderPayload {
 				'lines[].total',
 				sprintf(
 					/* translators: %d: line number. */
-					__( 'Line %d has no amount.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Line %d has no amount.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$number
 				),
 				'payload refused'

@@ -45,8 +45,8 @@ final class QoyodErrorMapper {
 				ErrorCode::Val002,
 				array(
 					'system' => QoyodConnector::LABEL,
-					'field'  => __( 'a related record', 'estasoft-erp-crm-sync-engine' ),
-					'reason' => __( 'Qoyod does not have this record in the connected company.', 'estasoft-erp-crm-sync-engine' ),
+					'field'  => __( 'a related record', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'reason' => __( 'Qoyod does not have this record in the connected company.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				404,
 				null,
@@ -73,8 +73,8 @@ final class QoyodErrorMapper {
 				ErrorCode::Val002,
 				array(
 					'system' => QoyodConnector::LABEL,
-					'field'  => '' !== $found['field'] ? $found['field'] : __( 'the request', 'estasoft-erp-crm-sync-engine' ),
-					'reason' => '' !== $found['reason'] ? $found['reason'] : __( 'Qoyod could not validate the request.', 'estasoft-erp-crm-sync-engine' ),
+					'field'  => '' !== $found['field'] ? $found['field'] : __( 'the request', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'reason' => '' !== $found['reason'] ? $found['reason'] : __( 'Qoyod could not validate the request.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				$status,
 				null,
@@ -147,7 +147,7 @@ final class QoyodErrorMapper {
 			ErrorCode::Auth004,
 			array(
 				'system' => QoyodConnector::LABEL,
-				'action' => __( 'do this', 'estasoft-erp-crm-sync-engine' ),
+				'action' => __( 'do this', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			),
 			403,
 			null,

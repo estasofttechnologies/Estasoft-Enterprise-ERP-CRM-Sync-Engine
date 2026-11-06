@@ -62,7 +62,7 @@ final class SalesforceErrorMapper {
 			return new ConnectorError( ErrorCode::Auth002, array(), 401, null, null, 'invalid session' );
 		}
 		if ( 403 === $status || in_array( $code, self::NO_RIGHT, true ) ) {
-			return new ConnectorError( ErrorCode::Auth004, array( 'action' => __( 'do this', 'estasoft-erp-crm-sync-engine' ) ), $status, null, null, 'forbidden' );
+			return new ConnectorError( ErrorCode::Auth004, array( 'action' => __( 'do this', 'estasoft-enterprise-erpcrm-sync-engine' ) ), $status, null, null, 'forbidden' );
 		}
 		if ( in_array( $code, self::BUSY, true ) ) {
 			return new ConnectorError( ErrorCode::Net002, array( 'status' => $status ), $status, 5, null, 'busy' );
@@ -72,7 +72,7 @@ final class SalesforceErrorMapper {
 			$text  = trim( (string) ( $first['message'] ?? '' ) );
 			if ( '' === $text ) {
 				/* translators: 1: HTTP status */
-				$text = sprintf( __( 'The system answered with status %d.', 'estasoft-erp-crm-sync-engine' ), $status );
+				$text = sprintf( __( 'The system answered with status %d.', 'estasoft-enterprise-erpcrm-sync-engine' ), $status );
 			}
 			return new ConnectorError(
 				ErrorCode::Val002,

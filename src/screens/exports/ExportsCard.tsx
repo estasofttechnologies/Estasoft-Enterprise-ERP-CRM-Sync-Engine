@@ -27,13 +27,13 @@ function ExportRow( { connection }: { connection: ConnectionSummary } ) {
 									/* translators: %s: number of orders such as "38 orders" */
 									__(
 										'%s waiting for the next file.',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									ordersPhrase( waiting )
 								)
 							: __(
 									'No orders are waiting for a file.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								)
 						: '' }
 				</span>
@@ -45,7 +45,10 @@ function ExportRow( { connection }: { connection: ConnectionSummary } ) {
 						navigate( `/connections/${ connection.id }/exports` )
 					}
 				>
-					{ __( 'Open Exports', 'estasoft-erp-crm-sync-engine' ) }
+					{ __(
+						'Open Exports',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 				</Btn>
 			</div>
 		</div>
@@ -76,12 +79,15 @@ export function ExportsCard() {
 	return (
 		<Card
 			id="estasoft-sync-exports-card"
-			title={ __( 'Export files', 'estasoft-erp-crm-sync-engine' ) }
+			title={ __(
+				'Export files',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			) }
 		>
 			<p className="estasoft-sync-muted">
 				{ __(
 					'These systems use files. The plugin writes a file, you import it.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			</p>
 			{ exporting.map( ( connection ) => (

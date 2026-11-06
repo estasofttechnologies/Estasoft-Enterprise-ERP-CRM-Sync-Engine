@@ -94,21 +94,21 @@ final class NetSuiteConnector extends AbstractApiConnector {
 	 */
 	protected function credentialDefinition(): array {
 		return array(
-			new CredentialField( 'account_id', __( 'Account ID', 'estasoft-erp-crm-sync-engine' ), false, true, __( 'Under Setup, Company, Company Information. A sandbox looks like 1234567-SB1.', 'estasoft-erp-crm-sync-engine' ) ),
-			CredentialFields::clientId( 'client_id', __( 'The Client ID (consumer key) of the integration record.', 'estasoft-erp-crm-sync-engine' ) ),
-			new CredentialField( 'certificate_id', __( 'Certificate ID', 'estasoft-erp-crm-sync-engine' ), false, true, __( 'Shown after you upload the public certificate under OAuth 2.0 Client Credentials (M2M) Setup.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'app' ),
-			CredentialFields::privateKey( 'private_key', __( 'The private key that belongs to the uploaded certificate. Saved encrypted. It is never shown again.', 'estasoft-erp-crm-sync-engine' ) ),
+			new CredentialField( 'account_id', __( 'Account ID', 'estasoft-enterprise-erpcrm-sync-engine' ), false, true, __( 'Under Setup, Company, Company Information. A sandbox looks like 1234567-SB1.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			CredentialFields::clientId( 'client_id', __( 'The Client ID (consumer key) of the integration record.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			new CredentialField( 'certificate_id', __( 'Certificate ID', 'estasoft-enterprise-erpcrm-sync-engine' ), false, true, __( 'Shown after you upload the public certificate under OAuth 2.0 Client Credentials (M2M) Setup.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'app' ),
+			CredentialFields::privateKey( 'private_key', __( 'The private key that belongs to the uploaded certificate. Saved encrypted. It is never shown again.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			CredentialFields::choice(
 				'algorithm',
-				__( 'Signing algorithm', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Signing algorithm', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				array(
-					'ES256' => __( 'ES256 (EC key)', 'estasoft-erp-crm-sync-engine' ),
-					'PS256' => __( 'PS256 (RSA key)', 'estasoft-erp-crm-sync-engine' ),
+					'ES256' => __( 'ES256 (EC key)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'PS256' => __( 'PS256 (RSA key)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				'ES256',
-				__( 'Must match the kind of key you made. NetSuite does not accept RS256.', 'estasoft-erp-crm-sync-engine' )
+				__( 'Must match the kind of key you made. NetSuite does not accept RS256.', 'estasoft-enterprise-erpcrm-sync-engine' )
 			),
-			new CredentialField( 'subsidiary', __( 'Subsidiary (internal id)', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Only for accounts with subsidiaries (OneWorld): the subsidiary new customers belong to.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
+			new CredentialField( 'subsidiary', __( 'Subsidiary (internal id)', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Only for accounts with subsidiaries (OneWorld): the subsidiary new customers belong to.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'advanced' ),
 		);
 	}
 
@@ -161,7 +161,7 @@ final class NetSuiteConnector extends AbstractApiConnector {
 			ErrorCode::Auth004,
 			array(
 				'system' => self::SYSTEM,
-				'action' => __( 'read sales orders, customers and items', 'estasoft-erp-crm-sync-engine' ),
+				'action' => __( 'read sales orders, customers and items', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			),
 			403,
 			null,
@@ -170,7 +170,7 @@ final class NetSuiteConnector extends AbstractApiConnector {
 		);
 		return new TestResult(
 			null === $error,
-			__( 'REST record service v1', 'estasoft-erp-crm-sync-engine' ),
+			__( 'REST record service v1', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			strtoupper( trim( (string) $connection->config( 'account_id', '' ) ) ),
 			array(),
 			$permissions,
@@ -268,7 +268,7 @@ final class NetSuiteConnector extends AbstractApiConnector {
 			EntityType::Order    => $this->sendOrder( $connection, $item, $payload ),
 			EntityType::Refund   => $this->sendRefund( $connection, $item, $payload ),
 			EntityType::Customer => $this->sendCustomer( $connection, $payload ),
-			default              => SendResult::failure( Problem::validation( self::SYSTEM, 'entity', __( 'This connector does not send this kind of record.', 'estasoft-erp-crm-sync-engine' ) ) ),
+			default              => SendResult::failure( Problem::validation( self::SYSTEM, 'entity', __( 'This connector does not send this kind of record.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) ),
 		};
 	}
 
@@ -368,7 +368,7 @@ final class NetSuiteConnector extends AbstractApiConnector {
 			return SendResult::failure( $parsed );
 		}
 		if ( $parsed->pricesIncludeTax ) {
-			return SendResult::failure( Problem::validation( self::SYSTEM, 'prices_include_tax', __( 'NetSuite takes prices before tax. Map the prices without tax.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( Problem::validation( self::SYSTEM, 'prices_include_tax', __( 'NetSuite takes prices before tax. Map the prices without tax.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$warnings = new Warnings();
 		$record   = $kit->orders->find( $parsed->reference );
@@ -425,7 +425,7 @@ final class NetSuiteConnector extends AbstractApiConnector {
 				$error   = Problem::validation(
 					self::SYSTEM,
 					'credit memo total',
-					(string) $error->context['reason'] . ' ' . ( $removed ? __( 'The credit memo was removed. Credit the customer in NetSuite.', 'estasoft-erp-crm-sync-engine' ) : __( 'The credit memo could not be removed and stays in NetSuite; correct or delete it there.', 'estasoft-erp-crm-sync-engine' ) )
+					(string) $error->context['reason'] . ' ' . ( $removed ? __( 'The credit memo was removed. Credit the customer in NetSuite.', 'estasoft-enterprise-erpcrm-sync-engine' ) : __( 'The credit memo could not be removed and stays in NetSuite; correct or delete it there.', 'estasoft-enterprise-erpcrm-sync-engine' ) )
 				);
 			}
 			return SendResult::failure( $error );
@@ -507,7 +507,7 @@ final class NetSuiteConnector extends AbstractApiConnector {
 	private function hostLabel( Connection $connection ): string {
 		$label = NetSuiteAccount::label( $connection );
 		if ( '' === $label ) {
-			$problem = Problem::validation( self::SYSTEM, 'account_id', __( 'The account ID may hold letters, digits, hyphens and underscores only (3 to 40 characters).', 'estasoft-erp-crm-sync-engine' ) );
+			$problem = Problem::validation( self::SYSTEM, 'account_id', __( 'The account ID may hold letters, digits, hyphens and underscores only (3 to 40 characters).', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			throw new ApiException( $problem ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 		}
 		return $label;

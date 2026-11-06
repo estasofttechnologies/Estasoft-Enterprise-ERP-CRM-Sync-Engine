@@ -75,7 +75,7 @@ final class FortnoxErrors {
 		if ( self::SCOPE === $code ) {
 			return new ConnectorError(
 				ErrorCode::Auth004,
-				$base + array( 'action' => __( 'use this area of Fortnox (the integration was not given this scope: change the connection options and sign in again)', 'estasoft-erp-crm-sync-engine' ) ),
+				$base + array( 'action' => __( 'use this area of Fortnox (the integration was not given this scope: change the connection options and sign in again)', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 				403,
 				null,
 				null,
@@ -89,8 +89,8 @@ final class FortnoxErrors {
 			return new ConnectorError(
 				ErrorCode::Val002,
 				$base + array(
-					'field'  => __( 'the request', 'estasoft-erp-crm-sync-engine' ),
-					'reason' => '' !== $text ? $text : __( 'Fortnox refused the request.', 'estasoft-erp-crm-sync-engine' ),
+					'field'  => __( 'the request', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'reason' => '' !== $text ? $text : __( 'Fortnox refused the request.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				$status,
 				null,

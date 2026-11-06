@@ -83,18 +83,18 @@ final class SageAccountingConnector extends AbstractApiConnector implements OAut
 			CredentialFields::clientSecret(),
 			CredentialFields::choice(
 				'country',
-				__( 'Country of the business', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Country of the business', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				array(
-					'gb' => __( 'United Kingdom', 'estasoft-erp-crm-sync-engine' ),
-					'ie' => __( 'Ireland', 'estasoft-erp-crm-sync-engine' ),
-					'ca' => __( 'Canada', 'estasoft-erp-crm-sync-engine' ),
-					'es' => __( 'Spain', 'estasoft-erp-crm-sync-engine' ),
-					'fr' => __( 'France', 'estasoft-erp-crm-sync-engine' ),
+					'gb' => __( 'United Kingdom', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'ie' => __( 'Ireland', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'ca' => __( 'Canada', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'es' => __( 'Spain', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'fr' => __( 'France', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				'gb',
-				__( 'It must match the region of the business, or Sage refuses the sign-in.', 'estasoft-erp-crm-sync-engine' )
+				__( 'It must match the region of the business, or Sage refuses the sign-in.', 'estasoft-enterprise-erpcrm-sync-engine' )
 			),
-			new CredentialField( 'business_id', __( 'Business ID', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Filled in when you sign in. Leave empty.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
+			new CredentialField( 'business_id', __( 'Business ID', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Filled in when you sign in. Leave empty.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'advanced' ),
 		);
 	}
 
@@ -330,7 +330,7 @@ final class SageAccountingConnector extends AbstractApiConnector implements OAut
 			EntityType::Order    => $services->orders->send( $item, $payload ),
 			EntityType::Refund   => $services->refunds->send( $item, $payload ),
 			EntityType::Customer => $services->customerSender->send( $item, $payload ),
-			default              => SendResult::failure( SageErrors::refused( 'entity', __( 'Sage takes orders, refunds and customers only.', 'estasoft-erp-crm-sync-engine' ) ) ),
+			default              => SendResult::failure( SageErrors::refused( 'entity', __( 'Sage takes orders, refunds and customers only.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) ),
 		};
 		$this->logWarnings( $result, $item );
 		return $result;
@@ -424,7 +424,7 @@ final class SageAccountingConnector extends AbstractApiConnector implements OAut
 	 */
 	private function servicesFor( Connection $connection, bool $requireBusiness = true ): SageServices {
 		if ( $requireBusiness && '' === SageBusiness::businessOf( $connection ) ) {
-			$failure = SageErrors::exception( SageErrors::refused( 'business_id', __( 'No business is chosen yet. Sign in with Sage and choose the business.', 'estasoft-erp-crm-sync-engine' ) ) );
+			$failure = SageErrors::exception( SageErrors::refused( 'business_id', __( 'No business is chosen yet. Sign in with Sage and choose the business.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 			throw $failure;
 		}
 		$key = $connection->id . ':' . md5( (string) wp_json_encode( $connection->config ) );

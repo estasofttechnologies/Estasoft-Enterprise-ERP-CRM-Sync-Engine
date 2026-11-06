@@ -57,7 +57,8 @@ export function LoadingState( {
 	return (
 		<div className="estasoft-sync-loading" role="status" aria-live="polite">
 			<span className="estasoft-sync-sr-only">
-				{ label ?? __( 'Loading', 'estasoft-erp-crm-sync-engine' ) }
+				{ label ??
+					__( 'Loading', 'estasoft-enterprise-erpcrm-sync-engine' ) }
 			</span>
 			{ Array.from( { length: rows } ).map( ( _unused, index ) => (
 				<span
@@ -111,7 +112,10 @@ export function ErrorState( {
 			action={
 				onRetry ? (
 					<Btn small onClick={ onRetry }>
-						{ __( 'Try again', 'estasoft-erp-crm-sync-engine' ) }
+						{ __(
+							'Try again',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						) }
 					</Btn>
 				) : undefined
 			}
@@ -120,7 +124,7 @@ export function ErrorState( {
 				{ title ??
 					__(
 						'This could not be loaded.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 			</strong>
 			<span> { errorText( error ) }</span>

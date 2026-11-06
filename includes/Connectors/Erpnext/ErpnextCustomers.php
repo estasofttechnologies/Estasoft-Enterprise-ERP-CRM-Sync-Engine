@@ -109,7 +109,7 @@ final class ErpnextCustomers {
 			return Problems::refused(
 				$this->system,
 				'partner.email',
-				__( 'No customer has this email address and the customer setting is "match only". Create the customer or change the setting.', 'estasoft-erp-crm-sync-engine' )
+				__( 'No customer has this email address and the customer setting is "match only". Create the customer or change the setting.', 'estasoft-enterprise-erpcrm-sync-engine' )
 			);
 		} else {
 			$created = $this->create( $partner );
@@ -153,7 +153,7 @@ final class ErpnextCustomers {
 			return Problems::refused(
 				$this->system,
 				'customer_group',
-				__( 'A new customer needs a customer group and a territory. Enter them in the connection settings, or set the defaults in Selling Settings.', 'estasoft-erp-crm-sync-engine' )
+				__( 'A new customer needs a customer group and a territory. Enter them in the connection settings, or set the defaults in Selling Settings.', 'estasoft-enterprise-erpcrm-sync-engine' )
 			);
 		}
 		$doc = array(
@@ -181,7 +181,7 @@ final class ErpnextCustomers {
 		$stored = $this->client->insert( 'Customer', $doc );
 		$name   = (string) ( $stored['name'] ?? '' );
 		if ( '' === $name ) {
-			return Problems::refused( $this->system, 'customer', __( 'ERPNext did not return the new customer.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $this->system, 'customer', __( 'ERPNext did not return the new customer.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return array(
 			'name'          => $name,

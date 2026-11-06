@@ -54,13 +54,13 @@ final class ConnectionResolver {
 					return $requested;
 				}
 			}
-			throw ApiException::notFound( esc_html__( 'That connection does not exist.', 'estasoft-erp-crm-sync-engine' ) );
+			throw ApiException::notFound( esc_html__( 'That connection does not exist.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		foreach ( $all as $connection ) {
 			if ( ConnectionStatus::Disconnected->value !== (string) ( $connection['status'] ?? '' ) ) {
 				return (int) $connection['id'];
 			}
 		}
-		throw ApiException::conflict( esc_html__( 'Connect a system first. This needs a connection.', 'estasoft-erp-crm-sync-engine' ), 'estasoft_sync_no_connection' );
+		throw ApiException::conflict( esc_html__( 'Connect a system first. This needs a connection.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'estasoft_sync_no_connection' );
 	}
 }

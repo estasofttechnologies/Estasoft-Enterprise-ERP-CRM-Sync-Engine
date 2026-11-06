@@ -72,7 +72,7 @@ final class OrderPayload {
 				return Problems::missingEmail( $item->entityId );
 			}
 			if ( '' === ( $partner['name'] ?? '' ) && '' === ( $partner['company_name'] ?? '' ) ) {
-				return Problems::refused( $system, 'partner.name', __( 'The customer name is empty.', 'estasoft-erp-crm-sync-engine' ) );
+				return Problems::refused( $system, 'partner.name', __( 'The customer name is empty.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 		}
 
@@ -87,7 +87,7 @@ final class OrderPayload {
 			$lines[]     = $line;
 		}
 		if ( array() === $lines ) {
-			return Problems::refused( $system, 'order_line', __( 'The order has no product lines.', 'estasoft-erp-crm-sync-engine' ) );
+			return Problems::refused( $system, 'order_line', __( 'The order has no product lines.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 
 		$total = PayloadReader::minor( $payload['total'] ?? null );
@@ -157,7 +157,7 @@ final class OrderPayload {
 				'order_line[].quantity',
 				sprintf(
 					/* translators: %d: line number. */
-					__( 'Line %d has no quantity.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Line %d has no quantity.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$number
 				)
 			);
@@ -169,7 +169,7 @@ final class OrderPayload {
 				'order_line[].price_unit',
 				sprintf(
 					/* translators: %d: line number. */
-					__( 'Line %d has no price in minor units (a whole number such as 21900).', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Line %d has no price in minor units (a whole number such as 21900).', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$number
 				)
 			);
@@ -193,18 +193,18 @@ final class OrderPayload {
 	private static function extras( array $payload ): array {
 		$extras   = array();
 		$shipping = isset( $payload['shipping'] ) && is_array( $payload['shipping'] ) ? $payload['shipping'] : array();
-		$row      = self::extra( 'shipping', $shipping, __( 'Shipping', 'estasoft-erp-crm-sync-engine' ) );
+		$row      = self::extra( 'shipping', $shipping, __( 'Shipping', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		if ( null !== $row ) {
 			$extras[] = $row;
 		}
 		foreach ( PayloadReader::rows( $payload['fee'] ?? null ) as $fee ) {
-			$row = self::extra( 'fee', $fee, __( 'Fee', 'estasoft-erp-crm-sync-engine' ) );
+			$row = self::extra( 'fee', $fee, __( 'Fee', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			if ( null !== $row ) {
 				$extras[] = $row;
 			}
 		}
 		$discount = isset( $payload['discount'] ) && is_array( $payload['discount'] ) ? $payload['discount'] : array();
-		$row      = self::extra( 'discount', $discount, __( 'Discount', 'estasoft-erp-crm-sync-engine' ) );
+		$row      = self::extra( 'discount', $discount, __( 'Discount', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		if ( null !== $row ) {
 			$row['amount_minor'] = abs( (int) $row['amount_minor'] );
 			$extras[]            = $row;

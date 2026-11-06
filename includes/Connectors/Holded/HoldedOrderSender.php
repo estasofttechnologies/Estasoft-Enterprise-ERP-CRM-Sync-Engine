@@ -100,7 +100,7 @@ final class HoldedOrderSender {
 			return SendResult::failure( $order );
 		}
 		if ( '' === $order->currency ) {
-			return SendResult::failure( $this->refused( 'currency', __( 'The order has no currency.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( $this->refused( 'currency', __( 'The order has no currency.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$type      = $options->documentType();
 		$reference = $this->ids->reference( $item );
@@ -256,7 +256,7 @@ final class HoldedOrderSender {
 		if ( '' !== $order->number && $order->number !== $item->entityId ) {
 			$parts[] = sprintf(
 				/* translators: %s: order number. */
-				__( 'Order number: %s', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Order number: %s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$order->number
 			);
 		}
@@ -285,7 +285,7 @@ final class HoldedOrderSender {
 				unset( $exception );
 				return $this->withReason(
 					$failure,
-					__( 'The sales order could not be removed. Delete it in Holded before syncing the order again.', 'estasoft-erp-crm-sync-engine' )
+					__( 'The sales order could not be removed. Delete it in Holded before syncing the order again.', 'estasoft-enterprise-erpcrm-sync-engine' )
 				);
 			}
 		}
@@ -304,7 +304,7 @@ final class HoldedOrderSender {
 			$failure,
 			sprintf(
 				/* translators: %s: document number in Holded. */
-				__( 'The document %s is in Holded. Correct it there (an issued invoice with a credit note) and sync the order again.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'The document %s is in Holded. Correct it there (an issued invoice with a credit note) and sync the order again.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$name
 			)
 		);

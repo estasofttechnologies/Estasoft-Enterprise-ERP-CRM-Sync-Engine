@@ -171,9 +171,9 @@ final class Scheduler {
 			$all[ $name ] = array(
 				'interval' => $interval,
 				'display'  => 60 === $interval
-					? __( 'Every minute (Estasoft Sync)', 'estasoft-erp-crm-sync-engine' )
+					? __( 'Every minute (Estasoft Sync)', 'estasoft-enterprise-erpcrm-sync-engine' )
 					/* translators: %d: number of seconds between two runs. */
-					: sprintf( __( 'Every %d seconds (Estasoft Sync)', 'estasoft-erp-crm-sync-engine' ), $interval ),
+					: sprintf( __( 'Every %d seconds (Estasoft Sync)', 'estasoft-enterprise-erpcrm-sync-engine' ), $interval ),
 			);
 		}
 		return $all;

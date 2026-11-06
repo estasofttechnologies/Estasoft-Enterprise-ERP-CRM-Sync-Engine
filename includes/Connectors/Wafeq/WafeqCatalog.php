@@ -143,7 +143,7 @@ final class WafeqCatalog {
 		if ( '' !== trim( $setting ) ) {
 			$account = $this->findAccount( $api, $connectionId, $setting );
 			if ( null === $account || '' === WafeqPayloadReader::text( $account['id'] ?? '' ) ) {
-				return $this->refused( 'sales_account', __( 'Wafeq has no account that matches the sales account setting.', 'estasoft-erp-crm-sync-engine' ) );
+				return $this->refused( 'sales_account', __( 'Wafeq has no account that matches the sales account setting.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			return WafeqPayloadReader::text( $account['id'] );
 		}
@@ -156,7 +156,7 @@ final class WafeqCatalog {
 		if ( 1 === count( $revenue ) ) {
 			return $revenue[0];
 		}
-		return $this->refused( 'sales_account', __( 'Choose the sales account in the connection settings.', 'estasoft-erp-crm-sync-engine' ) );
+		return $this->refused( 'sales_account', __( 'Choose the sales account in the connection settings.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**
@@ -171,11 +171,11 @@ final class WafeqCatalog {
 	 */
 	public function paymentAccountId( ApiClient $api, int $connectionId, string $setting ): string|ConnectorError {
 		if ( '' === trim( $setting ) ) {
-			return $this->refused( 'payment_account', __( 'Choose the payment account in the connection settings.', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->refused( 'payment_account', __( 'Choose the payment account in the connection settings.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$account = $this->findAccount( $api, $connectionId, $setting );
 		if ( null === $account || '' === WafeqPayloadReader::text( $account['id'] ?? '' ) ) {
-			return $this->refused( 'payment_account', __( 'Wafeq has no account that matches the payment account setting.', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->refused( 'payment_account', __( 'Wafeq has no account that matches the payment account setting.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return WafeqPayloadReader::text( $account['id'] );
 	}

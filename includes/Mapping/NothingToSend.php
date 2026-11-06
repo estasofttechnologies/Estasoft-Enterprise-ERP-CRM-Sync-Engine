@@ -29,8 +29,8 @@ final class NothingToSend {
 	public static function reason( EntityType $type, CanonicalOrder $order ): string {
 		if ( EntityType::Order === $type && 0 === $order->count( 'lines[]' ) ) {
 			return self::number( $order->get( 'order.excluded_count' ) ) > 0
-				? __( 'Every product on the order is marked Exclude from syncing.', 'estasoft-erp-crm-sync-engine' )
-				: __( 'The order has no products to send.', 'estasoft-erp-crm-sync-engine' );
+				? __( 'Every product on the order is marked Exclude from syncing.', 'estasoft-enterprise-erpcrm-sync-engine' )
+				: __( 'The order has no products to send.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		if ( EntityType::Refund === $type
 			&& 0 === $order->count( 'refund.lines[]' )
@@ -38,7 +38,7 @@ final class NothingToSend {
 			&& 0 === self::number( $order->get( 'refund.shipping_amount' ) )
 			&& 0 === self::number( $order->get( 'refund.other_amount' ) )
 		) {
-			return __( 'Every refunded product is marked Exclude from syncing.', 'estasoft-erp-crm-sync-engine' );
+			return __( 'Every refunded product is marked Exclude from syncing.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		return '';
 	}

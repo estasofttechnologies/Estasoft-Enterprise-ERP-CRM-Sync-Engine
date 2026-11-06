@@ -129,53 +129,53 @@ final class SageX3Connector extends AbstractApiConnector {
 	protected function credentialDefinition(): array {
 		$advanced = static fn( string $name, string $label, string $hint = '' ): CredentialField => new CredentialField( $name, $label, false, false, $hint, '', 'text', array(), 'advanced' );
 		$fields   = array(
-			CredentialFields::address( 'address', __( 'Web service address', 'estasoft-erp-crm-sync-engine' ), __( 'The https address of the Sage X3 server, for example https://x3.example.com:8443', 'estasoft-erp-crm-sync-engine' ) ),
-			new CredentialField( 'folder', __( 'Folder (endpoint)', 'estasoft-erp-crm-sync-engine' ), false, true, __( 'The name of the Sage X3 folder, for example SEED.', 'estasoft-erp-crm-sync-engine' ) ),
-			CredentialFields::username( 'username', __( 'Syracuse user', 'estasoft-erp-crm-sync-engine' ), __( 'A user that logs in with Basic authentication and is mapped to a Sage X3 user who may create sales orders.', 'estasoft-erp-crm-sync-engine' ) ),
-			CredentialFields::password( 'password', __( 'Password', 'estasoft-erp-crm-sync-engine' ), __( 'Saved encrypted. It is sent with every request, so use an https address.', 'estasoft-erp-crm-sync-engine' ) ),
-			new CredentialField( 'customer_code', __( 'Customer code for web orders', 'estasoft-erp-crm-sync-engine' ), false, true, __( 'Every web order is put on this customer.', 'estasoft-erp-crm-sync-engine' ) ),
+			CredentialFields::address( 'address', __( 'Web service address', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'The https address of the Sage X3 server, for example https://x3.example.com:8443', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			new CredentialField( 'folder', __( 'Folder (endpoint)', 'estasoft-enterprise-erpcrm-sync-engine' ), false, true, __( 'The name of the Sage X3 folder, for example SEED.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			CredentialFields::username( 'username', __( 'Syracuse user', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'A user that logs in with Basic authentication and is mapped to a Sage X3 user who may create sales orders.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			CredentialFields::password( 'password', __( 'Password', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Saved encrypted. It is sent with every request, so use an https address.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			new CredentialField( 'customer_code', __( 'Customer code for web orders', 'estasoft-enterprise-erpcrm-sync-engine' ), false, true, __( 'Every web order is put on this customer.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 		);
 		$labels   = array(
-			'order_class'             => __( 'Sales order class', 'estasoft-erp-crm-sync-engine' ),
-			'order_representation'    => __( 'Sales order representation', 'estasoft-erp-crm-sync-engine' ),
-			'prop_customer'           => __( 'Property: customer', 'estasoft-erp-crm-sync-engine' ),
-			'prop_date'               => __( 'Property: order date', 'estasoft-erp-crm-sync-engine' ),
-			'prop_reference'          => __( 'Property: customer order reference', 'estasoft-erp-crm-sync-engine' ),
-			'prop_currency'           => __( 'Property: currency', 'estasoft-erp-crm-sync-engine' ),
-			'prop_lines'              => __( 'Property: order lines', 'estasoft-erp-crm-sync-engine' ),
-			'prop_line_item'          => __( 'Property: line item', 'estasoft-erp-crm-sync-engine' ),
-			'prop_line_quantity'      => __( 'Property: line quantity', 'estasoft-erp-crm-sync-engine' ),
-			'prop_line_price'         => __( 'Property: line price', 'estasoft-erp-crm-sync-engine' ),
-			'prop_site'               => __( 'Property: sales site', 'estasoft-erp-crm-sync-engine' ),
-			'prop_number'             => __( 'Property: order number', 'estasoft-erp-crm-sync-engine' ),
-			'item_class'              => __( 'Item class (checks that a SKU exists)', 'estasoft-erp-crm-sync-engine' ),
-			'item_representation'     => __( 'Item representation', 'estasoft-erp-crm-sync-engine' ),
-			'prop_item_code'          => __( 'Property: item code', 'estasoft-erp-crm-sync-engine' ),
-			'customer_class'          => __( 'Customer class (checks the customer code)', 'estasoft-erp-crm-sync-engine' ),
-			'customer_representation' => __( 'Customer representation', 'estasoft-erp-crm-sync-engine' ),
-			'prop_customer_code'      => __( 'Property: customer code', 'estasoft-erp-crm-sync-engine' ),
-			'shipping_item'           => __( 'Item code for shipping', 'estasoft-erp-crm-sync-engine' ),
-			'fee_item'                => __( 'Item code for fees', 'estasoft-erp-crm-sync-engine' ),
-			'discount_item'           => __( 'Item code for discounts', 'estasoft-erp-crm-sync-engine' ),
-			'site'                    => __( 'Sales site', 'estasoft-erp-crm-sync-engine' ),
-			'total_property'          => __( 'Property that holds the order total (required)', 'estasoft-erp-crm-sync-engine' ),
+			'order_class'             => __( 'Sales order class', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'order_representation'    => __( 'Sales order representation', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'prop_customer'           => __( 'Property: customer', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'prop_date'               => __( 'Property: order date', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'prop_reference'          => __( 'Property: customer order reference', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'prop_currency'           => __( 'Property: currency', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'prop_lines'              => __( 'Property: order lines', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'prop_line_item'          => __( 'Property: line item', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'prop_line_quantity'      => __( 'Property: line quantity', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'prop_line_price'         => __( 'Property: line price', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'prop_site'               => __( 'Property: sales site', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'prop_number'             => __( 'Property: order number', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'item_class'              => __( 'Item class (checks that a SKU exists)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'item_representation'     => __( 'Item representation', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'prop_item_code'          => __( 'Property: item code', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'customer_class'          => __( 'Customer class (checks the customer code)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'customer_representation' => __( 'Customer representation', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'prop_customer_code'      => __( 'Property: customer code', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'shipping_item'           => __( 'Item code for shipping', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'fee_item'                => __( 'Item code for fees', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'discount_item'           => __( 'Item code for discounts', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'site'                    => __( 'Sales site', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'total_property'          => __( 'Property that holds the order total (required)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		);
 		foreach ( $labels as $name => $label ) {
 			$default  = SageX3Settings::DEFAULTS[ $name ];
-			$hint     = '' !== $default ? sprintf( /* translators: %s: default name. */ __( 'Empty: %s', 'estasoft-erp-crm-sync-engine' ), $default ) : '';
+			$hint     = '' !== $default ? sprintf( /* translators: %s: default name. */ __( 'Empty: %s', 'estasoft-enterprise-erpcrm-sync-engine' ), $default ) : '';
 			$fields[] = $advanced( $name, $label, $this->hintFor( $name, $hint ) );
 		}
 		$fields[] = new CredentialField(
 			'total_mismatch',
-			__( 'When Sage X3 totals differ from the shop', 'estasoft-erp-crm-sync-engine' ),
+			__( 'When Sage X3 totals differ from the shop', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			false,
 			false,
 			'',
 			'fail',
 			'select',
 			array(
-				'fail' => __( 'Stop and report', 'estasoft-erp-crm-sync-engine' ),
-				'warn' => __( 'Continue with a warning', 'estasoft-erp-crm-sync-engine' ),
+				'fail' => __( 'Stop and report', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				'warn' => __( 'Continue with a warning', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			),
 			'advanced'
 		);
@@ -190,8 +190,8 @@ final class SageX3Connector extends AbstractApiConnector {
 	 */
 	private function hintFor( string $name, string $hint ): string {
 		return match ( $name ) {
-			'item_class'     => __( 'Empty: ITMMASTER. Enter none to skip the check.', 'estasoft-erp-crm-sync-engine' ),
-			'total_property' => __( 'The property of the order that holds its total. Needed so the total can be compared with the shop, unless you choose to continue with a warning below.', 'estasoft-erp-crm-sync-engine' ),
+			'item_class'     => __( 'Empty: ITMMASTER. Enter none to skip the check.', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'total_property' => __( 'The property of the order that holds its total. Needed so the total can be compared with the shop, unless you choose to continue with a warning below.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			default          => $hint,
 		};
 	}
@@ -209,10 +209,10 @@ final class SageX3Connector extends AbstractApiConnector {
 		$label    = 'Sage X3 REST web services';
 		$failed   = static fn( ConnectorError $error ): TestResult => new TestResult( false, $label, $folder, array(), array(), $error );
 		if ( '' === $folder ) {
-			return $failed( Problems::refused( self::LABEL, 'folder', __( 'Enter the folder (endpoint) name.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return $failed( Problems::refused( self::LABEL, 'folder', __( 'Enter the folder (endpoint) name.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		if ( '' === $settings->get( 'customer_code' ) ) {
-			return $failed( Problems::refused( self::LABEL, 'customer_code', __( 'Enter the customer code that should receive the web orders.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return $failed( Problems::refused( self::LABEL, 'customer_code', __( 'Enter the customer code that should receive the web orders.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$unchecked = ( new SageX3OrderSender( $this->client( $connection ), $settings, Options::of( $connection ), new Amounts(), self::LABEL ) )->totalUnchecked();
 		if ( $unchecked instanceof ConnectorError ) {
@@ -241,7 +241,7 @@ final class SageX3Connector extends AbstractApiConnector {
 						'order_representation',
 						sprintf(
 							/* translators: 1: representation code, 2: setting names. */
-							__( 'The representation %1$s does not have these properties: %2$s. Change the settings to the names your folder uses.', 'estasoft-erp-crm-sync-engine' ),
+							__( 'The representation %1$s does not have these properties: %2$s. Change the settings to the names your folder uses.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 							$settings->get( 'order_representation' ),
 							implode( ', ', $missing )
 						)
@@ -251,7 +251,7 @@ final class SageX3Connector extends AbstractApiConnector {
 		}
 		$customer = $this->customerExists( $client, $settings );
 		if ( false === $customer ) {
-			return $failed( Problems::refused( self::LABEL, 'customer_code', __( 'Sage X3 has no customer with this code.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return $failed( Problems::refused( self::LABEL, 'customer_code', __( 'Sage X3 has no customer with this code.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		return new TestResult(
 			true,
@@ -319,7 +319,7 @@ final class SageX3Connector extends AbstractApiConnector {
 	protected function fieldCatalog( string $mappingType ): array {
 		return match ( $mappingType ) {
 			'orders'   => FieldSets::orders( self::LABEL, false, false ),
-			'products' => FieldSets::products( __( 'Item code', 'estasoft-erp-crm-sync-engine' ) ),
+			'products' => FieldSets::products( __( 'Item code', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			default    => array(),
 		};
 	}
@@ -361,7 +361,7 @@ final class SageX3Connector extends AbstractApiConnector {
 	 */
 	public function send( Connection $connection, Item $item, array $payload ): SendResult {
 		if ( EntityType::Order !== $item->entityType ) {
-			return SendResult::failure( Problems::refused( self::LABEL, 'entity', __( 'This kind of item cannot be sent to Sage X3.', 'estasoft-erp-crm-sync-engine' ), 'unsupported entity' ) );
+			return SendResult::failure( Problems::refused( self::LABEL, 'entity', __( 'This kind of item cannot be sent to Sage X3.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'unsupported entity' ) );
 		}
 		$parsed = OrderPayload::parse( $payload, $item, self::LABEL, new Amounts(), false );
 		if ( $parsed instanceof ConnectorError ) {

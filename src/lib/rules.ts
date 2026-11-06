@@ -34,43 +34,55 @@ const str = ( value: unknown ): string =>
 const CONDITIONS: { value: string; label: string; phrase: string }[] = [
 	{
 		value: 'equals',
-		label: __( 'equals', 'estasoft-erp-crm-sync-engine' ),
+		label: __( 'equals', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		/* translators: %s: the value compared with */
-		phrase: __( 'equals %s', 'estasoft-erp-crm-sync-engine' ),
+		phrase: __( 'equals %s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 	},
 	{
 		value: 'not_equals',
-		label: __( 'does not equal', 'estasoft-erp-crm-sync-engine' ),
+		label: __( 'does not equal', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		/* translators: %s: the value compared with */
-		phrase: __( 'does not equal %s', 'estasoft-erp-crm-sync-engine' ),
+		phrase: __(
+			'does not equal %s',
+			'estasoft-enterprise-erpcrm-sync-engine'
+		),
 	},
 	{
 		value: 'contains',
-		label: __( 'contains', 'estasoft-erp-crm-sync-engine' ),
+		label: __( 'contains', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		/* translators: %s: the value compared with */
-		phrase: __( 'contains %s', 'estasoft-erp-crm-sync-engine' ),
+		phrase: __( 'contains %s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 	},
 	{
 		value: 'empty',
-		label: __( 'is empty', 'estasoft-erp-crm-sync-engine' ),
-		phrase: __( 'is empty', 'estasoft-erp-crm-sync-engine' ),
+		label: __( 'is empty', 'estasoft-enterprise-erpcrm-sync-engine' ),
+		phrase: __( 'is empty', 'estasoft-enterprise-erpcrm-sync-engine' ),
 	},
 	{
 		value: 'not_empty',
-		label: __( 'is not empty', 'estasoft-erp-crm-sync-engine' ),
-		phrase: __( 'is not empty', 'estasoft-erp-crm-sync-engine' ),
+		label: __( 'is not empty', 'estasoft-enterprise-erpcrm-sync-engine' ),
+		phrase: __( 'is not empty', 'estasoft-enterprise-erpcrm-sync-engine' ),
 	},
 	{
 		value: 'gt',
-		label: __( 'is greater than', 'estasoft-erp-crm-sync-engine' ),
+		label: __(
+			'is greater than',
+			'estasoft-enterprise-erpcrm-sync-engine'
+		),
 		/* translators: %s: the value compared with */
-		phrase: __( 'is greater than %s', 'estasoft-erp-crm-sync-engine' ),
+		phrase: __(
+			'is greater than %s',
+			'estasoft-enterprise-erpcrm-sync-engine'
+		),
 	},
 	{
 		value: 'lt',
-		label: __( 'is less than', 'estasoft-erp-crm-sync-engine' ),
+		label: __( 'is less than', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		/* translators: %s: the value compared with */
-		phrase: __( 'is less than %s', 'estasoft-erp-crm-sync-engine' ),
+		phrase: __(
+			'is less than %s',
+			'estasoft-enterprise-erpcrm-sync-engine'
+		),
 	},
 ];
 
@@ -92,46 +104,58 @@ export function getTransformDefs(): TransformDef[] {
 			type: 'trim',
 			label: __(
 				'Keep as typed (trim spaces)',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			describe: () =>
-				__( 'Keep as typed', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Keep as typed', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			args: [],
 		},
 		{
 			type: 'prefix',
-			label: __( 'Add a prefix', 'estasoft-erp-crm-sync-engine' ),
+			label: __(
+				'Add a prefix',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			describe: ( args ) =>
 				sprintf(
 					/* translators: %s: the prefix, for example WC- */ __(
 						'Add the prefix %s',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					str( args.value )
 				),
 			args: [
 				{
 					name: 'value',
-					label: __( 'Prefix', 'estasoft-erp-crm-sync-engine' ),
+					label: __(
+						'Prefix',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					),
 					kind: 'text',
 				},
 			],
 		},
 		{
 			type: 'suffix',
-			label: __( 'Add a suffix', 'estasoft-erp-crm-sync-engine' ),
+			label: __(
+				'Add a suffix',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			describe: ( args ) =>
 				sprintf(
 					/* translators: %s: the suffix */ __(
 						'Add the suffix %s',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					str( args.value )
 				),
 			args: [
 				{
 					name: 'value',
-					label: __( 'Suffix', 'estasoft-erp-crm-sync-engine' ),
+					label: __(
+						'Suffix',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					),
 					kind: 'text',
 				},
 			],
@@ -140,31 +164,34 @@ export function getTransformDefs(): TransformDef[] {
 			type: 'case',
 			label: __(
 				'Change the letter case',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			describe: ( args ) => {
 				const mode = str( args.mode );
 				if ( mode === 'upper' ) {
 					return __(
 						'Capital letters',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					);
 				}
 				if ( mode === 'lower' ) {
 					return __(
 						'Small letters',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					);
 				}
 				return __(
 					'First letter of each word in capitals',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				);
 			},
 			args: [
 				{
 					name: 'mode',
-					label: __( 'Letters', 'estasoft-erp-crm-sync-engine' ),
+					label: __(
+						'Letters',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					),
 					kind: 'select',
 					default: 'title',
 					options: [
@@ -172,21 +199,21 @@ export function getTransformDefs(): TransformDef[] {
 							value: 'upper',
 							label: __(
 								'Capital letters',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 						},
 						{
 							value: 'lower',
 							label: __(
 								'Small letters',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 						},
 						{
 							value: 'title',
 							label: __(
 								'First letter of each word in capitals',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 						},
 					],
@@ -197,19 +224,19 @@ export function getTransformDefs(): TransformDef[] {
 			type: 'phone_e164',
 			label: __(
 				'International phone format',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			describe: () =>
 				__(
 					'International format, with a default country',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 			args: [
 				{
 					name: 'default_country',
 					label: __(
 						'Default country when none is typed (ISO code, for example AE)',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					kind: 'text',
 					default: '',
@@ -220,12 +247,12 @@ export function getTransformDefs(): TransformDef[] {
 			type: 'iso_country',
 			label: __(
 				'Country name to ISO code',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			describe: () =>
 				__(
 					'Country name to ISO code',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 			args: [],
 		},
@@ -233,58 +260,70 @@ export function getTransformDefs(): TransformDef[] {
 			type: 'iso_state',
 			label: __(
 				'Match to a state code',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			describe: () =>
-				__( 'Match to a state code', 'estasoft-erp-crm-sync-engine' ),
+				__(
+					'Match to a state code',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				),
 			args: [],
 		},
 		{
 			type: 'money_minor',
 			label: __(
 				'Amount in the currency’s decimals',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			describe: () =>
 				__(
 					'Keep the decimals of the currency',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 			args: [],
 		},
 		{
 			type: 'date_utc',
-			label: __( 'Date and time in UTC', 'estasoft-erp-crm-sync-engine' ),
+			label: __(
+				'Date and time in UTC',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			describe: () =>
-				__( 'Date and time in UTC', 'estasoft-erp-crm-sync-engine' ),
+				__(
+					'Date and time in UTC',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				),
 			args: [],
 		},
 		{
 			type: 'value_map',
-			label: __( 'Look up in a table', 'estasoft-erp-crm-sync-engine' ),
+			label: __(
+				'Look up in a table',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			describe: () =>
 				__(
 					'Look the value up in a table',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 			args: [
 				{
 					name: 'map',
 					label: __(
 						'Table: one “from = to” pair per line',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					kind: 'map',
 					hint: __(
 						'For example: cod = Pay on delivery',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 				},
 				{
 					name: 'else',
 					label: __(
 						'When nothing matches, use',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					kind: 'text',
 				},
@@ -292,12 +331,12 @@ export function getTransformDefs(): TransformDef[] {
 		},
 		{
 			type: 'if_then',
-			label: __( 'If then', 'estasoft-erp-crm-sync-engine' ),
+			label: __( 'If then', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			describe: ( args ) =>
 				sprintf(
 					/* translators: 1: condition such as "equals 5", 2: value used */ __(
 						'If it %1$s use %2$s',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					describeCondition(
 						str( args.operator ),
@@ -308,7 +347,10 @@ export function getTransformDefs(): TransformDef[] {
 			args: [
 				{
 					name: 'operator',
-					label: __( 'If the value', 'estasoft-erp-crm-sync-engine' ),
+					label: __(
+						'If the value',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					),
 					kind: 'select',
 					default: 'equals',
 					options: CONDITIONS.map( ( condition ) => ( {
@@ -320,20 +362,23 @@ export function getTransformDefs(): TransformDef[] {
 					name: 'value',
 					label: __(
 						'Compared with (not used for “is empty” and “is not empty”)',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					kind: 'text',
 				},
 				{
 					name: 'then',
-					label: __( 'Then use', 'estasoft-erp-crm-sync-engine' ),
+					label: __(
+						'Then use',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					),
 					kind: 'text',
 				},
 				{
 					name: 'else',
 					label: __(
 						'Otherwise use (leave empty to keep the value)',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					kind: 'text',
 				},
@@ -343,13 +388,13 @@ export function getTransformDefs(): TransformDef[] {
 			type: 'default',
 			label: __(
 				'Default value if empty',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			describe: ( args ) =>
 				sprintf(
 					/* translators: %s: the default value */ __(
 						'Use %s when empty',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					str( args.value )
 				),
@@ -358,7 +403,7 @@ export function getTransformDefs(): TransformDef[] {
 					name: 'value',
 					label: __(
 						'Value to use when empty',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					kind: 'text',
 				},
@@ -366,25 +411,34 @@ export function getTransformDefs(): TransformDef[] {
 		},
 		{
 			type: 'required',
-			label: __( 'Must not be empty', 'estasoft-erp-crm-sync-engine' ),
+			label: __(
+				'Must not be empty',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			describe: () =>
-				__( 'Must not be empty', 'estasoft-erp-crm-sync-engine' ),
+				__(
+					'Must not be empty',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				),
 			args: [],
 		},
 		{
 			type: 'join',
-			label: __( 'Join several fields', 'estasoft-erp-crm-sync-engine' ),
+			label: __(
+				'Join several fields',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			describe: () =>
 				__(
 					'Join the fields, keep as typed',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 			args: [
 				{
 					name: 'separator',
 					label: __(
 						'Put this between them',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					kind: 'text',
 					default: ' ',
@@ -393,16 +447,22 @@ export function getTransformDefs(): TransformDef[] {
 		},
 		{
 			type: 'split',
-			label: __( 'Split a field', 'estasoft-erp-crm-sync-engine' ),
+			label: __(
+				'Split a field',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			describe: () =>
 				__(
 					'Split the value at a separator',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 			args: [
 				{
 					name: 'separator',
-					label: __( 'Split at', 'estasoft-erp-crm-sync-engine' ),
+					label: __(
+						'Split at',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					),
 					kind: 'text',
 					default: ' ',
 				},
@@ -410,7 +470,7 @@ export function getTransformDefs(): TransformDef[] {
 					name: 'index',
 					label: __(
 						'Keep part number (0 is the first)',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					kind: 'text',
 					default: '0',
@@ -419,21 +479,27 @@ export function getTransformDefs(): TransformDef[] {
 		},
 		{
 			type: 'tax_lookup',
-			label: __( 'Use the tax mapping', 'estasoft-erp-crm-sync-engine' ),
+			label: __(
+				'Use the tax mapping',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			describe: () =>
-				__( 'Use the tax mapping', 'estasoft-erp-crm-sync-engine' ),
+				__(
+					'Use the tax mapping',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				),
 			args: [],
 		},
 		{
 			type: 'sku_match',
 			label: __(
 				'Match the product by SKU',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			describe: () =>
 				__(
 					'Match the product by reference',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 			args: [],
 		},
@@ -465,7 +531,7 @@ export function describeRule( rule: MappingRule ): string {
 		return sprintf(
 			/* translators: %s: the fixed value */ __(
 				'Always send %s',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			String( rule.source.const )
 		);
@@ -475,7 +541,7 @@ export function describeRule( rule: MappingRule ): string {
 			transform.type !== 'trim' || rule.transforms.length === 1
 	);
 	if ( meaningful.length === 0 ) {
-		return __( 'Keep as typed', 'estasoft-erp-crm-sync-engine' );
+		return __( 'Keep as typed', 'estasoft-enterprise-erpcrm-sync-engine' );
 	}
 	return meaningful
 		.map( ( transform ) => {

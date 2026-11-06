@@ -33,7 +33,7 @@ foreach ( array( '', '/plugins', '/mu-plugins', '/themes', '/uploads', '/languag
 	}
 }
 $links = array(
-	$content . '/plugins/estasoft-erp-crm-sync-engine' => $root,
+	$content . '/plugins/estasoft-enterprise-erpcrm-sync-engine' => $root,
 	$content . '/plugins/woocommerce'                   => $root . '/tests/php/stubs/woocommerce',
 );
 foreach ( $links as $link_path => $target ) {
@@ -68,7 +68,7 @@ require_once ABSPATH . 'wp-admin/includes/plugin.php';
 
 wp_install( 'Estasoft Tests', 'admin', 'admin@example.test', true, '', 'password' );
 update_option( 'active_plugins', array( 'woocommerce/woocommerce.php' ) );
-$result = activate_plugin( 'estasoft-erp-crm-sync-engine/estasoft-erp-crm-sync-engine.php' );
+$result = activate_plugin( 'estasoft-enterprise-erpcrm-sync-engine/estasoft-enterprise-erpcrm-sync-engine.php' );
 if ( is_wp_error( $result ) ) {
 	fwrite( STDERR, 'Activation failed: ' . $result->get_error_message() . "\n" );
 	exit( 1 );

@@ -94,7 +94,7 @@ final class LogsController extends BaseController {
 		$logs  = $this->serviceAs( Services::LOG_REPOSITORY, LogRepository::class );
 		$entry = $logs->find( (int) $request['id'] );
 		if ( null === $entry ) {
-			throw ApiException::notFound( esc_html__( 'That log entry does not exist. It may have been removed by the retention setting.', 'estasoft-erp-crm-sync-engine' ) );
+			throw ApiException::notFound( esc_html__( 'That log entry does not exist. It may have been removed by the retention setting.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		return $entry;
 	}

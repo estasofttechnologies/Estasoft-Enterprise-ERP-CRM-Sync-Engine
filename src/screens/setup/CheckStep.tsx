@@ -63,7 +63,7 @@ export function CheckStep( {
 		<Card
 			title={ __(
 				'Is your store ready?',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			) }
 			description={
 				data
@@ -74,7 +74,7 @@ export function CheckStep( {
 									'%1$d thing needs fixing before you can continue; %2$d worth fixing, %3$d passed.',
 									'%1$d things need fixing before you can continue; %2$d worth fixing, %3$d passed.',
 									needs,
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								needs,
 								worth,
@@ -87,7 +87,7 @@ export function CheckStep( {
 										'%1$d thing is worth fixing, %2$d passed. None of them stops you from continuing.',
 										'%1$d things are worth fixing, %2$d passed. None of them stops you from continuing.',
 										worth,
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									worth,
 									passed
@@ -103,7 +103,7 @@ export function CheckStep( {
 				>
 					{ __(
 						'Run the checks again',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</Btn>
 			}
@@ -114,7 +114,7 @@ export function CheckStep( {
 					rows={ 4 }
 					label={ __(
 						'Checking your store',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			) : null }
@@ -125,7 +125,7 @@ export function CheckStep( {
 						onRetry={ () => void readiness.reload() }
 						title={ __(
 							'The store check could not run.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					/>
 					{ onContinueAnyway ? (
@@ -136,14 +136,14 @@ export function CheckStep( {
 									<Btn small onClick={ onContinueAnyway }>
 										{ __(
 											'Continue anyway',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										) }
 									</Btn>
 								}
 							>
 								{ __(
 									'The check could not run, so nothing is known about your store yet. A check that did not run is not a pass. You can continue and run it later under Settings, then Readiness.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</Callout>
 						</div>

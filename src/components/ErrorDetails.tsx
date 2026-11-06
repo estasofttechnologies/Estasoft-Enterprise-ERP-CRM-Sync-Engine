@@ -15,7 +15,7 @@ export function KeyLineBlock( { line }: { line: string } ) {
 			<p>
 				{ __(
 					'Add this line to wp-config.php above the line that says “That’s all, stop editing”, then reload this page.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			</p>
 			<pre className="estasoft-sync-code estasoft-sync-code--inline">
@@ -24,7 +24,10 @@ export function KeyLineBlock( { line }: { line: string } ) {
 			<CopyButton
 				small
 				text={ line }
-				label={ __( 'Copy the line', 'estasoft-erp-crm-sync-engine' ) }
+				label={ __(
+					'Copy the line',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 			/>
 		</>
 	);
@@ -68,7 +71,7 @@ export function ErrorDetails( { error, ruleLabel }: ErrorDetailsProps ) {
 							'The connection test found this access missing: %s.',
 							'The connection test found this access missing: %s.',
 							missing.length,
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						missing.join( ', ' )
 					) }
@@ -83,7 +86,7 @@ export function ErrorDetails( { error, ruleLabel }: ErrorDetailsProps ) {
 								'%d problem to fix before this can go live:',
 								'%d problems to fix before this can go live:',
 								errors.length,
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							errors.length
 						) }
@@ -98,7 +101,7 @@ export function ErrorDetails( { error, ruleLabel }: ErrorDetailsProps ) {
 											/* translators: 1: name of the rule, 2: what is wrong with it */
 											__(
 												'%1$s: %2$s',
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											),
 											ruleLabel( problem.rule_id ),
 											problem.message

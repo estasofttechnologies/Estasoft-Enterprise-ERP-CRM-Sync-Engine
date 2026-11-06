@@ -39,10 +39,16 @@ function statusBadge( row: InvoiceRow ) {
 		not_required: 'neutral',
 	};
 	const labels: Record< InvoiceStatus, string > = {
-		waiting: __( 'Waiting to be reported', 'estasoft-erp-crm-sync-engine' ),
-		rejected: __( 'Rejected', 'estasoft-erp-crm-sync-engine' ),
-		reported: __( 'Reported', 'estasoft-erp-crm-sync-engine' ),
-		not_required: __( 'Not required', 'estasoft-erp-crm-sync-engine' ),
+		waiting: __(
+			'Waiting to be reported',
+			'estasoft-enterprise-erpcrm-sync-engine'
+		),
+		rejected: __( 'Rejected', 'estasoft-enterprise-erpcrm-sync-engine' ),
+		reported: __( 'Reported', 'estasoft-enterprise-erpcrm-sync-engine' ),
+		not_required: __(
+			'Not required',
+			'estasoft-enterprise-erpcrm-sync-engine'
+		),
 	};
 	return (
 		<StatusBadge tone={ tones[ row.status ] }>
@@ -140,11 +146,14 @@ export function Invoices() {
 	return (
 		<>
 			<PageHeader
-				title={ __( 'Invoices', 'estasoft-erp-crm-sync-engine' ) }
+				title={ __(
+					'Invoices',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 				description={ sprintf(
 					/* translators: 1: system name */ __(
 						'What %1$s and the tax authority say about each invoice. %1$s creates, signs and sends them. This page only shows the answer.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					system
 				) }
@@ -154,7 +163,7 @@ export function Invoices() {
 					/* translators: 1: system name */
 					__(
 						'The time left counts down to the reporting time set for this shop. %1$s, or the provider you use, creates, signs and reports the invoice. This page only shows what they say. Rules and dates differ by country and change; ask your accountant which apply to you.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					system
 				) }
@@ -164,13 +173,13 @@ export function Invoices() {
 					as="h2"
 					title={ __(
 						'Not available for this system',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				>
 					{ sprintf(
 						/* translators: %s: system name */ __(
 							'%s does not report invoice status back to the plugin, so there is nothing to show here.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						system
 					) }
@@ -180,7 +189,7 @@ export function Invoices() {
 					<SegmentedFilter< Filter >
 						label={ __(
 							'Filter by status',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						value={ filter }
 						onChange={ ( value ) =>
@@ -196,7 +205,7 @@ export function Invoices() {
 								value: 'all',
 								label: __(
 									'All',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								count: counted.data?.all,
 							},
@@ -204,7 +213,7 @@ export function Invoices() {
 								value: 'waiting',
 								label: __(
 									'Waiting',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								count: counts.waiting,
 							},
@@ -212,7 +221,7 @@ export function Invoices() {
 								value: 'rejected',
 								label: __(
 									'Rejected',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								count: counts.rejected,
 							},
@@ -220,7 +229,7 @@ export function Invoices() {
 								value: 'reported',
 								label: __(
 									'Reported',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								count: counts.reported,
 							},
@@ -228,7 +237,7 @@ export function Invoices() {
 								value: 'not_required',
 								label: __(
 									'Not required',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								count: counts.not_required,
 							},
@@ -239,7 +248,7 @@ export function Invoices() {
 							rows={ 4 }
 							label={ __(
 								'Loading invoices',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						/>
 					) : null }
@@ -254,20 +263,20 @@ export function Invoices() {
 							as="h2"
 							title={ __(
 								'No invoices to show',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						>
 							{ filter === 'all'
 								? sprintf(
 										/* translators: %s: system name */ __(
 											'Invoices appear here once %s has issued one for a synced order.',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										),
 										system
 									)
 								: __(
 										'No invoice has this status in the last 7 days.',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									) }
 						</EmptyState>
 					) : null }
@@ -276,7 +285,7 @@ export function Invoices() {
 							<ResponsiveTable< InvoiceRow, number >
 								caption={ __(
 									'Invoices',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 								rows={ rows }
 								rowKey={ ( row ) => row.order_id }
@@ -285,7 +294,7 @@ export function Invoices() {
 										id: 'order',
 										header: __(
 											'Order',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										),
 										primary: true,
 										cell: ( row ) => (
@@ -313,13 +322,13 @@ export function Invoices() {
 										header: sprintf(
 											/* translators: %s: system name */ __(
 												'%s invoice',
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											),
 											system
 										),
 										label: __(
 											'Invoice',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										),
 										cell: ( row ) => row.number ?? '—',
 									},
@@ -327,7 +336,7 @@ export function Invoices() {
 										id: 'authority',
 										header: __(
 											'Tax authority',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										),
 										cell: ( row ) => statusBadge( row ),
 									},
@@ -335,7 +344,7 @@ export function Invoices() {
 										id: 'left',
 										header: __(
 											'Time left',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										),
 										cell: ( row ) => (
 											<TimeLeft row={ row } />
@@ -345,7 +354,7 @@ export function Invoices() {
 										id: 'detail',
 										header: __(
 											'Detail',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										),
 										wide: true,
 										cell: ( row ) => (
@@ -360,7 +369,7 @@ export function Invoices() {
 														{ sprintf(
 															/* translators: %s: system name */ __(
 																'Issued by %s',
-																'estasoft-erp-crm-sync-engine'
+																'estasoft-enterprise-erpcrm-sync-engine'
 															),
 															system
 														) }{ ' ' }
@@ -376,7 +385,7 @@ export function Invoices() {
 													<>
 														{ __(
 															'Reported',
-															'estasoft-erp-crm-sync-engine'
+															'estasoft-enterprise-erpcrm-sync-engine'
 														) }{ ' ' }
 														<DateTime
 															value={
@@ -390,7 +399,7 @@ export function Invoices() {
 													? ( row.authority_status ??
 														__(
 															'No report to the tax authority is needed for this sale.',
-															'estasoft-erp-crm-sync-engine'
+															'estasoft-enterprise-erpcrm-sync-engine'
 														) )
 													: null }
 												{ safeHttpUrl( row.pdf_url ) ? (
@@ -409,7 +418,7 @@ export function Invoices() {
 															{ sprintf(
 																/* translators: %s: system name */ __(
 																	'Open in %s',
-																	'estasoft-erp-crm-sync-engine'
+																	'estasoft-enterprise-erpcrm-sync-engine'
 																),
 																system
 															) }
@@ -429,7 +438,7 @@ export function Invoices() {
 								shown={ rows.length }
 								scope={ __(
 									'in the last 7 days',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 								onPage={ ( next ) =>
 									navigate(

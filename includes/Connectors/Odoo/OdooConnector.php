@@ -147,40 +147,40 @@ final class OdooConnector implements ConnectorInterface {
 		return array(
 			new CredentialField(
 				'address',
-				__( 'Odoo address', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Odoo address', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				false,
 				true,
-				__( 'The web address you use to sign in to Odoo, for example https://mycompany.odoo.com.', 'estasoft-erp-crm-sync-engine' )
+				__( 'The web address you use to sign in to Odoo, for example https://mycompany.odoo.com.', 'estasoft-enterprise-erpcrm-sync-engine' )
 			),
 			new CredentialField(
 				'database',
-				__( 'Database', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Database', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				false,
 				true,
-				__( 'Shown on the Odoo sign-in page. On Odoo Online it is the first part of the address.', 'estasoft-erp-crm-sync-engine' )
+				__( 'Shown on the Odoo sign-in page. On Odoo Online it is the first part of the address.', 'estasoft-enterprise-erpcrm-sync-engine' )
 			),
 			new CredentialField(
 				'user',
-				__( 'Sync user (email)', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Sync user (email)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				false,
 				false,
-				__( 'A user made just for syncing. Odoo 17 and 18 need it together with the key. Odoo 19 and later use the key alone, and this field can stay empty.', 'estasoft-erp-crm-sync-engine' )
+				__( 'A user made just for syncing. Odoo 17 and 18 need it together with the key. Odoo 19 and later use the key alone, and this field can stay empty.', 'estasoft-enterprise-erpcrm-sync-engine' )
 			),
 			new CredentialField(
 				'api_key',
-				__( 'API key', 'estasoft-erp-crm-sync-engine' ),
+				__( 'API key', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				true,
 				true,
-				__( 'Saved encrypted. It is never shown again.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Saved encrypted. It is never shown again.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'',
 				'password'
 			),
 			new CredentialField(
 				'company',
-				__( 'Company', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Company', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				false,
 				false,
-				__( 'Only for an Odoo with several companies: the name of the company that gets the orders. Leave empty to use the sync user\'s own company.', 'estasoft-erp-crm-sync-engine' )
+				__( 'Only for an Odoo with several companies: the name of the company that gets the orders. Leave empty to use the sync user\'s own company.', 'estasoft-enterprise-erpcrm-sync-engine' )
 			),
 		);
 	}
@@ -598,7 +598,7 @@ final class OdooConnector implements ConnectorInterface {
 					array(
 						'system' => OdooErrorMapper::SYSTEM,
 						'field'  => 'partner.email',
-						'reason' => __( 'A customer needs a name and an email address.', 'estasoft-erp-crm-sync-engine' ),
+						'reason' => __( 'A customer needs a name and an email address.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					),
 					null,
 					null,
@@ -625,7 +625,7 @@ final class OdooConnector implements ConnectorInterface {
 			array(
 				'system' => OdooErrorMapper::SYSTEM,
 				'field'  => $type->value,
-				'reason' => __( 'This connector does not send this kind of item.', 'estasoft-erp-crm-sync-engine' ),
+				'reason' => __( 'This connector does not send this kind of item.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			),
 			null,
 			null,

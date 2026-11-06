@@ -209,7 +209,7 @@ final class Sage300Client {
 	 * @throws ApiException Always.
 	 */
 	private function notTheApi(): never {
-		$exception = new ApiException( Problems::refused( $this->system, 'address', __( 'This address is not a Sage 300 Web API. Check the address and the company ID.', 'estasoft-erp-crm-sync-engine' ), 'not the web api' ) );
+		$exception = new ApiException( Problems::refused( $this->system, 'address', __( 'This address is not a Sage 300 Web API. Check the address and the company ID.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'not the web api' ) );
 		throw $exception;
 	}
 }

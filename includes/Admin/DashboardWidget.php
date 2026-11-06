@@ -57,7 +57,7 @@ final class DashboardWidget {
 		if ( ! Capabilities::userCanManage() ) {
 			return;
 		}
-		wp_add_dashboard_widget( self::ID, __( 'ESTASOFT SYNC', 'estasoft-erp-crm-sync-engine' ), array( $this, 'render' ) );
+		wp_add_dashboard_widget( self::ID, __( 'ESTASOFT SYNC', 'estasoft-enterprise-erpcrm-sync-engine' ), array( $this, 'render' ) );
 	}
 
 	/**
@@ -94,15 +94,15 @@ final class DashboardWidget {
 		$synced     = (int) ( $data['synced_today'] ?? 0 );
 		$connection = is_array( $data['connection'] ?? null ) ? $data['connection'] : array();
 		$shadow     = is_array( $data['shadow'] ?? null ) ? $data['shadow'] : array();
-		$system     = '' !== (string) ( $connection['label'] ?? '' ) ? (string) $connection['label'] : __( 'The system', 'estasoft-erp-crm-sync-engine' );
+		$system     = '' !== (string) ( $connection['label'] ?? '' ) ? (string) $connection['label'] : __( 'The system', 'estasoft-enterprise-erpcrm-sync-engine' );
 
 		if ( in_array( $mode, array( 'not_connected', 'first_run' ), true ) ) {
 			return array(
 				'state'    => 'not-connected',
 				'counts'   => array(),
-				'headline' => __( 'Not connected', 'estasoft-erp-crm-sync-engine' ),
-				'detail'   => __( 'Connect a system to start syncing. Setup takes about ten minutes.', 'estasoft-erp-crm-sync-engine' ),
-				'action'   => __( 'Start setup', 'estasoft-erp-crm-sync-engine' ),
+				'headline' => __( 'Not connected', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				'detail'   => __( 'Connect a system to start syncing. Setup takes about ten minutes.', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				'action'   => __( 'Start setup', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'route'    => '/setup',
 			);
 		}
@@ -111,38 +111,38 @@ final class DashboardWidget {
 				'state'    => 'shadow',
 				'counts'   => array(
 					array(
-						'label' => __( 'Compared', 'estasoft-erp-crm-sync-engine' ),
+						'label' => __( 'Compared', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						'value' => (int) ( $shadow['items'] ?? 0 ),
 					),
 					array(
-						'label' => __( 'Match', 'estasoft-erp-crm-sync-engine' ),
+						'label' => __( 'Match', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						'value' => (int) ( $shadow['matches'] ?? 0 ),
 					),
 					array(
-						'label' => __( 'Differ', 'estasoft-erp-crm-sync-engine' ),
+						'label' => __( 'Differ', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						'value' => (int) ( $shadow['differs'] ?? 0 ),
 					),
 				),
 				/* translators: 1: current day of shadow mode, 2: number of days. */
-				'headline' => sprintf( __( 'Shadow mode, day %1$d of %2$d', 'estasoft-erp-crm-sync-engine' ), (int) ( $shadow['day'] ?? 1 ), (int) ( $shadow['of_days'] ?? 7 ) ),
+				'headline' => sprintf( __( 'Shadow mode, day %1$d of %2$d', 'estasoft-enterprise-erpcrm-sync-engine' ), (int) ( $shadow['day'] ?? 1 ), (int) ( $shadow['of_days'] ?? 7 ) ),
 				/* translators: %s: name of the connected system. */
-				'detail'   => sprintf( __( 'Nothing is sent to %s.', 'estasoft-erp-crm-sync-engine' ), $system ),
-				'action'   => __( 'See the comparison', 'estasoft-erp-crm-sync-engine' ),
+				'detail'   => sprintf( __( 'Nothing is sent to %s.', 'estasoft-enterprise-erpcrm-sync-engine' ), $system ),
+				'action'   => __( 'See the comparison', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'route'    => '/shadow',
 			);
 		}
 
 		$counts = array(
 			array(
-				'label' => __( 'Synced today', 'estasoft-erp-crm-sync-engine' ),
+				'label' => __( 'Synced today', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'value' => $synced,
 			),
 			array(
-				'label' => __( 'Waiting', 'estasoft-erp-crm-sync-engine' ),
+				'label' => __( 'Waiting', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'value' => $waiting,
 			),
 			array(
-				'label' => __( 'Failed', 'estasoft-erp-crm-sync-engine' ),
+				'label' => __( 'Failed', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'value' => $failed,
 			),
 		);
@@ -153,40 +153,40 @@ final class DashboardWidget {
 				'state'    => 'paused',
 				'counts'   => $counts,
 				/* translators: %s: name of the connected system. */
-				'headline' => $unreachable ? sprintf( __( 'Paused: %s is not answering', 'estasoft-erp-crm-sync-engine' ), $system ) : __( 'Syncing is paused', 'estasoft-erp-crm-sync-engine' ),
+				'headline' => $unreachable ? sprintf( __( 'Paused: %s is not answering', 'estasoft-enterprise-erpcrm-sync-engine' ), $system ) : __( 'Syncing is paused', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'detail'   => $this->pausedDetail( $connection ),
-				'action'   => __( 'Open the dashboard', 'estasoft-erp-crm-sync-engine' ),
+				'action'   => __( 'Open the dashboard', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'route'    => '/',
 			);
 		}
 
 		$connected = sprintf(
 			/* translators: %s: name of the connected system. */
-			__( '%s connected.', 'estasoft-erp-crm-sync-engine' ),
+			__( '%s connected.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			$system
 		);
 		$success = $this->time( $connection['last_success_at'] ?? null );
 		/* translators: %s: time of day. */
-		$detail = '' === $success ? $connected : $connected . ' ' . sprintf( __( 'Last success %s.', 'estasoft-erp-crm-sync-engine' ), $success );
+		$detail = '' === $success ? $connected : $connected . ' ' . sprintf( __( 'Last success %s.', 'estasoft-enterprise-erpcrm-sync-engine' ), $success );
 
 		if ( $failed > 0 ) {
 			return array(
 				'state'    => 'attention',
 				'counts'   => $counts,
 				/* translators: %s: number of failed orders. */
-				'headline' => sprintf( _n( '%s order needs a person', '%s orders need a person', $failed, 'estasoft-erp-crm-sync-engine' ), number_format_i18n( $failed ) ),
+				'headline' => sprintf( _n( '%s order needs a person', '%s orders need a person', $failed, 'estasoft-enterprise-erpcrm-sync-engine' ), number_format_i18n( $failed ) ),
 				'detail'   => $detail,
 				/* translators: %s: number of failed orders. */
-				'action'   => sprintf( _n( 'Review %s failed order', 'Review %s failed orders', $failed, 'estasoft-erp-crm-sync-engine' ), number_format_i18n( $failed ) ),
+				'action'   => sprintf( _n( 'Review %s failed order', 'Review %s failed orders', $failed, 'estasoft-enterprise-erpcrm-sync-engine' ), number_format_i18n( $failed ) ),
 				'route'    => '/queue?state=failed',
 			);
 		}
 		return array(
 			'state'    => 'clear',
 			'counts'   => $counts,
-			'headline' => __( 'Everything is in step', 'estasoft-erp-crm-sync-engine' ),
+			'headline' => __( 'Everything is in step', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			'detail'   => $detail,
-			'action'   => __( 'Open ESTASOFT SYNC', 'estasoft-erp-crm-sync-engine' ),
+			'action'   => __( 'Open ESTASOFT SYNC', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			'route'    => '/',
 		);
 	}
@@ -202,11 +202,11 @@ final class DashboardWidget {
 		$next  = $this->time( $connection['paused_until'] ?? null );
 		if ( '' !== $last ) {
 			/* translators: %s: time of day. */
-			$parts[] = sprintf( __( 'Last answer %s.', 'estasoft-erp-crm-sync-engine' ), $last );
+			$parts[] = sprintf( __( 'Last answer %s.', 'estasoft-enterprise-erpcrm-sync-engine' ), $last );
 		}
 		if ( '' !== $next ) {
 			/* translators: %s: time of day. */
-			$parts[] = sprintf( __( 'Next check %s.', 'estasoft-erp-crm-sync-engine' ), $next );
+			$parts[] = sprintf( __( 'Next check %s.', 'estasoft-enterprise-erpcrm-sync-engine' ), $next );
 		}
 		return implode( ' ', $parts );
 	}

@@ -87,26 +87,26 @@ final class MyobConnector extends AbstractApiConnector implements OAuthConnector
 	 */
 	protected function credentialDefinition(): array {
 		return array(
-			CredentialFields::clientId( 'client_id', __( 'The API key of your app in my.MYOB (Developer tab).', 'estasoft-erp-crm-sync-engine' ) ),
+			CredentialFields::clientId( 'client_id', __( 'The API key of your app in my.MYOB (Developer tab).', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			CredentialFields::clientSecret(),
 			CredentialFields::choice(
 				'currency',
-				__( 'Currency of the company file', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Currency of the company file', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				array(
-					'AUD' => __( 'Australian dollar (AUD)', 'estasoft-erp-crm-sync-engine' ),
-					'NZD' => __( 'New Zealand dollar (NZD)', 'estasoft-erp-crm-sync-engine' ),
+					'AUD' => __( 'Australian dollar (AUD)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'NZD' => __( 'New Zealand dollar (NZD)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				'AUD',
-				__( 'Orders in another currency are not sent.', 'estasoft-erp-crm-sync-engine' )
+				__( 'Orders in another currency are not sent.', 'estasoft-enterprise-erpcrm-sync-engine' )
 			),
-			new CredentialField( 'company_file_user', __( 'Company file user name', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Only when the company file asks for its own login.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
-			new CredentialField( 'company_file_password', __( 'Company file password', 'estasoft-erp-crm-sync-engine' ), true, false, __( 'Only when the company file asks for its own login.', 'estasoft-erp-crm-sync-engine' ), '', 'password', array(), 'advanced' ),
+			new CredentialField( 'company_file_user', __( 'Company file user name', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Only when the company file asks for its own login.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'advanced' ),
+			new CredentialField( 'company_file_password', __( 'Company file password', 'estasoft-enterprise-erpcrm-sync-engine' ), true, false, __( 'Only when the company file asks for its own login.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'password', array(), 'advanced' ),
 			new CredentialField(
 				'api_host',
-				__( 'MYOB address', 'estasoft-erp-crm-sync-engine' ),
+				__( 'MYOB address', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				false,
 				false,
-				__( 'Leave the default unless MYOB told you to use the other one.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Leave the default unless MYOB told you to use the other one.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				MyobCompany::HOST,
 				'select',
 				array(
@@ -115,7 +115,7 @@ final class MyobConnector extends AbstractApiConnector implements OAuthConnector
 				),
 				'advanced'
 			),
-			new CredentialField( 'company_file_id', __( 'Company file ID', 'estasoft-erp-crm-sync-engine' ), false, false, __( 'Filled in when you sign in. Leave empty.', 'estasoft-erp-crm-sync-engine' ), '', 'text', array(), 'advanced' ),
+			new CredentialField( 'company_file_id', __( 'Company file ID', 'estasoft-enterprise-erpcrm-sync-engine' ), false, false, __( 'Filled in when you sign in. Leave empty.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'text', array(), 'advanced' ),
 		);
 	}
 
@@ -366,7 +366,7 @@ final class MyobConnector extends AbstractApiConnector implements OAuthConnector
 			EntityType::Order    => $services->orders->send( $item, $payload ),
 			EntityType::Refund   => $services->refunds->send( $item, $payload ),
 			EntityType::Customer => $services->customerSender->send( $item, $payload ),
-			default              => SendResult::failure( MyobErrors::refused( 'entity', __( 'MYOB takes orders, refunds and customers only.', 'estasoft-erp-crm-sync-engine' ) ) ),
+			default              => SendResult::failure( MyobErrors::refused( 'entity', __( 'MYOB takes orders, refunds and customers only.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) ),
 		};
 		$this->logWarnings( $result, $item );
 		return $result;
@@ -492,7 +492,7 @@ final class MyobConnector extends AbstractApiConnector implements OAuthConnector
 	 */
 	private function servicesFor( Connection $connection, bool $requireFile = true ): MyobServices {
 		if ( $requireFile && '' === MyobCompany::fileOf( $connection ) ) {
-			$failure = MyobErrors::exception( MyobErrors::refused( 'company_file_id', __( 'No company file is chosen yet. Sign in with MYOB and choose the company file.', 'estasoft-erp-crm-sync-engine' ) ) );
+			$failure = MyobErrors::exception( MyobErrors::refused( 'company_file_id', __( 'No company file is chosen yet. Sign in with MYOB and choose the company file.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 			throw $failure;
 		}
 		$key = $connection->id . ':' . md5( (string) wp_json_encode( $connection->config ) );

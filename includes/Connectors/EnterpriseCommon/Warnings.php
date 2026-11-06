@@ -50,7 +50,7 @@ final class Warnings {
 		$this->add(
 			sprintf(
 				/* translators: 1: field name, 2: number of characters kept. */
-				__( '%1$s was longer than %2$d characters and was shortened.', 'estasoft-erp-crm-sync-engine' ),
+				__( '%1$s was longer than %2$d characters and was shortened.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$field,
 				$max
 			)

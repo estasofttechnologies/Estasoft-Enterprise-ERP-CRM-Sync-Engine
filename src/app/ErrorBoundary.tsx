@@ -61,7 +61,7 @@ export class ErrorBoundary extends Component<
 						<Btn small onClick={ () => window.location.reload() }>
 							{ __(
 								'Reload the page',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Btn>
 					}
@@ -69,12 +69,12 @@ export class ErrorBoundary extends Component<
 					<strong>
 						{ __(
 							'This screen could not be shown.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</strong>{ ' ' }
 					{ __(
 						'Your data is safe. Reload the page; if it happens again, copy a support report from Logs.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</Callout>
 			);

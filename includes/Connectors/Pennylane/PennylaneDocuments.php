@@ -119,7 +119,7 @@ final class PennylaneDocuments {
 		$created = $api->post( 'customer_invoices', array(), $body )->json();
 		$id      = PayloadReader::text( $created['id'] ?? '' );
 		if ( '' === $id ) {
-			return SendResult::failure( Refusal::value( PennylaneConnector::LABEL, 'invoice', __( 'Pennylane did not return the new invoice.', 'estasoft-erp-crm-sync-engine' ), 'no invoice id' ) );
+			return SendResult::failure( Refusal::value( PennylaneConnector::LABEL, 'invoice', __( 'Pennylane did not return the new invoice.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'no invoice id' ) );
 		}
 		return $this->finish( $api, $id, $order, $options, $built['warnings'] );
 	}
@@ -138,7 +138,7 @@ final class PennylaneDocuments {
 	private function finish( ApiClient $api, string $id, OrderPayload $order, Options $options, array $warnings ): SendResult {
 		$invoice = $this->read( $api, $id );
 		if ( null === $invoice ) {
-			return SendResult::failure( Refusal::value( PennylaneConnector::LABEL, 'invoice', __( 'Pennylane could not read the invoice back.', 'estasoft-erp-crm-sync-engine' ), 'read back failed' ) );
+			return SendResult::failure( Refusal::value( PennylaneConnector::LABEL, 'invoice', __( 'Pennylane could not read the invoice back.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'read back failed' ) );
 		}
 		$problem = $this->check( $invoice, $order->totalMinor, $options, $warnings, $order->rows(), $order->date );
 		if ( null !== $problem ) {
@@ -147,7 +147,7 @@ final class PennylaneDocuments {
 		if ( $options->is( 'invoice_state', 'finalized' ) && $this->isDraft( $invoice ) ) {
 			$response = $api->put( 'customer_invoices/' . rawurlencode( $id ) . '/finalize', array(), null, array( 'allow' => array( 404, 405 ) ) );
 			if ( ! $response->isSuccess() ) {
-				return SendResult::failure( Refusal::value( PennylaneConnector::LABEL, 'finalize', __( 'Pennylane did not accept the finalise call. The invoice stays a draft.', 'estasoft-erp-crm-sync-engine' ), 'finalize refused' ) );
+				return SendResult::failure( Refusal::value( PennylaneConnector::LABEL, 'finalize', __( 'Pennylane did not accept the finalise call. The invoice stays a draft.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'finalize refused' ) );
 			}
 			$invoice = $this->read( $api, $id ) ?? $invoice;
 			if ( LocalDate::differs( $invoice['date'] ?? null, $order->date, $options->text( 'timezone' ) ) ) {
@@ -199,7 +199,7 @@ final class PennylaneDocuments {
 		}
 		$actual = $this->amounts->toMinor( $invoice['currency_amount'] ?? null, 2 );
 		if ( null === $actual ) {
-			return Refusal::value( PennylaneConnector::LABEL, 'currency_amount', __( 'Pennylane returned no total for the invoice.', 'estasoft-erp-crm-sync-engine' ), 'no total' );
+			return Refusal::value( PennylaneConnector::LABEL, 'currency_amount', __( 'Pennylane returned no total for the invoice.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'no total' );
 		}
 		if ( Tolerance::accepts( $actual, $expected, $options, $rows ) ) {
 			return null;
@@ -240,7 +240,7 @@ final class PennylaneDocuments {
 			'currency',
 			sprintf(
 				/* translators: %s: currency code. */
-				__( 'The Pennylane connector supports euro only; the order is in %s.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'The Pennylane connector supports euro only; the order is in %s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'' === $currency ? '?' : $currency
 			),
 			'currency not supported'

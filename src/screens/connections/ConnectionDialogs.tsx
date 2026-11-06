@@ -55,7 +55,7 @@ export async function startSignIn( connectionId: number ): Promise< void > {
 		throw new Error(
 			__(
 				'The sign-in page address was not a web address, so it was not opened. Try again. If it keeps happening, the log has the details.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			)
 		);
 	}
@@ -108,15 +108,21 @@ export function ReplaceSecretDialog( {
 			title={ sprintf(
 				/* translators: 1: system name, 2: "key", "secret" or "password" */ __(
 					'Replace the %1$s %2$s',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				system,
 				word
 			) }
 			confirmLabel={
 				signInAgain
-					? __( 'Save and sign in', 'estasoft-erp-crm-sync-engine' )
-					: __( 'Test and save', 'estasoft-erp-crm-sync-engine' )
+					? __(
+							'Save and sign in',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						)
+					: __(
+							'Test and save',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						)
 			}
 			confirmDisabled={ ! filled }
 			onClose={ onClose }
@@ -168,7 +174,7 @@ export function ReplaceSecretDialog( {
 					text: sprintf(
 						/* translators: 1: system name, 2: "key", "secret" or "password" */ __(
 							'The new %1$s %2$s is saved, encrypted. Your mappings stay.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						system,
 						word
@@ -182,7 +188,7 @@ export function ReplaceSecretDialog( {
 					? sprintf(
 							/* translators: 1: "key", "secret" or "password", 2: system name */ __(
 								'Paste the new %1$s from your %2$s app. It is saved, and then you sign in at %2$s again.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							word,
 							system
@@ -190,7 +196,7 @@ export function ReplaceSecretDialog( {
 					: sprintf(
 							/* translators: 1: "key", "secret" or "password", 2: system name */ __(
 								'Paste the new %1$s from %2$s. It is tested first, and saved only if the test passes. The old one stays until then.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							word,
 							system
@@ -210,7 +216,7 @@ export function ReplaceSecretDialog( {
 							field.hint ||
 							__(
 								'Saved encrypted. It is never shown again.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							)
 						}
 					/>
@@ -228,7 +234,7 @@ export function ReplaceSecretDialog( {
 							field.hint ||
 							__(
 								'Saved encrypted. It is never shown again.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							)
 						}
 					/>
@@ -275,7 +281,10 @@ export function EditSettingsDialog( {
 	return (
 		<ConfirmDialog
 			title={ title }
-			confirmLabel={ __( 'Save', 'estasoft-erp-crm-sync-engine' ) }
+			confirmLabel={ __(
+				'Save',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			) }
 			onClose={ onClose }
 			onConfirm={ async () => {
 				const { config } = splitInput( fields, values );
@@ -284,7 +293,7 @@ export function EditSettingsDialog( {
 					kind: 'success',
 					text: __(
 						'Saved. Test the connection to check the new details.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 				} );
 				onDone();
@@ -326,14 +335,14 @@ export function ReconnectDialog( {
 			title={ sprintf(
 				/* translators: %s: system name */ __(
 					'Reconnect %s',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				system
 			) }
 			confirmLabel={ sprintf(
 				/* translators: %s: system name */ __(
 					'Continue to %s',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				system
 			) }
@@ -344,7 +353,7 @@ export function ReconnectDialog( {
 				{ sprintf(
 					/* translators: %s: system name */ __(
 						'%s opens its own sign-in page. After you approve, you come back here and syncing continues. Orders that waited are sent in the order they arrived.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					system
 				) }
@@ -355,7 +364,7 @@ export function ReconnectDialog( {
 						{
 							label: __(
 								'Organisation',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							value: (
 								<span dir="auto">{ connection.company }</span>

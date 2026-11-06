@@ -48,7 +48,7 @@ final class DaftraStockReader {
 				array(
 					'system' => DaftraConnector::LABEL,
 					'field'  => 'warehouses',
-					'reason' => __( 'Daftra reports one stock figure for all warehouses. Count all warehouses toward shop stock.', 'estasoft-erp-crm-sync-engine' ),
+					'reason' => __( 'Daftra reports one stock figure for all warehouses. Count all warehouses toward shop stock.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				null,
 				null,

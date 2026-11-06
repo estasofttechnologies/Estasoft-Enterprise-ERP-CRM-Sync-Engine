@@ -113,44 +113,44 @@ final class DynamicsSalesConnector extends AbstractApiConnector {
 		$choice = static fn( string $name, string $label, array $options ): CredentialField => EntraCredentialFields::option( $name, $label, $options, (string) array_key_first( $options ) );
 		return array_merge(
 			array(
-				new CredentialField( 'environment_url', __( 'Environment URL', 'estasoft-erp-crm-sync-engine' ), false, true, __( 'The address of your Dynamics 365 environment, for example https://contoso.crm4.dynamics.com.', 'estasoft-erp-crm-sync-engine' ), '', 'url' ),
+				new CredentialField( 'environment_url', __( 'Environment URL', 'estasoft-enterprise-erpcrm-sync-engine' ), false, true, __( 'The address of your Dynamics 365 environment, for example https://contoso.crm4.dynamics.com.', 'estasoft-enterprise-erpcrm-sync-engine' ), '', 'url' ),
 			),
 			EntraCredentialFields::app(),
 			array(
 				$choice(
 					'customer_policy',
-					__( 'Contacts', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Contacts', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					array(
-						'match_or_create' => __( 'Match by email, create when missing', 'estasoft-erp-crm-sync-engine' ),
-						'match_only'      => __( 'Match by email only', 'estasoft-erp-crm-sync-engine' ),
+						'match_or_create' => __( 'Match by email, create when missing', 'estasoft-enterprise-erpcrm-sync-engine' ),
+						'match_only'      => __( 'Match by email only', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					)
 				),
 				$choice(
 					'create_accounts',
-					__( 'Accounts for company buyers', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Accounts for company buyers', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					array(
-						'yes' => __( 'Create an account', 'estasoft-erp-crm-sync-engine' ),
-						'no'  => __( 'Contact only', 'estasoft-erp-crm-sync-engine' ),
+						'yes' => __( 'Create an account', 'estasoft-enterprise-erpcrm-sync-engine' ),
+						'no'  => __( 'Contact only', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					)
 				),
 				$choice(
 					'unknown_sku',
-					__( 'SKU not found as a product', 'estasoft-erp-crm-sync-engine' ),
+					__( 'SKU not found as a product', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					array(
-						'refuse'   => __( 'Refuse the order', 'estasoft-erp-crm-sync-engine' ),
-						'write_in' => __( 'Add a write-in line', 'estasoft-erp-crm-sync-engine' ),
+						'refuse'   => __( 'Refuse the order', 'estasoft-enterprise-erpcrm-sync-engine' ),
+						'write_in' => __( 'Add a write-in line', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					)
 				),
 				$choice(
 					'total_mismatch',
-					__( 'Total differs from the shop', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Total differs from the shop', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					array(
-						'fail' => __( 'Stop and show an error', 'estasoft-erp-crm-sync-engine' ),
-						'warn' => __( 'Go on with a warning', 'estasoft-erp-crm-sync-engine' ),
+						'fail' => __( 'Stop and show an error', 'estasoft-enterprise-erpcrm-sync-engine' ),
+						'warn' => __( 'Go on with a warning', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					)
 				),
-				EntraCredentialFields::text( 'reference_column', __( 'Order reference column', 'estasoft-erp-crm-sync-engine' ), __( 'Optional: the logical name of a text column on Opportunity that holds the order number, so a renamed topic is still found.', 'estasoft-erp-crm-sync-engine' ) ),
-				EntraCredentialFields::text( 'price_list', __( 'Price list', 'estasoft-erp-crm-sync-engine' ), __( 'Optional: the name of a price list to put on every deal.', 'estasoft-erp-crm-sync-engine' ) ),
+				EntraCredentialFields::text( 'reference_column', __( 'Order reference column', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Optional: the logical name of a text column on Opportunity that holds the order number, so a renamed topic is still found.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+				EntraCredentialFields::text( 'price_list', __( 'Price list', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Optional: the name of a price list to put on every deal.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			)
 		);
 	}
@@ -180,10 +180,10 @@ final class DynamicsSalesConnector extends AbstractApiConnector {
 			);
 		}
 		if ( 404 === $response->status() && 1 === preg_match( '/Resource not found for the segment/i', $message ) ) {
-			return Failures::invalid( $this->label(), 'table', __( 'Dynamics 365 Sales does not seem to be installed in this environment (a table was not found).', 'estasoft-erp-crm-sync-engine' ), 'table not found' );
+			return Failures::invalid( $this->label(), 'table', __( 'Dynamics 365 Sales does not seem to be installed in this environment (a table was not found).', 'estasoft-enterprise-erpcrm-sync-engine' ), 'table not found' );
 		}
 		if ( 412 === $response->status() ) {
-			return Failures::invalid( $this->label(), 'record', __( 'Dynamics 365 refused the record (a duplicate or a stale version).', 'estasoft-erp-crm-sync-engine' ), 'precondition failed' );
+			return Failures::invalid( $this->label(), 'record', __( 'Dynamics 365 refused the record (a duplicate or a stale version).', 'estasoft-enterprise-erpcrm-sync-engine' ), 'precondition failed' );
 		}
 		return null;
 	}
@@ -199,7 +199,7 @@ final class DynamicsSalesConnector extends AbstractApiConnector {
 		$dv  = new DvClient( $this->api( $connection ), $this->label() );
 		$who = $dv->one( 'WhoAmI' );
 		if ( null === $who ) {
-			throw new ApiException( Failures::invalid( $this->label(), 'environment_url', __( 'The address did not answer like a Dynamics 365 environment.', 'estasoft-erp-crm-sync-engine' ), 'whoami missing' ) );
+			throw new ApiException( Failures::invalid( $this->label(), 'environment_url', __( 'The address did not answer like a Dynamics 365 environment.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'whoami missing' ) );
 		}
 		$org     = $dv->first( 'organizations', array( '$select' => 'name' ) );
 		$version = $dv->one( 'RetrieveVersion' );
@@ -232,7 +232,7 @@ final class DynamicsSalesConnector extends AbstractApiConnector {
 			ErrorCode::Auth004,
 			array(
 				'system' => $this->label(),
-				'action' => __( 'read deals, contacts, accounts and products', 'estasoft-erp-crm-sync-engine' ),
+				'action' => __( 'read deals, contacts, accounts and products', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			),
 			403,
 			null,
@@ -409,7 +409,7 @@ final class DynamicsSalesConnector extends AbstractApiConnector {
 		}
 		$name = trim( ( $partner['first_name'] ?? '' ) . ' ' . ( $partner['last_name'] ?? ( $partner['name'] ?? '' ) ) );
 		if ( '' === ( $partner['email'] ?? '' ) || '' === $name ) {
-			return SendResult::failure( Failures::invalid( $this->label(), 'partner.email', __( 'A contact needs a name and an email address.', 'estasoft-erp-crm-sync-engine' ), 'customer incomplete' ) );
+			return SendResult::failure( Failures::invalid( $this->label(), 'partner.email', __( 'A contact needs a name and an email address.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'customer incomplete' ) );
 		}
 		$parties = new DvParties( $dv, $this->label(), $this->deps->logger );
 		$found   = $parties->findContact( $partner['email'] );
@@ -440,7 +440,7 @@ final class DynamicsSalesConnector extends AbstractApiConnector {
 	private function environment( Connection $connection ): string {
 		$url = EnvironmentUrl::normalise( (string) $connection->config( 'environment_url', '' ) );
 		if ( null === $url ) {
-			throw new ApiException( Failures::invalid( $this->label(), 'environment_url', __( 'The environment URL must be an https address ending in dynamics.com, for example https://contoso.crm4.dynamics.com.', 'estasoft-erp-crm-sync-engine' ), 'environment refused' ) );
+			throw new ApiException( Failures::invalid( $this->label(), 'environment_url', __( 'The environment URL must be an https address ending in dynamics.com, for example https://contoso.crm4.dynamics.com.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'environment refused' ) );
 		}
 		return $url;
 	}
@@ -462,6 +462,6 @@ final class DynamicsSalesConnector extends AbstractApiConnector {
 			)[ $found[1] ];
 			return $verb . ' ' . strtolower( $found[2] ) . ' records';
 		}
-		return __( 'do this', 'estasoft-erp-crm-sync-engine' );
+		return __( 'do this', 'estasoft-enterprise-erpcrm-sync-engine' );
 	}
 }

@@ -75,7 +75,7 @@ export function StockPage( { tab }: { tab: StockTab } ) {
 			kind: 'success',
 			text: __(
 				'Stock sync started. The numbers update when it finishes.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 		} );
 		await overview.reload();
@@ -86,14 +86,14 @@ export function StockPage( { tab }: { tab: StockTab } ) {
 			? sprintf(
 					/* translators: %s: system name */ __(
 						'Tracking numbers and delivery status come from %s.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					system
 				)
 			: sprintf(
 					/* translators: %s: system name */ __(
 						'%s is the source of truth for stock quantities.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					system
 				);
@@ -101,7 +101,10 @@ export function StockPage( { tab }: { tab: StockTab } ) {
 	return (
 		<>
 			<PageHeader
-				title={ __( 'Stock', 'estasoft-erp-crm-sync-engine' ) }
+				title={ __(
+					'Stock',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 				description={ subtitle }
 				actions={
 					tab === 'stock' && canManage && supported ? (
@@ -113,29 +116,38 @@ export function StockPage( { tab }: { tab: StockTab } ) {
 						>
 							{ __(
 								'Run stock sync now',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Btn>
 					) : null
 				}
 			/>
 			<TabNav
-				label={ __( 'Stock pages', 'estasoft-erp-crm-sync-engine' ) }
+				label={ __(
+					'Stock pages',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 				items={ [
 					{
-						label: __( 'Stock', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'Stock',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						to: '/stock',
 						current: tab === 'stock',
 					},
 					{
-						label: __( 'Tracking', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'Tracking',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						to: '/stock/tracking',
 						current: tab === 'tracking',
 					},
 					{
 						label: __(
 							'Conflicts',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						to: '/stock/conflicts',
 						current: tab === 'conflicts',
@@ -154,13 +166,13 @@ export function StockPage( { tab }: { tab: StockTab } ) {
 					as="h2"
 					title={ __(
 						'Not offered for this system',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				>
 					{ sprintf(
 						/* translators: %s: system name */ __(
 							'%s does not give the plugin stock quantities or tracking numbers to read, so there is nothing to set up here.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						system
 					) }
@@ -171,7 +183,7 @@ export function StockPage( { tab }: { tab: StockTab } ) {
 					rows={ 5 }
 					label={ __(
 						'Loading stock',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			) : null }
@@ -289,7 +301,7 @@ function StockTabView( {
 			throw new Error(
 				__(
 					'At least one warehouse must count toward shop stock.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				)
 			);
 		}
@@ -307,7 +319,10 @@ function StockTabView( {
 		onSaved( next );
 		notify( {
 			kind: 'success',
-			text: __( 'Stock rules saved.', 'estasoft-erp-crm-sync-engine' ),
+			text: __(
+				'Stock rules saved.',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 		} );
 	} );
 	return (
@@ -317,51 +332,57 @@ function StockTabView( {
 					{
 						label: __(
 							'Products checked',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						value: overview.matched,
 						hint: overview.last_run_at
 							? __(
 									'matched in the last run',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								)
 							: __(
 									'not run yet',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 					},
 					{
-						label: __( 'Changed', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'Changed',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						value: overview.changes.length,
 						hint: __(
 							'in the last run',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 					},
 					{
 						label: __(
 							'Conflicts',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						value: overview.conflicts.length,
 						hint: __(
 							'need a decision',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 					},
 					{
-						label: __( 'Runs', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'Runs',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						value: sprintf(
 							/* translators: %d: minutes */ __(
 								'Every %d min',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							rules.interval_minutes
 						),
 						hint: sprintf(
 							/* translators: %s: system name */ __(
 								'and when %s reports a change',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							system
 						),
@@ -370,7 +391,10 @@ function StockTabView( {
 			/>
 			{ overview.last_run_at ? (
 				<p className="estasoft-sync-muted">
-					{ __( 'Last run:', 'estasoft-erp-crm-sync-engine' ) }{ ' ' }
+					{ __(
+						'Last run:',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }{ ' ' }
 					<DateTime value={ overview.last_run_at } kind="smart" />
 				</p>
 			) : null }
@@ -384,7 +408,7 @@ function StockTabView( {
 						>
 							{ __(
 								'Open Products',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Link>
 					}
@@ -394,32 +418,40 @@ function StockTabView( {
 							'%d product has no match, so its stock is not updated.',
 							'%d products have no match, so their stock is not updated.',
 							overview.unmatched,
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						overview.unmatched
 					) }
 				</Callout>
 			) : null }
-			<Card title={ __( 'Rules', 'estasoft-erp-crm-sync-engine' ) }>
+			<Card
+				title={ __(
+					'Rules',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
+			>
 				<fieldset
 					className="estasoft-sync-fieldset"
 					disabled={ ! canConfigure }
 				>
 					<legend className="estasoft-sync-sr-only">
-						{ __( 'Stock rules', 'estasoft-erp-crm-sync-engine' ) }
+						{ __(
+							'Stock rules',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						) }
 					</legend>
 					<p>
 						<span className="estasoft-sync-strong">
 							{ __(
 								'Which side wins',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</span>
 						<span className="estasoft-sync-muted estasoft-sync-block">
 							{ sprintf(
 								/* translators: 1: system name */ __(
 									'%1$s wins. WooCommerce never writes stock to %1$s.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								system
 							) }
@@ -428,7 +460,7 @@ function StockTabView( {
 					<CheckField
 						label={ __(
 							'Update WooCommerce stock',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						checked={ enabled }
 						onChange={ setEnabled }
@@ -437,7 +469,7 @@ function StockTabView( {
 						label={ sprintf(
 							/* translators: %s: system name */ __(
 								'Check %s for stock',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							system
 						) }
@@ -448,21 +480,21 @@ function StockTabView( {
 								value: '5',
 								label: __(
 									'Every 5 minutes',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 							},
 							{
 								value: '15',
 								label: __(
 									'Every 15 minutes',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 							},
 							{
 								value: '60',
 								label: __(
 									'Every hour',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 							},
 							...( [ 5, 15, 60 ].includes(
@@ -477,7 +509,7 @@ function StockTabView( {
 											label: sprintf(
 												/* translators: %d: minutes */ __(
 													'Every %d minutes',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												),
 												rules.interval_minutes
 											),
@@ -487,7 +519,7 @@ function StockTabView( {
 						hint={ sprintf(
 							/* translators: %s: system name */ __(
 								'And whenever %s says a quantity changed.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							system
 						) }
@@ -495,7 +527,7 @@ function StockTabView( {
 					<TextField
 						label={ __(
 							'Safety buffer (units kept in reserve for each product)',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						type="number"
 						min={ 0 }
@@ -505,18 +537,18 @@ function StockTabView( {
 						error={ error }
 						hint={ __(
 							'Shows less than your system has, so a short delay is less likely to oversell.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					/>
 					<CheckField
 						label={ __(
 							'Count items held in unpaid orders',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						hint={ sprintf(
 							/* translators: %s: system name */ __(
 								'WooCommerce holds stock for unpaid orders for a while. The shop quantity never rises above %s minus what is held.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							system
 						) }
@@ -526,10 +558,13 @@ function StockTabView( {
 				</fieldset>
 			</Card>
 			<Card
-				title={ __( 'Warehouses', 'estasoft-erp-crm-sync-engine' ) }
+				title={ __(
+					'Warehouses',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 				description={ __(
 					'The shop shows the sum of the warehouses that count, minus the safety buffer. WooCommerce keeps one quantity per product, so per-warehouse stock is not shown in the shop.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				flush
 			>
@@ -538,7 +573,10 @@ function StockTabView( {
 					disabled={ ! canConfigure }
 				>
 					<legend className="estasoft-sync-sr-only">
-						{ __( 'Warehouses', 'estasoft-erp-crm-sync-engine' ) }
+						{ __(
+							'Warehouses',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						) }
 					</legend>
 					<ResponsiveTable<
 						StockRules[ 'warehouses' ][ number ],
@@ -546,7 +584,7 @@ function StockTabView( {
 					>
 						caption={ __(
 							'Warehouses',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						rows={ rules.warehouses }
 						rowKey={ ( warehouse ) => warehouse.id }
@@ -555,7 +593,7 @@ function StockTabView( {
 								id: 'name',
 								header: __(
 									'Warehouse',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								primary: true,
 								cell: ( warehouse ) => (
@@ -571,14 +609,14 @@ function StockTabView( {
 								id: 'counts',
 								header: __(
 									'Counts toward shop stock',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								cell: ( warehouse ) => (
 									<CheckField
 										label={ sprintf(
 											/* translators: %s: warehouse name */ __(
 												'Counts: %s',
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											),
 											warehouse.name
 										) }
@@ -598,7 +636,7 @@ function StockTabView( {
 								id: 'used',
 								header: __(
 									'Used for',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								cell: ( warehouse ) =>
 									warehouse.countries.join( ', ' ) || '—',
@@ -608,11 +646,14 @@ function StockTabView( {
 				</fieldset>
 			</Card>
 			<Card
-				title={ __( 'Recent changes', 'estasoft-erp-crm-sync-engine' ) }
+				title={ __(
+					'Recent changes',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 				description={ sprintf(
 					/* translators: %s: system name */ __(
 						'The shop quantity is the quantity in %s minus the safety buffer.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					system
 				) }
@@ -622,19 +663,19 @@ function StockTabView( {
 					<EmptyState
 						title={ __(
 							'Stock is up to date',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					>
 						{ __(
 							'Nothing changed in the last run.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</EmptyState>
 				) : (
 					<ResponsiveTable< StockChange, number >
 						caption={ __(
 							'Recent stock changes',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						rows={ overview.changes }
 						rowKey={ ( change ) => change.id }
@@ -643,7 +684,7 @@ function StockTabView( {
 								id: 'sku',
 								header: __(
 									'SKU',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								primary: true,
 								cell: ( change ) => (
@@ -656,7 +697,7 @@ function StockTabView( {
 								id: 'product',
 								header: __(
 									'Product',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								wide: true,
 								cell: ( change ) => (
@@ -674,13 +715,13 @@ function StockTabView( {
 								id: 'shop',
 								header: __(
 									'Shop before, then after',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								cell: ( change ) =>
 									sprintf(
 										/* translators: 1: quantity before, 2: quantity after */ __(
 											'%1$d, then %2$d',
-											'estasoft-erp-crm-sync-engine'
+											'estasoft-enterprise-erpcrm-sync-engine'
 										),
 										change.shop_before,
 										change.shop_after
@@ -690,7 +731,7 @@ function StockTabView( {
 								id: 'time',
 								header: __(
 									'Time',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								cell: ( change ) => (
 									<DateTime value={ change.at } />
@@ -761,7 +802,7 @@ function TrackingTabView( {
 			kind: 'success',
 			text: __(
 				'Tracking settings saved.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 		} );
 	} );
@@ -771,7 +812,7 @@ function TrackingTabView( {
 				title={ sprintf(
 					/* translators: %s: system name */ __(
 						'When %s ships an order',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					system
 				) }
@@ -783,33 +824,33 @@ function TrackingTabView( {
 					<legend className="estasoft-sync-sr-only">
 						{ __(
 							'Tracking settings',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</legend>
 					<SelectField
 						label={ __(
 							'Move the order to',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						value={ becomes }
 						onChange={ setBecomes }
 						hint={ __(
 							'The status only moves forward, never back.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						options={ [
 							{
 								value: 'completed',
 								label: __(
 									'Completed when delivered',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 							},
 							{
 								value: 'none',
 								label: __(
 									'Do not change the status',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 							},
 							// A status saved some other way stays visible, labelled with its slug, so saving
@@ -822,11 +863,11 @@ function TrackingTabView( {
 					<CheckField
 						label={ __(
 							'Save the carrier and tracking number on the order',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						hint={ __(
 							'Added as an order note and made available to tracking plugins.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						checked={ tracking }
 						onChange={ setTracking }
@@ -835,13 +876,13 @@ function TrackingTabView( {
 						label={ sprintf(
 							/* translators: %s: system name */ __(
 								'Tell %s when the payment is collected',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							system
 						) }
 						hint={ __(
 							'When a cash on delivery order is marked delivered, a payment event is queued.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						checked={ cod }
 						onChange={ setCod }
@@ -851,7 +892,7 @@ function TrackingTabView( {
 			<Card
 				title={ __(
 					'Recent shipments',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				flush
 			>
@@ -859,13 +900,13 @@ function TrackingTabView( {
 					<EmptyState
 						title={ __(
 							'No shipments yet',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					>
 						{ sprintf(
 							/* translators: %s: system name */ __(
 								'Tracking numbers appear here once %s has shipped an order.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							system
 						) }
@@ -877,7 +918,7 @@ function TrackingTabView( {
 					>
 						caption={ __(
 							'Recent shipments',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						rows={ overview.tracking_recent }
 						rowKey={ ( row ) => row.order_id }
@@ -886,7 +927,7 @@ function TrackingTabView( {
 								id: 'order',
 								header: __(
 									'Order',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								primary: true,
 								cell: ( row ) => (
@@ -899,7 +940,7 @@ function TrackingTabView( {
 								id: 'carrier',
 								header: __(
 									'Carrier',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								cell: ( row ) => row.carrier,
 							},
@@ -907,7 +948,7 @@ function TrackingTabView( {
 								id: 'number',
 								header: __(
 									'Tracking number',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								wide: true,
 								cell: ( row ) => (
@@ -920,7 +961,7 @@ function TrackingTabView( {
 								id: 'at',
 								header: __(
 									'Updated',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								),
 								cell: ( row ) => <DateTime value={ row.at } />,
 							},
@@ -966,7 +1007,7 @@ function ConflictsView( {
 					text: sprintf(
 						/* translators: 1: SKU, 2: system name */ __(
 							'The shop now shows the %2$s quantity for %1$s.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						sku,
 						system
@@ -979,7 +1020,7 @@ function ConflictsView( {
 					text: sprintf(
 						/* translators: %s: SKU */ __(
 							'Holding %s. The shop quantity stays as it is, and the conflict stays open.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						sku
 					),
@@ -992,12 +1033,15 @@ function ConflictsView( {
 		return (
 			<EmptyState
 				as="h2"
-				title={ __( 'No conflicts', 'estasoft-erp-crm-sync-engine' ) }
+				title={ __(
+					'No conflicts',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 			>
 				{ sprintf(
 					/* translators: %s: system name */ __(
 						'A conflict is a case where the quantity in %s does not fit what WooCommerce already sold. None right now.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					system
 				) }
@@ -1010,7 +1054,7 @@ function ConflictsView( {
 				{ sprintf(
 					/* translators: 1: system name */ __(
 						'A conflict is a case where the quantity in %1$s does not fit what WooCommerce already sold. Nothing changes in the shop until you choose. Accept sets the shop to what %1$s says. Hold keeps the shop quantity as it is and leaves the conflict open until you decide.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					system
 				) }
@@ -1026,7 +1070,7 @@ function ConflictsView( {
 						'%d conflict',
 						'%d conflicts',
 						conflicts.length,
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					conflicts.length
 				) }
@@ -1035,7 +1079,7 @@ function ConflictsView( {
 				<ResponsiveTable< StockConflict, number >
 					caption={ __(
 						'Stock conflicts',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					rows={ conflicts }
 					rowKey={ ( conflict ) => conflict.id }
@@ -1044,7 +1088,7 @@ function ConflictsView( {
 							id: 'product',
 							header: __(
 								'Product',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							primary: true,
 							cell: ( conflict ) => (
@@ -1065,14 +1109,14 @@ function ConflictsView( {
 							id: 'differs',
 							header: __(
 								'What differs',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							wide: true,
 							cell: ( conflict ) =>
 								sprintf(
 									/* translators: 1: system name, 2: quantity there, 3: units sold and not synced */ __(
 										'%1$s has %2$d. %3$d sold and not synced yet.',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									system,
 									conflict.system_quantity,
@@ -1083,7 +1127,7 @@ function ConflictsView( {
 							id: 'problem',
 							header: __(
 								'Problem',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							cell: ( conflict ) => (
 								<StatusBadge
@@ -1096,11 +1140,11 @@ function ConflictsView( {
 									{ conflict.system_quantity < 0
 										? __(
 												'Negative quantity',
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											)
 										: __(
 												'Sold more than the system has',
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											) }
 								</StatusBadge>
 							),
@@ -1109,7 +1153,7 @@ function ConflictsView( {
 							id: 'actions',
 							header: __(
 								'Actions',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							hideHeader: true,
 							align: 'end',
@@ -1122,7 +1166,7 @@ function ConflictsView( {
 											aria-label={ sprintf(
 												/* translators: 1: system name, 2: SKU */ __(
 													'Accept %1$s’s quantity for %2$s',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												),
 												system,
 												conflict.sku
@@ -1138,7 +1182,7 @@ function ConflictsView( {
 											{ sprintf(
 												/* translators: %s: system name */ __(
 													'Accept %s’s quantity',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												),
 												system
 											) }
@@ -1149,7 +1193,7 @@ function ConflictsView( {
 											aria-label={ sprintf(
 												/* translators: %s: SKU */ __(
 													'Hold %s',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												),
 												conflict.sku
 											) }
@@ -1163,7 +1207,7 @@ function ConflictsView( {
 										>
 											{ __(
 												'Hold',
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											) }
 										</Btn>
 									</span>

@@ -57,7 +57,7 @@ final class MappingException extends \RuntimeException {
 	public static function requiredMissing( ErrorCode $code, string $ruleId, string $target, array $context = array() ): self {
 		$context += array(
 			'field'  => $target,
-			'reason' => __( 'A required value is missing.', 'estasoft-erp-crm-sync-engine' ),
+			'reason' => __( 'A required value is missing.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		);
 		return new self( $code, $context, $ruleId, $target );
 	}

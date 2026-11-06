@@ -15,11 +15,10 @@ need the owner's accounts.
 
 ## Before you upload (10 minutes)
 
-1. **Check the plugin name and slug.** WordPress.org builds the permalink from the plugin name, so it may offer
-   `estasoft-enterprise-erp-crm-sync-engine` rather than the text domain and folder name
-   `estasoft-erp-crm-sync-engine`. If the review email proposes the longer one, reply that you want
-   `estasoft-erp-crm-sync-engine` so the slug matches the text domain; if they insist on the other one, the text
-   domain and folder name must be changed to match before approval.
+1. **The slug.** WordPress.org assigned `estasoft-enterprise-erpcrm-sync-engine` when you uploaded the first zip. Plugin Check on
+   wordpress.org found one problem only: the text domain was `estasoft-erp-crm-sync-engine`. This zip uses the
+   assigned slug everywhere (text domain, folder in the zip, main file), so that problem is gone. The slug cannot be
+   changed after approval; if you would rather have a shorter one, ask the review team before they approve.
 2. **Check the account.** Sign in at <https://wordpress.org/> with the account that will own the plugin. Turn on
    two-factor authentication (Profile > Account & Security). Check that `Contributors: estasofttechnologies` in
    `readme.txt` is exactly that account's username; change `readme.txt` and rebuild the zip if it is not.
@@ -29,8 +28,9 @@ need the owner's accounts.
 
 ## Upload
 
-4. Open <https://wordpress.org/plugins/developers/add/>, upload the file
-   `estasoft-erp-crm-sync-engine-0.1.0.zip`, tick the confirmations and submit.
+4. If the first zip is still waiting for review, send the new file `estasoft-enterprise-erpcrm-sync-engine-0.1.0.zip` the way
+   WordPress.org tells you on the plugin's pending page or in its email (a new upload on the same page, or an
+   attachment to your reply). A first submission is made at <https://wordpress.org/plugins/developers/add/>.
 5. An automatic check runs at once and a person from the Plugin Review team writes to the account's email address
    (not at once). Reply in the same thread. The text to paste is in [SUBMISSION-NOTES.md](SUBMISSION-NOTES.md),
    sections 1 to 8 for the description and section 9 for how a reviewer can test it without a paid ERP.

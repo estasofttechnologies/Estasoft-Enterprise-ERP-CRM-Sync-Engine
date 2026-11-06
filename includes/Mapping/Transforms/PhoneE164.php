@@ -62,7 +62,7 @@ final class PhoneE164 extends BaseTransform {
 		}
 		$number = $this->normalise( $raw, $this->defaultRegion( $args, $context ) );
 		if ( null === $number ) {
-			$context->warn( __( 'A phone number could not be read as an international number and was left empty.', 'estasoft-erp-crm-sync-engine' ) );
+			$context->warn( __( 'A phone number could not be read as an international number and was left empty.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			return '';
 		}
 		return $number;

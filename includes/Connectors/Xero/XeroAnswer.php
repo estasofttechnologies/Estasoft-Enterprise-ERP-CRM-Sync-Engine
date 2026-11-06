@@ -33,12 +33,12 @@ final class XeroAnswer {
 		$data    = $response->json();
 		$element = isset( $data[ $key ][0] ) && is_array( $data[ $key ][0] ) ? $data[ $key ][0] : null;
 		if ( null === $element ) {
-			$failure = XeroErrors::exception( XeroErrors::refused( $key, __( 'Xero answered without the record.', 'estasoft-erp-crm-sync-engine' ), $response->status() ), $response );
+			$failure = XeroErrors::exception( XeroErrors::refused( $key, __( 'Xero answered without the record.', 'estasoft-enterprise-erpcrm-sync-engine' ), $response->status() ), $response );
 			throw $failure;
 		}
 		if ( ! empty( $element['HasErrors'] ) || ! empty( $element['ValidationErrors'] ) ) {
 			$messages = XeroErrors::validationMessages( array( $key => array( $element ) ) );
-			$failure  = XeroErrors::exception( XeroErrors::refused( $key, array() === $messages ? __( 'Xero refused the data.', 'estasoft-erp-crm-sync-engine' ) : $messages[0], $response->status() ), $response );
+			$failure  = XeroErrors::exception( XeroErrors::refused( $key, array() === $messages ? __( 'Xero refused the data.', 'estasoft-enterprise-erpcrm-sync-engine' ) : $messages[0], $response->status() ), $response );
 			throw $failure;
 		}
 		return $element;

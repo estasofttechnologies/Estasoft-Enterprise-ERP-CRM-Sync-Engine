@@ -198,16 +198,16 @@ final class CapacityTest {
 	 */
 	private function verdict( int $perMinute, bool $database ): string {
 		if ( $perMinute >= 6000 ) {
-			$text = __( 'Fast. The queue itself is not the limit on this server; the speed of your connected system is.', 'estasoft-erp-crm-sync-engine' );
+			$text = __( 'Fast. The queue itself is not the limit on this server; the speed of your connected system is.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		} elseif ( $perMinute >= 1200 ) {
-			$text = __( 'Good. This server handles the queue comfortably for a busy shop; the speed of your connected system is the limit.', 'estasoft-erp-crm-sync-engine' );
+			$text = __( 'Good. This server handles the queue comfortably for a busy shop; the speed of your connected system is the limit.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		} elseif ( $perMinute >= 300 ) {
-			$text = __( 'Fair. Enough for most shops. If you expect big sales, ask your host about faster database access.', 'estasoft-erp-crm-sync-engine' );
+			$text = __( 'Fair. Enough for most shops. If you expect big sales, ask your host about faster database access.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		} else {
-			$text = __( 'Slow. This server may fall behind in a busy hour. Check the database speed with your host, or switch to the High volume profile.', 'estasoft-erp-crm-sync-engine' );
+			$text = __( 'Slow. This server may fall behind in a busy hour. Check the database speed with your host, or switch to the High volume profile.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		if ( ! $database ) {
-			$text .= ' ' . __( 'The database could not be part of the test, so only the plugin\'s own code was measured.', 'estasoft-erp-crm-sync-engine' );
+			$text .= ' ' . __( 'The database could not be part of the test, so only the plugin\'s own code was measured.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		return $text;
 	}

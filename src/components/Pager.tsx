@@ -42,7 +42,7 @@ export function Pager( {
 				/* translators: 1: first item number, 2: last item number, 3: total number, 4: scope such as "today" */
 				__(
 					'Showing %1$d to %2$d of %3$d %4$s',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				first,
 				last,
@@ -53,7 +53,7 @@ export function Pager( {
 				/* translators: 1: first item number, 2: last item number, 3: total number */
 				__(
 					'Showing %1$d to %2$d of %3$d',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				first,
 				last,
@@ -62,7 +62,10 @@ export function Pager( {
 	return (
 		<nav
 			className="estasoft-sync-pager"
-			aria-label={ __( 'Pages', 'estasoft-erp-crm-sync-engine' ) }
+			aria-label={ __(
+				'Pages',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			) }
 		>
 			<p className="estasoft-sync-muted" aria-live="polite">
 				{ summary }
@@ -73,14 +76,17 @@ export function Pager( {
 					disabled={ page <= 1 }
 					onClick={ () => onPage( page - 1 ) }
 				>
-					{ __( 'Previous', 'estasoft-erp-crm-sync-engine' ) }
+					{ __(
+						'Previous',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 				</Btn>
 				<Btn
 					small
 					disabled={ page >= totalPages }
 					onClick={ () => onPage( page + 1 ) }
 				>
-					{ __( 'Next', 'estasoft-erp-crm-sync-engine' ) }
+					{ __( 'Next', 'estasoft-enterprise-erpcrm-sync-engine' ) }
 				</Btn>
 			</div>
 		</nav>

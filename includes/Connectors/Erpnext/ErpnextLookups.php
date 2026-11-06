@@ -54,7 +54,7 @@ final class ErpnextLookups {
 		if ( '' !== $named ) {
 			$doc = $this->client->get( 'Company', $named );
 			if ( null === $doc ) {
-				return Problems::refused( $this->system, 'company', __( 'The company named in the connection settings does not exist, or the user cannot see it.', 'estasoft-erp-crm-sync-engine' ) );
+				return Problems::refused( $this->system, 'company', __( 'The company named in the connection settings does not exist, or the user cannot see it.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$this->cache['company'] = array(
 				'name'     => (string) ( $doc['name'] ?? $named ),
@@ -68,8 +68,8 @@ final class ErpnextLookups {
 				$this->system,
 				'company',
 				array() === $rows
-					? __( 'The user can see no company. Give it access to one, or check the roles.', 'estasoft-erp-crm-sync-engine' )
-					: __( 'The site has several companies. Enter the company in the connection settings.', 'estasoft-erp-crm-sync-engine' )
+					? __( 'The user can see no company. Give it access to one, or check the roles.', 'estasoft-enterprise-erpcrm-sync-engine' )
+					: __( 'The site has several companies. Enter the company in the connection settings.', 'estasoft-enterprise-erpcrm-sync-engine' )
 			);
 		}
 		$this->cache['company'] = array(
@@ -101,7 +101,7 @@ final class ErpnextLookups {
 					'price_list',
 					sprintf(
 						/* translators: %s: currency code. */
-						__( 'The price list in the connection settings must exist, be enabled, be a selling list and be in %s.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'The price list in the connection settings must exist, be enabled, be a selling list and be in %s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$currency
 					)
 				);
@@ -116,7 +116,7 @@ final class ErpnextLookups {
 				'price_list',
 				sprintf(
 					/* translators: %s: currency code. */
-					__( 'There is no enabled selling price list in %s. Create one, or the order would be priced in another currency.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'There is no enabled selling price list in %s. Create one, or the order would be priced in another currency.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$currency
 				)
 			);
@@ -155,7 +155,7 @@ final class ErpnextLookups {
 				'currency',
 				sprintf(
 					/* translators: 1: order currency, 2: company currency. */
-					__( 'ERPNext has no exchange rate from %1$s to %2$s. Add one under Currency Exchange.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'ERPNext has no exchange rate from %1$s to %2$s. Add one under Currency Exchange.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$from,
 					$to
 				)

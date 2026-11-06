@@ -167,11 +167,11 @@ export function Wizard() {
 				mode === 'shadow'
 					? __(
 							'Shadow mode started. Nothing is sent. Each order is compared with your system and the differences are listed.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						)
 					: __(
 							'You are live. New orders are sent as they arrive.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 		} );
 		navigate( '/' );
@@ -190,7 +190,10 @@ export function Wizard() {
 		speak(
 			sprintf(
 				/* translators: 1: current step, 2: number of steps, 3: name of the step */
-				__( 'Step %1$d of %2$d: %3$s', 'estasoft-erp-crm-sync-engine' ),
+				__(
+					'Step %1$d of %2$d: %3$s',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				),
 				step,
 				5,
 				getStepLabels()[ step - 1 ] ?? ''
@@ -205,14 +208,14 @@ export function Wizard() {
 				<PageHeader
 					title={ __(
 						'Set up ESTASOFT SYNC',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 				<LoadingState
 					rows={ 4 }
 					label={ __(
 						'Loading the setup guide',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			</>
@@ -224,7 +227,7 @@ export function Wizard() {
 				<PageHeader
 					title={ __(
 						'Set up ESTASOFT SYNC',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 				<ErrorState
@@ -232,7 +235,7 @@ export function Wizard() {
 					onRetry={ () => void onboarding.reload() }
 					title={ __(
 						'The setup guide could not be loaded.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			</>
@@ -244,13 +247,13 @@ export function Wizard() {
 				<PageHeader
 					title={ __(
 						'Set up ESTASOFT SYNC',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 				<Callout tone="info">
 					{ __(
 						'Only an administrator can set up the connection. Ask one to open this page.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</Callout>
 			</>
@@ -267,7 +270,7 @@ export function Wizard() {
 	let canContinue = true;
 	let continueLabel: string = __(
 		'Continue',
-		'estasoft-erp-crm-sync-engine'
+		'estasoft-enterprise-erpcrm-sync-engine'
 	);
 	let onContinue: () => void = () => void move.run( step + 1 );
 	let onBack: ( () => void ) | null =
@@ -342,7 +345,7 @@ export function Wizard() {
 						rows={ 3 }
 						label={ __(
 							'Loading',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					/>
 				);
@@ -368,14 +371,14 @@ export function Wizard() {
 						<Btn small onClick={ () => void move.run( 2 ) }>
 							{ __(
 								'Connect a system',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Btn>
 					}
 				>
 					{ __(
 						'Connect a system first. What to sync depends on what the system can do.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</Callout>
 			);
@@ -391,7 +394,7 @@ export function Wizard() {
 			);
 			continueLabel = __(
 				'Looks right, continue',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			);
 			onContinue = () =>
 				void move.run( 5, {
@@ -413,15 +416,21 @@ export function Wizard() {
 				<Callout tone="warning">
 					{ __(
 						'Connect a system first.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				</Callout>
 			);
 			canContinue = Boolean( connection );
 			continueLabel =
 				mode === 'shadow'
-					? __( 'Start shadow mode', 'estasoft-erp-crm-sync-engine' )
-					: __( 'Go live now', 'estasoft-erp-crm-sync-engine' );
+					? __(
+							'Start shadow mode',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						)
+					: __(
+							'Go live now',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						);
 			onContinue = () =>
 				mode === 'live' ? setConfirmLive( true ) : void start.run();
 	}
@@ -431,11 +440,11 @@ export function Wizard() {
 			<PageHeader
 				title={ __(
 					'Set up ESTASOFT SYNC',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				description={ __(
 					'You can leave and come back. Nothing is sent to your system until the last step.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			/>
 			<Steps current={ step } />
@@ -462,7 +471,7 @@ export function Wizard() {
 					{ sprintf(
 						/* translators: 1: current step, 2: number of steps */ __(
 							'Step %1$d of %2$d',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						step,
 						5
@@ -473,13 +482,16 @@ export function Wizard() {
 						<Btn onClick={ () => navigate( '/mapping/orders' ) }>
 							{ __(
 								'Edit the mapping',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Btn>
 					) : null }
 					{ onBack ? (
 						<Btn onClick={ onBack } disabled={ move.busy }>
-							{ __( 'Back', 'estasoft-erp-crm-sync-engine' ) }
+							{ __(
+								'Back',
+								'estasoft-enterprise-erpcrm-sync-engine'
+							) }
 						</Btn>
 					) : null }
 					<Btn
@@ -496,11 +508,11 @@ export function Wizard() {
 				<ConfirmDialog
 					title={ __(
 						'Go live now?',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					confirmLabel={ __(
 						'Go live now',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					onClose={ () => setConfirmLive( false ) }
 					onConfirm={ doStart }
@@ -509,19 +521,19 @@ export function Wizard() {
 						{ sprintf(
 							/* translators: %s: system name */ __(
 								'New orders will be sent to %s as they arrive. Orders placed before now are not sent.',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							system ||
 								__(
 									'your system',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								)
 						) }
 					</p>
 					<p className="estasoft-sync-muted">
 						{ __(
 							'Shadow mode compares first and sends nothing. Going live skips that check.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</p>
 				</ConfirmDialog>

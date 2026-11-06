@@ -35,12 +35,12 @@ final class SageX3ErrorMapper {
 		}
 		$text = self::firstError( $response->jsonValue() );
 		if ( 404 === $status ) {
-			return Problems::refused( $system, 'order_class', '' !== $text ? $text : __( 'This folder does not expose the class with the representation named in the connection settings, or the folder name is wrong.', 'estasoft-erp-crm-sync-engine' ), 'class not found' );
+			return Problems::refused( $system, 'order_class', '' !== $text ? $text : __( 'This folder does not expose the class with the representation named in the connection settings, or the folder name is wrong.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'class not found' );
 		}
 		if ( 1 === preg_match( '/^\s*(<!doctype|<html|<head|<body)/i', $response->body() ) ) {
-			return Problems::refused( $system, 'address', __( 'This address did not answer like Sage X3 web services. Check the address and the folder.', 'estasoft-erp-crm-sync-engine' ), 'not x3' );
+			return Problems::refused( $system, 'address', __( 'This address did not answer like Sage X3 web services. Check the address and the folder.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'not x3' );
 		}
-		return Problems::refused( $system, 'request', '' !== $text ? $text : __( 'Sage X3 refused the request.', 'estasoft-erp-crm-sync-engine' ), 'sagex3 ' . $status );
+		return Problems::refused( $system, 'request', '' !== $text ? $text : __( 'Sage X3 refused the request.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'sagex3 ' . $status );
 	}
 
 	/**

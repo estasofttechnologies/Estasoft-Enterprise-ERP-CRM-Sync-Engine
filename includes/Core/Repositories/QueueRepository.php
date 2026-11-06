@@ -993,7 +993,7 @@ final class QueueRepository extends Repository {
 	public static function poisonMessage( int $reaps ): string {
 		return sprintf(
 			/* translators: %d: how many times the worker stopped while sending this item. */
-			__( 'The sync worker stopped %d times while sending this item, so it was set aside. A person needs to look at it, then retry.', 'estasoft-erp-crm-sync-engine' ),
+			__( 'The sync worker stopped %d times while sending this item, so it was set aside. A person needs to look at it, then retry.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			$reaps
 		);
 	}
@@ -1005,7 +1005,7 @@ final class QueueRepository extends Repository {
 	 */
 	public static function poisonCause( int $reaps ): string {
 		/* translators: %d: how many times the worker stopped. */
-		return sprintf( __( 'Worker stopped %d times', 'estasoft-erp-crm-sync-engine' ), $reaps );
+		return sprintf( __( 'Worker stopped %d times', 'estasoft-enterprise-erpcrm-sync-engine' ), $reaps );
 	}
 
 	/**

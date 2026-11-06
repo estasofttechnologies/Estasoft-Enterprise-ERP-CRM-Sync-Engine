@@ -23,19 +23,19 @@ final class StateChip {
 	 */
 	public function label( string $state ): string {
 		return match ( $state ) {
-			'queued'    => __( 'Queued', 'estasoft-erp-crm-sync-engine' ),
-			'syncing'   => __( 'Syncing', 'estasoft-erp-crm-sync-engine' ),
-			'synced'    => __( 'Synced', 'estasoft-erp-crm-sync-engine' ),
-			'retrying'  => __( 'Retrying', 'estasoft-erp-crm-sync-engine' ),
-			'failed'    => __( 'Failed', 'estasoft-erp-crm-sync-engine' ),
-			'skipped'   => __( 'Skipped', 'estasoft-erp-crm-sync-engine' ),
-			'shadow'    => __( 'Shadow mode', 'estasoft-erp-crm-sync-engine' ),
-			'excluded'  => __( 'Excluded', 'estasoft-erp-crm-sync-engine' ),
-			'matched'   => __( 'Matched', 'estasoft-erp-crm-sync-engine' ),
-			'unmatched' => __( 'Not matched', 'estasoft-erp-crm-sync-engine' ),
-			'no_sku'    => __( 'No SKU', 'estasoft-erp-crm-sync-engine' ),
-			'unchecked' => __( 'Not checked yet', 'estasoft-erp-crm-sync-engine' ),
-			default     => __( 'Not sent', 'estasoft-erp-crm-sync-engine' ),
+			'queued'    => __( 'Queued', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'syncing'   => __( 'Syncing', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'synced'    => __( 'Synced', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'retrying'  => __( 'Retrying', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'failed'    => __( 'Failed', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'skipped'   => __( 'Skipped', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'shadow'    => __( 'Shadow mode', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'excluded'  => __( 'Excluded', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'matched'   => __( 'Matched', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'unmatched' => __( 'Not matched', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'no_sku'    => __( 'No SKU', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'unchecked' => __( 'Not checked yet', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			default     => __( 'Not sent', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		};
 	}
 

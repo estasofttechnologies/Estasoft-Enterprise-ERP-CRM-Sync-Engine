@@ -128,8 +128,8 @@ final class ToolsController extends BaseController {
 	public function deleteData( \WP_REST_Request $request ): array {
 		if ( self::DELETE_WORD !== (string) $request->get_param( 'word' ) ) {
 			throw ApiException::invalid(
-				esc_html__( 'Type the word DELETE to confirm.', 'estasoft-erp-crm-sync-engine' ),
-				array( 'word' => esc_html__( 'Type the word DELETE exactly as shown.', 'estasoft-erp-crm-sync-engine' ) )
+				esc_html__( 'Type the word DELETE to confirm.', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				array( 'word' => esc_html__( 'Type the word DELETE exactly as shown.', 'estasoft-enterprise-erpcrm-sync-engine' ) )
 			);
 		}
 		$eraser = $this->serviceAs( Services::DATA_ERASER, DataEraser::class );

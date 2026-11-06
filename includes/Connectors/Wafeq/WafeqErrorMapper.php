@@ -46,8 +46,8 @@ final class WafeqErrorMapper {
 				ErrorCode::Val002,
 				array(
 					'system' => WafeqConnector::LABEL,
-					'field'  => '' !== $found['field'] ? $found['field'] : __( 'the request', 'estasoft-erp-crm-sync-engine' ),
-					'reason' => '' !== $found['reason'] ? $found['reason'] : __( 'Wafeq could not validate the request.', 'estasoft-erp-crm-sync-engine' ),
+					'field'  => '' !== $found['field'] ? $found['field'] : __( 'the request', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'reason' => '' !== $found['reason'] ? $found['reason'] : __( 'Wafeq could not validate the request.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				400,
 				null,
@@ -60,8 +60,8 @@ final class WafeqErrorMapper {
 				ErrorCode::Val002,
 				array(
 					'system' => WafeqConnector::LABEL,
-					'field'  => __( 'a related record', 'estasoft-erp-crm-sync-engine' ),
-					'reason' => __( 'Wafeq does not have this record in the connected organisation.', 'estasoft-erp-crm-sync-engine' ),
+					'field'  => __( 'a related record', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'reason' => __( 'Wafeq does not have this record in the connected organisation.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				404,
 				null,
@@ -103,7 +103,7 @@ final class WafeqErrorMapper {
 			ErrorCode::Auth004,
 			array(
 				'system' => WafeqConnector::LABEL,
-				'action' => __( 'do this', 'estasoft-erp-crm-sync-engine' ),
+				'action' => __( 'do this', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			),
 			403,
 			null,

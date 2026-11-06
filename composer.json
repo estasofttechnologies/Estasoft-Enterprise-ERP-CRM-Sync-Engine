@@ -1,5 +1,5 @@
 {
-  "name": "estasofttechnologies/estasoft-erp-crm-sync-engine",
+  "name": "estasofttechnologies/estasoft-enterprise-erpcrm-sync-engine",
   "description": "Estasoft Enterprise ERP/CRM Sync Engine: a WooCommerce plugin that keeps your store in step with your ERP, accounting system or CRM through a durable queue.",
   "type": "wordpress-plugin",
   "license": "GPL-2.0-or-later",
@@ -53,6 +53,6 @@
     "check": "PHPCS, PHPStan and the unit tests.",
     "check:all": "Everything that can run locally, with a list of what was skipped.",
     "build:zip": "Build the production zip (bin/build-zip.sh; add --dry-run to only check the file list).",
-    "i18n:pot": "Write languages/estasoft-erp-crm-sync-engine.pot with WP-CLI."
+    "i18n:pot": "Write languages/estasoft-enterprise-erpcrm-sync-engine.pot with WP-CLI."
   }
 }

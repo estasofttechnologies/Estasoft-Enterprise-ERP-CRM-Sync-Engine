@@ -172,66 +172,66 @@ final class QoyodConnector extends AbstractApiConnector {
 	protected function credentialDefinition(): array {
 		$advanced = static fn( string $name, string $label, string $hint, string $preset = '', string $type = 'text', array $options = array() ): CredentialField => new CredentialField( $name, $label, false, false, $hint, $preset, $type, $options, 'advanced' );
 		return array(
-			CredentialFields::apiKey( 'api_key', __( 'API key', 'estasoft-erp-crm-sync-engine' ), __( 'Make it under Settings, General Settings in Qoyod (Pro or Advanced plan). Saved encrypted. It is never shown again.', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'inventory_id', __( 'Branch number', 'estasoft-erp-crm-sync-engine' ), __( 'The branch (inventory) that documents are booked to. Empty: the only branch.', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'currency', __( 'Account currency', 'estasoft-erp-crm-sync-engine' ), __( 'Qoyod makes invoices in this currency. Orders in another currency are stopped.', 'estasoft-erp-crm-sync-engine' ), 'SAR' ),
+			CredentialFields::apiKey( 'api_key', __( 'API key', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Make it under Settings, General Settings in Qoyod (Pro or Advanced plan). Saved encrypted. It is never shown again.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'inventory_id', __( 'Branch number', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'The branch (inventory) that documents are booked to. Empty: the only branch.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'currency', __( 'Account currency', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Qoyod makes invoices in this currency. Orders in another currency are stopped.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'SAR' ),
 			$advanced(
 				'approval',
-				__( 'Invoices', 'estasoft-erp-crm-sync-engine' ),
-				__( 'Approved invoices are posted and sent to the tax authority by Qoyod. Drafts wait for a person.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Invoices', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				__( 'Approved invoices are posted and sent to the tax authority by Qoyod. Drafts wait for a person.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'after_check',
 				'select',
 				array(
-					'after_check' => __( 'Approve after the total is checked', 'estasoft-erp-crm-sync-engine' ),
-					'draft'       => __( 'Leave as draft', 'estasoft-erp-crm-sync-engine' ),
+					'after_check' => __( 'Approve after the total is checked', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'draft'       => __( 'Leave as draft', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				)
 			),
 			$advanced(
 				'untaxed_rows',
-				__( 'Lines without tax', 'estasoft-erp-crm-sync-engine' ),
-				__( 'A line the shop sent without a tax. Zero-rated and exempt sales are different in tax law, so choose; by default the order stops.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Lines without tax', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				__( 'A line the shop sent without a tax. Zero-rated and exempt sales are different in tax law, so choose; by default the order stops.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'refuse',
 				'select',
 				array(
-					'refuse'     => __( 'Stop the order', 'estasoft-erp-crm-sync-engine' ),
-					'zero_rated' => __( 'Zero-rated (code 2)', 'estasoft-erp-crm-sync-engine' ),
-					'exempt'     => __( 'Exempt (code 3)', 'estasoft-erp-crm-sync-engine' ),
+					'refuse'     => __( 'Stop the order', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'zero_rated' => __( 'Zero-rated (code 2)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'exempt'     => __( 'Exempt (code 3)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				)
 			),
 			$advanced(
 				'record_payment',
-				__( 'Record payments', 'estasoft-erp-crm-sync-engine' ),
-				__( 'Paid orders also create a payment in Qoyod. Needs the payment account number below.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Record payments', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				__( 'Paid orders also create a payment in Qoyod. Needs the payment account number below.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'no',
 				'select',
 				array(
-					'no'  => __( 'No', 'estasoft-erp-crm-sync-engine' ),
-					'yes' => __( 'Yes', 'estasoft-erp-crm-sync-engine' ),
+					'no'  => __( 'No', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'yes' => __( 'Yes', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				)
 			),
-			$advanced( 'payment_account_id', __( 'Payment account number', 'estasoft-erp-crm-sync-engine' ), __( 'The number of the bank or cash account that receives the money.', 'estasoft-erp-crm-sync-engine' ) ),
+			$advanced( 'payment_account_id', __( 'Payment account number', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'The number of the bank or cash account that receives the money.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			$advanced(
 				'line_tax_field',
-				__( 'How tax is sent', 'estasoft-erp-crm-sync-engine' ),
-				__( 'Change this only if Qoyod rejects the tax of a line.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'How tax is sent', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				__( 'Change this only if Qoyod rejects the tax of a line.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'tax_id',
 				'select',
 				array(
-					'tax_id'      => __( 'By tax code', 'estasoft-erp-crm-sync-engine' ),
-					'tax_percent' => __( 'By percentage', 'estasoft-erp-crm-sync-engine' ),
+					'tax_id'      => __( 'By tax code', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'tax_percent' => __( 'By percentage', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				)
 			),
-			$advanced( 'shipping_product_sku', __( 'Shipping product (SKU)', 'estasoft-erp-crm-sync-engine' ), __( 'Qoyod has no lines without a product. A service product that carries shipping.', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'fee_product_sku', __( 'Fees product (SKU)', 'estasoft-erp-crm-sync-engine' ), __( 'A service product that carries fees and other refunded amounts.', 'estasoft-erp-crm-sync-engine' ) ),
+			$advanced( 'shipping_product_sku', __( 'Shipping product (SKU)', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Qoyod has no lines without a product. A service product that carries shipping.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'fee_product_sku', __( 'Fees product (SKU)', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'A service product that carries fees and other refunded amounts.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			$advanced(
 				'total_mismatch',
-				__( 'A total that differs from the shop', 'estasoft-erp-crm-sync-engine' ),
-				__( 'Stop before approving, or approve and warn.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'A total that differs from the shop', 'estasoft-enterprise-erpcrm-sync-engine' ),
+				__( 'Stop before approving, or approve and warn.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'fail',
 				'select',
 				array(
-					'fail' => __( 'Stop the invoice', 'estasoft-erp-crm-sync-engine' ),
-					'warn' => __( 'Warn and go on', 'estasoft-erp-crm-sync-engine' ),
+					'fail' => __( 'Stop the invoice', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'warn' => __( 'Warn and go on', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				)
 			),
 		);
@@ -349,7 +349,7 @@ final class QoyodConnector extends AbstractApiConnector {
 					array(
 						'system' => self::LABEL,
 						'field'  => $item->entityType->value,
-						'reason' => __( 'This connector does not send this kind of item.', 'estasoft-erp-crm-sync-engine' ),
+						'reason' => __( 'This connector does not send this kind of item.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					),
 					null,
 					null,

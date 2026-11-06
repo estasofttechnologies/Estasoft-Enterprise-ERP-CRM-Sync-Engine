@@ -61,7 +61,7 @@ final class SmaccConnector extends AbstractApiConnector {
 	 * Why the system cannot be used, as a sentence the screens can show.
 	 */
 	public function unavailableReason(): string {
-		return __( 'SMACC publishes no public API yet, so the plugin cannot send orders to it.', 'estasoft-erp-crm-sync-engine' );
+		return __( 'SMACC publishes no public API yet, so the plugin cannot send orders to it.', 'estasoft-enterprise-erpcrm-sync-engine' );
 	}
 
 	/**

@@ -117,7 +117,7 @@ final class SageOrderSender {
 			$done = $this->finish( $invoice, $parsed, false, $warnings );
 		}
 		if ( null === $done ) {
-			return SendResult::failure( SageErrors::refused( 'sales_invoice', __( 'Sage keeps answering with an invoice that no longer exists. Try again later.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( SageErrors::refused( 'sales_invoice', __( 'Sage keeps answering with an invoice that no longer exists. Try again later.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		if ( $done instanceof ConnectorError ) {
 			return SendResult::failure( $done );
@@ -142,7 +142,7 @@ final class SageOrderSender {
 				'currency',
 				sprintf(
 					/* translators: 1: order currency, 2: currency of the business. */
-					__( 'The order is in %1$s but the business works in %2$s. Foreign-currency invoices are not sent.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'The order is in %1$s but the business works in %2$s. Foreign-currency invoices are not sent.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$parsed->currency,
 					$currency
 				)
@@ -249,7 +249,7 @@ final class SageOrderSender {
 			$problem,
 			sprintf(
 				/* translators: %s: the shop's reference of the order, such as WC-1042. */
-				__( 'The draft invoice %s is still in Sage (nothing is posted for a draft). Delete it in Sage, then retry.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'The draft invoice %s is still in Sage (nothing is posted for a draft). Delete it in Sage, then retry.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				SagePayloadReader::text( $invoice['reference'] ?? '' )
 			)
 		);
@@ -276,7 +276,7 @@ final class SageOrderSender {
 	private function pay( array $invoice, SageOrderPayload $parsed ): array|ConnectorError {
 		$account = $this->options->text( 'payment_bank_account' );
 		if ( '' === $account ) {
-			return SageErrors::refused( 'payment_bank_account', __( 'Set the bank account that receives payments in the connection option "payment_bank_account".', 'estasoft-erp-crm-sync-engine' ) );
+			return SageErrors::refused( 'payment_bank_account', __( 'Set the bank account that receives payments in the connection option "payment_bank_account".', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$bank = $this->business->bankId( $account );
 		if ( '' === $bank ) {
@@ -284,7 +284,7 @@ final class SageOrderSender {
 				'payment_bank_account',
 				sprintf(
 					/* translators: %s: name or id of a bank account. */
-					__( 'Sage has no bank account "%s". Check the connection option payment_bank_account.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Sage has no bank account "%s". Check the connection option payment_bank_account.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$account
 				)
 			);
@@ -418,7 +418,7 @@ final class SageOrderSender {
 			'sales_invoice',
 			sprintf(
 				/* translators: %s: the shop's reference of the order, such as WC-1042. */
-				__( 'The invoice for %s was voided in Sage. Delete the voided invoice there, or change its reference, then retry.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'The invoice for %s was voided in Sage. Delete the voided invoice there, or change its reference, then retry.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$reference
 			)
 		);
@@ -434,7 +434,7 @@ final class SageOrderSender {
 			$option,
 			sprintf(
 				/* translators: %s: the name of a connection option. */
-				__( 'Set the nominal code of an income account in the connection option "%s": Sage needs a ledger account on every line.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Set the nominal code of an income account in the connection option "%s": Sage needs a ledger account on every line.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$option
 			)
 		);
@@ -451,7 +451,7 @@ final class SageOrderSender {
 			$option,
 			sprintf(
 				/* translators: 1: a nominal code, 2: the name of a connection option. */
-				__( 'Sage has no ledger account "%1$s". Check the connection option "%2$s".', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Sage has no ledger account "%1$s". Check the connection option "%2$s".', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$value,
 				$option
 			)

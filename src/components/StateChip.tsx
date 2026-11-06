@@ -26,7 +26,7 @@ export function StateChip( { state, label, large = false }: StateChipProps ) {
 	const text =
 		label ??
 		( state === 'paused'
-			? __( 'Paused', 'estasoft-erp-crm-sync-engine' )
+			? __( 'Paused', 'estasoft-enterprise-erpcrm-sync-engine' )
 			: stateLabel( state ) );
 	const icon: IconName = state;
 	return (

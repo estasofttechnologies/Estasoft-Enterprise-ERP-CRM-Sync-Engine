@@ -53,10 +53,10 @@ final class OdooAddressNormalizer {
 	public function normalize( string $input ): OdooAddress|ConnectorError {
 		$input = trim( $input );
 		if ( '' === $input ) {
-			return $this->reject( __( 'Enter the web address you use to sign in to Odoo.', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->reject( __( 'Enter the web address you use to sign in to Odoo.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( 1 === preg_match( '/[\x00-\x20\x7f]/', $input ) ) {
-			return $this->reject( __( 'The address must not contain spaces or control characters.', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->reject( __( 'The address must not contain spaces or control characters.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 
 		if ( 1 === preg_match( '#^[a-z][a-z0-9+.\-]*://#i', $input ) ) {
@@ -67,35 +67,35 @@ final class OdooAddressNormalizer {
 
 		$parts = wp_parse_url( $withScheme );
 		if ( ! is_array( $parts ) || empty( $parts['host'] ) || empty( $parts['scheme'] ) ) {
-			return $this->reject( __( 'This is not a web address.', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->reject( __( 'This is not a web address.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 
 		$scheme = strtolower( (string) $parts['scheme'] );
 		if ( 'http' !== $scheme && 'https' !== $scheme ) {
-			return $this->reject( __( 'Use an address that starts with https://.', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->reject( __( 'Use an address that starts with https://.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( isset( $parts['user'] ) || isset( $parts['pass'] ) ) {
-			return $this->reject( __( 'Do not put a user name or password in the address. Use the fields below it.', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->reject( __( 'Do not put a user name or password in the address. Use the fields below it.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 
 		$host = $this->asciiHost( strtolower( rtrim( (string) $parts['host'], '.' ) ) );
 		if ( '' === $host || ! $this->validHost( $host ) ) {
-			return $this->reject( __( 'The host name in the address is not valid.', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->reject( __( 'The host name in the address is not valid.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 
 		$port = isset( $parts['port'] ) ? (int) $parts['port'] : null;
 		if ( null !== $port && ( $port < 1 || $port > 65535 ) ) {
-			return $this->reject( __( 'The port in the address is not valid.', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->reject( __( 'The port in the address is not valid.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 
 		$private = $this->isPrivateHost( $host );
 		$base    = $scheme . '://' . $this->hostForUrl( $host ) . $this->portSuffix( $scheme, $port );
 
 		if ( $private && ! (bool) call_user_func( $this->allowPrivate, $base ) ) {
-			return $this->reject( __( 'This address points to a private network or to this computer, which is not allowed.', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->reject( __( 'This address points to a private network or to this computer, which is not allowed.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( 'http' === $scheme && ! $private ) {
-			return $this->reject( __( 'Use an address that starts with https://. Plain http is only accepted for private networks you have allowed.', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->reject( __( 'Use an address that starts with https://. Plain http is only accepted for private networks you have allowed.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 
 		return new OdooAddress( $base, $host, $private );
@@ -227,7 +227,7 @@ final class OdooAddressNormalizer {
 			ErrorCode::Val002,
 			array(
 				'system' => 'Odoo',
-				'field'  => __( 'Odoo address', 'estasoft-erp-crm-sync-engine' ),
+				'field'  => __( 'Odoo address', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'reason' => $reason,
 			),
 			null,

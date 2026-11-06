@@ -256,7 +256,7 @@ final class SapS4HanaGateway {
 		$response = $this->api->get( $service . '/', array(), null, array( 'headers' => array( 'X-CSRF-Token' => 'Fetch' ) ) );
 		$token    = trim( (string) $response->header( 'x-csrf-token' ) );
 		if ( '' === $token || 'required' === strtolower( $token ) ) {
-			$problem = Problem::validation( 'SAP S/4HANA', 'X-CSRF-Token', __( 'The system did not give a token for writing. Check the communication arrangement of this service.', 'estasoft-erp-crm-sync-engine' ) );
+			$problem = Problem::validation( 'SAP S/4HANA', 'X-CSRF-Token', __( 'The system did not give a token for writing. Check the communication arrangement of this service.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			throw new ApiException( $problem ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- the argument is an error object, not output.
 		}
 		$this->api->redaction()->add( $token );

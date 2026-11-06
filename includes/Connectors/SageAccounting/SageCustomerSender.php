@@ -45,7 +45,7 @@ final class SageCustomerSender {
 			return SendResult::failure( SageErrors::noEmail( $item->entityId ) );
 		}
 		if ( '' === ( $partner['name'] ?? '' ) && '' === ( $partner['company_name'] ?? '' ) ) {
-			return SendResult::failure( SageErrors::refused( 'partner.name', __( 'The customer name is empty.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( SageErrors::refused( 'partner.name', __( 'The customer name is empty.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$existing = $this->contacts->findByEmail( $partner['email'] );
 		if ( null !== $existing ) {

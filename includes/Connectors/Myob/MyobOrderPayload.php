@@ -70,12 +70,12 @@ final class MyobOrderPayload {
 			return MyobErrors::noEmail( $item->entityId );
 		}
 		if ( '' === ( $partner['name'] ?? '' ) && '' === ( $partner['company_name'] ?? '' ) ) {
-			return MyobErrors::refused( 'partner.name', __( 'The customer name is empty.', 'estasoft-erp-crm-sync-engine' ) );
+			return MyobErrors::refused( 'partner.name', __( 'The customer name is empty.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 
 		$date = MyobPayloadReader::day( $payload['date_order'] ?? '' );
 		if ( '' === $date ) {
-			return MyobErrors::refused( 'date_order', __( 'The order has no date. MYOB needs the date of the invoice.', 'estasoft-erp-crm-sync-engine' ) );
+			return MyobErrors::refused( 'date_order', __( 'The order has no date. MYOB needs the date of the invoice.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 
 		$lines = array();
@@ -87,7 +87,7 @@ final class MyobOrderPayload {
 			$lines[] = $line;
 		}
 		if ( array() === $lines ) {
-			return MyobErrors::refused( 'order_line', __( 'The order has no product lines.', 'estasoft-erp-crm-sync-engine' ) );
+			return MyobErrors::refused( 'order_line', __( 'The order has no product lines.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$extras = self::extras( $payload );
 		if ( $extras instanceof ConnectorError ) {
@@ -99,7 +99,7 @@ final class MyobOrderPayload {
 		if ( 0 !== $freight && array_key_exists( 'tax', $shipping ) ) {
 			$codes = MyobPayloadReader::taxCodes( $shipping['tax'] );
 			if ( count( $codes ) > 1 ) {
-				return MyobErrors::refused( 'shipping.tax', __( 'More than one tax code on the shipping. MYOB takes one tax code per line.', 'estasoft-erp-crm-sync-engine' ) );
+				return MyobErrors::refused( 'shipping.tax', __( 'More than one tax code on the shipping. MYOB takes one tax code per line.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$freeTax = array() === $codes ? '' : $codes[0];
 		}
@@ -147,7 +147,7 @@ final class MyobOrderPayload {
 				'order_line[].quantity',
 				sprintf(
 					/* translators: %d: line number. */
-					__( 'Line %d has no quantity.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Line %d has no quantity.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$number
 				)
 			);
@@ -158,7 +158,7 @@ final class MyobOrderPayload {
 				'order_line[].price_unit',
 				sprintf(
 					/* translators: %d: line number. */
-					__( 'Line %d has no price in minor units (a whole number such as 21900).', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Line %d has no price in minor units (a whole number such as 21900).', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$number
 				)
 			);
@@ -171,7 +171,7 @@ final class MyobOrderPayload {
 					'order_line[].tax',
 					sprintf(
 						/* translators: %d: line number. */
-						__( 'Line %d has more than one tax code. MYOB takes one tax code per line.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'Line %d has more than one tax code. MYOB takes one tax code per line.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$number
 					)
 				);
@@ -198,10 +198,10 @@ final class MyobOrderPayload {
 		$extras = array();
 		$blocks = array();
 		foreach ( MyobPayloadReader::rows( $payload['fee'] ?? null ) as $fee ) {
-			$blocks[] = array( 'fee', $fee, __( 'Fee', 'estasoft-erp-crm-sync-engine' ) );
+			$blocks[] = array( 'fee', $fee, __( 'Fee', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$discount = isset( $payload['discount'] ) && is_array( $payload['discount'] ) ? $payload['discount'] : array();
-		$blocks[] = array( 'discount', $discount, __( 'Discount', 'estasoft-erp-crm-sync-engine' ) );
+		$blocks[] = array( 'discount', $discount, __( 'Discount', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 
 		foreach ( $blocks as $block ) {
 			list( $kind, $raw, $fallback ) = $block;
@@ -213,7 +213,7 @@ final class MyobOrderPayload {
 			if ( array_key_exists( 'tax', $raw ) ) {
 				$codes = MyobPayloadReader::taxCodes( $raw['tax'] );
 				if ( count( $codes ) > 1 ) {
-					return MyobErrors::refused( $kind . '.tax', __( 'More than one tax code on a fee or discount line. MYOB takes one tax code per line.', 'estasoft-erp-crm-sync-engine' ) );
+					return MyobErrors::refused( $kind . '.tax', __( 'More than one tax code on a fee or discount line. MYOB takes one tax code per line.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 				}
 				$tax = array() === $codes ? '' : $codes[0];
 			}

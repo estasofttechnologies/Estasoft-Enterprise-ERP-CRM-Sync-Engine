@@ -142,38 +142,38 @@ final class Sage300Connector extends AbstractApiConnector {
 	protected function credentialDefinition(): array {
 		$advanced = static fn( string $name, string $label, string $hint = '', string $type = 'text', array $options = array(), string $initial = '' ): CredentialField => new CredentialField( $name, $label, false, false, $hint, $initial, $type, $options, 'advanced' );
 		return array(
-			CredentialFields::address( 'address', __( 'Web API address', 'estasoft-erp-crm-sync-engine' ), __( 'The https address of the Sage 300 Web API, for example https://sage.example.com/Sage300WebApi', 'estasoft-erp-crm-sync-engine' ) ),
-			new CredentialField( 'company', __( 'Company ID', 'estasoft-erp-crm-sync-engine' ), false, true, __( 'The company (database) ID, for example SAMLTD.', 'estasoft-erp-crm-sync-engine' ) ),
-			CredentialFields::username( 'username', __( 'Sage 300 user', 'estasoft-erp-crm-sync-engine' ), __( 'A user whose security group has the Web API, Order Entry and Accounts Receivable rights.', 'estasoft-erp-crm-sync-engine' ) ),
-			CredentialFields::password( 'password', __( 'Password', 'estasoft-erp-crm-sync-engine' ), __( 'Saved encrypted. It is sent with every request, so use an https address.', 'estasoft-erp-crm-sync-engine' ) ),
+			CredentialFields::address( 'address', __( 'Web API address', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'The https address of the Sage 300 Web API, for example https://sage.example.com/Sage300WebApi', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			new CredentialField( 'company', __( 'Company ID', 'estasoft-enterprise-erpcrm-sync-engine' ), false, true, __( 'The company (database) ID, for example SAMLTD.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			CredentialFields::username( 'username', __( 'Sage 300 user', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'A user whose security group has the Web API, Order Entry and Accounts Receivable rights.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			CredentialFields::password( 'password', __( 'Password', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Saved encrypted. It is sent with every request, so use an https address.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			$advanced(
 				'customer_policy',
-				__( 'Customers', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Customers', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'',
 				'select',
 				array(
-					'fixed'      => __( 'Put every order on one customer account', 'estasoft-erp-crm-sync-engine' ),
-					'match_only' => __( 'Match the buyer by email', 'estasoft-erp-crm-sync-engine' ),
+					'fixed'      => __( 'Put every order on one customer account', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'match_only' => __( 'Match the buyer by email', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				'fixed'
 			),
-			$advanced( 'customer_number', __( 'Customer number for web orders', 'estasoft-erp-crm-sync-engine' ), __( 'Needed for the one-account setting.', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'location', __( 'Inventory location', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'shipping_charge_code', __( 'Miscellaneous charge code for shipping', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'fee_charge_code', __( 'Miscellaneous charge code for fees', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'discount_charge_code', __( 'Miscellaneous charge code for discounts', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'refund_charge_code', __( 'Miscellaneous charge code for refunds without lines', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'reference_property', __( 'Order property for the shop order number', 'estasoft-erp-crm-sync-engine' ), __( 'Empty: PONumber, else Reference.', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'total_property', __( 'Order property that holds the total', 'estasoft-erp-crm-sync-engine' ), __( 'Empty: the first of OrderTotal, TotalOrderAmount, OrderTotalAmount that the answer has.', 'estasoft-erp-crm-sync-engine' ) ),
-			$advanced( 'refund_total_property', __( 'Credit note property that holds the total', 'estasoft-erp-crm-sync-engine' ), __( 'Needed to send refunds, so a credit note can be compared with the refund; or choose to continue with a warning below.', 'estasoft-erp-crm-sync-engine' ) ),
+			$advanced( 'customer_number', __( 'Customer number for web orders', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Needed for the one-account setting.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'location', __( 'Inventory location', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'shipping_charge_code', __( 'Miscellaneous charge code for shipping', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'fee_charge_code', __( 'Miscellaneous charge code for fees', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'discount_charge_code', __( 'Miscellaneous charge code for discounts', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'refund_charge_code', __( 'Miscellaneous charge code for refunds without lines', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'reference_property', __( 'Order property for the shop order number', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Empty: PONumber, else Reference.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'total_property', __( 'Order property that holds the total', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Empty: the first of OrderTotal, TotalOrderAmount, OrderTotalAmount that the answer has.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			$advanced( 'refund_total_property', __( 'Credit note property that holds the total', 'estasoft-enterprise-erpcrm-sync-engine' ), __( 'Needed to send refunds, so a credit note can be compared with the refund; or choose to continue with a warning below.', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			$advanced(
 				'total_mismatch',
-				__( 'When Sage 300 totals differ from the shop', 'estasoft-erp-crm-sync-engine' ),
+				__( 'When Sage 300 totals differ from the shop', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'',
 				'select',
 				array(
-					'fail' => __( 'Stop and report', 'estasoft-erp-crm-sync-engine' ),
-					'warn' => __( 'Continue with a warning', 'estasoft-erp-crm-sync-engine' ),
+					'fail' => __( 'Stop and report', 'estasoft-enterprise-erpcrm-sync-engine' ),
+					'warn' => __( 'Continue with a warning', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				),
 				'fail'
 			),
@@ -219,7 +219,7 @@ final class Sage300Connector extends AbstractApiConnector {
 					'company',
 					sprintf(
 						/* translators: %s: resource names. */
-						__( 'The Web API did not answer for: %s. Check the company ID and that this Sage 300 offers these resources.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'The Web API did not answer for: %s. Check the company ID and that this Sage 300 offers these resources.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						implode( ', ', $refused )
 					)
 				)
@@ -232,7 +232,7 @@ final class Sage300Connector extends AbstractApiConnector {
 		}
 		$metadata = new Sage300Metadata( $client );
 		if ( null !== $metadata->entity( 'OE', 'OEOrders' ) && ! $metadata->has( 'OE', 'OEOrders', 'UnitPrice', 'OrderDetails' ) ) {
-			return new TestResult( false, $label, Sage300Site::company( $connection ), array(), $permissions, Problems::refused( self::LABEL, 'order_line[].price_unit', __( 'The Order Entry order lines of this Sage 300 have no UnitPrice property, so the shop price cannot be sent.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return new TestResult( false, $label, Sage300Site::company( $connection ), array(), $permissions, Problems::refused( self::LABEL, 'order_line[].price_unit', __( 'The Order Entry order lines of this Sage 300 have no UnitPrice property, so the shop price cannot be sent.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$options  = Options::of( $connection );
 		$lookups  = new Sage300Lookups( $client );
@@ -240,11 +240,11 @@ final class Sage300Connector extends AbstractApiConnector {
 		if ( 'match_only' !== $options->choice( 'customer_policy', array( 'fixed', 'match_only' ), 'fixed' ) ) {
 			$number = $options->text( 'customer_number' );
 			if ( '' === $number ) {
-				return new TestResult( false, $label, Sage300Site::company( $connection ), array(), $permissions, Problems::refused( self::LABEL, 'customer_number', __( 'Enter the customer number that should receive the web orders.', 'estasoft-erp-crm-sync-engine' ) ) );
+				return new TestResult( false, $label, Sage300Site::company( $connection ), array(), $permissions, Problems::refused( self::LABEL, 'customer_number', __( 'Enter the customer number that should receive the web orders.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 			}
 			$customer = $lookups->customer( $number );
 			if ( null === $customer ) {
-				return new TestResult( false, $label, Sage300Site::company( $connection ), array(), $permissions, Problems::refused( self::LABEL, 'customer_number', __( 'Sage 300 has no customer with this number.', 'estasoft-erp-crm-sync-engine' ) ) );
+				return new TestResult( false, $label, Sage300Site::company( $connection ), array(), $permissions, Problems::refused( self::LABEL, 'customer_number', __( 'Sage 300 has no customer with this number.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 			}
 		}
 		$locations = $permissions['read IC/ICItems'] ? $this->locationsOrNone( $lookups ) : array();
@@ -309,8 +309,8 @@ final class Sage300Connector extends AbstractApiConnector {
 	protected function fieldCatalog( string $mappingType ): array {
 		return match ( $mappingType ) {
 			'orders'   => FieldSets::orders( self::LABEL ),
-			'products' => FieldSets::products( __( 'Item number', 'estasoft-erp-crm-sync-engine' ) ),
-			'refunds'  => FieldSets::refunds( self::LABEL, __( 'Credit note', 'estasoft-erp-crm-sync-engine' ) ),
+			'products' => FieldSets::products( __( 'Item number', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
+			'refunds'  => FieldSets::refunds( self::LABEL, __( 'Credit note', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 			default    => array(),
 		};
 	}
@@ -374,7 +374,7 @@ final class Sage300Connector extends AbstractApiConnector {
 			}
 			return $this->refunds( $connection )->send( $item, $parsed );
 		}
-		return SendResult::failure( Problems::refused( self::LABEL, 'entity', __( 'This kind of item cannot be sent to Sage 300.', 'estasoft-erp-crm-sync-engine' ), 'unsupported entity' ) );
+		return SendResult::failure( Problems::refused( self::LABEL, 'entity', __( 'This kind of item cannot be sent to Sage 300.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'unsupported entity' ) );
 	}
 
 	/**
@@ -463,7 +463,7 @@ final class Sage300Connector extends AbstractApiConnector {
 		foreach ( ( new Sage300Lookups( $this->client( $connection ) ) )->taxGroups() as $group ) {
 			$codes[] = array(
 				'code'         => $group['id'],
-				'name'         => $group['name'] . ' (' . __( 'rate set by the tax group', 'estasoft-erp-crm-sync-engine' ) . ')',
+				'name'         => $group['name'] . ' (' . __( 'rate set by the tax group', 'estasoft-enterprise-erpcrm-sync-engine' ) . ')',
 				'rate_percent' => '0',
 			);
 		}

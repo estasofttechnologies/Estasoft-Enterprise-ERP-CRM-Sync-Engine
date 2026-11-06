@@ -53,30 +53,30 @@ final class Sage50UkWriter {
 			throw Refusal::because(
 				sprintf(
 					/* translators: %s: account reference */
-					__( 'account reference "%s" is not 1 to 8 letters or digits', 'estasoft-erp-crm-sync-engine' ),
+					__( 'account reference "%s" is not 1 to 8 letters or digits', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$account
 				)
 			);
 		}
 		$reference = SafeText::safe( $document->voucherNumber() );
 		if ( strlen( $reference ) > 30 ) {
-			throw Refusal::because( __( 'the order number is longer than 30 characters', 'estasoft-erp-crm-sync-engine' ) );
+			throw Refusal::because( __( 'the order number is longer than 30 characters', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 
 		$rows = array();
 		foreach ( $document->lines as $index => $line ) {
-			$what   = sprintf( /* translators: %d: line number */ __( 'line %d', 'estasoft-erp-crm-sync-engine' ), $index + 1 );
+			$what   = sprintf( /* translators: %d: line number */ __( 'line %d', 'estasoft-enterprise-erpcrm-sync-engine' ), $index + 1 );
 			$code   = $this->code( $line->taxCode, $line->tax, $what, $settings );
 			$rows[] = array(
 				'nominal' => '' !== $code['nominal'] ? $code['nominal'] : $settings->salesNominal(),
-				'details' => '' !== $line->name ? $line->name : ( '' !== $line->sku ? $line->sku : __( 'Product', 'estasoft-erp-crm-sync-engine' ) ),
+				'details' => '' !== $line->name ? $line->name : ( '' !== $line->sku ? $line->sku : __( 'Product', 'estasoft-enterprise-erpcrm-sync-engine' ) ),
 				'net'     => $line->net,
 				'tax'     => $line->tax,
 				'code'    => $code['code'],
 			);
 		}
 		foreach ( $document->shipping as $charge ) {
-			$code   = $this->code( $charge->taxCode, $charge->tax, __( 'shipping', 'estasoft-erp-crm-sync-engine' ), $settings );
+			$code   = $this->code( $charge->taxCode, $charge->tax, __( 'shipping', 'estasoft-enterprise-erpcrm-sync-engine' ), $settings );
 			$rows[] = array(
 				'nominal' => '' !== $settings->shippingNominal() ? $settings->shippingNominal() : ( '' !== $code['nominal'] ? $code['nominal'] : $settings->salesNominal() ),
 				'details' => $charge->name,
@@ -86,7 +86,7 @@ final class Sage50UkWriter {
 			);
 		}
 		foreach ( $document->fees as $charge ) {
-			$code   = $this->code( '' !== $charge->taxCode ? $charge->taxCode : $settings->feeTaxCode(), $charge->tax, __( 'fee', 'estasoft-erp-crm-sync-engine' ), $settings );
+			$code   = $this->code( '' !== $charge->taxCode ? $charge->taxCode : $settings->feeTaxCode(), $charge->tax, __( 'fee', 'estasoft-enterprise-erpcrm-sync-engine' ), $settings );
 			$rows[] = array(
 				'nominal' => '' !== $code['nominal'] ? $code['nominal'] : $settings->salesNominal(),
 				'details' => $charge->name,
@@ -101,15 +101,15 @@ final class Sage50UkWriter {
 				throw Refusal::because(
 					sprintf(
 						/* translators: %s: amount */
-						__( 'refund amount %s has no adjustment nominal', 'estasoft-erp-crm-sync-engine' ),
+						__( 'refund amount %s has no adjustment nominal', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						Amount::decimal( $document->adjustment, $document->currency )
 					)
 				);
 			}
-			$code   = $this->code( '', 0, __( 'refund adjustment', 'estasoft-erp-crm-sync-engine' ), $settings );
+			$code   = $this->code( '', 0, __( 'refund adjustment', 'estasoft-enterprise-erpcrm-sync-engine' ), $settings );
 			$rows[] = array(
 				'nominal' => $nominal,
-				'details' => __( 'Refund adjustment', 'estasoft-erp-crm-sync-engine' ),
+				'details' => __( 'Refund adjustment', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'net'     => $document->adjustment,
 				'tax'     => 0,
 				'code'    => $code['code'],
@@ -122,14 +122,14 @@ final class Sage50UkWriter {
 			$sum += $row['net'] + $row['tax'];
 		}
 		if ( 0 === $gross && 0 === $sum ) {
-			throw Refusal::because( __( 'the total is zero, so there is nothing to post', 'estasoft-erp-crm-sync-engine' ) );
+			throw Refusal::because( __( 'the total is zero, so there is nothing to post', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$diff = $gross - $sum;
 		if ( abs( $diff ) > 1 ) {
 			throw Refusal::because(
 				sprintf(
 					/* translators: 1: sum of the lines, 2: total of the order */
-					__( 'the lines add up to %1$s but the order total is %2$s', 'estasoft-erp-crm-sync-engine' ),
+					__( 'the lines add up to %1$s but the order total is %2$s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					Amount::decimal( $sum, $document->currency ),
 					Amount::decimal( $gross, $document->currency )
 				)
@@ -204,13 +204,13 @@ final class Sage50UkWriter {
 				throw Refusal::because(
 					sprintf(
 						/* translators: %s: payment method such as Tabby */
-						__( 'payment method %s has no bank nominal', 'estasoft-erp-crm-sync-engine' ),
+						__( 'payment method %s has no bank nominal', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						'' === $document->payment->title ? $document->payment->method : $document->payment->title
 					)
 				);
 			}
 			if ( 1 !== preg_match( '/^\d{1,8}$/', $bank ) ) {
-				throw Refusal::because( __( 'the bank nominal of the payment method is not a number of up to 8 digits', 'estasoft-erp-crm-sync-engine' ) );
+				throw Refusal::because( __( 'the bank nominal of the payment method is not a number of up to 8 digits', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			}
 			$this->assertFits( $document->gross(), $currency );
 			$lines[]    = Sage50Csv::line(
@@ -221,7 +221,7 @@ final class Sage50UkWriter {
 					$settings->department(),
 					$this->date( $document->payment->date, $settings->dateFormat() ),
 					$reference,
-					SafeText::fit( sprintf( /* translators: %s: payment method title */ __( 'Payment %s', 'estasoft-erp-crm-sync-engine' ), '' === $document->payment->title ? $document->payment->method : $document->payment->title ), 60 )['text'],
+					SafeText::fit( sprintf( /* translators: %s: payment method title */ __( 'Payment %s', 'estasoft-enterprise-erpcrm-sync-engine' ), '' === $document->payment->title ? $document->payment->method : $document->payment->title ), 60 )['text'],
 					Amount::decimal( $document->gross(), $currency ),
 					'T9',
 					Amount::decimal( 0, $currency ),
@@ -259,12 +259,12 @@ final class Sage50UkWriter {
 	private function code( string $code, int $tax, string $what, Sage50Settings $settings ): array {
 		if ( '' === $code ) {
 			if ( 0 !== $tax ) {
-				throw Refusal::because( sprintf( /* translators: %s: line, for example "line 2" or "shipping" */ __( '%s has tax but no tax code', 'estasoft-erp-crm-sync-engine' ), $what ) );
+				throw Refusal::because( sprintf( /* translators: %s: line, for example "line 2" or "shipping" */ __( '%s has tax but no tax code', 'estasoft-enterprise-erpcrm-sync-engine' ), $what ) );
 			}
 			$code = $settings->untaxedCode();
 		}
 		if ( 1 !== preg_match( '/^[Tt](\d{1,2})(?::(\d{1,8}))?$/', trim( $code ), $found ) ) {
-			throw Refusal::because( sprintf( /* translators: %s: tax code */ __( 'tax code "%s" is not a Sage tax code (T0 to T99)', 'estasoft-erp-crm-sync-engine' ), $code ) );
+			throw Refusal::because( sprintf( /* translators: %s: tax code */ __( 'tax code "%s" is not a Sage tax code (T0 to T99)', 'estasoft-enterprise-erpcrm-sync-engine' ), $code ) );
 		}
 		return array(
 			'code'    => 'T' . (int) $found[1],
@@ -300,7 +300,7 @@ final class Sage50UkWriter {
 	private function assertFits( int $minor, string $currency ): void {
 		$whole = ltrim( explode( '.', Amount::decimal( abs( $minor ), $currency ) )[0], '0' );
 		if ( strlen( $whole ) > self::MAX_INTEGER_DIGITS ) {
-			throw Refusal::because( __( 'an amount is larger than Sage 50 can import (8 digits before the decimals)', 'estasoft-erp-crm-sync-engine' ) );
+			throw Refusal::because( __( 'an amount is larger than Sage 50 can import (8 digits before the decimals)', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 	}
 }

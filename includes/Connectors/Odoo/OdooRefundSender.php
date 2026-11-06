@@ -69,7 +69,7 @@ final class OdooRefundSender {
 			array(
 				'system' => OdooErrorMapper::SYSTEM,
 				'field'  => 'order_ref',
-				'reason' => __( 'The refund does not say which order it belongs to.', 'estasoft-erp-crm-sync-engine' ),
+				'reason' => __( 'The refund does not say which order it belongs to.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			),
 			null,
 			null,
@@ -99,7 +99,7 @@ final class OdooRefundSender {
 						'order_ref',
 						sprintf(
 							/* translators: %s: order reference such as WC-10490. */
-							__( 'Odoo does not have the order %s yet. Send the order first.', 'estasoft-erp-crm-sync-engine' ),
+							__( 'Odoo does not have the order %s yet. Send the order first.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 							$orderRef
 						)
 					)
@@ -282,7 +282,7 @@ final class OdooRefundSender {
 		$quantity = isset( $line['quantity'] ) && is_numeric( $line['quantity'] ) ? max( 1.0, (float) $line['quantity'] ) : 1.0;
 		$amount   = abs( (int) OdooPayloadReader::minor( $line['amount'] ?? null ) );
 		$name     = OdooPayloadReader::text( $line['name'] ?? '' );
-		$name     = '' !== $name ? $name : ( '' !== $sku ? $sku : __( 'Refund', 'estasoft-erp-crm-sync-engine' ) );
+		$name     = '' !== $name ? $name : ( '' !== $sku ? $sku : __( 'Refund', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 
 		$codes  = array_key_exists( 'tax', $line ) ? OdooPayloadReader::taxCodes( $line['tax'] ) : array();
 		$whole  = floor( $quantity ) === $quantity && 0 === $amount % (int) $quantity;
@@ -323,7 +323,7 @@ final class OdooRefundSender {
 		}
 		$name  = OdooPayloadReader::text( $shipping['name'] ?? '' );
 		$extra = array(
-			'name'   => '' !== $name ? $name : __( 'Shipping', 'estasoft-erp-crm-sync-engine' ),
+			'name'   => '' !== $name ? $name : __( 'Shipping', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			'amount' => abs( $amount ),
 		);
 		if ( array_key_exists( 'tax', $shipping ) ) {
@@ -371,14 +371,14 @@ final class OdooRefundSender {
 	private function amountOnlyLine( array $payload, string $clientRef, int $exponent ): array {
 		$amount = OdooPayloadReader::minor( $payload['amount'] ?? null );
 		if ( null === $amount || 0 === $amount ) {
-			$exception = new OdooException( $this->refused( 'amount', __( 'The refund has no amount and no lines.', 'estasoft-erp-crm-sync-engine' ) ) );
+			$exception = new OdooException( $this->refused( 'amount', __( 'The refund has no amount and no lines.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 			throw $exception;
 		}
 		return array(
 			'product_id' => $this->catalog->serviceProductId( 'refund' ),
 			'name'       => sprintf(
 				/* translators: %s: refund reference such as WC-5521. */
-				__( 'Refund %s', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Refund %s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$clientRef
 			),
 			'quantity'   => 1.0,

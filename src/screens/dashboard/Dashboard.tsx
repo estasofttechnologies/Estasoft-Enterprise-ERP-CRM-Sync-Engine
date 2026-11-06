@@ -52,12 +52,15 @@ export function Dashboard() {
 		return (
 			<>
 				<PageHeader
-					title={ __( 'Dashboard', 'estasoft-erp-crm-sync-engine' ) }
+					title={ __(
+						'Dashboard',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 				/>
 				<LoadingState
 					label={ __(
 						'Loading the dashboard',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					rows={ 5 }
 				/>
@@ -68,14 +71,17 @@ export function Dashboard() {
 		return (
 			<>
 				<PageHeader
-					title={ __( 'Dashboard', 'estasoft-erp-crm-sync-engine' ) }
+					title={ __(
+						'Dashboard',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 				/>
 				<ErrorState
 					error={ error }
 					onRetry={ () => void reload() }
 					title={ __(
 						'The dashboard could not be loaded.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			</>
@@ -94,38 +100,44 @@ function FirstRun() {
 	const { canConfigure } = useApp();
 	const steps: [ string, string ][] = [
 		[
-			__( 'Check your store', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Check your store', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			__(
 				'Looks for duplicate SKUs, missing country codes and other things that break syncing.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 		],
 		[
-			__( 'Connect a system', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Connect a system', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			__(
 				'Choose your system and test the connection.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 		],
 		[
-			__( 'Choose what to sync', 'estasoft-erp-crm-sync-engine' ),
+			__(
+				'Choose what to sync',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			__(
 				'Orders, customers, stock, tracking. You decide which side is the source of truth.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 		],
 		[
-			__( 'Preview a real order', 'estasoft-erp-crm-sync-engine' ),
+			__(
+				'Preview a real order',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			__(
 				'See exactly what your system will receive before anything is sent.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 		],
 		[
-			__( 'Go live', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Go live', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			__(
 				'Start in shadow mode, then switch to live when the comparison looks right.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 		],
 	];
@@ -134,21 +146,21 @@ function FirstRun() {
 			<PageHeader
 				title={ __(
 					'Welcome to ESTASOFT SYNC',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				description={ __(
 					'Connect your store to your accounting or ERP system. Checkout never waits for it.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			/>
 			<Card
 				title={ __(
 					'Connect your first system',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				description={ __(
 					'Setup takes about ten minutes. Nothing is sent to your system until you say so: you start in shadow mode, which only compares.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			>
 				{ canConfigure ? (
@@ -156,13 +168,16 @@ function FirstRun() {
 						variant="primary"
 						onClick={ () => navigate( '/setup' ) }
 					>
-						{ __( 'Start setup', 'estasoft-erp-crm-sync-engine' ) }
+						{ __(
+							'Start setup',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						) }
 					</Btn>
 				) : (
 					<Callout tone="info">
 						{ __(
 							'An administrator needs to set up the connection. You can see the queue once it is connected.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					</Callout>
 				) }
@@ -170,7 +185,7 @@ function FirstRun() {
 			<Card
 				title={ __(
 					'What setup does',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 				flush
 			>
@@ -229,7 +244,7 @@ function NormalDashboard( { status }: { status: Status } ) {
 			kind: 'success',
 			text: __(
 				'Sync started. Waiting orders are being sent now, oldest first.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 		} );
 		await reload();
@@ -240,7 +255,7 @@ function NormalDashboard( { status }: { status: Status } ) {
 			kind: 'success',
 			text: __(
 				'Syncing resumed. Waiting orders are sent oldest first.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 		} );
 		await reload();
@@ -257,7 +272,7 @@ function NormalDashboard( { status }: { status: Status } ) {
 					/* translators: %s: system name such as Odoo */
 					__(
 						'%s answered. The connection checks again by itself and resumes when it is healthy.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
 					system
 				),
@@ -270,7 +285,7 @@ function NormalDashboard( { status }: { status: Status } ) {
 					sprintf(
 						/* translators: %s: system name */ __(
 							'%s did not answer.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						system
 					),
@@ -300,7 +315,10 @@ function NormalDashboard( { status }: { status: Status } ) {
 	return (
 		<>
 			<PageHeader
-				title={ __( 'Dashboard', 'estasoft-erp-crm-sync-engine' ) }
+				title={ __(
+					'Dashboard',
+					'estasoft-enterprise-erpcrm-sync-engine'
+				) }
 				description={ formatFullDateTime( status.now, cfg ) }
 				actions={
 					canManage ? (
@@ -315,7 +333,7 @@ function NormalDashboard( { status }: { status: Status } ) {
 										{ sprintf(
 											/* translators: %s: system name */ __(
 												'Check %s now',
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											),
 											system
 										) }
@@ -330,7 +348,7 @@ function NormalDashboard( { status }: { status: Status } ) {
 								>
 									{ __(
 										'Resume syncing',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									) }
 								</Btn>
 							</>
@@ -342,7 +360,7 @@ function NormalDashboard( { status }: { status: Status } ) {
 								>
 									{ __(
 										'Pause syncing',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									) }
 								</Btn>
 								<Btn
@@ -353,7 +371,7 @@ function NormalDashboard( { status }: { status: Status } ) {
 								>
 									{ __(
 										'Sync now',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									) }
 								</Btn>
 							</>
@@ -378,22 +396,25 @@ function NormalDashboard( { status }: { status: Status } ) {
 				<Kpi
 					label={ __(
 						'Synced today',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					value={ status.synced_today }
 					hint={ __(
 						'since midnight',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 				<Kpi
-					label={ __( 'Waiting', 'estasoft-erp-crm-sync-engine' ) }
+					label={ __(
+						'Waiting',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 					value={ status.waiting }
 					hint={ sprintf(
 						/* translators: 1: queued count, 2: syncing count, 3: retrying count */
 						__(
 							'%1$d queued, %2$d syncing, %3$d retrying',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						status.by_state.queued,
 						status.by_state.syncing,
@@ -403,25 +424,25 @@ function NormalDashboard( { status }: { status: Status } ) {
 				<Kpi
 					label={ __(
 						'Needs attention',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					value={ status.needs_attention }
 					hint={
 						paused
 							? __(
 									'orders failed before the pause',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								)
 							: __(
 									'orders failed and need a person',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								)
 					}
 				/>
 				<Kpi
 					label={ __(
 						'Oldest waiting',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					value={ oldest === null ? '—' : formatSpan( oldest ) }
 					hint={
@@ -430,7 +451,7 @@ function NormalDashboard( { status }: { status: Status } ) {
 									/* translators: %s: order number such as #10484 */
 									__(
 										'Order %s',
-										'estasoft-erp-crm-sync-engine'
+										'estasoft-enterprise-erpcrm-sync-engine'
 									),
 									status.oldest_waiting_order.startsWith(
 										'#'
@@ -440,7 +461,7 @@ function NormalDashboard( { status }: { status: Status } ) {
 								)
 							: __(
 									'Nothing is waiting',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								)
 					}
 				/>
@@ -451,7 +472,7 @@ function NormalDashboard( { status }: { status: Status } ) {
 					<Card
 						title={ __(
 							'Needs attention',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						description={ attentionSummary(
 							groups.length,
@@ -465,7 +486,7 @@ function NormalDashboard( { status }: { status: Status } ) {
 								rows={ 2 }
 								label={ __(
 									'Loading what needs attention',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							/>
 						) : null }
@@ -481,7 +502,7 @@ function NormalDashboard( { status }: { status: Status } ) {
 							<p className="estasoft-sync-pad estasoft-sync-muted">
 								{ __(
 									'All clear. No order needs a person. Failed orders will appear here, grouped by cause.',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</p>
 						) : null }
@@ -514,11 +535,11 @@ function NormalDashboard( { status }: { status: Status } ) {
 											{ group.count > 1
 												? __(
 														'Review and retry',
-														'estasoft-erp-crm-sync-engine'
+														'estasoft-enterprise-erpcrm-sync-engine'
 													)
 												: __(
 														'Open order',
-														'estasoft-erp-crm-sync-engine'
+														'estasoft-enterprise-erpcrm-sync-engine'
 													) }
 										</Btn>
 									) : null }
@@ -563,7 +584,7 @@ function NormalDashboard( { status }: { status: Status } ) {
 						<Card
 							title={ __(
 								'What happens next',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 							flush
 						>
@@ -574,7 +595,7 @@ function NormalDashboard( { status }: { status: Status } ) {
 										{ sprintf(
 											/* translators: %s: system name */ __(
 												'Customers can still check out. Nothing waits for %s.',
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											),
 											system
 										) }
@@ -586,7 +607,7 @@ function NormalDashboard( { status }: { status: Status } ) {
 										{ sprintf(
 											/* translators: %s: system name */ __(
 												'When %s answers, the oldest orders go first, two at a time.',
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											),
 											system
 										) }
@@ -598,7 +619,7 @@ function NormalDashboard( { status }: { status: Status } ) {
 										{ sprintf(
 											/* translators: %s: system name */ __(
 												'Resume by hand at any time. If %s still does not answer, it pauses again.',
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											),
 											system
 										) }
@@ -616,7 +637,7 @@ function NormalDashboard( { status }: { status: Status } ) {
 					<Card
 						title={ __(
 							'Queue right now',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					>
 						<QueueMeters status={ status } />
@@ -649,7 +670,7 @@ function attentionSummary(
 			'%1$d failed order in %2$s',
 			'%1$d failed orders in %2$s',
 			failed,
-			'estasoft-erp-crm-sync-engine'
+			'estasoft-enterprise-erpcrm-sync-engine'
 		),
 		failed,
 		groupsPhrase( groupCount )
@@ -657,13 +678,13 @@ function attentionSummary(
 	if ( notes === 0 ) {
 		return sprintf(
 			/* translators: %s: sentence about failed orders */
-			__( '%s.', 'estasoft-erp-crm-sync-engine' ),
+			__( '%s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			failedPart
 		);
 	}
 	return sprintf(
 		/* translators: 1: sentence about failed orders, 2: number of notes such as "2 notes" */
-		__( '%1$s, and %2$s.', 'estasoft-erp-crm-sync-engine' ),
+		__( '%1$s, and %2$s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		failedPart,
 		notesPhrase( notes )
 	);
@@ -692,13 +713,16 @@ function buildNotes(
 			tone: 'warning',
 			title: __(
 				'The encryption key is missing from wp-config.php',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			text: __(
 				'Saved credentials cannot be stored safely until you add it.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
-			action: __( 'Show me how', 'estasoft-erp-crm-sync-engine' ),
+			action: __(
+				'Show me how',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			route: '/settings/readiness',
 		} );
 	}
@@ -712,7 +736,7 @@ function buildNotes(
 					'%d invoice was rejected by the tax authority',
 					'%d invoices were rejected by the tax authority',
 					rejectedCount,
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				rejectedCount
 			),
@@ -721,15 +745,18 @@ function buildNotes(
 						/* translators: %s: order label */
 						__(
 							'See order %s and the reason on the Invoices page. Fix it in your system, then ask it to report again.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						rejectedOrder
 					)
 				: __(
 						'Fix the cause in your system, then ask it to report again.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					),
-			action: __( 'Open Invoices', 'estasoft-erp-crm-sync-engine' ),
+			action: __(
+				'Open Invoices',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			route: '/invoices',
 		} );
 	}
@@ -746,7 +773,7 @@ function buildNotes(
 					'The last check found %d difference',
 					'The last check found %d differences',
 					open,
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				open
 			),
@@ -754,13 +781,16 @@ function buildNotes(
 				/* translators: 1: number of orders that differ, 2: number of orders compared such as "2,104 orders", 3: length of the window such as "7 days" */
 				__(
 					'WooCommerce and your system disagree on %1$s of %2$s from the last %3$s.',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				formatNumber( open, cfg.locale ),
 				ordersPhrase( recon.last_run.compared, cfg.locale ),
 				daysPhrase( recon.window_days )
 			),
-			action: __( 'Open Reconciliation', 'estasoft-erp-crm-sync-engine' ),
+			action: __(
+				'Open Reconciliation',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			),
 			route: '/reconciliation',
 		} );
 	}
@@ -770,15 +800,15 @@ function buildNotes(
 			tone: 'info',
 			title: __(
 				'Scheduled tasks depend on site visits',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			text: __(
 				'A real cron job keeps timing steady when traffic is quiet.',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			action: __(
 				'Open Readiness check',
-				'estasoft-erp-crm-sync-engine'
+				'estasoft-enterprise-erpcrm-sync-engine'
 			),
 			route: '/settings/readiness',
 		} );
@@ -806,7 +836,7 @@ function PausedBanner( {
 					'%1$s has not answered since %2$s. Syncing is paused. Customers can still check out. %3$d order is waiting in the queue. The next automatic check is at %4$s.',
 					'%1$s has not answered since %2$s. Syncing is paused. Customers can still check out. %3$d orders are waiting in the queue. The next automatic check is at %4$s.',
 					status.waiting,
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				system,
 				formatTime( connection.last_success_at, cfg ),
@@ -819,7 +849,7 @@ function PausedBanner( {
 					'Syncing to %1$s is paused. Customers can still check out. %2$d order is waiting in the queue.',
 					'Syncing to %1$s is paused. Customers can still check out. %2$d orders are waiting in the queue.',
 					status.waiting,
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				),
 				system,
 				status.waiting
@@ -834,7 +864,10 @@ function PausedBanner( {
 						navigate( routeTo( `/connections/${ connection.id }` ) )
 					}
 				>
-					{ __( 'Open connection', 'estasoft-erp-crm-sync-engine' ) }
+					{ __(
+						'Open connection',
+						'estasoft-enterprise-erpcrm-sync-engine'
+					) }
 				</Btn>
 			}
 		>
@@ -854,13 +887,19 @@ function ReconCard( { overview }: { overview: ReconOverview } ) {
 	).length;
 	return (
 		<Card
-			title={ __( 'Last night’s check', 'estasoft-erp-crm-sync-engine' ) }
+			title={ __(
+				'Last night’s check',
+				'estasoft-enterprise-erpcrm-sync-engine'
+			) }
 		>
 			<KeyValueList
 				stacked
 				items={ [
 					{
-						label: __( 'Ran', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'Ran',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						value: (
 							<DateTime
 								value={ run.finished_at ?? run.started_at }
@@ -869,24 +908,30 @@ function ReconCard( { overview }: { overview: ReconOverview } ) {
 						),
 					},
 					{
-						label: __( 'Compared', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'Compared',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						value: sprintf(
 							/* translators: 1: number of orders such as "2,104 orders", 2: length of the window such as "7 days" */
 							__(
 								'%1$s from the last %2$s',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							ordersPhrase( run.compared, cfg.locale ),
 							daysPhrase( run.window_days )
 						),
 					},
 					{
-						label: __( 'Result', 'estasoft-erp-crm-sync-engine' ),
+						label: __(
+							'Result',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						),
 						value: sprintf(
 							/* translators: 1: matching count, 2: differing count, 3: repaired count */
 							__(
 								'%1$s match, %2$s differ, %3$s repaired',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							formatNumber( run.matched, cfg.locale ),
 							formatNumber( run.differences, cfg.locale ),
@@ -900,11 +945,11 @@ function ReconCard( { overview }: { overview: ReconOverview } ) {
 					{ open > 0
 						? __(
 								'Open Reconciliation',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							)
 						: __(
 								'View the check',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 				</Btn>
 			</div>

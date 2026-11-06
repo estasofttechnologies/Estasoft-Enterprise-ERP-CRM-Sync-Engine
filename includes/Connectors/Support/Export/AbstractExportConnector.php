@@ -119,7 +119,7 @@ abstract class AbstractExportConnector extends AbstractApiConnector {
 					array(
 						'system' => $this->label(),
 						'field'  => $item->entityType->value,
-						'reason' => __( 'Only orders and refunds go into an export file.', 'estasoft-erp-crm-sync-engine' ),
+						'reason' => __( 'Only orders and refunds go into an export file.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					),
 					null,
 					null,
@@ -144,7 +144,7 @@ abstract class AbstractExportConnector extends AbstractApiConnector {
 					array(
 						'system' => $this->label(),
 						'field'  => 'order',
-						'reason' => __( 'The order could not be added to the export.', 'estasoft-erp-crm-sync-engine' ),
+						'reason' => __( 'The order could not be added to the export.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					),
 					null,
 					null,
@@ -163,6 +163,6 @@ abstract class AbstractExportConnector extends AbstractApiConnector {
 	 * @param int $connectionId Connection.
 	 */
 	private function batchRef( int $connectionId ): ExternalRef {
-		return new ExternalRef( 'export-' . $connectionId, __( 'Waiting for export', 'estasoft-erp-crm-sync-engine' ), null, array( 'export_batch' => true ) );
+		return new ExternalRef( 'export-' . $connectionId, __( 'Waiting for export', 'estasoft-enterprise-erpcrm-sync-engine' ), null, array( 'export_batch' => true ) );
 	}
 }

@@ -98,7 +98,7 @@ final class DvRefundSender {
 					'order_ref',
 					sprintf(
 						/* translators: %s: order reference such as WC-123. */
-						__( 'The deal for order %s is not in Dynamics 365 yet, so the refund has nothing to refer to.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'The deal for order %s is not in Dynamics 365 yet, so the refund has nothing to refer to.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$data['order_ref']
 					),
 					'original deal missing'
@@ -109,13 +109,13 @@ final class DvRefundSender {
 		$amount   = Amounts::text( $data['amount'], $currency ) . ' ' . $currency;
 		$text     = sprintf(
 			/* translators: 1: refund reference, 2: order reference, 3: amount with currency. */
-			__( 'Refund %1$s of order %2$s: %3$s.', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Refund %1$s of order %2$s: %3$s.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			$ref,
 			$data['order_ref'],
 			$amount
 		);
 		if ( '' !== $data['reason'] ) {
-			$text .= ' ' . sprintf( /* translators: %s: reason of the refund. */ __( 'Reason: %s', 'estasoft-erp-crm-sync-engine' ), $data['reason'] );
+			$text .= ' ' . sprintf( /* translators: %s: reason of the refund. */ __( 'Reason: %s', 'estasoft-enterprise-erpcrm-sync-engine' ), $data['reason'] );
 		}
 		$text   .= "\n" . sprintf( '[estasoft:refund %s minor=%d %s]', $ref, $data['amount'], $currency );
 		$created = $this->dv->create(
@@ -187,13 +187,13 @@ final class DvRefundSender {
 		$orderRef = is_string( $payload['order_ref'] ?? null ) ? trim( $payload['order_ref'] ) : '';
 		$amount   = $payload['amount'] ?? null;
 		if ( 1 !== preg_match( '/^WC-\d+$/', $orderRef ) ) {
-			return Failures::invalid( $system, 'order_ref', __( 'A refund needs the reference of its order, WC- and the order number.', 'estasoft-erp-crm-sync-engine' ), 'order ref' );
+			return Failures::invalid( $system, 'order_ref', __( 'A refund needs the reference of its order, WC- and the order number.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'order ref' );
 		}
 		if ( is_string( $amount ) && 1 === preg_match( '/^\d{1,15}$/', trim( $amount ) ) ) {
 			$amount = (int) trim( $amount );
 		}
 		if ( ! is_int( $amount ) || $amount <= 0 ) {
-			return Failures::invalid( $system, 'amount', __( 'A refund needs an amount above zero in whole numbers of the smallest currency unit.', 'estasoft-erp-crm-sync-engine' ), 'refund amount' );
+			return Failures::invalid( $system, 'amount', __( 'A refund needs an amount above zero in whole numbers of the smallest currency unit.', 'estasoft-enterprise-erpcrm-sync-engine' ), 'refund amount' );
 		}
 		return array(
 			'order_ref' => $orderRef,

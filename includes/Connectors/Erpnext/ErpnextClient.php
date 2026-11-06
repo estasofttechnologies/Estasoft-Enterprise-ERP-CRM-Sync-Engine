@@ -114,7 +114,7 @@ final class ErpnextClient {
 					'window',
 					sprintf(
 						/* translators: 1: row limit, 2: DocType name. */
-						__( 'ERPNext has more than %1$d %2$s records in the period asked for, so the list would be incomplete. Ask for a shorter period.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'ERPNext has more than %1$d %2$s records in the period asked for, so the list would be incomplete. Ask for a shorter period.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						self::LARGE,
 						$doctype
 					),

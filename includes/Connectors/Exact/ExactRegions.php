@@ -56,13 +56,13 @@ final class ExactRegions {
 	 */
 	public static function choices(): array {
 		return array(
-			'nl'    => __( 'Netherlands (.nl)', 'estasoft-erp-crm-sync-engine' ),
-			'be'    => __( 'Belgium (.be)', 'estasoft-erp-crm-sync-engine' ),
-			'de'    => __( 'Germany (.de)', 'estasoft-erp-crm-sync-engine' ),
-			'fr'    => __( 'France (.fr)', 'estasoft-erp-crm-sync-engine' ),
-			'co.uk' => __( 'United Kingdom (.co.uk)', 'estasoft-erp-crm-sync-engine' ),
-			'es'    => __( 'Spain (.es)', 'estasoft-erp-crm-sync-engine' ),
-			'com'   => __( 'United States (.com)', 'estasoft-erp-crm-sync-engine' ),
+			'nl'    => __( 'Netherlands (.nl)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'be'    => __( 'Belgium (.be)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'de'    => __( 'Germany (.de)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'fr'    => __( 'France (.fr)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'co.uk' => __( 'United Kingdom (.co.uk)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'es'    => __( 'Spain (.es)', 'estasoft-enterprise-erpcrm-sync-engine' ),
+			'com'   => __( 'United States (.com)', 'estasoft-enterprise-erpcrm-sync-engine' ),
 		);
 	}
 }

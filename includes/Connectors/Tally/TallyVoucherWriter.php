@@ -49,7 +49,7 @@ final class TallyVoucherWriter {
 				throw Refusal::because(
 					sprintf(
 						/* translators: %s: payment method such as Tabby */
-						__( 'payment method %s has no ledger', 'estasoft-erp-crm-sync-engine' ),
+						__( 'payment method %s has no ledger', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						'' === $document->payment->title ? $document->payment->method : $document->payment->title
 					)
 				);
@@ -87,7 +87,7 @@ final class TallyVoucherWriter {
 
 		foreach ( $document->lines as $index => $line ) {
 			if ( $asLedger && 0 !== $line->tax && '' === $line->taxCode ) {
-				throw Refusal::because( sprintf( /* translators: %d: line number */ __( 'line %d has tax but no tax code', 'estasoft-erp-crm-sync-engine' ), $index + 1 ) );
+				throw Refusal::because( sprintf( /* translators: %d: line number */ __( 'line %d has tax but no tax code', 'estasoft-enterprise-erpcrm-sync-engine' ), $index + 1 ) );
 			}
 			$amount = $line->net + ( $asLedger ? 0 : $line->tax );
 			if ( $asLedger && '' !== $settings->discountLedger() && $line->unitPrice > 0 ) {
@@ -108,7 +108,7 @@ final class TallyVoucherWriter {
 				throw Refusal::because(
 					sprintf(
 						/* translators: %d: line number */
-						$settings->stockBySku() ? __( 'line %d has no SKU', 'estasoft-erp-crm-sync-engine' ) : __( 'line %d has no product name', 'estasoft-erp-crm-sync-engine' ),
+						$settings->stockBySku() ? __( 'line %d has no SKU', 'estasoft-enterprise-erpcrm-sync-engine' ) : __( 'line %d has no product name', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$index + 1
 					)
 				);
@@ -118,18 +118,18 @@ final class TallyVoucherWriter {
 			$this->addTax( $taxes, $asLedger, $line->taxCode, $line->tax, $line->taxRate, $line->net );
 		}
 		foreach ( $document->shipping as $charge ) {
-			$this->charge( $ledgers, $taxes, $charge, $charge->taxCode, $settings->shippingLedger(), $asLedger, __( 'shipping', 'estasoft-erp-crm-sync-engine' ) );
+			$this->charge( $ledgers, $taxes, $charge, $charge->taxCode, $settings->shippingLedger(), $asLedger, __( 'shipping', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		foreach ( $document->fees as $charge ) {
 			$code = '' !== $charge->taxCode ? $charge->taxCode : $settings->feeTaxCode();
-			$this->charge( $ledgers, $taxes, $charge, $code, $settings->feeLedger(), $asLedger, __( 'fee', 'estasoft-erp-crm-sync-engine' ) );
+			$this->charge( $ledgers, $taxes, $charge, $code, $settings->feeLedger(), $asLedger, __( 'fee', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( 0 !== $document->adjustment ) {
 			if ( '' === $settings->adjustmentLedger() ) {
 				throw Refusal::because(
 					sprintf(
 						/* translators: %s: amount */
-						__( 'refund amount %s has no adjustment ledger', 'estasoft-erp-crm-sync-engine' ),
+						__( 'refund amount %s has no adjustment ledger', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						Amount::decimal( $document->adjustment, $currency )
 					)
 				);
@@ -149,14 +149,14 @@ final class TallyVoucherWriter {
 		}
 		$gross = $document->gross();
 		if ( 0 === $gross && 0 === $sum ) {
-			throw Refusal::because( __( 'the total is zero, so there is nothing to post', 'estasoft-erp-crm-sync-engine' ) );
+			throw Refusal::because( __( 'the total is zero, so there is nothing to post', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$diff = $gross - $sum;
 		if ( abs( $diff ) > $settings->roundOffMax() ) {
 			throw Refusal::because(
 				sprintf(
 					/* translators: 1: sum of the lines, 2: total of the order */
-					__( 'the lines add up to %1$s but the order total is %2$s', 'estasoft-erp-crm-sync-engine' ),
+					__( 'the lines add up to %1$s but the order total is %2$s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					Amount::decimal( $sum, $currency ),
 					Amount::decimal( $gross, $currency )
 				)
@@ -323,7 +323,7 @@ final class TallyVoucherWriter {
 		}
 		$narration = sprintf(
 			/* translators: %s: client reference such as WC-1001 */
-			__( 'Payment for order %s', 'estasoft-erp-crm-sync-engine' ),
+			__( 'Payment for order %s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			$document->reference
 		) . ( null !== $payment && '' !== $payment->reference ? ' (' . $payment->reference . ')' : '' );
 		$x->leaf( 'DATE', str_replace( '-', '', null === $payment ? $document->date : $payment->date ) )
@@ -383,7 +383,7 @@ final class TallyVoucherWriter {
 			throw Refusal::because(
 				sprintf(
 					/* translators: 1: shipping or fee, 2: text of the line */
-					__( '%1$s "%2$s" has tax but no tax ledger', 'estasoft-erp-crm-sync-engine' ),
+					__( '%1$s "%2$s" has tax but no tax ledger', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$what,
 					$charge->name
 				)
@@ -451,13 +451,13 @@ final class TallyVoucherWriter {
 		$base = $document->isCredit()
 			? sprintf(
 				/* translators: 1: refund id, 2: client reference such as WC-1001 */
-				__( 'Refund R%1$d of order %2$s', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Refund R%1$d of order %2$s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$document->refundId,
 				$document->reference
 			)
 			: sprintf(
 				/* translators: %s: client reference such as WC-1001 */
-				__( 'Order %s', 'estasoft-erp-crm-sync-engine' ),
+				__( 'Order %s', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$document->reference
 			);
 		$text = '' === $document->note ? $base : $base . ': ' . $document->note;

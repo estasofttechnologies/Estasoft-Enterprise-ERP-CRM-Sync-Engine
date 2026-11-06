@@ -97,7 +97,7 @@ final class QuickBooksRefundSender {
 					'Invoice',
 					sprintf(
 						/* translators: %s: the shop's reference of the order, such as WC-1042. */
-						__( 'The invoice %s was not found in QuickBooks, so the refund cannot be linked to it.', 'estasoft-erp-crm-sync-engine' ),
+						__( 'The invoice %s was not found in QuickBooks, so the refund cannot be linked to it.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						$parsed->orderRef
 					)
 				)
@@ -127,7 +127,7 @@ final class QuickBooksRefundSender {
 			$done = $this->finish( $memo, $parsed, $currency, $home, $warnings );
 		}
 		if ( null === $done ) {
-			return SendResult::failure( QuickBooksErrors::refused( 'CreditMemo', __( 'QuickBooks keeps answering with a credit memo that no longer exists. Try again later.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( QuickBooksErrors::refused( 'CreditMemo', __( 'QuickBooks keeps answering with a credit memo that no longer exists. Try again later.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		if ( $done instanceof ConnectorError ) {
 			return SendResult::failure( $done );
@@ -252,7 +252,7 @@ final class QuickBooksRefundSender {
 			'CreditMemo',
 			sprintf(
 				/* translators: %s: the shop's reference of the refund, such as WC-77. */
-				__( 'The credit memo %s was voided in QuickBooks. Delete the voided credit memo there, then retry.', 'estasoft-erp-crm-sync-engine' ),
+				__( 'The credit memo %s was voided in QuickBooks. Delete the voided credit memo there, then retry.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				$reference
 			)
 		);

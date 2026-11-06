@@ -31,14 +31,14 @@ final class SuiteCrmAddress {
 	public static function base( Connection $connection ): string {
 		$raw = trim( (string) $connection->config( 'address', '' ) );
 		if ( '' === $raw ) {
-			self::refuse( __( 'The SuiteCRM address is empty.', 'estasoft-erp-crm-sync-engine' ) );
+			self::refuse( __( 'The SuiteCRM address is empty.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( ! str_contains( $raw, '://' ) ) {
 			$raw = 'https://' . $raw;
 		}
 		$parts = wp_parse_url( $raw );
 		if ( ! is_array( $parts ) || empty( $parts['host'] ) || empty( $parts['scheme'] ) ) {
-			self::refuse( __( 'The SuiteCRM address is not a web address.', 'estasoft-erp-crm-sync-engine' ) );
+			self::refuse( __( 'The SuiteCRM address is not a web address.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$path = '/' . trim( (string) ( $parts['path'] ?? '' ), '/' );
 		$path = (string) preg_replace( '#/(legacy/)?Api(/.*)?$#i', '', $path );

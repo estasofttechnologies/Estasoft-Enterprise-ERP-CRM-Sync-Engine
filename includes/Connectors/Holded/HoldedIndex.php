@@ -266,7 +266,7 @@ final class HoldedIndex {
 			array(
 				'system' => HoldedConnector::LABEL,
 				'field'  => $path,
-				'reason' => __( 'The list is longer than the connector reads. Narrow it in Holded or use a bigger plan.', 'estasoft-erp-crm-sync-engine' ),
+				'reason' => __( 'The list is longer than the connector reads. Narrow it in Holded or use a bigger plan.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			),
 			null,
 			null,

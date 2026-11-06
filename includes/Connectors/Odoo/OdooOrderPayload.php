@@ -90,7 +90,7 @@ final class OdooOrderPayload {
 			);
 		}
 		if ( '' === ( $partner['name'] ?? '' ) ) {
-			return self::refused( 'partner.name', __( 'The customer name is empty.', 'estasoft-erp-crm-sync-engine' ) );
+			return self::refused( 'partner.name', __( 'The customer name is empty.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 
 		$taxesMapped = false;
@@ -104,7 +104,7 @@ final class OdooOrderPayload {
 			$lines[]     = $line;
 		}
 		if ( array() === $lines ) {
-			return self::refused( 'order_line', __( 'The order has no product lines.', 'estasoft-erp-crm-sync-engine' ) );
+			return self::refused( 'order_line', __( 'The order has no product lines.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 
 		$flow = self::plan( $options, isset( $payload['flow'] ) && is_array( $payload['flow'] ) ? $payload['flow'] : array() );
@@ -189,7 +189,7 @@ final class OdooOrderPayload {
 				'order_line[].quantity',
 				sprintf(
 					/* translators: %d: line number. */
-					__( 'Line %d has no quantity.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Line %d has no quantity.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$number
 				)
 			);
@@ -200,7 +200,7 @@ final class OdooOrderPayload {
 				'order_line[].price_unit',
 				sprintf(
 					/* translators: %d: line number. */
-					__( 'Line %d has no price in minor units (a whole number such as 21900).', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Line %d has no price in minor units (a whole number such as 21900).', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$number
 				)
 			);
@@ -226,20 +226,20 @@ final class OdooOrderPayload {
 		$extras = array();
 
 		$shipping = isset( $payload['shipping'] ) && is_array( $payload['shipping'] ) ? $payload['shipping'] : array();
-		$extra    = self::extra( 'shipping', $shipping, 'total', __( 'Shipping', 'estasoft-erp-crm-sync-engine' ) );
+		$extra    = self::extra( 'shipping', $shipping, 'total', __( 'Shipping', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		if ( null !== $extra ) {
 			$extras[] = $extra;
 		}
 
 		foreach ( OdooPayloadReader::rows( $payload['fee'] ?? null ) as $fee ) {
-			$extra = self::extra( 'fee', $fee, 'total', __( 'Fee', 'estasoft-erp-crm-sync-engine' ) );
+			$extra = self::extra( 'fee', $fee, 'total', __( 'Fee', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 			if ( null !== $extra ) {
 				$extras[] = $extra;
 			}
 		}
 
 		$discount = isset( $payload['discount'] ) && is_array( $payload['discount'] ) ? $payload['discount'] : array();
-		$extra    = self::extra( 'discount', $discount, 'total', __( 'Discount', 'estasoft-erp-crm-sync-engine' ) );
+		$extra    = self::extra( 'discount', $discount, 'total', __( 'Discount', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		if ( null !== $extra ) {
 			$extra['price_minor'] = -abs( (int) $extra['price_minor'] );
 			$extras[]             = $extra;

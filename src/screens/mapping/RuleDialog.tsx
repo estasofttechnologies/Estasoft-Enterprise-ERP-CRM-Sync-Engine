@@ -172,11 +172,14 @@ export function RuleDialog( {
 					? sprintf(
 							/* translators: %s: field name */ __(
 								'Edit rule: %s',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 							sourceLabel( initialPaths[ 0 ] ?? rule.target )
 						)
-					: __( 'Add a field', 'estasoft-erp-crm-sync-engine' )
+					: __(
+							'Add a field',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						)
 			}
 			onClose={ onClose }
 			size="large"
@@ -187,26 +190,29 @@ export function RuleDialog( {
 							<Btn danger variant="primary" onClick={ onRemove }>
 								{ __(
 									'Yes, remove this field',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</Btn>
 						) : (
 							<Btn onClick={ () => setConfirmRemove( true ) }>
 								{ __(
 									'Remove this field',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 							</Btn>
 						)
 					) : null }
 					<Btn variant="tertiary" onClick={ onClose }>
-						{ __( 'Cancel', 'estasoft-erp-crm-sync-engine' ) }
+						{ __(
+							'Cancel',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						) }
 					</Btn>
 					{ onTest && valid ? (
 						<Btn onClick={ () => onTest( build() ) }>
 							{ __(
 								'Test on an order',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</Btn>
 					) : null }
@@ -216,10 +222,13 @@ export function RuleDialog( {
 						onClick={ () => onSave( build() ) }
 					>
 						{ rule
-							? __( 'Save rule', 'estasoft-erp-crm-sync-engine' )
+							? __(
+									'Save rule',
+									'estasoft-enterprise-erpcrm-sync-engine'
+								)
 							: __(
 									'Add field',
-									'estasoft-erp-crm-sync-engine'
+									'estasoft-enterprise-erpcrm-sync-engine'
 								) }
 					</Btn>
 				</>
@@ -229,7 +238,7 @@ export function RuleDialog( {
 				<SelectField
 					label={ __(
 						'Where the value comes from',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					value={ mode }
 					onChange={ ( value ) => setMode( value as SourceMode ) }
@@ -238,21 +247,21 @@ export function RuleDialog( {
 							value: 'field',
 							label: __(
 								'One WooCommerce field',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 						},
 						{
 							value: 'fields',
 							label: __(
 								'Several WooCommerce fields, joined',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 						},
 						{
 							value: 'const',
 							label: __(
 								'A fixed value',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							),
 						},
 					] }
@@ -261,7 +270,7 @@ export function RuleDialog( {
 					<SelectField
 						label={ __(
 							'WooCommerce field',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						value={ path }
 						onChange={ setPath }
@@ -271,7 +280,7 @@ export function RuleDialog( {
 						} ) ) }
 						hint={ __(
 							'Only fields that exist on the order can be chosen.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 					/>
 				) : null }
@@ -280,7 +289,7 @@ export function RuleDialog( {
 						<legend className="estasoft-sync-label">
 							{ __(
 								'WooCommerce fields, in order',
-								'estasoft-erp-crm-sync-engine'
+								'estasoft-enterprise-erpcrm-sync-engine'
 							) }
 						</legend>
 						{ set.source_fields.map( ( field ) => (
@@ -305,7 +314,7 @@ export function RuleDialog( {
 					<TextField
 						label={ __(
 							'Value to send',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						) }
 						value={ constant }
 						onChange={ setConstant }
@@ -314,7 +323,10 @@ export function RuleDialog( {
 
 				<fieldset className="estasoft-sync-steplist">
 					<legend className="estasoft-sync-label">
-						{ __( 'Rule', 'estasoft-erp-crm-sync-engine' ) }
+						{ __(
+							'Rule',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						) }
 					</legend>
 					{ steps.map( ( step, index ) => {
 						const def = transformDef( step.type );
@@ -325,12 +337,12 @@ export function RuleDialog( {
 										index === 0
 											? __(
 													'Rule',
-													'estasoft-erp-crm-sync-engine'
+													'estasoft-enterprise-erpcrm-sync-engine'
 												)
 											: sprintf(
 													/* translators: %d: step number */ __(
 														'Then, step %d',
-														'estasoft-erp-crm-sync-engine'
+														'estasoft-enterprise-erpcrm-sync-engine'
 													),
 													index + 1
 												)
@@ -439,7 +451,7 @@ export function RuleDialog( {
 										{ sprintf(
 											/* translators: %d: step number */ __(
 												'Remove step %d',
-												'estasoft-erp-crm-sync-engine'
+												'estasoft-enterprise-erpcrm-sync-engine'
 											),
 											index + 1
 										) }
@@ -455,7 +467,10 @@ export function RuleDialog( {
 							setSteps( [ ...steps, { type: 'trim', args: {} } ] )
 						}
 					>
-						{ __( 'Add a step', 'estasoft-erp-crm-sync-engine' ) }
+						{ __(
+							'Add a step',
+							'estasoft-enterprise-erpcrm-sync-engine'
+						) }
 					</Btn>
 				</fieldset>
 
@@ -463,7 +478,7 @@ export function RuleDialog( {
 					label={ sprintf(
 						/* translators: %s: system name */ __(
 							'Target in %s',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						system
 					) }
@@ -472,7 +487,7 @@ export function RuleDialog( {
 					hint={ sprintf(
 						/* translators: %s: system name */ __(
 							'Fields %s offers for this type of data.',
-							'estasoft-erp-crm-sync-engine'
+							'estasoft-enterprise-erpcrm-sync-engine'
 						),
 						system
 					) }
@@ -491,13 +506,13 @@ export function RuleDialog( {
 				<CheckField
 					label={ __(
 						'Required: fail the order when this is empty',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 					checked={ required }
 					onChange={ setRequired }
 					hint={ __(
 						'The order waits in Needs attention instead of arriving incomplete.',
-						'estasoft-erp-crm-sync-engine'
+						'estasoft-enterprise-erpcrm-sync-engine'
 					) }
 				/>
 			</div>

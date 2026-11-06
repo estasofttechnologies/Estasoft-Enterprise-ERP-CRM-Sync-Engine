@@ -147,7 +147,7 @@ final class SettingsController extends BaseController {
 		$recipient     = sanitize_email( (string) $request->get_param( 'recipient' ) );
 		$result        = $notifications->sendTest( $recipient );
 		if ( empty( $result['sent'] ) ) {
-			$refusal = new ApiException( ApiException::MAIL_FAILED, esc_html__( 'The test email could not be sent. WordPress did not accept the message. Check the email settings of this site.', 'estasoft-erp-crm-sync-engine' ), 502, 'needs_person' );
+			$refusal = new ApiException( ApiException::MAIL_FAILED, esc_html__( 'The test email could not be sent. WordPress did not accept the message. Check the email settings of this site.', 'estasoft-enterprise-erpcrm-sync-engine' ), 502, 'needs_person' );
 			throw $refusal;
 		}
 		$addresses = array_values( array_filter( array_map( 'trim', explode( ',', (string) ( $result['to'] ?? '' ) ) ), static fn( string $address ): bool => '' !== $address ) );

@@ -97,7 +97,7 @@ final class DaftraOrderSender {
 			return SendResult::failure( $parsed );
 		}
 		if ( '' === $parsed->currency ) {
-			return SendResult::failure( $this->refused( 'currency', __( 'The order has no currency.', 'estasoft-erp-crm-sync-engine' ) ) );
+			return SendResult::failure( $this->refused( 'currency', __( 'The order has no currency.', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		}
 		$reference = $this->ids->reference( $item );
 		$found     = $this->docs->findInvoices( $api, $reference );
@@ -243,7 +243,7 @@ final class DaftraOrderSender {
 				'InvoiceItem',
 				sprintf(
 					/* translators: 1: number of items Daftra kept, 2: number of items sent. */
-					__( 'Daftra kept %1$d lines of the %2$d that were sent.', 'estasoft-erp-crm-sync-engine' ),
+					__( 'Daftra kept %1$d lines of the %2$d that were sent.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					$record->lineCount(),
 					$lineCount
 				)
@@ -259,10 +259,10 @@ final class DaftraOrderSender {
 		$this->docs->issue( $api, $record->id() );
 		$after = $this->docs->invoice( $api, $record->id() );
 		if ( $after->isDraft() ) {
-			return $this->refused( 'draft', __( 'Daftra did not issue the invoice.', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->refused( 'draft', __( 'Daftra did not issue the invoice.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( '' !== $parsed->date && '' !== $after->date() && $after->date() !== $parsed->date ) {
-			$warnings[] = __( 'Daftra changed the date of the invoice.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'Daftra changed the date of the invoice.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		return $after;
 	}
@@ -279,7 +279,7 @@ final class DaftraOrderSender {
 			$this->docs->deleteInvoice( $api, $record->id() );
 		} catch ( ApiException $exception ) {
 			unset( $exception );
-			return __( 'The draft invoice could not be removed. Delete it in Daftra before syncing the order again.', 'estasoft-erp-crm-sync-engine' );
+			return __( 'The draft invoice could not be removed. Delete it in Daftra before syncing the order again.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		return '';
 	}
@@ -322,12 +322,12 @@ final class DaftraOrderSender {
 			return null;
 		}
 		if ( '' === $options->paymentMethod() ) {
-			return $this->refused( 'payment_method', __( 'Choose the payment method in the connection settings.', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->refused( 'payment_method', __( 'Choose the payment method in the connection settings.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		$exponent = $this->amounts->exponent( $parsed->currency );
 		$total    = $record->totalMinor( $exponent ) ?? $parsed->totalMinor;
 		if ( null === $total || $total <= 0 ) {
-			$warnings[] = __( 'The payment was not recorded because the invoice total is not known.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'The payment was not recorded because the invoice total is not known.', 'estasoft-enterprise-erpcrm-sync-engine' );
 			return null;
 		}
 		$this->docs->createPayment(

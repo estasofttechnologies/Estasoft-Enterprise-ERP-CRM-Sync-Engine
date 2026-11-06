@@ -52,10 +52,10 @@ final class DvPlan {
 			);
 		}
 		if ( null !== $order->shipping ) {
-			$lines[] = new DvLine( '' !== $order->shipping->name ? $order->shipping->name : __( 'Shipping', 'estasoft-erp-crm-sync-engine' ), 1, $order->shipping->totalMinor, $order->shipping->taxMinor );
+			$lines[] = new DvLine( '' !== $order->shipping->name ? $order->shipping->name : __( 'Shipping', 'estasoft-enterprise-erpcrm-sync-engine' ), 1, $order->shipping->totalMinor, $order->shipping->taxMinor );
 		}
 		foreach ( $order->fees as $fee ) {
-			$lines[] = new DvLine( '' !== $fee->name ? $fee->name : __( 'Fee', 'estasoft-erp-crm-sync-engine' ), 1, $fee->totalMinor, $fee->taxMinor );
+			$lines[] = new DvLine( '' !== $fee->name ? $fee->name : __( 'Fee', 'estasoft-enterprise-erpcrm-sync-engine' ), 1, $fee->totalMinor, $fee->taxMinor );
 		}
 		return $lines;
 	}

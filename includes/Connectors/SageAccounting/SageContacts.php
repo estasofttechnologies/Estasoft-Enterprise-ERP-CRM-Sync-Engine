@@ -112,7 +112,7 @@ final class SageContacts {
 			$body['delivery_address'] = $ship;
 		}
 		if ( $cut ) {
-			$warnings[] = __( 'A long customer value was shortened to fit Sage.', 'estasoft-erp-crm-sync-engine' );
+			$warnings[] = __( 'A long customer value was shortened to fit Sage.', 'estasoft-enterprise-erpcrm-sync-engine' );
 		}
 		return $body;
 	}

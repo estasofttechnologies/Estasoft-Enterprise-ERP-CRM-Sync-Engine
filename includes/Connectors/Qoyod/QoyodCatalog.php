@@ -58,15 +58,15 @@ final class QoyodCatalog {
 	public function standardTaxes(): array {
 		return array(
 			'1' => array(
-				'name'    => __( 'VAT 15%', 'estasoft-erp-crm-sync-engine' ),
+				'name'    => __( 'VAT 15%', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'rate_bp' => 1500,
 			),
 			'2' => array(
-				'name'    => __( 'VAT 0%', 'estasoft-erp-crm-sync-engine' ),
+				'name'    => __( 'VAT 0%', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'rate_bp' => 0,
 			),
 			'3' => array(
-				'name'    => __( 'Tax exempt', 'estasoft-erp-crm-sync-engine' ),
+				'name'    => __( 'Tax exempt', 'estasoft-enterprise-erpcrm-sync-engine' ),
 				'rate_bp' => 0,
 			),
 		);
@@ -109,12 +109,12 @@ final class QoyodCatalog {
 					return $setting;
 				}
 			}
-			return $this->refused( 'inventory_id', __( 'Qoyod has no branch with the number in the connection settings.', 'estasoft-erp-crm-sync-engine' ) );
+			return $this->refused( 'inventory_id', __( 'Qoyod has no branch with the number in the connection settings.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 		}
 		if ( 1 === count( $branches ) ) {
 			return QoyodPayloadReader::text( $branches[0]['id'] ?? '' );
 		}
-		return $this->refused( 'inventory_id', __( 'Choose the branch in the connection settings.', 'estasoft-erp-crm-sync-engine' ) );
+		return $this->refused( 'inventory_id', __( 'Choose the branch in the connection settings.', 'estasoft-enterprise-erpcrm-sync-engine' ) );
 	}
 
 	/**

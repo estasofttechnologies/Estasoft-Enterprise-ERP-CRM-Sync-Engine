@@ -72,7 +72,7 @@ final class ZohoCrmApi {
 					'per_page' => self::PAGE,
 				),
 				null,
-				array( 'action' => __( 'search records', 'estasoft-erp-crm-sync-engine' ) )
+				array( 'action' => __( 'search records', 'estasoft-enterprise-erpcrm-sync-engine' ) )
 			);
 			$this->note( $response );
 			$json = $response->json();
@@ -123,7 +123,7 @@ final class ZohoCrmApi {
 					'per_page' => self::PAGE,
 				),
 				null,
-				array( 'action' => __( 'read related records', 'estasoft-erp-crm-sync-engine' ) )
+				array( 'action' => __( 'read related records', 'estasoft-enterprise-erpcrm-sync-engine' ) )
 			);
 			$this->note( $response );
 			$json = $response->json();
@@ -155,7 +155,7 @@ final class ZohoCrmApi {
 			array( 'data' => array( $record ) ),
 			array(
 				'allow'  => array( 400 ),
-				'action' => __( 'create records', 'estasoft-erp-crm-sync-engine' ),
+				'action' => __( 'create records', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			)
 		);
 		$this->note( $response );
@@ -184,7 +184,7 @@ final class ZohoCrmApi {
 	 * @param array<string,mixed> $record Fields to change.
 	 */
 	public function update( string $module, string $id, array $record ): void {
-		$this->note( $this->api->put( "/crm/v8/{$module}/" . rawurlencode( $id ), array(), array( 'data' => array( $record ) ), array( 'action' => __( 'change records', 'estasoft-erp-crm-sync-engine' ) ) ) );
+		$this->note( $this->api->put( "/crm/v8/{$module}/" . rawurlencode( $id ), array(), array( 'data' => array( $record ) ), array( 'action' => __( 'change records', 'estasoft-enterprise-erpcrm-sync-engine' ) ) ) );
 	}
 
 	/**
@@ -194,7 +194,7 @@ final class ZohoCrmApi {
 	 * @param string $id     Record id.
 	 */
 	public function delete( string $module, string $id ): void {
-		$this->note( $this->api->delete( "/crm/v8/{$module}", array( 'ids' => $id ), null, array( 'action' => __( 'delete records', 'estasoft-erp-crm-sync-engine' ) ) ) );
+		$this->note( $this->api->delete( "/crm/v8/{$module}", array( 'ids' => $id ), null, array( 'action' => __( 'delete records', 'estasoft-enterprise-erpcrm-sync-engine' ) ) ) );
 	}
 
 	/**
@@ -203,7 +203,7 @@ final class ZohoCrmApi {
 	 * @return array<string,mixed>
 	 */
 	public function org(): array {
-		$response = $this->api->get( '/crm/v8/org', array(), null, array( 'action' => __( 'read the organisation', 'estasoft-erp-crm-sync-engine' ) ) );
+		$response = $this->api->get( '/crm/v8/org', array(), null, array( 'action' => __( 'read the organisation', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		$this->note( $response );
 		$row = $response->json()['org'][0] ?? array();
 		return is_array( $row ) ? $row : array();
@@ -217,7 +217,7 @@ final class ZohoCrmApi {
 	 * @throws ApiException When Zoho refuses the call (scope ZohoCRM.settings.layouts.READ).
 	 */
 	public function layouts( string $module ): array {
-		$response = $this->api->get( '/crm/v8/settings/layouts', array( 'module' => $module ), null, array( 'action' => __( 'read the layouts', 'estasoft-erp-crm-sync-engine' ) ) );
+		$response = $this->api->get( '/crm/v8/settings/layouts', array( 'module' => $module ), null, array( 'action' => __( 'read the layouts', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		$this->note( $response );
 		return $this->rowsOf( $response->json()['layouts'] ?? array() );
 	}
@@ -230,7 +230,7 @@ final class ZohoCrmApi {
 	 * @throws ApiException When Zoho refuses the call (scope ZohoCRM.settings.pipeline.READ).
 	 */
 	public function pipelines( string $layoutId ): array {
-		$response = $this->api->get( '/crm/v8/settings/pipeline', array( 'layout_id' => $layoutId ), null, array( 'action' => __( 'read the pipelines', 'estasoft-erp-crm-sync-engine' ) ) );
+		$response = $this->api->get( '/crm/v8/settings/pipeline', array( 'layout_id' => $layoutId ), null, array( 'action' => __( 'read the pipelines', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		$this->note( $response );
 		return $this->rowsOf( $response->json()['pipeline'] ?? array() );
 	}
@@ -243,7 +243,7 @@ final class ZohoCrmApi {
 	 * @throws ApiException When Zoho refuses the call (scope ZohoCRM.settings.fields.READ).
 	 */
 	public function fields( string $module ): array {
-		$response = $this->api->get( '/crm/v8/settings/fields', array( 'module' => $module ), null, array( 'action' => __( 'read the fields', 'estasoft-erp-crm-sync-engine' ) ) );
+		$response = $this->api->get( '/crm/v8/settings/fields', array( 'module' => $module ), null, array( 'action' => __( 'read the fields', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		$this->note( $response );
 		return $this->rowsOf( $response->json()['fields'] ?? array() );
 	}
@@ -262,7 +262,7 @@ final class ZohoCrmApi {
 			array( 'fields' => array( $field ) ),
 			array(
 				'allow'  => array( 400 ),
-				'action' => __( 'create fields', 'estasoft-erp-crm-sync-engine' ),
+				'action' => __( 'create fields', 'estasoft-enterprise-erpcrm-sync-engine' ),
 			)
 		);
 		$this->note( $response );
@@ -279,7 +279,7 @@ final class ZohoCrmApi {
 	 * @return array{rows:array<int,array<string,mixed>>,more:bool}
 	 */
 	public function coql( string $query ): array {
-		$response = $this->api->post( '/crm/v8/coql', array(), array( 'select_query' => $query ), array( 'action' => __( 'read records', 'estasoft-erp-crm-sync-engine' ) ) );
+		$response = $this->api->post( '/crm/v8/coql', array(), array( 'select_query' => $query ), array( 'action' => __( 'read records', 'estasoft-enterprise-erpcrm-sync-engine' ) ) );
 		$this->note( $response );
 		$json = $response->json();
 		return array(

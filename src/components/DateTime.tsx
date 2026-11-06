@@ -31,7 +31,7 @@ export function DateTime( { value, kind = 'time' }: DateTimeProps ) {
 			<span
 				aria-label={ __(
 					'Not available',
-					'estasoft-erp-crm-sync-engine'
+					'estasoft-enterprise-erpcrm-sync-engine'
 				) }
 			>
 				{ '—' }

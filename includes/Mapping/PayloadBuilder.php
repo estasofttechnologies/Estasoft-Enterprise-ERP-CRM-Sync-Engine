@@ -101,7 +101,7 @@ final class PayloadBuilder implements PayloadBuilderInterface {
 						ErrorCode::Val002,
 						array(
 							'system' => $system,
-							'field'  => __( 'Order lines', 'estasoft-erp-crm-sync-engine' ),
+							'field'  => __( 'Order lines', 'estasoft-enterprise-erpcrm-sync-engine' ),
 							'reason' => $reason,
 						)
 					),
@@ -117,9 +117,9 @@ final class PayloadBuilder implements PayloadBuilderInterface {
 				new ConnectorError(
 					ErrorCode::Val002,
 					array(
-						'system' => __( 'WooCommerce', 'estasoft-erp-crm-sync-engine' ),
+						'system' => __( 'WooCommerce', 'estasoft-enterprise-erpcrm-sync-engine' ),
 						'field'  => $item->entityType->value,
-						'reason' => __( 'It no longer exists in WooCommerce.', 'estasoft-erp-crm-sync-engine' ),
+						'reason' => __( 'It no longer exists in WooCommerce.', 'estasoft-enterprise-erpcrm-sync-engine' ),
 					)
 				),
 				$version
@@ -175,7 +175,7 @@ final class PayloadBuilder implements PayloadBuilderInterface {
 		 */
 		$result = ( $this->filter )( self::FILTER, $payload, $item, $connection );
 		if ( ! is_array( $result ) ) {
-			$this->log->warning( __( 'A payload filter returned something other than an array and was ignored.', 'estasoft-erp-crm-sync-engine' ), array( 'connection_id' => $connection->id ) );
+			$this->log->warning( __( 'A payload filter returned something other than an array and was ignored.', 'estasoft-enterprise-erpcrm-sync-engine' ), array( 'connection_id' => $connection->id ) );
 			return $payload;
 		}
 		return $result;
