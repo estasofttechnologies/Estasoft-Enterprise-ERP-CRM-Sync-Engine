@@ -166,8 +166,9 @@ form so nobody builds the same thing twice.
 5. **Test it.** Extend the shared contract test case and use the fake HTTP client in `tests/php/` so the
    connector is checked against the rules every connector must follow: same key, same reference; unknown errors
    classified; secrets never in output; Arabic text and money by currency exponent round-trip.
-6. **Trademarks and logos.** Use the vendor's name as text only. Do not add logos or artwork unless the vendor's
-   brand terms allow it, and say where the permission is recorded.
+6. **Trademarks and logos.** Use the vendor's name as text. Add a logo (`assets/logos/<connector id>.png`, 160 by
+   160 px) only if the vendor's brand terms allow it, and record where the permission is in
+   `docs/release/LOGOS.md`.
 7. **Catalog.** `includes/Catalog/catalog.php` marks a system available only when a connector for it ships in
    the same release.
 

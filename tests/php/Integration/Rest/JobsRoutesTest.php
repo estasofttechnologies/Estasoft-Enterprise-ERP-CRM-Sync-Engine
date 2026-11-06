@@ -198,7 +198,7 @@ final class JobsRoutesTest extends RestIntegrationCase {
 		$this->assertSame( 900, $this->call( 'POST', '/capacity-test' )->get_data()['items_per_minute'] );
 		$this->assertSame( array( 'step' => 2 ), $this->call( 'GET', '/onboarding' )->get_data() );
 		$this->assertSame( array( array( 'id' => 10490 ) ), $this->call( 'GET', '/orders/sample' )->get_data() );
-		$this->assertSame( array( array( 'name' => 'Odoo' ) ), $this->call( 'GET', '/catalog' )->get_data() );
+		$this->assertSame( array( array( 'name' => 'Odoo', 'logo' => '' ) ), $this->call( 'GET', '/catalog' )->get_data() );
 
 		$this->call( 'PUT', '/onboarding', array( 'step' => 3, 'connector' => 'Odoo<b>', 'answers' => array( 'stock' => true ) ) );
 		$this->call( 'PUT', '/onboarding', array( 'connector' => null ) );

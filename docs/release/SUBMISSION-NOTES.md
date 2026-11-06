@@ -242,7 +242,9 @@ smoke test for its system. The plugin's own tests run each connector against a f
 - **Admin notices** concern only the plugin's own state, are dismissible or clear themselves, and say how to fix
   the problem. There is no advertising and no upgrade prompt.
 - **Nothing is output on the public site.**
-- **Trademarks:** vendor names appear only in text, with a disclaimer; no vendor logos ship.
+- **Trademarks:** vendor names appear in text with a disclaimer. The Choose a system screen shows each vendor's own
+  logo (a 160 px file in `assets/logos/`) next to its name, only to identify the system. If the team asks for
+  permission or removal, the logos can be removed by deleting that folder; nothing else depends on them.
 - **The plugin is English only.** Strings use the text domain `estasoft-erp-crm-sync-engine`; a `.pot` file is
   generated with `bin/make-pot.sh`.
 - **Local checks.** The release zip is installed into a fresh WordPress with `bin/smoke-install.sh`
@@ -260,5 +262,6 @@ smoke test for its system. The plugin's own tests run each connector against a f
 - **"Calls an external server."** Only after a merchant saves a connection, only to the hosts listed for that system,
   and never to Estasoft. The smoke test records zero outbound requests on install, activation and every screen.
 - **"Compiled code."** Section 8.
-- **"Vendor names."** Used only to say which systems the plugin works with, with the disclaimer in the readme; no
-  logos; the plugin name and slug begin with Estasoft.
+- **"Vendor names and logos."** Used only to say which systems the plugin works with and to identify a system in the
+  list, with the disclaimer in the readme; the plugin name and slug begin with Estasoft; the logos can be removed by
+  deleting `assets/logos/` (see LOGOS.md).

@@ -141,7 +141,35 @@ function WhichProduct( {
 	);
 }
 
-function Tile( { name }: { name: string } ) {
+/**
+ * The mark next to a system: its logo, or the first letter of its name when there is no logo or the
+ * file cannot be loaded (a blocked or removed image must never leave an empty box).
+ *
+ * @param props      The system name and the address of its logo.
+ * @param props.name
+ * @param props.logo
+ * @return The tile.
+ */
+function Tile( { name, logo }: { name: string; logo?: string } ) {
+	const [ failed, setFailed ] = useState( false );
+	if ( logo && ! failed ) {
+		return (
+			<span
+				className="estasoft-sync-tile estasoft-sync-tile--logo"
+				aria-hidden="true"
+			>
+				<img
+					src={ logo }
+					alt=""
+					width={ 44 }
+					height={ 44 }
+					loading="lazy"
+					decoding="async"
+					onError={ () => setFailed( true ) }
+				/>
+			</span>
+		);
+	}
 	return (
 		<span className="estasoft-sync-tile" aria-hidden="true">
 			{ tileLetter( name ) }
@@ -339,7 +367,10 @@ export function ChooseSystem( {
 								className={ `estasoft-sync-sys-card${ selected === entry.name ? ' is-selected' : '' }` }
 							>
 								<div className="estasoft-sync-sys-card__head">
-									<Tile name={ entry.name } />
+									<Tile
+										name={ entry.name }
+										logo={ entry.logo }
+									/>
 									<span className="estasoft-sync-strong">
 										{ entry.name }
 									</span>
@@ -469,7 +500,10 @@ export function ChooseSystem( {
 										primary: true,
 										cell: ( entry ) => (
 											<span className="estasoft-sync-sys">
-												<Tile name={ entry.name } />
+												<Tile
+													name={ entry.name }
+													logo={ entry.logo }
+												/>
 												<span>
 													<span className="estasoft-sync-strong">
 														{ entry.name }

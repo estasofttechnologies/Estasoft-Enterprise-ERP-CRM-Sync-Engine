@@ -86,6 +86,7 @@ final class RealServicesSmokeTest extends RestIntegrationCase {
 		$odoo = array_values( array_filter( $this->call( 'GET', '/catalog' )->get_data(), static fn( array $entry ): bool => 'odoo' === $entry['connector'] ) );
 		$this->assertCount( 1, $odoo );
 		$this->assertTrue( $odoo[0]['available'] );
+		$this->assertStringEndsWith( '/assets/logos/odoo.png', $odoo[0]['logo'] );
 		$this->assertCount( 34, $this->call( 'GET', '/catalog' )->get_data() );
 	}
 

@@ -33,6 +33,7 @@ Requests (2 Nov 2026): start the UI/UX design; the Estasoft E icon, colours and 
 - From files the owner supplied (vendors' own artwork), made into square 160 px PNG tiles at 24, 28, 36 or 40 px. Systems without a logo show a letter tile.
 - **23 of 34 have a logo.** **11 still show a letter tile:** Qoyod, Wafeq, Daftra, TallyPrime, Lexware Office, sevDesk, Pennylane, Dynamics 365 Finance and Supply Chain, Dynamics 365 Sales, Acumatica, Holded. Ten more files were supplied but their vendors were not clear from the artwork, so none is used yet (owner to name them).
 - Before release, check each vendor's brand terms. WordPress.org reviewers look closely at third-party trademarks; the safe fallback is the system's name in text.
+- **Built in the plugin on 6 Nov 2026** for the 23 rows with a logo (22 files); see [../release/LOGOS.md](../release/LOGOS.md). The ten unplaced files are still not used.
 
 ## Boards (88)
 

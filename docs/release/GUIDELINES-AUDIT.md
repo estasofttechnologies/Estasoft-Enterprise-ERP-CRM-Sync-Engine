@@ -34,7 +34,7 @@ entry for every service, generated from the connector documents and checked in C
 | 14 | Frequent commits to a plugin should be avoided | The SVN repository only receives release-ready code: one deploy per tag by the release workflow. Development happens on GitHub. | Met. |
 | 15 | Plugin version numbers must be incremented for each new release | `bin/bump-version.sh` sets the header, constant, Stable tag, `package.json` and changelog together; `bin/build-zip.sh` refuses to build when they disagree or when the tag differs. | Met. |
 | 16 | A complete plugin must be available at the time of submission | The plugin is complete as described: the engine, every admin screen and 35 selectable connectors. Two catalog entries are listed and cannot be selected, and say why on the screen: SMACC (publishes no API) and Pennylane (needs a sign-in app for production and its API terms limit use). Their code does nothing until `available` is set. No name is being reserved. | Met. **Owner action:** the connectors have been tested against simulated copies of the vendors' APIs only; run the smoke test of each connector document on a vendor sandbox before or soon after submission and flip `verified` (see OWNER-ACTIONS.md). The readme says plainly that none has been tried live. |
-| 17 | Plugins must respect trademarks, copyrights, and project names | The slug and name begin with Estasoft, the owner's own brand, not with a third-party mark. WooCommerce and the vendors are named only in text, to say which systems the plugin works with, with a disclaimer in the readme under "Trademarks" and in `README.md`. No vendor logos ship (the zip holds no image; the catalog has names only). See the trademark notes and the list of 34 below. | Met. **Owner action:** vendor brand terms before any logo is added; confirm the Estasoft name is the owner's to use if the team asks. |
+| 17 | Plugins must respect trademarks, copyrights, and project names | The slug and name begin with Estasoft, the owner's own brand, not with a third-party mark. WooCommerce and the vendors are named only in text, to say which systems the plugin works with, with a disclaimer in the readme under "Trademarks" and in `README.md`. The Choose a system screen also shows the vendor's own logo next to 23 of the 34 entries (22 files in `assets/logos/`), only to identify the system, with the readme disclaimer; the other 11 entries show a letter tile. **No vendor has been asked for permission yet** ([LOGOS.md](LOGOS.md)). See the trademark notes and the list of 34 below. | **Open risk.** A reviewer may ask for permission or for the logos to be removed; removal is deleting `assets/logos/` (letter tiles take over) and needs no code change. **Owner action:** find each vendor's brand terms and record them in LOGOS.md, or remove the logos before submitting; confirm the Estasoft name is the owner's to use if the team asks. |
 | 18 | We reserve the right to maintain the Plugin Directory | Acknowledged. A security contact exists (`SECURITY.md`); the WordPress.org account email must be monitored. | **Owner action:** keep the account email current, turn on two-factor authentication on the WordPress.org account, and answer review emails. |
 
 ## Other checks the reviewers make
@@ -59,19 +59,21 @@ entry for every service, generated from the connector documents and checked in C
 - **Vendors.** Names appear only as text: in the readme (supported systems, External services), in the setup
   screen's list of systems and in documents. The readme disclaims affiliation and endorsement. The tag `odoo` was
   removed from the readme so that no vendor name is used as a tag.
-- **Logos.** The design boards use vendors' own artwork for 23 of the 34 systems (the other 11 use a letter
-  tile). **The shipped plugin has no logo of any vendor** (no image in the zip), so nothing needs clearing for 0.1.0.
-  Before any logo is added to the Choose a system screen, check that vendor's brand or logo terms, keep a record of
-  the permission, and use the vendor's current artwork unaltered and no larger than the terms allow. The safe
-  fallback is the system's name in text. This is an **open owner task** for all 34.
+- **Logos.** The plugin ships the vendor's own artwork for 23 of the 34 entries (22 files; the Sage artwork serves
+  two entries) and shows it on the Choose a system screen at 36 and 44 px. The other 11 entries show a letter tile.
+  The files, their trademark owners and how to remove them are in [LOGOS.md](LOGOS.md). **No vendor's brand or logo
+  terms have been read and no permission has been asked for.** Check each vendor's terms, keep a record of the
+  permission, and use the vendor's current artwork unaltered and no larger than the terms allow. The safe fallback is
+  the system's name in text: delete `assets/logos/` and nothing else changes. This is an **open owner task** for all
+  23.
 
 ### The 34 systems
 
-Trademark owners are given from general knowledge and must be confirmed on each vendor's own page. "Artwork
-supplied" means a logo file exists in the design project; it does not mean permission has been checked. The
+Trademark owners are given from general knowledge and must be confirmed on each vendor's own page. "Logo shown"
+means the plugin ships a logo file for the entry (`assets/logos/`); it does not mean permission has been checked. The
 connector column shows the state of this release (from `includes/Catalog/catalog.php`).
 
-| # | System | Type | Trademark owner (to confirm) | Artwork supplied | Connector in 0.1.0 | Brand terms |
+| # | System | Type | Trademark owner (to confirm) | Logo shown | Connector in 0.1.0 | Brand terms |
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | QuickBooks Online | Accounting | Intuit Inc. | Yes | Yes | Owner to find and record |
 | 2 | Xero | Accounting | Xero Limited | Yes | Yes | Owner to find and record |
@@ -108,8 +110,7 @@ connector column shows the state of this release (from `includes/Catalog/catalog
 | 33 | Pipedrive | CRM | Pipedrive | Yes | Yes | Owner to find and record |
 | 34 | SuiteCRM | CRM | SalesAgility Ltd. | Yes | Yes | Owner to find and record |
 
-Counts: 17 accounting, 11 ERP, 6 CRM; 23 with supplied artwork, 11 without (from
-[../design/uiux-status.md](../design/uiux-status.md)); 32 of the 34 entries have a selectable connector (37
+Counts: 17 accounting, 11 ERP, 6 CRM; 23 with a logo, 11 with a letter tile (see [LOGOS.md](LOGOS.md)); 32 of the 34 entries have a selectable connector (37
 connector documents in all, because the Sage entries hold five products). The names, types and flags are the ones in
 `includes/Catalog/catalog.php`.
 

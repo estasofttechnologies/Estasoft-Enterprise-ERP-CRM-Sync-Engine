@@ -17,6 +17,9 @@ First release.
 
 ### Added
 
+- Vendor logos on the Choose a system screen for 23 of the 34 entries (160 px files in `assets/logos/`, shown at 36 and
+  44 px); the other entries keep a letter tile, as does any logo that cannot load. The filter
+  `estasoft_sync_show_vendor_logos` hides them on one site. See `docs/release/LOGOS.md`.
 - Durable queue: an order event is written to the queue in the order's own database transaction; a background
   worker delivers it with retries, a circuit breaker and a rate limiter. Checkout makes no request to the
   connected system.
