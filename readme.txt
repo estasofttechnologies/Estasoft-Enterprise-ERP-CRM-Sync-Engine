@@ -34,11 +34,11 @@ Before you go live: every connector was built from the vendor's public documenta
 * Preview what your system will receive, and a Shadow mode that changes nothing.
 * Readable mapping rules with tax mapping, SKU matching and rollback; failed orders grouped by cause, with a fix.
 * Stock, tracking and invoice status back, a nightly reconciliation, a dashboard and email alerts.
-* Encrypted credentials. HPOS and the block checkout are supported.
+* Encrypted credentials, with the key in wp-config.php. HPOS and the block checkout are supported.
 
 = Trademarks =
 
-All product and company names and logos are trademarks of their owners. They are used only to say which systems the plugin works with, and a logo is shown only next to its own system so you can find it in the list. The plugin is independent of these companies and is not sponsored or endorsed by any of them.
+All product and company names are trademarks of their owners, used only to say which systems the plugin works with. The plugin is independent of them and includes no vendor logos.
 
 == External services ==
 

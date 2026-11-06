@@ -21,10 +21,8 @@ Rules that WordPress.org enforces or reviewers check:
 - No price, upgrade, licence or "pro" wording in any image. The plugin has no paid tier.
 - The official name, **Estasoft Enterprise ERP/CRM Sync Engine**, is written in full on the banner. The short
   label ESTASOFT SYNC is used only inside the plugin's own screens.
-- No image made for WordPress.org (icon, banners) carries a third-party logo or trademark (see
-  [GUIDELINES-AUDIT.md](GUIDELINES-AUDIT.md), guideline 17). A screenshot of the plugin's own Choose a system screen
-  shows the vendor logos the plugin itself shows ([LOGOS.md](LOGOS.md)); a vendor's name may appear in a screenshot
-  as the name of the connected system on a screen.
+- Third-party logos and trademarks do not appear (see [GUIDELINES-AUDIT.md](GUIDELINES-AUDIT.md), guideline 17).
+  A vendor's name may appear in a screenshot only as the name of the connected system on a screen.
 - Screenshots show the finished plugin with sample data only: no real customer names, emails, addresses, API keys
   or order numbers from a live shop.
 - Optional and not used: `icon.svg`, right-to-left banners (`banner-772x250-rtl.png`, `banner-1544x500-rtl.png`),
@@ -55,8 +53,7 @@ The captions in `readme.txt` match these files (looked at on 2 Nov 2026).
 | 6 | Settings: email notifications, performance, access and a readiness check, with no usage tracking. | Settings, Notifications tab, with the line "This plugin has no usage tracking and talks only to the system you connect, and only after you set it up." |
 
 Screenshot 3 was retaken on 3 Nov 2026 from the build with the 34-system Choose a system screen (the method line, the
-"Not yet tested" tag and the reason on a system that cannot be selected). It was taken before the vendor logos were
-added (6 Nov 2026) and shows letter tiles; retake it if the logos stay in the release. The others still match the screens; look at
+"Not yet tested" tag and the reason on a system that cannot be selected). The others still match the screens; look at
 them once more against the final build.
 
 If a final screen differs from its caption, change the caption in `readme.txt` (keep the numbering) rather than the

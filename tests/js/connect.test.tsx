@@ -2,7 +2,6 @@
  * The connect experience for all systems: choose a system, the five ways to connect, the way back
  * from a sign-in page, reconnecting, and the problems screen.
  */
-import { fireEvent } from '@testing-library/react';
 import { setLeaver } from '../../src/lib/external';
 import {
 	answer,
@@ -100,43 +99,6 @@ describe( 'Choose a system', () => {
 			)
 		).toBeInTheDocument();
 		await expectNoA11yViolations();
-	} );
-
-	it( 'shows a logo for a system that has one, a letter for one that has none, and a letter again when the image cannot load', async () => {
-		await renderApp( {
-			route: '/connections/add',
-			wrap: patchJson(
-				( req ) => req.route === '/catalog' && req.method === 'GET',
-				( data ) =>
-					( data as unknown as Record< string, unknown >[] ).map(
-						( entry ) => ( {
-							...entry,
-							logo:
-								entry.name === 'Xero'
-									? 'https://example.test/assets/logos/xero.png'
-									: '',
-						} )
-					) as unknown as typeof data
-			),
-		} );
-		const xero = await screen.findByRole( 'row', { name: /Xero/ } );
-		const image = xero.querySelector( 'img' );
-		expect( image ).toHaveAttribute(
-			'src',
-			'https://example.test/assets/logos/xero.png'
-		);
-		expect( image ).toHaveAttribute( 'alt', '' );
-		const wafeq = await screen.findByRole( 'row', { name: /Wafeq/ } );
-		expect( wafeq.querySelector( 'img' ) ).toBeNull();
-		expect(
-			wafeq.querySelector( '.estasoft-sync-tile' )
-		).toHaveTextContent( 'W' );
-
-		fireEvent.error( image as HTMLImageElement );
-		await waitFor( () => expect( xero.querySelector( 'img' ) ).toBeNull() );
-		expect( xero.querySelector( '.estasoft-sync-tile' ) ).toHaveTextContent(
-			'X'
-		);
 	} );
 
 	it( 'does not let SMACC be selected and gives the reason from the catalog', async () => {

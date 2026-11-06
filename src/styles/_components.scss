@@ -1160,30 +1160,10 @@
 	font-weight: 600;
 }
 
-// A vendor's logo: a white tile with a hairline border, so every logo sits on the same ground whatever its colours.
-.estasoft-sync-tile--logo {
-	overflow: hidden;
-	border: 1px solid var(--estasoft-sync-divider);
-	background: #fff;
-
-	img {
-		display: block;
-		inline-size: 100%;
-		block-size: 100%;
-		object-fit: contain;
-	}
-}
-
 .estasoft-sync-sys {
 	display: flex;
 	align-items: center;
 	gap: 12px;
-
-	// In the list the mark is a little larger than in a card: a wordmark is small at 36 px.
-	.estasoft-sync-tile {
-		inline-size: 44px;
-		block-size: 44px;
-	}
 }
 
 .estasoft-sync-sys-card {

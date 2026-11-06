@@ -66,10 +66,6 @@ Full detail, sources and confidence tags are in the research document. The point
 6. Whether to tell merchants about SMACC's own WooCommerce connection.
 7. Whether to keep the contract and test suite public for add-ons from other developers.
 
-## Update, 6 Nov 2026: vendor logos on the Choose a system screen
-
-The first build showed letter tiles only, because a vendor's logo is its trademark. The owner asked for the logos to be shown. The plugin now ships the 22 files the owner supplied whose vendor is clear (23 catalog rows; the Sage artwork serves two) in `assets/logos/<connector id>.png`, at 160 px, and the Choose a system screen draws them at 36 px in a card and 44 px in the list. The catalog answer carries a `logo` field (an address, or an empty string), a system with no file or a file that cannot load keeps the letter tile, and the filter `estasoft_sync_show_vendor_logos` turns them off for a site. No vendor has been asked for permission, so [the logo document](../release/LOGOS.md) records the risk and the one step that removes them. Eleven entries still show a letter tile because no logo was supplied for them or the vendor of a supplied file was not clear.
-
 ## Update, 3 Nov 2026 (later still): no Help tabs and no Screen Options on the plugin screen
 
 Item UI-8 of the phase 1 spec asked for WordPress's Screen Options and a Help tab on every list screen. On a real site they are two buttons above the plugin's own header, and the owner asked for them to be removed. The plugin screen now adds neither. The queue shows 25 rows a page (the route still accepts `per_page` 25, 50 or 100), the boot data no longer carries `perPage`, and what the Help tabs said is explained in place in the app and in the readme. The Screen Options of the WordPress dashboard, where the status box can be hidden, are WordPress's own and stay.

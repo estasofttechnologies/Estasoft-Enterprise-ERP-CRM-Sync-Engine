@@ -24,9 +24,8 @@ Everything else is in the repository and checked by a script. The full ordered l
    pages, which refuse automated reads). Fix the front matter in `docs/connectors/<id>.md`, then run
    `php bin/generate-external-services.php`. Systems with no terms page at all (SuiteCRM) are said so in words.
 7. **Confirm the rights to the artwork:** Estasoft holds the rights to the icon and banner in `.wordpress-org/`
-   (they are not in the zip). The plugin shows 22 vendor logos on the Choose a system screen
-   ([LOGOS.md](LOGOS.md)) and no vendor has been asked. Either get each vendor's permission (or find that its brand
-   terms allow this use) and record it in LOGOS.md, or delete `assets/logos/` before submitting.
+   (they are not in the zip). Real vendor logos are used **only with each vendor's written permission**; the plugin
+   ships none.
 8. **Look at the screenshots again** against the final screens (screenshot 3, Choose a system, was retaken on
    3 Nov 2026; [ASSETS.md](ASSETS.md)).
 9. **Test on a real shop**, because the install test used a WooCommerce stand-in: WordPress 6.4 and the latest 7.x,
@@ -61,7 +60,7 @@ Everything else is in the repository and checked by a script. The full ordered l
     it found under "Not verified"); the plugin is free and each merchant uses their own account, which is the case
     to put to the vendor when a term is unclear.
 16. **Trademarks.** Confirm the owner of each of the 34 names in [GUIDELINES-AUDIT.md](GUIDELINES-AUDIT.md) and find
-    each vendor's brand terms; record the answer for each logo in [LOGOS.md](LOGOS.md).
+    each vendor's brand terms before any logo is considered.
 17. **Translations and right-to-left.** The screens are English only. Translations come from translate.wordpress.org
     after approval; a right-to-left admin layout is not built (the stylesheet uses logical properties, so it
     should not break).

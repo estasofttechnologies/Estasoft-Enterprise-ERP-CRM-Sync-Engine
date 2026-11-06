@@ -311,8 +311,6 @@ export interface CatalogEntry {
 	/** The shape of the connection: for a row that holds variants, the style of the connection method; each variant carries its own. Always sent by the server. */
 	auth_style?: AuthStyle;
 	wave: number;
-	/** Address of the system's logo, or an empty string when there is none (the screen then draws a letter tile). Always sent by the server. */
-	logo?: string;
 }
 
 /** One product of a catalog row that holds several (Sage 200, 300 and X3). Has its own connector id and its own form. */
