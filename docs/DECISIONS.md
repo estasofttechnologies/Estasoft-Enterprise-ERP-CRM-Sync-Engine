@@ -153,7 +153,7 @@ A public connector contract (adapter interface plus contract test suite) lets ot
 - Canonical order model, then one small adapter per system.
 - Runtime profiles as settings, not tiers: Action Scheduler by default; WP-CLI worker plus optional Redis for high volume.
 - Read and write orders through the WooCommerce CRUD layer, never raw SQL on HPOS tables.
-- Credentials encrypted with libsodium, key in wp-config, not in the database.
+- Credentials encrypted with libsodium; the key comes from the WordPress security keys or from a constant in wp-config.php, never from the database.
 - Log table: truncate payloads, redact personal data, prune on a schedule.
 - Never forward raw payment tokens to an ERP: send transaction ID and last four digits to stay out of PCI scope.
 

@@ -34,7 +34,7 @@ Before you go live: every connector was built from the vendor's public documenta
 * Preview what your system will receive, and a Shadow mode that changes nothing.
 * Readable mapping rules with tax mapping, SKU matching and rollback; failed orders grouped by cause, with a fix.
 * Stock, tracking and invoice status back, a nightly reconciliation, a dashboard and email alerts.
-* Encrypted credentials, with the key in wp-config.php. HPOS and the block checkout are supported.
+* Encrypted credentials. HPOS and the block checkout are supported.
 
 = Trademarks =
 
