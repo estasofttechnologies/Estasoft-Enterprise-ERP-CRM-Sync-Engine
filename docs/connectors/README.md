@@ -21,7 +21,7 @@ One document per connector id. Each starts with a front matter block that the ca
 | [NetSuite](netsuite.md) | `netsuite` | Cloud app, no sign-in page | `*.suitetalk.api.netsuite.com` | No |
 | [Odoo](odoo.md) | `odoo` | Key or login | The address you enter, or none | No |
 | [Oracle Fusion Cloud ERP](oracle-fusion.md) | `oracle-fusion` | Cloud app, no sign-in page | `*.oraclecloud.com` | No |
-| [Pennylane](pennylane.md) | `pennylane` | Key or login | `app.pennylane.com` | No |
+| [Pennylane](pennylane.md) | `pennylane` | Key or login | The address you enter, or none | No |
 | [Pipedrive](pipedrive.md) | `pipedrive` | Key or login | `*.pipedrive.com` | No |
 | [Qoyod](qoyod.md) | `qoyod` | Key or login | `api.qoyod.com` | No |
 | [QuickBooks Online](quickbooks.md) | `quickbooks` | Your own app, sign in | `quickbooks.api.intuit.com`, `sandbox-quickbooks.api.intuit.com`, `appcenter.intuit.com`, `oauth.platform.intuit.com` | No |

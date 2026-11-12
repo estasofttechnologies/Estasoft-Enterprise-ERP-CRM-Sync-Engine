@@ -100,7 +100,7 @@ return array(
 			'www.zohoapis.ca',
 			'www.zohoapis.com.cn',
 		),
-		'terms_url'         => 'https://www.zoho.com/books/terms.html',
+		'terms_url'         => 'https://www.zoho.com/terms.html',
 		'privacy_url'       => 'https://www.zoho.com/privacy.html',
 		'developer_url'     => 'https://api-console.zoho.com',
 		'steps'             => array(
@@ -465,7 +465,7 @@ return array(
 		'unavailable_reason' => 'Pennylane requires OAuth for production integrations (its company tokens are for sandbox testing) and its API terms limit use to internal business purposes, so this connector cannot be offered until both are cleared with Pennylane.',
 		'verified'           => false,
 		'variants'           => array(),
-		'hosts'              => array( 'app.pennylane.com' ),
+		'hosts'              => array(),
 		'terms_url'          => 'https://pennylane.readme.io/page/api-contract-terms',
 		'privacy_url'        => 'https://www.pennylane.com/fr/legal/privacy',
 		'developer_url'      => 'https://pennylane.readme.io/docs/generating-my-api-token',

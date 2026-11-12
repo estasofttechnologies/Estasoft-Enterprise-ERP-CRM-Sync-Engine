@@ -208,5 +208,6 @@ final class ConnectorShapeTest extends TestCase {
 		$this->assertSame( \Estasoft\SyncEngine\Connectors\Datev\DatevProvider::class, $index['datev-export'] );
 		$this->assertSame( \Estasoft\SyncEngine\Connectors\Sage50\Sage50Provider::class, $index['sage50-export'] );
 		$this->assertSame( \Estasoft\SyncEngine\Connectors\Smacc\SmaccProvider::class, $index['smacc'] );
+		$this->assertSame( \Estasoft\SyncEngine\Connectors\Pennylane\PennylaneProvider::class, $index['pennylane'] );
 	}
 }

@@ -6,7 +6,7 @@ connection_method: own_app
 available: true
 verified: false
 hosts: [accounts.zoho.com, accounts.zoho.eu, accounts.zoho.in, accounts.zoho.com.au, accounts.zoho.jp, accounts.zoho.sa, accounts.zohocloud.ca, accounts.zoho.com.cn, www.zohoapis.com, www.zohoapis.eu, www.zohoapis.in, www.zohoapis.com.au, www.zohoapis.jp, www.zohoapis.sa, www.zohoapis.ca, www.zohoapis.com.cn]
-terms_url: https://www.zoho.com/books/terms.html
+terms_url: https://www.zoho.com/terms.html   # Zoho Terms of Service (general terms for all Zoho services); the old address /books/terms.html returned 404 on 12 Nov 2026
 privacy_url: https://www.zoho.com/privacy.html
 developer_url: https://api-console.zoho.com
 variants: []

@@ -130,6 +130,34 @@ final class HostPolicy {
 	}
 
 	/**
+	 * The reason text in the language of the site. Every message is written out as a plain string so that
+	 * translators can see it; an unknown text is returned as it is.
+	 *
+	 * @param string $reason A text returned by violation().
+	 */
+	private static function reasonText( string $reason ): string {
+		switch ( $reason ) {
+			case 'No address is allowed for this connection.':
+				return __( 'No address is allowed for this connection.', 'estasoft-enterprise-erpcrm-sync-engine' );
+			case 'The address is not a valid web address.':
+				return __( 'The address is not a valid web address.', 'estasoft-enterprise-erpcrm-sync-engine' );
+			case 'The address must not contain a user name or password.':
+				return __( 'The address must not contain a user name or password.', 'estasoft-enterprise-erpcrm-sync-engine' );
+			case 'The address must use a host name or an IP address written the usual way.':
+				return __( 'The address must use a host name or an IP address written the usual way.', 'estasoft-enterprise-erpcrm-sync-engine' );
+			case 'The address must start with https://.':
+				return __( 'The address must start with https://.', 'estasoft-enterprise-erpcrm-sync-engine' );
+			case 'The address is not one of the hosts this connector contacts.':
+				return __( 'The address is not one of the hosts this connector contacts.', 'estasoft-enterprise-erpcrm-sync-engine' );
+			case 'The address points to a private network.':
+				return __( 'The address points to a private network.', 'estasoft-enterprise-erpcrm-sync-engine' );
+			case 'The address could not be found. Check the spelling of the host name.':
+				return __( 'The address could not be found. Check the spelling of the host name.', 'estasoft-enterprise-erpcrm-sync-engine' );
+		}
+		return $reason;
+	}
+
+	/**
 	 * Throw when a URL is not allowed.
 	 *
 	 * @param string $url    Absolute URL.
@@ -146,7 +174,7 @@ final class HostPolicy {
 					array(
 						'system' => $system,
 						'field'  => 'address',
-						'reason' => __( $reason, 'estasoft-enterprise-erpcrm-sync-engine' ), // phpcs:ignore WordPress.WP.I18n.NonSingularStringLiteralText -- a fixed list of reasons above.
+						'reason' => self::reasonText( $reason ),
 					),
 					null,
 					null,

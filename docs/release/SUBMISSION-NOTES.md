@@ -19,7 +19,7 @@ WooCommerce > ESTASOFT SYNC, using WordPress components and the REST API `estaso
 The plugin contains 35 connectors (34 entries on the setup screen, because the Sage entries hold several products):
 13 ERP systems, 13 accounting systems, 6 CRM systems, and 3 systems that get an import file instead of a connection
 (DATEV, Sage 50, TallyPrime). Two more entries, SMACC and Pennylane, are listed and cannot be selected yet, and
-say why. A connector does nothing until a merchant selects it and enters credentials. All features are free. There
+say why; the plugin has no code that contacts either of them. A connector does nothing until a merchant selects it and enters credentials. All features are free. There
 is no licence key, tier, trial or upsell code, and no telemetry.
 
 ---

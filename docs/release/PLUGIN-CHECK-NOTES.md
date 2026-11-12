@@ -67,7 +67,7 @@ wp_plugin_check_load()". The workflow now leaves both to the action.
    `includes/`), discouraged functions, `register_setting` without a sanitise callback (none), images and offloaded
    resources. The WordPress sniffs ran clean here.
 2. **The official readme parser** and the rules it applies to the header, the tags, the screenshots and the changelog;
-   also whether the Contributors name `estasofttechnologies` is a real WordPress.org user, whether `Tested up to` is
+   also whether the Contributors name `estasoft` is a real WordPress.org user (the review email of 12 Nov 2026 confirms that `estasoft` is the account that owns the plugin), whether `Tested up to` is
    the current WordPress and whether the plugin name or slug is flagged as a trademark.
 3. **Runtime checks on a real site** with WooCommerce active: the front end must load no script or style of the
    plugin and no external resource, activation must produce no output, and the admin screen must not trip the

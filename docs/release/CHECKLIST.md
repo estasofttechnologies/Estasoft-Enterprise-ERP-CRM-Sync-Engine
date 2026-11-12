@@ -71,7 +71,7 @@ or authority has to do it. **Done** = already true on the day this file was last
 | # | Step | Who | Status |
 | --- | --- | --- | --- |
 | F1 | The tag build uploads `estasoft-enterprise-erpcrm-sync-engine-<version>.zip` to the GitHub release (the `github-release` job). Download that exact file. | Tooling | On tag |
-| F2 | Submit it at <https://wordpress.org/plugins/developers/add/> while signed in to the WordPress.org account `estasofttechnologies`. Paste the text from [SUBMISSION-NOTES.md](SUBMISSION-NOTES.md) where the form or the review email asks for notes. | Owner | Open |
+| F2 | Submit it at <https://wordpress.org/plugins/developers/add/> while signed in to the WordPress.org account `estasoft`. Paste the text from [SUBMISSION-NOTES.md](SUBMISSION-NOTES.md) where the form or the review email asks for notes. | Owner | Open |
 | F3 | Answer the Plugin Review team's emails (they come from the account's address) and fix what they list. Re-submit by uploading a new zip as they instruct; bump the version if they ask. | Owner | After submission |
 | F4 | After approval the SVN repository exists. Re-run the release workflow for the approved tag (or tag the next version). When the `deploy-wordpress-org` job waits, review it and **approve**. It puts the unpacked verified zip in `trunk`, copies it to `tags/<version>` and uploads `.wordpress-org/*` to `assets`. | Owner | After approval |
 | F5 | Check the plugin page: name, banner at both sizes, icon, screenshots and captions, tabs, changelog, upgrade notice, "Requires Plugins" box. Install it from the directory on a clean site with WooCommerce and run the setup. | Owner | After deploy |

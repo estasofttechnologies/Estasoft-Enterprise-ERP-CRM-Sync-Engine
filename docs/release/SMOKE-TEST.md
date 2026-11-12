@@ -4,13 +4,13 @@ Written by `bin/smoke-install.sh --report`; do not edit by hand. Run it again af
 
 | | |
 |---|---|
-| Date (UTC) | 2026-11-06 20:06 |
+| Date (UTC) | 2026-11-12 19:05 |
 | Result | passed: 98 checks, 0 failed |
 | Plugin version | 0.1.0 |
 | Zip | `estasoft-enterprise-erpcrm-sync-engine-0.1.0.zip` |
-| Files in the zip | 931 |
-| Size | 1.96 MiB zipped, 5.97 MiB unpacked |
-| SHA-256 | `4942bedfb7abec799063089921f3f151eab56e4a4a86e30221806fe6d002c7fb` |
+| Files in the zip | 926 |
+| Size | 1.94 MiB zipped, 5.93 MiB unpacked |
+| SHA-256 | `267a6723cae9675802e32340996b6ee228ed213141e4edc0c1b9a8acc5523c2d` |
 | WordPress | 6.4.3 (fresh install, WP_DEBUG on, debug.log) |
 | PHP | 8.3.6 |
 | Database | 10.11.14-MariaDB-0ubuntu0.24.04.1 (fresh database, utf8mb4) |

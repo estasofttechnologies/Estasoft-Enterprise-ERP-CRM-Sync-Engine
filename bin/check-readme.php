@@ -19,7 +19,7 @@ if ( 'cli' !== PHP_SAPI ) {
 	exit( 2 );
 }
 
-const ESTASOFT_README_CONTRIBUTORS = array( 'estasofttechnologies' );
+const ESTASOFT_README_CONTRIBUTORS = array( 'estasoft' );
 const ESTASOFT_README_REQUIRED     = array(
 	'Contributors',
 	'Tags',

@@ -120,11 +120,13 @@ final class NoticesAndBootTest extends RestIntegrationCase {
 	}
 
 	/**
-	 * Print the notices and return the HTML.
+	 * Print the notices on an admin screen and return the HTML.
 	 *
 	 * @param Notices $notices Notices.
+	 * @param string  $screen  Screen id; the Dashboard by default.
 	 */
-	private function printed( Notices $notices ): string {
+	private function printed( Notices $notices, string $screen = 'dashboard' ): string {
+		set_current_screen( $screen );
 		ob_start();
 		$notices->render();
 		return (string) ob_get_clean();
@@ -239,6 +241,29 @@ final class NoticesAndBootTest extends RestIntegrationCase {
 		$this->assertSame( '1 order failed to sync. It needs a person.', $app['failed_orders']['text'] );
 		$this->assertSame( '/queue?state=failed', $app['failed_orders']['action_route'] );
 		$this->assertStringContainsString( '13 items are waiting. That is more than the limit of 10.', $app['backlog']['text'] );
+	}
+
+	public function test_the_notices_show_only_on_the_dashboard_the_plugins_list_and_the_woocommerce_screens(): void {
+		$notices = $this->notices();
+		foreach ( array( 'dashboard', 'plugins', 'woocommerce_page_wc-settings', 'edit-shop_order', 'edit-product' ) as $screen ) {
+			$this->assertStringContainsString( 'notice notice-info', $this->printed( $notices, $screen ), $screen );
+		}
+		foreach ( array( 'edit-post', 'edit-page', 'upload', 'themes', 'users', 'tools', 'options-general', 'edit-comments' ) as $screen ) {
+			$this->assertSame( '', $this->printed( $notices, $screen ), $screen );
+		}
+	}
+
+	public function test_a_site_can_change_the_screens_with_a_filter(): void {
+		$notices = $this->notices();
+		$this->hook(
+			'estasoft_sync_show_notices_on_screen',
+			static function ( bool $show ): bool {
+				$id = (string) get_current_screen()->id;
+				return 'tools' === $id || ( 'dashboard' !== $id && $show );
+			}
+		);
+		$this->assertStringContainsString( 'notice notice-info', $this->printed( $notices, 'tools' ) );
+		$this->assertSame( '', $this->printed( $notices, 'dashboard' ) );
 	}
 
 	public function test_nothing_is_printed_on_the_plugin_page_itself(): void {

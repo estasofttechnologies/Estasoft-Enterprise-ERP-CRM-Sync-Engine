@@ -39,8 +39,7 @@ Everything else is in the repository and checked by a script. The full ordered l
 
 11. **Set up the deployment:** create the GitHub environment `wordpress-org` with yourself as required reviewer and
     the secrets `SVN_USERNAME` and `SVN_PASSWORD`; turn on two-factor authentication on the WordPress.org account
-    `estasofttechnologies`, and check that `Contributors: estasofttechnologies` in `readme.txt` is exactly that
-    account's username.
+    `estasoft` (the account that owns the plugin; `Contributors: estasoft` in `readme.txt` is exactly that username).
 12. **Submit the zip** from the GitHub release (tag `v0.1.0` on `main`) at
     <https://wordpress.org/plugins/developers/add/>, using the text in [SUBMISSION-NOTES.md](SUBMISSION-NOTES.md).
     Answer the review emails, which go to the account's address, and approve the deploy job after approval.

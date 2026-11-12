@@ -1,5 +1,5 @@
 === Estasoft Enterprise ERP/CRM Sync Engine ===
-Contributors: estasofttechnologies
+Contributors: estasoft
 Tags: woocommerce, erp, crm, accounting, sync
 Requires at least: 6.4
 Tested up to: 7.1
@@ -174,7 +174,7 @@ Terms: https://developer.xero.com/xero-developer-platform-terms-conditions/ | Pr
 = Zoho Books =
 Used for: invoices or sales orders, credit notes and customers. Sends: the client ID and secret of your own app, and its sign-in tokens. Contacts: `accounts.zoho.com`, `accounts.zoho.eu`, `accounts.zoho.in`, `accounts.zoho.com.au`, `accounts.zoho.jp`, `accounts.zoho.sa`, `accounts.zohocloud.ca`, `accounts.zoho.com.cn`, `www.zohoapis.com`, `www.zohoapis.eu`, `www.zohoapis.in`, `www.zohoapis.com.au`, `www.zohoapis.jp`, `www.zohoapis.sa`, `www.zohoapis.ca`, `www.zohoapis.com.cn`.
 
-Terms: https://www.zoho.com/books/terms.html | Privacy: https://www.zoho.com/privacy.html
+Terms: https://www.zoho.com/terms.html | Privacy: https://www.zoho.com/privacy.html
 
 = Dynamics 365 Sales =
 Used for: deals or opportunities, contacts and refund notes. Sends: your app's client ID and secret (or signed assertion), and its access tokens. Contacts: `*.dynamics.com`, `login.microsoftonline.com`.
@@ -259,7 +259,7 @@ Checkout is not affected. Deliveries retry with growing delays; after repeated f
 Yes. Names, addresses and notes are stored and sent as UTF-8 exactly as typed, and Arabic digits in phone and tax numbers are understood. The screens are in English only.
 
 = Is Pennylane available? Is SMACC? =
-Not yet. Both are listed but cannot be selected. Pennylane requires a sign-in app for production use and its API terms limit how integrations may be used; SMACC publishes no way to connect. They will be enabled when that changes.
+Not yet. Both are listed but cannot be selected, and the plugin contains no code that contacts either of them. Pennylane requires a sign-in app for production use and its API terms limit how integrations may be used; SMACC publishes no way to connect. They will be enabled when that changes.
 
 = Does it sign or issue tax invoices? =
 No. It sends orders to your system, and the certified invoicing module of that system issues the invoice. The plugin never claims that a store is compliant with any tax authority's rules.

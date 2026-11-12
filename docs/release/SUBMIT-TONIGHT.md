@@ -20,20 +20,24 @@ need the owner's accounts.
    assigned slug everywhere (text domain, folder in the zip, main file), so that problem is gone. The slug cannot be
    changed after approval; if you would rather have a shorter one, ask the review team before they approve.
 2. **Check the account.** Sign in at <https://wordpress.org/> with the account that will own the plugin. Turn on
-   two-factor authentication (Profile > Account & Security). Check that `Contributors: estasofttechnologies` in
-   `readme.txt` is exactly that account's username; change `readme.txt` and rebuild the zip if it is not.
+   two-factor authentication (Profile > Account & Security). The account is `estasoft`, and
+   `Contributors: estasoft` in `readme.txt` is exactly that username.
 3. **Read the zip's readme once in the validator.** Paste `readme.txt` into
    <https://wordpress.org/plugins/developers/readme-validator/> and read the result. The offline check
    (`php bin/check-readme.php --strict-assets`) already passes, so anything new the validator reports is worth a look.
 
-## Upload
+## Upload (after the first review, 12 Nov 2026)
 
-4. If the first zip is still waiting for review, send the new file `estasoft-enterprise-erpcrm-sync-engine-0.1.0.zip` the way
-   WordPress.org tells you on the plugin's pending page or in its email (a new upload on the same page, or an
-   attachment to your reply). A first submission is made at <https://wordpress.org/plugins/developers/add/>.
-5. An automatic check runs at once and a person from the Plugin Review team writes to the account's email address
-   (not at once). Reply in the same thread. The text to paste is in [SUBMISSION-NOTES.md](SUBMISSION-NOTES.md),
-   sections 1 to 8 for the description and section 9 for how a reviewer can test it without a paid ERP.
+4. The Plugin Review team pended the first submission with a list of issues (all fixed in this zip). Upload the new
+   `estasoft-enterprise-erpcrm-sync-engine-0.1.0.zip` at <https://wordpress.org/plugins/developers/add/> while signed in
+   as `estasoft`, then **reply to the review email thread** (not a new email). Keep the reply short; the team reviews
+   the whole plugin again and does not want a list of changes. Suggested reply:
+
+   > Hello, I uploaded a corrected version. Besides the listed issues, I changed Pennylane to a placeholder that makes
+   > no request (its API terms are not cleared yet), and limited the plugin's admin notices to the Dashboard, the
+   > Plugins list and WooCommerce screens. Thank you.
+
+5. Wait for the next reply (a few days to a few weeks; do not ask for status before a month has passed).
 6. Do **not** push the tag `v0.1.0` yet. The release workflow publishes to WordPress.org subversion and needs the
    `wordpress-org` environment (required reviewer, secrets `SVN_USERNAME` and `SVN_PASSWORD`), which can only exist
    after approval. Create it then ([CHECKLIST.md](CHECKLIST.md), A4 and F4).

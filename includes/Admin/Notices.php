@@ -14,7 +14,8 @@ defined( 'ABSPATH' ) || exit;
 use Estasoft\SyncEngine\Core\Capabilities;
 
 /**
- * WordPress' own notice style, a coloured edge, plain words and one action. Three notices show on any admin screen: the welcome notice
+ * WordPress' own notice style, a coloured edge, plain words and one action. Three notices show, and only on the screens where a store
+ * owner is working (the Dashboard, the Plugins list and the WooCommerce screens, see onNoticeScreen()), never on the rest of the admin: the welcome notice
  * after activation (the only one a person can dismiss for good, with a nonce and a user-meta flag), the missing encryption key
  * with a fresh line to paste, and a connection that needs the person to sign in again. The notices about failed orders, the queue
  * backlog and the end of shadow mode show inside the app, from the boot data, so the person is not told twice. The message about
@@ -70,12 +71,37 @@ final class Notices {
 	 * Print the notices that apply. Runs on `admin_notices`.
 	 */
 	public function render(): void {
-		if ( ! Capabilities::userCanManage() || ( $this->onPluginPage )() ) {
+		if ( ! Capabilities::userCanManage() || ( $this->onPluginPage )() || ! $this->onNoticeScreen() ) {
 			return;
 		}
 		foreach ( $this->rules->forScreens( $this->facts->gather( (int) get_current_user_id() ) ) as $notice ) {
 			$this->print( $notice );
 		}
+	}
+
+	/**
+	 * Whether the current screen is one where a notice of this plugin may show: the Dashboard, the Plugins list, and the WooCommerce
+	 * screens (its own pages, the orders and the products). Every other admin screen stays free of them.
+	 */
+	private function onNoticeScreen(): bool {
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( ! $screen instanceof \WP_Screen ) {
+			return false;
+		}
+		$id    = (string) $screen->id;
+		$shop  = array( 'shop_order', 'shop_order_placehold', 'product', 'edit-shop_order', 'edit-shop_order_placehold', 'edit-product' );
+		$known = 'dashboard' === $id
+			|| 'plugins' === $id
+			|| str_contains( $id, 'woocommerce' )
+			|| in_array( $id, $shop, true )
+			|| in_array( (string) $screen->post_type, $shop, true );
+		/**
+		 * Whether the notices of ESTASOFT SYNC show on the current admin screen.
+		 *
+		 * @param bool       $show   True on the Dashboard, the Plugins list and the WooCommerce screens.
+		 * @param \WP_Screen $screen The current screen.
+		 */
+		return (bool) apply_filters( 'estasoft_sync_show_notices_on_screen', $known, $screen );
 	}
 
 	/**
