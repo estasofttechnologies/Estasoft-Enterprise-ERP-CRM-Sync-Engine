@@ -21,10 +21,10 @@
     "check:js": "npm run typecheck && npm run lint:js && npm run lint:css && npm run test:js && npm run build"
   },
   "dependencies": {
-    "@wordpress/a11y": "^5.0.0",
-    "@wordpress/api-fetch": "^8.0.0",
+    "@wordpress/a11y": "^5.1.0",
+    "@wordpress/api-fetch": "^8.1.0",
     "@wordpress/components": "^43.0.0",
-    "@wordpress/element": "^10.0.0",
+    "@wordpress/element": "^10.1.0",
     "@wordpress/i18n": "^7.0.0"
   },
   "devDependencies": {
@@ -36,7 +36,7 @@
     "@types/jest-axe": "^3.5.9",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@wordpress/scripts": "^37.0.0",
+    "@wordpress/scripts": "^37.1.0",
     "babel-jest": "^30.5.2",
     "cross-env": "^10.1.0",
     "jest": "^30.5.2",
