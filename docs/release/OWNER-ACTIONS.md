@@ -46,6 +46,16 @@ Everything else is in the repository and checked by a script. The full ordered l
 13. **Set up support:** watch the WordPress.org support forum and the GitHub issues, and decide who answers a
     security report sent to the address in `SECURITY.md`.
 
+The plugin was approved on 19 Nov 2026. The first upload to the WordPress.org Subversion repository
+(`https://plugins.svn.wordpress.org/estasoft-enterprise-erpcrm-sync-engine`) is done by the Release workflow
+(tag `v0.1.0`, then approve the deploy job). That job sends all 926 files in one commit, and on a first release
+the server can need longer than ten minutes for it, so the connection times out (`svn: E175012`) and nothing is
+committed. In that case run **Actions > Upload to WordPress.org in batches > Run workflow** (version `0.1.0`).
+It takes the zip from the GitHub release, uploads it in small commits (`bin/wporg-upload-in-batches.sh`, which
+can also be run by hand with `--dry-run` to print the plan), checks that trunk equals the zip, and only then
+creates `tags/0.1.0` and uploads the icons, banners and screenshots. If a run stops part-way, run it again; it
+commits only what is missing. Later releases change few files, so the normal Release workflow is enough.
+
 ## Before any connector is called verified, and legal questions
 
 14. **Live-test every connector with a vendor sandbox or a free account.** Follow the manual smoke test at the end

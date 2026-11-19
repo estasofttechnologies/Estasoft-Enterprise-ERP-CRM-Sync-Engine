@@ -1,0 +1,106 @@
+name: Upload to WordPress.org in batches
+
+# A manual fallback for the "Publish to WordPress.org" job of the Release workflow.
+#
+# That job sends every file in one Subversion commit. On a plugin's first release the WordPress.org server can
+# need more than ten minutes to process such a commit, and the connection times out (svn: E175012). This
+# workflow takes the verified zip from the GitHub release (the same file the Release workflow built and
+# attached) and uploads it with bin/wporg-upload-in-batches.sh: many small commits, then a check that trunk
+# equals the zip, then tags/<version> and the assets. If a run fails part-way, start it again: it commits only
+# what is still missing, and it creates the tag only after trunk has been verified.
+#
+# Start it from Actions > Upload to WordPress.org in batches > Run workflow. It uses the "wordpress-org"
+# environment, so it waits for the required reviewer and reads the same SVN_USERNAME and SVN_PASSWORD secrets
+# as the Release workflow. It never runs by itself.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to upload, for example 0.1.0 (the GitHub release v<version> must exist and carry the zip)"
+        required: true
+        default: "0.1.0"
+        type: string
+      batch_size:
+        description: "Most files in one commit; lower it if a commit times out"
+        required: true
+        default: "100"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wporg-upload
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    name: Upload in small commits (needs approval)
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    # Required reviewers on this environment are the manual approval. Nothing below runs until they approve.
+    environment:
+      name: wordpress-org
+      url: https://wordpress.org/plugins/estasoft-enterprise-erpcrm-sync-engine/
+    steps:
+      - name: Check out the code (for the upload script and the .wordpress-org assets folder)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check the inputs and the WordPress.org secrets
+        env:
+          VERSION: ${{ inputs.version }}
+          BATCH_SIZE: ${{ inputs.batch_size }}
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+        run: |
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::The version must look like 1.2.3 (a stable release)."
+            exit 1
+          fi
+          if ! [[ "$BATCH_SIZE" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::The batch size must be a positive whole number."
+            exit 1
+          fi
+          if [ -z "$SVN_USERNAME" ] || [ -z "$SVN_PASSWORD" ]; then
+            echo "::error::SVN_USERNAME and SVN_PASSWORD must be set as secrets of the 'wordpress-org' environment."
+            exit 1
+          fi
+
+      - name: Make sure Subversion is installed
+        run: |
+          if ! command -v svn > /dev/null 2>&1; then
+            sudo apt-get update -q
+            sudo apt-get install -y -q subversion
+          fi
+          svn --version --quiet
+
+      - name: Download the verified zip from the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          gh release download "v${VERSION}" --pattern '*.zip' --pattern '*.zip.sha256' --dir dist
+          (cd dist && sha256sum -c ./*.zip.sha256)
+
+      - name: Unpack the zip so the exact verified files are uploaded
+        run: |
+          mkdir -p "$RUNNER_TEMP/release"
+          unzip -q dist/*.zip -d "$RUNNER_TEMP/release"
+          test -f "$RUNNER_TEMP/release/estasoft-enterprise-erpcrm-sync-engine/estasoft-enterprise-erpcrm-sync-engine.php"
+
+      - name: Upload in small commits
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+          VERSION: ${{ inputs.version }}
+          BATCH_SIZE: ${{ inputs.batch_size }}
+        run: |
+          bash bin/wporg-upload-in-batches.sh \
+            --plugin-dir "$RUNNER_TEMP/release/estasoft-enterprise-erpcrm-sync-engine" \
+            --assets-dir .wordpress-org \
+            --version "$VERSION" \
+            --batch-size "$BATCH_SIZE"
