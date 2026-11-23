@@ -45,7 +45,7 @@ jobs:
       url: https://wordpress.org/plugins/estasoft-enterprise-erpcrm-sync-engine/
     steps:
       - name: Check out the code (for the upload script and the .wordpress-org assets folder)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 

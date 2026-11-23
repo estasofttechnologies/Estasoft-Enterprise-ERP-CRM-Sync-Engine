@@ -38,7 +38,7 @@ jobs:
         php: ["8.1", "8.2", "8.3", "8.4"]
     steps:
       - name: Check out the code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -57,7 +57,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Check out the code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -75,7 +75,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Check out the code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -97,7 +97,7 @@ jobs:
         php: ["8.1", "8.2", "8.3", "8.4"]
     steps:
       - name: Check out the code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -146,7 +146,7 @@ jobs:
       WP_VERSION: ${{ matrix.wordpress }}
     steps:
       - name: Check out the code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -171,12 +171,12 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Check out the code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -225,7 +225,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Check out the code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -251,7 +251,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Check out the code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -262,7 +262,7 @@ jobs:
           install: "false"
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -277,7 +277,7 @@ jobs:
         run: bash bin/build-zip.sh --out "$RUNNER_TEMP/zip"
 
       - name: Keep the zip for a week
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: estasoft-enterprise-erpcrm-sync-engine-zip
           path: ${{ runner.temp }}/zip/*
@@ -311,7 +311,7 @@ jobs:
       SMOKE_DB_HOST: 127.0.0.1
     steps:
       - name: Check out the code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -322,7 +322,7 @@ jobs:
           install: "false"
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
